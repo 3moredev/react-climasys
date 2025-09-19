@@ -1,0 +1,63 @@
+﻿.complaintext
+{
+    text-align:right;
+    margin-right:2%;
+    font-size: 165%;
+    color:Black;
+   
+    }
+  span.complaintext label 
+  {
+      
+      font-weight:normal;
+       box-sizing: border-box; 
+            margin: 0; 
+            outline: 0; 
+            padding: 0; 
+            position: relative; 
+            top: 15px; 
+            vertical-align: top; 
+      }
+.chkalignleft
+{
+    text-align:right;
+    padding-right:2%;
+    }
+.chkalignmiddle
+{
+    text-align:right;
+    padding-right:3%;
+    }
+.chkalignright
+{
+    text-align:right;
+    padding-right:7%;
+    }
+ .btn_kiosk
+    {
+    width : 80px;
+    height: 80px;
+    background: #b7d8e3;
+    border-radius: 50%;
+    border: none;
+    color: Black;
+   font-size: 20px;
+    outline:none;
+    cursor:none;
+    background-color:#fff;
+    }
+.ChkBoxClass input
+{
+    width:50px;
+    height:50px;
+    cursor:none;
+    }
+#lblErrorMsg
+{
+    font-size:20px;
+    font-weight:bold;
+    }
+      .PBtn .touch
+        {
+            background-color: #CA4200 !important;
+        }

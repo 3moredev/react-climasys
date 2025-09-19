@@ -1,0 +1,6459 @@
+/*varsha 22july Master Page*/
+   
+.navbar-default {
+    background-color: #3a6f9f !important;
+    border-color: #3a6f9f !important;
+}
+
+.navbar {
+    border-radius: 0px !important;
+    margin-bottom:0px !important;
+    
+}
+
+.navbar-brand {
+    float: left;
+    height: 49px;
+    padding: 0px !important;
+    font-size: 18px;
+     line-height: 20px; 
+}
+
+/*.nav>li
+{
+    height:49px;
+}*/
+.navbar-default .navbar-nav>li>a {
+    color: #fff !important;
+}
+
+.navbar-default .navbar-nav>li>a:hover {
+    color: #fff !important;
+}
+
+
+.navbar-default .navbar-nav>li>a:hover {
+       background: #366794 !important;
+       
+}
+
+.nav>li>a>img {
+    max-width: none;
+    position: relative;
+    width: 25px;
+    height: 25px;
+    display: inline-block;
+}
+
+.navbar-header{
+   
+    background: #3e77ab;  
+}
+
+.navbar-default .navbar-nav>.open>a, .navbar-default .navbar-nav>.open>a:hover, .navbar-default .navbar-nav>.open>a:focus
+{
+    background: #366794 !important;
+}
+
+.nav .open>a, .nav .open>a:hover, .nav .open>a:focus
+{
+     background: #366794 !important;
+}
+
+.dropdown-menu>li>a:hover, .dropdown-menu>li>a:focus
+{
+   background: #366794 !important;
+   color:White !important;
+  
+}
+.navbar-default .navbar-nav>.open>a, .navbar-default .navbar-nav>.open>a:hover, .navbar-default .navbar-nav>.open>a:focus 
+{
+    color:none;
+}
+
+.dropdown>li>a{
+    text-decoration: none;
+    color: #262626;
+    background-color: #366794 !important;
+}
+
+
+/*-----------------------------------------------------------------------*/
+
+
+
+/*.user-top>li>a:hover
+{
+    background-color: #366794 !important;
+}
+
+
+*/
+
+/***************LOGIN PAGE****************/
+
+.login-heading {
+    font-size: 25px;
+    font-weight: 600;
+    font-family: 'Lato', sans-serif;
+}
+.form-actions {
+   background: none !important; 
+}
+
+.loginfrmadj{
+    margin-top: 10%;
+}
+
+.form-message{
+    padding-top: 2%; 
+    font-size: 16px;
+}
+
+.error-box{
+    text-align: center;
+    font-size:16px;
+    color:red;
+    padding-bottom: 1%;
+    
+}
+.error-boxgray{
+    text-align: center;
+    font-size:16px;
+    color:Gray;
+    padding-bottom: 1%;
+    
+}
+.addimgbutton
+{
+	
+width: 40%;
+}
+/*no use removed class*/
+.change-err
+{
+	  text-align: center;
+font-size: 16px;
+color: red;
+margin-left: 450px;
+margin-top: -29px;
+font-weight: 500;
+}
+
+/**********************Patient Registration***********************/
+
+.form-heading{
+    text-align: center;
+    font-size: 20px;
+    padding-bottom: 2%;
+}
+
+.asterisk_inputIE:after {
+content:" *"; 
+color: #e32;
+position: absolute;
+/*15 april change*/ 
+/*margin: 8px\0 0px\0 0px\0 4px\0;*/ 
+margin-top:8px\9;
+margin-right:0px\9;
+margin-bottom:0px\9;
+margin-left:4px\9; 
+font-size:large; 
+padding: 0 2px\0 0 0; 
+}
+ .asterisk_input:after {
+content:" *"; 
+color: #e32;
+position: absolute;
+/*15 april change*/ 
+margin: 8px 0px 0px 4px; 
+font-size:large; 
+padding: 0 2px 0 0; 
+}
+
+.asterisk_input1:after {
+content:" *"; 
+color: #e32;
+position: absolute; 
+/*15 april change*/
+margin: 8px 0px 0px 4px; 
+font-size:large; 
+padding: 0 2px 0 0; 
+}
+/**********Fullregistration***********/
+
+.fullmenualign
+{
+	margin-left: 81px;
+margin-right: -205px;
+}
+@-moz-document url-prefix() {
+   .asterisk_input:after {
+        margin:8px 12px 0px -61%;
+    }
+}
+
+@media screen and (-ms-high-contrast: active), (-ms-high-contrast: none) {
+   .asterisk_input:after {
+        margin:8px 12px 0px 26%;
+    }
+}
+
+@-moz-document url-prefix() {
+   .asterisk_input1:after {
+        margin:8px 0px 0px -412.5px;
+    }
+}
+
+@media screen and (-ms-high-contrast: active), (-ms-high-contrast: none) {
+   .asterisk_input1:after {
+        margin:8px 12px 0px 26%;
+    }
+}
+
+
+/**********************Patient Registration***********************/
+.form-sub-heading{
+    font-size: 20px;
+    background: #0a819c;
+    padding: 1%;
+    color: #fff;
+}
+
+ .asterisk_input2:after {
+content:" *"; 
+color: #e32;
+position: absolute; 
+margin: 8px 0px 0px 1.2%; 
+font-size: large; 
+padding: 0 2px 0 0; 
+/*------------
+30 may 2016 chnage ie only
+------------*/
+left:0px \9;
+
+}
+
+@-moz-document url-prefix() {
+   .asterisk_input2:after {
+        margin:8px 12px 0px -98%;
+    }
+}
+
+@media screen and (-ms-high-contrast: active), (-ms-high-contrast: none) {
+   .asterisk_input2:after {
+        margin:8px 12px 0px -98%;
+    }
+}
+
+table th{
+     background: #3a6f9f;
+     color:#fff;
+      text-align: center;
+}
+
+table td{
+    font-weight: bold;
+}
+.lable-adj{
+     float: right;   
+ }
+@media screen and (max-width:767px){
+    .lable-adj{
+     float: none;   
+    }
+    #topbar .navbar-top-links li > a
+ {
+ }
+}
+
+
+.previousappoint{
+    
+}
+
+.dateblock{
+   background-color: #fff;
+   border: 1px solid #ccc;
+   text-align: center;
+    padding: 3%;
+}
+
+.dateblock:hover , .dateblock:visited{
+/*    background-color: #f7f7f7;*/
+background-color: #0a819c;   
+     border: 1px solid blueviolet;
+     color:#fff;
+}
+
+
+
+
+/**************************18 feb 2016 change****************************/
+
+.headingbar{
+    background:#0A819C; 
+    color:#fff; 
+    border:0.4em solid #d8d8d8;
+}
+.actives {
+    background-color: #0a819c;    
+    color:#fff;
+}
+
+/*@media screen and (min-width: 768px) {
+    .dropdown-menu .pull-right{
+    right: 0px !important;
+    left: 0px !important;
+    }
+}*/
+.Family_hyp
+{
+	left: 0%;
+}
+.hyp
+{
+	left: 0%;
+}
+.Chol
+{
+	left: -3%;
+}
+.chol_chk
+{
+    left: -2%;
+}
+.Diabetes_chk
+{
+     left: -5%;
+}
+.viewcho-lbl-adjst
+{
+}
+.viewFamilyth-lbl-adjst
+{
+	
+}
+.viewFamilycho-lbl-adjst
+{
+}
+.viewalch-lbl-adjst
+{
+}
+.viewth-lbl-adjst
+{
+}
+.IHD_chk
+{
+    left: 0%;
+}
+.Asthma_chk
+{
+    left: -5%;
+}
+.TH_chk
+{
+   left: -3%;
+}
+.TH_chkk
+{
+    left:-2%;
+}
+.Tobacco_chk
+{
+   left: -5%;
+}
+.Tob_chk
+{
+    left: -5%;
+}
+.ViewTob_chk
+{
+    left: -5%;
+}
+.Smoking_chk
+{
+   left: 0%;
+}
+.Alcohol_chk
+{
+    left: -3%;
+}
+.Alc_chk
+{
+    left:-2%;
+}
+.Family_Diabetes_chk
+{
+     left: -5%;
+}
+.Family_IHD_chk
+{
+    left: 0%;
+}
+.Family_Asthma_chk
+{
+    left: -5%;
+}
+.Family_TH_chk
+{
+    left:-3%;
+}
+.Family_TH_chkk
+{
+    left:-2%;
+}
+/**************2 June css for view registration pop up*********/
+.pDiabetes_chk
+{
+     left: -2%;
+}
+.pFamily_hyp
+{
+	left: 1%;
+}
+.phyp
+{
+	left: 1%;
+}
+.pChol
+{
+	left: -1%;
+}
+
+.pIHD_chk
+{
+    left: 1%;
+}
+.pAsthma_chk
+{
+    left: -2%;
+}
+.pTH_chk
+{
+   left: -1%;
+}
+.pTobacco_chk
+{
+   left: -3%;
+}
+.pSmoking_chk
+{
+   left: 1%;
+}
+.pAlcohol_chk
+{
+    left: -1%;
+}
+.pFamily_Diabetes_chk
+{
+     left: -2%;
+}
+.pFamily_IHD_chk
+{
+    left: 1%;
+}
+.pFamily_Asthma_chk
+{
+    left: -2%;
+}
+.pFamily_TH_chk
+{
+    left:-1%;
+}
+.ptxt-box-adjst
+{
+	margin-left:4%;
+}
+.ptxt-box-adjst2
+{
+	margin-left:4%;
+}
+.lbl_amt_paid
+{
+    margin-left:15px;
+}
+.txt_amount_paid
+{
+    padding-left:2%;
+    margin-top: 4px;
+    
+    margin-left: 6px;
+}
+@media only screen and (min-width: 320px) and (max-width: 360px) 
+{
+    .navbar-default .navbar-nav .open .dropdown-menu>li>a
+{
+    color:White !important;
+}
+    .modal-dialog {
+        width: 300px  !important;
+        margin: 15px auto;
+         top: 35px;
+         margin-top: 144px;
+    }
+  .fullmenualign
+{
+	margin-left: 81px;
+margin-right: -205px;
+}
+ #topbar .navbar-top-links li > a
+ {
+ }
+ .txt_amount_paid
+{
+    
+}
+} 
+
+
+
+/***************
+15 april changes css change
+****************/
+
+
+
+.or-txt
+{
+    margin-right: -40px !important;
+}
+
+/*****************25 april change added*******************/
+.lable-adjs
+{
+    margin-right: -28px;
+}
+
+#collapseExample3 input[type=checkbox]{
+    margin:4px 12px 0px;
+}
+
+#collapseExample3d input[type=checkbox]{
+    margin: 4px 18px 0px !important;
+}
+
+.checkbox-adjs input[type=checkbox]{
+    margin: 4px 20px 0px !important;
+}
+
+.cm-txt-adjs
+{
+    margin-left: -10px
+}
+
+.rs-txt-adjs i
+{
+    margin-right: 553px; 
+    color: #0a819c
+}
+
+.page-content1
+{
+    padding: 20px 20px 50px 20px;
+   /* height: 1035px;*/
+    height: 1240px;
+}
+
+.lbl-adjs
+{
+ margin-left:18px;
+ }
+
+
+
+.test-popup-adjs
+{
+   overflow: auto;
+   overflow-y: auto;
+   overflow-x: none;
+   max-height:250px;
+    
+}
+
+/*************comepounder popup Medicines/Fees Collection **************/
+.componder-popup-adjs
+{
+   background: #FFF;
+   overflow:auto;
+   height: auto;  
+}
+
+/**********************Operator popup**********************/
+.result-popup-adjs
+{
+   overflow: auto;
+   overflow-y: auto;
+   overflow-x: none;
+   max-height:500px;  
+}
+
+
+.dropdown-submenu > a:after {
+    display: block;
+    float: right;
+    width: 0;
+    height: 0;
+    margin-top: 12px;
+    margin-right: 8%;
+    border-color: transparent;
+    border-left-color: #fff;
+    border-style: solid;
+    border-width: 5px 0 5px 5px;
+    content: " ";
+}
+/*----------------------------------------
+30 may 2016 css change
+----------------------------------------*/
+
+.astrick-sign{
+    position: relative;
+    font-size: 18px;
+    color: #db4028;
+    top: 4px;
+   /* left: 30px;*/
+    display: inline-block;
+    font-style: normal;
+    font-weight: normal;
+    line-height: 1;
+    -webkit-font-smoothing: antialiased;
+
+}
+
+/* all */
+::-webkit-input-placeholder { font-size:13px !important; font-weight:normal; }
+::-moz-placeholder { font-size:13px !important; font-weight:normal;} 
+:-ms-input-placeholder { font-size:13px !important;font-weight:normal; } 
+input:-moz-placeholder { font-size:13px !important; font-weight:normal;}
+
+.form-control
+{
+	font-size: 12px !important; 
+	    border-radius: 6px !important;
+}
+
+.form-control-Patient
+{
+	font-size: 15px !important; 
+}
+.adddicharge
+{
+    height: 135px !important;
+}
+.addinstruction
+{
+    height: 190px !important;
+}
+
+
+.newpatientbtn
+{
+     width: 110%;
+    height: 70px !important;
+    font-size: 23px !important;
+}
+
+.ButtonClass
+{
+    cursor: pointer;
+}
+
+.newpatientHight
+{
+       width: 110%;  
+    height: 70px !important;
+    font-size: 23px !important;
+}
+
+.veiwpTIENTDD
+{
+        width: 112%;
+    height: 70px !important;
+    MARGIN-LEFT: -1%;
+    font-size: 23px !important;
+}
+
+.veiwDemoHeightss
+{
+    margin-left: 35%;
+    height: 137px;
+    width: 59%;
+}
+
+.veiwsubmitviewss
+{
+
+     height: 137px;
+    width: 59%;
+    margin-left: -30%;
+}
+
+.veiwsExistingpat
+{
+margin-left: 1%;
+     height: 137px;
+    width: 59%;
+}
+
+
+.text-box-adjs
+{
+	margin-left:1%;
+}
+
+.lbl-adjst
+{
+	margin-left: -2px;	
+}
+.lbl-adjst-FR
+{
+    margin-left:15px;
+}
+.lbl-adjs-FR-MD
+{
+    margin-left: 22px;
+}
+lbl-adjstpp
+{
+	margin-left: 3px;	
+}
+.plbl-adjst
+{
+	margin-left: 1px;	
+}
+.lbl-adjst2
+{
+	margin-left: 40px;	
+}
+
+.lbl-currVisitdtls
+{
+	margin-left: 8px;
+}
+
+.lbl-remark
+{
+	margin-left: 6px;
+}
+
+
+
+.pth-chk-adjst
+{
+	   
+}
+.pth-adjst
+{
+	
+}
+.pAsthma-chk-adjst
+{
+	  
+}
+.pAsthma-adjst
+{
+	 
+}
+.pIHD-chk-adjst
+{
+	    
+}
+.pIHD-adjst
+{
+	
+}
+/*-------------------------------------
+---------------------------------------*/
+.navbar-brandlogo img
+{
+	margin-top: -15px;
+}
+
+
+.page-heading
+{
+	text-align:justify;
+	font-size: 22px;
+   font-weight:300;
+   color: #0066CC;
+}
+
+.errorBox
+{
+    text-align: center;
+    font-size: 16px;
+    color: red;
+    font-weight: 500;
+    line-height: 38px;
+}
+
+
+@media (min-width : 992px)
+{
+    .txt_amount_paid
+{
+ .navbar-default .navbar-nav .open .dropdown-menu>li>a
+{
+    color:White !important;
+}
+}
+
+}
+
+
+/***************
+15 april changes
+Media Screen for pc and tablate and mobile layout
+****************/
+
+
+/**************************/
+@media only screen and (min-width : 1681px) and (max-width : 1920px)
+{
+    .txtdobadj
+{
+    margin-left: -22px !important;
+}
+.lbldobadj1 {
+    margin-top: 7px;
+    margin-right: -19px !important;
+}
+.modal-lg
+{
+    width: 1256px;
+    margin-left: -215px;
+    overflow-y: scroll;
+    max-height: 85%;
+ }
+ .modal-lg-popup
+{
+    width: 1256px;
+    margin-left: -215px;
+    overflow-y: scroll;
+    max-height: 85%;
+ }
+ .maxheight
+ {
+ 	height: 500px;
+ 	overflow:auto;	 
+ }
+ 
+.asterisk_input:after {
+    content: " *";
+    color: #e32;
+    position: absolute;
+    margin: 0px 0px 0px -7px;
+    font-size: large;
+    padding: 0 2px 0 0;
+}
+@-moz-document url-prefix() {
+   .asterisk_input:after {
+        margin:8px 12px 0px -61%;
+    }
+}
+@-moz-document url-prefix() {
+   .asterisk_input1:after {
+        margin:8px 0px 0px -412.5px;
+    }
+}
+.fullmenualign
+{
+	margin-left: 81px;
+margin-right: -205px;
+}
+.change-err
+{
+	  text-align: center;
+font-size: 16px;
+color: red;
+margin-left: 450px;
+margin-top: -29px;
+font-weight: 500;
+}
+/*------------------------------
+ 30 may 2016 docor change 
+--------------------------------*/
+.Pp-hyp-lbl-adjs{
+	margin-left:8%;
+}
+
+.Pp-hyp-chk{
+	margin-left: 3%;
+}
+.pPp-hyp-chk{
+	margin-left: 3%;
+}
+.Pp-Diab-lbl-adjs{
+	margin-left: -3%;
+}
+.Pp-Diab-chk{}
+.Pp-Cho-lbl-adjs{
+	margin-left: -3%;
+}
+.Pp-Cho-chk{}
+.Pp-Cho-chk{}
+
+.Pp-Smok-lbl-adjs{}
+.Ppp-Smok-lbl-adjs{}
+.Ppp-Smok-lbl-adjs{}
+.Pp-Toba-lbl-adjs
+{
+	margin-left: -3%;
+}
+.Pp-Alch-lbl-adjs
+{
+	margin-left: -3%;
+}
+.Pp-Smok-chk 
+{
+	margin-left: 3%;
+}
+.pPp-Smok-chk 
+{
+	margin-left: 3%;
+}
+.Pp-Toba{}
+.Pp-Alch{}
+.pPp-Alch{}
+.CompDash-heading
+{
+	margin-left: -67% !important;
+}
+
+.page-title-breadcrumb .page-header .page-title {
+    margin-left: -76%;
+    margin-left: -61.6%\0;
+}
+.pTobacco_chk
+{
+    left:-2%;
+}
+
+.lbl-lab-test
+{
+    margin-left:5px;
+}
+.btn-submit
+{
+    margin-left:830px;
+}
+#topbar .navbar-top-links li > a
+ {
+ }
+ .txt_amount_paid
+{
+      
+}
+ .txtDivBP
+ {
+ 	width:12%;
+ }
+}
+
+/**************************/
+@media only screen and (min-width : 1441px) and (max-width : 1680px)
+{
+    .txtdobadj
+{
+    margin-left: -25px !important;
+}
+.PR_textbox_adj
+{
+    width:324px !important;
+}
+.modal-lg
+{
+    width: 1256px;
+    margin-left: -215px;
+    overflow-y: scroll;
+    max-height: 85%;
+ }
+ .modal-lg-popup
+{
+    width: 1256px;
+    margin-left: -215px;
+    overflow-y: scroll;
+    max-height: 85%;
+ }
+ .maxheight
+ {
+ 	height: 500px;
+ 	overflow:auto;	 
+ }
+.asterisk_input:after {
+    content: " *";
+    color: #e32;
+    position: absolute;
+    margin: 8px 0px 0px 4px;
+    font-size: large;
+    padding: 0 2px 0 0;
+}
+@-moz-document url-prefix() {
+   .asterisk_input:after {
+        margin:8px 12px 0px -61%;
+    }
+}
+@-moz-document url-prefix() {
+   .asterisk_input1:after {
+        margin:8px 0px 0px -494.5px;
+    }
+}
+.Agetxt1
+{
+	width:100%;
+}
+.fullmenualign
+{
+	margin-left: 21px;
+margin-right: -232px;
+}
+.change-err
+{
+	  text-align: center;
+font-size: 16px;
+color: red;
+margin-left: 450px;
+margin-top: -29px;
+font-weight: 500;
+}
+/*------------------------------
+ 30 may 2016 docor change 
+--------------------------------*/
+.Pp-hyp-lbl-adjs{
+	margin-left:8%;
+}
+
+.Pp-hyp-chk{
+	margin-left: 3%;
+}
+.pPp-hyp-chk{
+	margin-left: 3%;
+}
+.Pp-Diab-lbl-adjs{
+	margin-left: -3%;
+}
+.Pp-Diab-chk{}
+.Pp-Cho-lbl-adjs{
+	margin-left: -3%;
+}
+.Pp-Cho-chk{}
+.pPp-Cho-chk{}
+
+.Pp-Smok-lbl-adjs{}
+.Ppp-Smok-lbl-adjs
+{
+	margin-left: 8%;
+	}
+.Pp-Toba-lbl-adjs
+{
+	margin-left: -3%;
+}
+.Pp-Alch-lbl-adjs
+{
+	margin-left: -3%;
+}
+.Pp-Smok-chk 
+{
+	margin-left: 3%;
+}
+.pPp-Smok-chk 
+{
+	margin-left: 3%;
+}
+.Pp-Toba{}
+.Pp-Alch{}
+.CompDash-heading
+{
+	margin-left: -62% !important;
+
+}
+.page-title-breadcrumb .page-header .page-title {
+    margin-left: -71%;
+    margin-left: -63.6%\0;
+}
+.pTobacco_chk
+{
+    left:-2%;
+}
+.lbl-lab-test
+{
+    margin-left:5px;
+}
+.btn-submit
+{
+    margin-left:640px;
+}
+#topbar .navbar-top-links li > a
+ {
+ }
+ .txtDivBP
+ {
+ 	width:12%;
+ }
+}
+
+
+@media only screen and (min-width : 1366px) and (max-width : 1366px)
+{
+    /*.txtdobadj
+    {
+        margin-left: -24px;
+    }*/
+   
+	.page-title-breadcrumb .page-header .page-title {
+		margin-left: -65% !important;
+	}
+	 .txtDivBP
+ {
+ 	width:12%;
+ }
+	.hyp-adjst
+	{
+		margin-left:2%;
+	}
+	.ihd-adjst
+	{
+	  margin-left:2%;
+	}
+	.smoke-adjst
+	{
+	  margin-left:2%;
+	}
+	
+	.hyp-adjst2
+	{
+		margin-left:-2%;
+	}
+	.vhyp-adjst2
+	{
+		margin-left:-2%;
+	}
+	.vihd-adjst2
+	{
+		
+	}
+	.fhyp-adjst2  /* varsha  09june 16*/
+	{
+		margin-left:-2%;
+	}
+	.ihd-adjst2
+	{
+	  margin-left:-2%;
+	}
+	.fihd-adjst2  /* varsha  09june 16*/
+	{
+	  margin-left:2%;
+	}
+	.phyp-adjst
+	{
+		margin-left:2%;
+	}
+	.pihd-adjst
+	{
+	  margin-left:2%;
+	}
+	.psmoke-adjst
+	{
+	  margin-left:2%;
+	}
+	
+	.phyp-adjst2
+	{
+		margin-left:-2%;
+	}
+	.fphyp-adjst2
+	{
+		margin-left:-2%;
+	}
+	.pihd-adjst2
+	{
+	  margin-left:-2%;
+	}
+	.lbl-lab-test
+	{
+	    margin-left:3px;
+	}
+	#topbar .navbar-top-links li > a
+ {
+ 
+ }
+ .txt_amount_paid
+{
+   
+}
+}
+
+
+/**************************/
+@media only screen and (min-width : 1366px) and (max-width : 1440px){
+
+/*.txtdobadj
+{
+    margin-left: -24px !important;
+}*/ .txtDivBP
+ {
+ 	width:12%;
+ }
+.modal-lg
+{
+    width: 1256px;
+    margin-left: -236px;
+    overflow-y: scroll;
+    max-height: 105%;
+ }
+ .modal-lg-popup
+ {
+     width: 1256px;
+    margin-left: -326px;
+    overflow-y: scroll;
+    max-height: 89%;
+
+ }
+ .maxheight
+ {
+ 	height: 500px;
+ 	overflow:auto;	 
+ }
+.asterisk_input:after {
+    content: " *";
+    color: #e32;
+    position: absolute;
+    margin: 8px 0px 0px 4px;
+    font-size: large;
+    padding: 0 2px 0 0;
+}
+@-moz-document url-prefix() {
+   .asterisk_input:after {
+        margin:8px 12px 0px -61%;
+    }
+}
+@-moz-document url-prefix() {
+   .asterisk_input1:after {
+        margin:8px 0px 0px -412.5px;
+    }
+}
+.Agetxt1
+{
+	width:100%;
+}
+.fullmenualign
+{
+	margin-left: 81px;
+margin-right: -205px;
+}
+.change-err
+{
+	  text-align: center;
+font-size: 16px;
+color: red;
+margin-left: 450px;
+margin-top: -29px;
+font-weight: 500;
+}
+
+/*------------------------------
+30 may 2016 change 
+-------------------------------*/
+.Diabetes_chk {
+    left: -3%;
+}
+.Tob_chk
+{
+     left: -3%;
+}
+.viewcho-lbl-adjst
+{
+	margin-left: -20px;
+}
+.viewFamilycho-lbl-adjst
+{
+	margin-left: -20px;
+}
+.viewFamilyth-lbl-adjst
+{
+	margin-left: -20px;
+}
+.viewalch-lbl-adjst
+{
+	margin-left: -20px;
+}
+.viewth-lbl-adjst
+{
+	margin-left: -20px;
+}
+.Asthma_chk {
+    left: -3%;
+}
+.Family_Diabetes_chk {
+    left: -3%;
+}
+.Family_Asthma_chk {
+    left: -3%;
+}
+.pDiabetes_chk {
+    left: -3%;
+}
+.pAsthma_chk {
+    left: -3%;
+}
+.pFamily_Diabetes_chk {
+    left: -3%;
+}
+.pFamily_Asthma_chk {
+    left: -3%;
+}
+.txt-box-adjst
+{
+	margin-left:4%;
+}
+.txt-box-adjst2  /*varsha 09 june 16*/
+{
+    margin-left:4%;
+}
+.ptxt-box-adjst
+{
+	margin-left:4%;
+}
+.btn-submit
+{
+    margin-left:570px;
+}
+/*------------------------------
+ 30 may 2016 docor change 
+--------------------------------*/
+.Pp-hyp-lbl-adjs{
+	margin-left:8%;
+}
+
+.Pp-hyp-chk{
+	margin-left: 3%;
+}
+.pPp-hyp-chk{
+	margin-left: 4%;
+}
+.Pp-Diab-lbl-adjs{
+	margin-left: -3%;
+}
+.Pp-Diab-chk{}
+.Pp-Cho-lbl-adjs{
+	margin-left: -3%;
+}
+.Pp-Cho-chk
+{
+ left: 1%;   
+ }
+.pPp-Cho-chk
+{
+	margin-left: 11px;
+	}
+
+.Pp-Smok-lbl-adjs{}
+.Pp-Smok-lbl-adjs{}
+.Ppp-Smok-lbl-adjs
+{
+	margin-left: 8%;
+	}
+.Pp-Toba-lbl-adjs
+{
+	margin-left: -3%;
+}
+.Pp-Alch-lbl-adjs
+{
+	margin-left: -3%;
+}
+.Pp-Smok-chk 
+{
+	margin-left: 3%;
+}
+.pPp-Smok-chk 
+{
+	margin-left: 4%;
+}
+.Pp-Toba{}
+.Pp-Alch
+{
+    left: 1%;
+}
+.pPp-Alch
+{
+	margin-left: 11px;
+	}
+.CompDash-heading
+{
+margin-left: -56% !important;	
+}
+.page-title-breadcrumb .page-header .page-title {
+    margin-left: -66%;
+    margin-left: -63.6%\0;
+}
+ .txtDivBP
+ {
+ 	width:12%;
+ }
+.hyp-adjst
+	{
+		margin-left:2%;
+	}
+	.ihd-adjst
+	{
+	  margin-left:1.5%;
+	}
+	.smoke-adjst
+	{
+	  margin-left:2%;
+	}
+	
+	.hyp-adjst2
+	{
+		margin-left:-2%;
+	}
+	.vhyp-adjst2
+	{
+		margin-left:1%;
+	}
+	.vihd-adjst2
+	{
+		margin-left:1%;
+	}
+	.fhyp-adjst2  /* varsha khandre 09june16*/
+	{
+		margin-left:2%;
+	}
+	.ihd-adjst2
+	{
+	  margin-left:-2%;
+	}
+	.fihd-adjst2   /* varsha  09june 16*/
+	{
+	  margin-left:2%;
+	}
+	
+	.phyp-adjst                   
+	{
+		margin-left:-2%;
+	}
+    .fphyp-adjst     
+	{
+		margin-left:2%;
+	}
+	.pihd-adjst
+	{
+	  margin-left:2%;
+	}
+	.psmoke-adjst
+	{
+	  margin-left:2%;
+	}
+	
+	.phyp-adjst2
+	{
+		margin-left:-2%;
+	}
+	.fphyp-adjst2
+	{
+		margin-left:-2%;
+	}
+	.pihd-adjst2
+	{
+	  margin-left:-2%;
+	}
+	.btn-submit
+    {
+    margin-left:570px;
+    }   
+    #topbar .navbar-top-links li > a
+ {
+ }
+ .txt_amount_paid
+{
+    
+}
+}
+
+
+/**************************/
+
+@media only screen and (min-width : 1281px) and (max-width : 1365px){
+ .txtDivBP
+ {
+ 	width:12%;
+ }
+.txtdobadj
+{
+    margin-left: -24px;
+}
+.modal-lg
+{
+    width: 1256px;
+    margin-left: -215px;
+    overflow-y: scroll;
+    max-height: 85%;
+ }
+ .modal-lg-popup
+ {
+     width: 1256px;
+    margin-left: -215px;
+    overflow-y: scroll;
+    max-height: 85%;
+ }
+ .maxheight
+ {
+ 	height:500px;
+ 	overflow:auto;	 
+ }
+.asterisk_input:after {
+    content: " *";
+    color: #e32;
+    position: absolute;
+    margin: 8px 0px 0px 4px;
+    font-size: large;
+    padding: 0 2px 0 0;
+}
+@-moz-document url-prefix() {
+   .asterisk_input:after {
+        margin:8px 12px 0px -61%;
+    }
+}
+@-moz-document url-prefix() {
+   .asterisk_input1:after {
+        margin:8px 0px 0px -412.5px;
+    }
+}
+.Agetxt1
+{
+	width:100%;
+}
+.fullmenualign
+{
+	margin-left: 30px;
+margin-right: -205px;
+}
+.change-err
+{
+	  text-align: center;
+font-size: 16px;
+color: red;
+margin-left: 450px;
+margin-top: -29px;
+font-weight: 500;
+}
+.btn-submit
+{
+    margin-left:300px;
+}
+/*------------------------------
+30 may 2016 change 
+-------------------------------*/
+.Diabetes_chk {
+    left: -3%;
+}
+.viewcho-lbl-adjst
+{
+}
+.viewFamilyth-lbl-adjst
+{
+	
+}
+.viewth-lbl-adjst
+{
+}
+.viewalch-lbl-adjst
+{
+}
+.Asthma_chk {
+    left: -3%;
+}
+.Family_Diabetes_chk {
+    left: -3%;
+}
+.Family_Asthma_chk {
+    left: -3%;
+}
+.txt-box-adjst
+{
+	margin-left:4%;
+}
+.txt-box-adjst2  /*varsha 09 june 16*/
+{
+    margin-left:4%;
+}
+.ptxt-box-adjst
+{
+	margin-left:4%;
+}
+.pDiabetes_chk {
+    left: -3%;
+}
+.pAsthma_chk {
+    left: -3%;
+}
+.pFamily_Diabetes_chk {
+    left: -3%;
+}
+.pFamily_Asthma_chk {
+    left: -3%;
+}
+/*------------------------------
+ 30 may 2016 docor change 
+--------------------------------*/
+.Pp-hyp-lbl-adjs{
+	margin-left:8%;
+}
+
+.Pp-hyp-chk{
+	margin-left: 3%;
+}
+.pPp-hyp-chk{
+	margin-left: 3%;
+}
+.Pp-Diab-lbl-adjs{
+	margin-left: -3%;
+}
+.Pp-Diab-chk{}
+.Pp-Cho-lbl-adjs{
+	margin-left: -3%;
+}
+.Pp-Cho-chk{}
+.pPp-Cho-chk{}
+
+.Pp-Smok-lbl-adjs{}
+.Ppp-Smok-lbl-adjs
+{
+	margin-left: 8%;
+	}
+.Pp-Toba-lbl-adjs
+{
+	margin-left: -3%;
+}
+.Pp-Alch-lbl-adjs
+{
+	margin-left: -3%;
+}
+.pPp-Alch-lbl-adjs
+{
+	margin-left: -3%;
+}
+.Pp-Smok-chk 
+{
+	margin-left: 3%;
+}
+.pPp-Smok-chk 
+{
+	margin-left: 3%;
+}
+.Pp-Toba{}
+.Pp-Alch{}
+.pPp-Alch{}
+.CompDash-heading
+{
+		
+}
+#topbar .navbar-top-links li > a
+ {
+ }
+ .txt_amount_paid
+{
+   
+}
+}
+
+/**************************/
+@media only screen and (min-width : 1025px) and (max-width : 1280px){
+ .txtDivBP
+ {
+ 	width:12%;
+ }
+.txtdobadj
+{
+    margin-left: -24px;
+}
+.right-inner-addon i {
+    position: absolute;
+    right: 689px;
+    padding: 10px 12px;
+    pointer-events: none;
+}
+.rs-txt-adjs i {
+    margin-right: 518px;
+}
+.checkbox-adjs input[type=checkbox] {
+    margin: 4px 48px 0px !important;
+}
+
+.modal-lg
+{
+    width: 1200px;
+    margin-left: -196px;
+    overflow-y: scroll;
+    max-height: 85%;
+ }
+ .modal-popup-FR
+ {
+     margin-left: -298px !important;
+ }
+ .modal-popup-FR-compounder
+ {
+     margin-left: -247px !important;
+ }
+ .modal-lg-popup
+ {
+      width: 1200px;
+    margin-left: -196px;
+    overflow-y: scroll;
+    max-height: 85%;
+ }
+ .maxheight
+ {
+ 	height: 500px;
+ 	overflow:auto;	 
+ }
+.asterisk_input:after {
+    content: " *";
+    color: #e32;
+    position: absolute;
+    margin: 8px 0px 0px 4px;
+    font-size: large;
+    padding: 0 2px 0 0;
+}
+@-moz-document url-prefix() {
+   .asterisk_input:after {
+        margin:8px 12px 0px -696px;
+    }
+}
+@-moz-document url-prefix() {
+   .asterisk_input1:after {
+        margin:8px 0px 0px -496.5px;
+    }
+}
+.Agetxt1
+{
+	width:100%;
+}
+.Agetxt 
+{
+    width:80% !important;
+}
+.fullmenualign
+{
+	margin-left: 26px;
+margin-right: -147px;
+}
+.change-err
+{
+	  text-align: center;
+font-size: 16px;
+color: red;
+margin-left: 450px;
+margin-top: -29px;
+font-weight: 500;
+}
+/*---------------------
+30 may change
+-------------------------*/
+.page-title-breadcrumb .page-header .page-title {
+    margin-left: -63%;
+}
+.cho-lbl-adjst
+{
+margin-left: -3%;
+}
+.viewcho-lbl-adjst
+{
+margin-left: -3%;
+}
+.viewFamilyth-lbl-adjst
+{
+	
+}
+.viewth-lbl-adjst
+{
+}
+.viewalch-lbl-adjst
+{
+}
+.th-lbl-adjst
+{
+margin-left: -3%;
+}
+
+.hyp {
+    left: 1%;
+}
+.Chol {
+    left: -2%;
+}
+.chol_chk
+{
+    left:-2%;
+}
+.TH_chk {
+    left: -2%;
+}
+.TH_chkk
+{
+    left:-2%;
+}
+.IHD_chk {
+    left: 1%;
+}
+.Diabetes_chk {
+    left: -2%;
+}
+.viewcho-lbl-adjst
+{
+}
+.viewFamilyth-lbl-adjst
+{
+	
+}
+.viewalch-lbl-adjst
+{
+}
+.viewth-lbl-adjst
+{
+}
+.Asthma_chk {
+    left: -2%;
+}
+.Family_Diabetes_chk {
+    left: -2%;
+}
+.Family_Asthma_chk {
+    left: -2%;
+}
+.Family_hyp {
+    left: 1%;
+}
+.Family_IHD_chk {
+    left: 1%;
+}
+.Family_TH_chk {
+    left: -2%;
+}
+
+.lbl-adjst
+{
+	margin-left: 0px;	
+}
+.lbl-adjst2
+{
+	margin-left: 0px;	
+}
+.sublabelFull
+{
+	margin-left: 9px;
+}
+.sublabelFull2
+{
+	margin-left: 9px;
+}
+.lbl_amt_paid
+{
+    margin-left:15px;
+}
+.txt-box-adjst
+{
+	margin-left:4%;
+}
+.txt-box-adjst2
+{
+	margin-left:4%;
+}
+.ptxt-box-adjst
+{
+	margin-left:4%;
+}
+.lable-adjs {
+margin-right: -36px;
+}
+
+.phyp {
+    left: 1%;
+}
+.pChol {
+    left: 0%;
+}
+.pTH_chk {
+    left: -3%;
+}
+.pIHD_chk {
+    left: 1%;
+}
+.pDiabetes_chk {
+    left: -2%;
+}
+.pAsthma_chk {
+    left: -2%;
+}
+.pFamily_Diabetes_chk {
+    left: -2%;
+}
+.pFamily_Asthma_chk {
+    left: -4%;
+}
+.pFamily_hyp {
+    left: 1%;
+}
+.pFamily_IHD_chk {
+    left: -1%;
+}
+.pFamily_TH_chk {
+    left: -2%;
+}
+/*------------------------------
+ 30 may 2016 docor change 
+--------------------------------*/
+.Pp-hyp-lbl-adjs{
+	margin-left:8%;
+}
+
+.Pp-hyp-chk{
+	margin-left: 3%;
+}
+.pPp-hyp-chk{
+	margin-left: 3%;
+}
+.Pp-Diab-lbl-adjs{
+	margin-left: -3%;
+}
+.Pp-Diab-chk{}
+.Pp-Cho-lbl-adjs{
+	margin-left: -3%;
+}
+.Pp-Cho-chk
+{
+    margin-left:2px;    
+}
+.pPp-Cho-chk
+{
+    margin-left:2px;    
+}
+.Pp-Smok-lbl-adjs{}
+.Ppp-Smok-lbl-adjs
+{
+	margin-left: 8%;}
+.Pp-Toba-lbl-adjs
+{
+	margin-left: -3%;
+}
+.Pp-Alch-lbl-adjs
+{
+	margin-left: -3%;
+}
+.Pp-Smok-chk 
+{
+	margin-left: 3%;
+}
+.pPp-Smok-chk 
+{
+	margin-left: 3%;
+}
+.Pp-Toba{}
+.Pp-Alch{}
+.pPp-Alch{}
+.CompDash-heading
+{
+	margin-left: -50% !important;	
+
+}
+ .txtDivBP
+ {
+ 	width:12%;
+ }
+.hyp-adjst
+	{
+		margin-left:2%;
+	}
+	.ihd-adjst
+	{
+	  margin-left:2%;
+	}
+	.smoke-adjst
+	{
+	  margin-left:2%;
+	}
+	
+	.hyp-adjst2
+	{
+		margin-left:-2%;
+	}
+	.vhyp-adjst2
+	{
+		margin-left:-2%;
+	}
+	.vihd-adjst2
+	{
+		
+	}
+	.fhyp-adjst2   /* varsha  09june 16*/
+	{
+		margin-left:-2%;
+	}
+	.ihd-adjst2
+	{
+	  margin-left:-2%;
+	}
+	.fihd-adjst2   /* varsha  09june 16*/
+	{
+	  margin-left:-2%;
+	}
+	.phyp-adjst
+	{
+		margin-left:2%;
+	}
+	.pihd-adjst
+	{
+	  margin-left:2%;
+	}
+	.psmoke-adjst
+	{
+	  margin-left:2%;
+	}
+	
+	.phyp-adjst2
+	{
+		margin-left:-2%;
+	}
+	.fphyp-adjst2
+	{
+		margin-left:-2%;
+	}
+	.pihd-adjst2
+	{
+	  margin-left:-2%;
+	}
+	.pTobacco_chk
+	{
+	    left:-2%;
+	}
+	.pAlcohol_chk
+	{
+	    left:-3%;
+	}
+	.btn-submit
+{
+    margin-left:538px;
+}
+#topbar .navbar-top-links li > a
+ {
+ }
+ .txt_amount_paid
+{
+   
+}
+}
+
+
+/**************************/
+@media only screen and (min-width : 992px) and (max-width : 1024px)
+{
+    
+    .txtDivBP
+ {
+ 	width:12%;
+ }
+.right-inner-addon i {
+    position: absolute;
+    right: 547px;
+    padding: 10px 12px;
+    pointer-events: none;
+}
+
+
+/*varsha 24june homepage*/
+
+.contentTxt {
+    background-color: #f7f7f7;
+    border: 1px solid #cec596;
+    border-radius: 5px;
+    margin: 0 -15px 16px;
+    padding: 5px;
+}
+
+.lbl_amt_paid
+{
+    margin-left:13px;
+}
+#topbar .navbar-top-links li > a
+ {
+ }
+
+.rs-txt-adjs i {
+    margin-right: 409px;
+}
+.checkbox-adjs input[type=checkbox] {
+    margin: 4px 48px 0px !important;
+}
+
+#collapseExample3 input[type=checkbox] {
+    margin: 4px 30px 0px !important;
+}
+ /******************27 april 2016 change*******************/
+  
+  
+  .modal-lg
+    {
+        width: 950px;
+        overflow-y: scroll;
+        margin-left: -77px;
+        max-height: 85%;
+    }
+    .modal-lg-popup
+    {
+        width: 950px;
+        overflow-y: scroll;
+        margin-left: -77px;
+        max-height: 85%;
+    }
+    .maxheight
+ {
+ 	height: 500px;
+ 	 overflow:auto;	 
+ }
+    .btn-view-Reg
+    {
+      margin-left : 22px;
+    }
+    
+    #collapseExample3d input[type=checkbox] {
+    margin: 4px 36px 0px !important;
+  }
+    .lbl-adjs
+    {
+    margin-left:0px;
+     }
+    .lbl-adjss
+    {
+       margin-left: -31px;
+    }
+    .lbl-adjs1
+    {
+         margin-left:0px;
+    }
+    .lbl-ihd
+    {
+        margin-left: 15px;
+    }
+.asterisk_input:after {
+    content: " *";
+    color: #e32;
+    position: absolute;
+    margin: 8px 0px 0px 4px;
+    font-size: large;
+    padding: 0 2px 0 0;
+}
+.asterisk_input1:after {
+    content: " *";
+    color: #e32;
+    position: absolute;
+    margin: 7px 0px 0px 4px;
+    font-size: large;
+    padding: 0 2px 0 0;
+}
+@-moz-document url-prefix() {
+   .asterisk_input:after {
+        margin:8px 12px 0px -578px;
+    }
+}
+@-moz-document url-prefix() {
+   .asterisk_input1:after {
+        margin:8px 0px 0px -412.5px;
+    }
+    
+}
+.Agetxt1
+{
+	width:100%;
+}
+.btn-submit
+{
+    margin-left:420px;
+}
+.fullmenualign
+{
+	margin-left: 38px;
+margin-right: -135px;
+}
+.change-err
+{
+	  text-align: center;
+font-size: 16px;
+color: red;
+margin-left: 450px;
+margin-top: -29px;
+font-weight: 500;
+}
+/*---------------------
+30 may change
+-------------------------*/
+.page-title-breadcrumb .page-header .page-title {
+    margin-left: -53%;
+}
+.hyp-lbl-adjst
+{
+	    margin-left: 2%;
+}
+.ihd-lbl-adjst
+{
+	    margin-left: 2%;
+}
+
+.hyp {
+    left: 1%;
+}
+.Chol {
+    left: -2%;
+}
+.chol_chk
+{
+    left:-2%;
+}
+.TH_chk {
+    left: -2%;
+}
+.TH_chkk
+{
+    left:-2%;
+}
+.IHD_chk {
+    left: 1%;
+}
+.Diabetes_chk {
+    left: -2%;
+}
+.viewcho-lbl-adjst
+{
+}
+.viewFamilyth-lbl-adjst
+{
+	
+}
+.viewFamilycho-lbl-adjst
+{
+}
+.viewalch-lbl-adjst
+{
+}
+.viewth-lbl-adjst
+{
+}
+.Asthma_chk {
+    left: -2%;
+}
+.Family_Diabetes_chk {
+    left: -2%;
+}
+.Family_Asthma_chk {
+    left: -2%;
+}
+.Family_hyp {
+    left: 1%;
+}
+.Family_IHD_chk {
+    left: 1%;
+}
+.Family_TH_chk {
+    left: -2%;
+}
+
+.lbl-adjst
+{
+	margin-left: 0px;	
+}
+.lbl-adjst2
+{
+	margin-left: 0px;	
+}
+.sublabelFull
+{
+	margin-left: 9px;
+}
+.sublabelFull2
+{
+	margin-left: 9px;
+}
+.txt-box-adjst
+{
+	margin-left:4%;
+}
+
+.ptxt-box-adjst
+{
+	margin-left:4%;
+}
+.txt-box-adjst2
+{
+	margin-left:4%;
+}
+.ptxt-box-adjst2
+{
+	margin-left:4%;
+}
+
+.phyp {
+    left: 1%;
+}
+.pChol {
+    left: -2%;
+}
+.pTH_chk {
+    left: -2%;
+}
+.pIHD_chk {
+    left: 1%;
+}
+.pDiabetes_chk {
+    left: -2%;
+}
+.pAsthma_chk {
+    left: -2%;
+}
+.pFamily_Diabetes_chk {
+    left: -2%;
+}
+.pFamily_Asthma_chk {
+    left: -2%;
+}
+.pFamily_hyp {
+    left: 1%;
+}
+.pFamily_IHD_chk {
+    left: 1%;
+}
+.pFamily_TH_chk {
+    left: -2%;
+}
+/*----------------------------
+	31 may 2016 change
+-----------------------------*/
+.btn-viewLabrep{ margin-left:1%; }
+.btn-prevVisitdtls{ margin-left:1%;}
+.btn-suggInvest{margin-left:-3%;}
+.btn-view-Reg{margin-left:4%;}
+
+.Pp-hyp-lbl-adjs{
+	margin-left:10%;
+}
+.Pp-Diab-lbl-adjs{
+	margin-left: -7%;
+}
+.Pp-Cho-lbl-adjs{
+	margin-left: -7%;
+}
+
+.Pp-hyp-chk{
+	margin-left: 8%;
+}
+.pPp-hyp-chk{
+	margin-left: 8%;
+}
+
+.Pp-Diab-chk
+{
+	margin-left: 2px;
+}
+
+.Pp-Cho-chk
+{
+	margin-left: 3.8%;
+}
+.pPp-Cho-chk
+{
+	margin-left: 3.8%;
+}
+.Pp-Smok-lbl-adjs
+{
+	margin-left: 2%;
+}
+.Ppp-Smok-lbl-adjs
+{
+	margin-left: 11%;
+}
+.Pp-Toba-lbl-adjs
+{
+	margin-left: -3%;
+}
+.Pp-Alch-lbl-adjs
+{
+	margin-left: -3%;
+}
+.Pp-Smok-chk 
+{
+	margin-left: 3%;
+}
+.pPp-Smok-chk 
+{
+	margin-left: 3%;
+}
+.Pp-Toba{}
+.Pp-Alch{}
+.CompDash-heading
+{
+	margin-left: -36% !important;	
+}
+.txt_amount_paid
+{
+    
+}
+}
+
+/***************************/
+@media only screen and (min-width: 768px) and (max-width: 991px) 
+{
+     .txtDivBP
+ {
+ 	width:12%;
+ }
+  .checkbox
+    {
+    padding-left: 3%;
+    }
+    .Diabetes_chk
+    {
+        left: 0px;
+    }
+    .viewcho-lbl-adjst
+{
+}
+.viewFamilyth-lbl-adjst
+{
+	
+}
+.viewFamilycho-lbl-adjst
+{
+}
+.viewalch-lbl-adjst
+{
+}
+.viewth-lbl-adjst
+{
+}
+    .Family_hyp
+{
+	left: 0%;
+}
+.hyp
+{
+	left: 0%;
+}
+.Chol
+{
+	left: 0%;
+}
+.chol_chk
+{
+    left:0%;
+}
+.IHD_chk
+{
+    left:0px;
+}
+.TH_chk
+{
+    left:0px;
+}
+.TH_chkk
+{
+    left:0px;
+}
+.Tobacco_chk
+{
+    left:0px;
+}
+.Tob_chk
+{
+    left:0px;
+}
+.ViewTob_chk
+{
+    left:0px;
+}
+.Smoking_chk
+{
+    left:0px;
+}
+.Alcohol_chk
+{
+    left:0px;
+}
+.Alc_chk
+{
+    left:0px;
+}
+.Family_Diabetes_chk
+{
+     left:0px;
+}
+.Family_IHD_chk
+{
+    left:0px;
+}
+.Family_TH_chk
+{
+    left:0px;
+}
+.Family_TH_chkk
+{
+    left:0px;
+}
+.Family_Asthma_chk
+{
+    left: 0%;
+}
+.Asthma_chk
+{
+    left: 0%;
+}
+
+.pDiabetes_chk
+ {
+        left: 18px;
+ }
+    .pFamily_hyp
+{
+	left: 0%;
+}
+.phyp
+{
+	left: 0%;
+}
+.pChol
+{
+	left: 0%;
+}
+.pIHD_chk
+{
+    left:0px;
+}
+.pTH_chk
+{
+    left:0px;
+}
+.pTobacco_chk
+{
+    left:0px;
+}
+.pSmoking_chk
+{
+    left:0px;
+}
+.pAlcohol_chk
+{
+    left:0px;
+}
+.pFamily_Diabetes_chk
+{
+     left:0px;
+}
+.pFamily_IHD_chk
+{
+    left:0px;
+}
+.pFamily_TH_chk
+{
+    left:0px;
+}
+.pFamily_Asthma_chk
+{
+    left: 0%;
+}
+.pAsthma_chk
+{
+    left: 0%;
+}
+
+.btn-submit
+{
+    margin-left:300px;
+}
+/*29 june*/
+.ptxt-box-adjst {
+    margin-left: 2%;
+}
+.ptxt-box-adjst2 {
+    margin-left: 2%;
+}
+.lable-adjs 
+{
+    margin-right: -14px;
+}
+
+.txt_amount_paid 
+{
+   
+    
+}
+/*************25 april change added************/
+.cm-txt-adjs {
+    float: right;
+    font-size: 12px;
+    margin-top: -30px;
+    margin-right: -1px;
+}
+.kg-txt-adjs
+{
+    float: right;
+    font-size: 12px;
+    margin-top: -30px;
+    margin-right: 1px;
+}
+   .right-inner-addon i
+   {
+    position : absolute;
+    right: 0px;
+    padding:0px;
+    pointer-events: none;
+
+   }
+   
+   .rs-txt-adjs i
+   {
+    margin-right: -8px;
+    font-size: 12px;
+   }
+    /*****************27 april 2016 changes***************/
+    .patient-btn-adjs
+    {
+       padding-bottom: 5px;
+       display: initial;
+    }    
+    
+    .asterisk_input2:after {
+    content: " *";
+    color: #e32;
+    position: absolute;
+    margin: 8px 0px 0px 5px;
+    font-size: large;
+    padding: 0 2px 0 0;
+    }
+    /*****patinetprofile textbox adjust******/
+    .adjs-textbox
+    {
+       padding-bottom: 5px;
+    }
+    
+   /****popup adjust****/
+    .page-content1
+    {
+     padding: 0px;
+     height: 2700px;
+    }
+     .modal-dialog
+    {
+        width: 650px;
+        margin: 50px auto;
+     }
+
+     .modal-lg
+    {
+        width: 460px;
+        overflow-y: scroll;
+        max-height: 85%;
+    }
+    .modal-lg-popup
+    {
+        width: 460px;
+        overflow-y: scroll;
+        max-height: 85%;
+    }
+    .maxheight
+ {
+ 	height: 500px;
+ 	overflow:auto;	  
+ }
+     .componder-popup-adjs
+     {
+      height: auto;  
+     }
+    .compounder-modal-dialog-adjs
+     { 
+         margin: 10px auto !important;
+         top: 0px !important;
+         max-height: 0% !important;
+     }
+   .asterisk_input:after {
+    content: " *";
+    color: #e32;
+    position: absolute;
+    margin: 0px 0px 0px -7px;
+    font-size: large;
+    padding: 0 2px 0 0;
+}  
+ .asterisk_input1:after {
+    content: " *";
+    color: #e32;
+    position: absolute;
+    margin: 0px 0px 0px -8px;
+    font-size: large;
+    padding: 0 2px 0 0;
+} 
+@-moz-document url-prefix() {
+   .asterisk_input:after {
+        margin:-2px 12px 0px -8px;
+    }
+}
+  @-moz-document url-prefix() {
+   .asterisk_input1:after {
+        margin:0px 0px 0px -8.5px;
+    }
+}
+.Agetxt1
+{
+	width:100%;
+}
+.fullmenualign
+{
+	margin-left: 20px;
+margin-right: 20px;
+}
+.change-err
+{
+	  text-align: center;
+font-size: 16px;
+color: red;
+margin-left: 450px;
+margin-top: -29px;
+font-weight: 500;
+}
+ .text-box-adjs 
+ {
+   margin-left: 0%;
+ }
+ 
+ .lbl-adjst2 
+ {
+    margin-left: 0px;
+ }
+ .lbl-lab-test
+ {
+     margin-left:6px;
+ }
+ #topbar .navbar-top-links li > a
+ {
+ }
+}
+
+/***************************/
+@media only screen and (min-width: 550px) and (max-width: 767px) 
+{
+	 .txtDivBP
+ {
+ 	width:12%;
+ }
+ .navbar-default .navbar-nav .open .dropdown-menu>li>a
+{
+    color:White !important;
+}
+.Agetxt {
+    width: 100% !important;
+}
+     .checkbox
+    {
+    padding-left: 4%;
+    }
+     .Diabetes_chk
+    {
+        left: 0px;
+    }
+    .viewcho-lbl-adjst
+{
+}
+.viewFamilyth-lbl-adjst
+{
+	
+}
+.viewFamilycho-lbl-adjst
+{
+}
+.viewalch-lbl-adjst
+{
+}
+.viewth-lbl-adjst
+{
+}
+    .Family_hyp
+{
+	left: 0%;
+}
+.hyp
+{
+	left: 0%;
+}
+.Chol
+{
+	left: 0%;
+}
+.chol_chk
+{
+    left:0%;
+}
+.IHD_chk
+{
+    left:0px;
+}
+.TH_chk
+{
+    left:0px;
+}
+.TH_chkk
+{
+    left:0px;
+}
+.Tobacco_chk
+{
+    left:0px;
+}
+.Tob_chk
+{
+    left: 0px;
+}
+.ViewTob_chk
+{
+    left: 0px;
+}
+.Smoking_chk
+{
+    left:0px;
+}
+.Alcohol_chk
+{
+    left:0px;
+}
+.Alc_chk
+{
+    left:0px;
+}
+.Family_Diabetes_chk
+{
+     left:0px;
+}
+.Family_IHD_chk
+{
+    left:0px;
+}
+.Family_TH_chk
+{
+    left:0px;
+}
+.Family_TH_chkk
+{
+    left:0px;
+}
+.Family_Asthma_chk
+{
+    left: 0%;
+}
+.Asthma_chk
+{
+    left: 0%;
+}
+
+.pDiabetes_chk
+    {
+        left: 0px;
+    }
+    .pFamily_hyp
+{
+	left: 0%;
+}
+.phyp
+{
+	left: 0%;
+}
+.pChol
+{
+	left: 0%;
+}
+.pIHD_chk
+{
+    left:0px;
+}
+.pTH_chk
+{
+    left:0px;
+}
+.pTobacco_chk
+{
+    left:0px;
+}
+.pSmoking_chk
+{
+    left:0px;
+}
+.pAlcohol_chk
+{
+    left:0px;
+}
+.pFamily_Diabetes_chk
+{
+     left:0px;
+}
+.pFamily_IHD_chk
+{
+    left:0px;
+}
+.pFamily_TH_chk
+{
+    left:0px;
+}
+.pFamily_Asthma_chk
+{
+    left: 0%;
+}
+.pAsthma_chk
+{
+    left: 0%;
+}
+.btn-submit
+{
+    margin-left:210px;
+}
+/*************25 april change added************/
+.kg-txt-adjs
+{
+    float: right;
+    font-size: 12px;
+    margin-top: -30px;
+    margin-right: 1px;
+}
+
+.cm-txt-adjs {
+    float: right;
+    font-size: 12px;
+    margin-top: -30px;
+    margin-right: -1px;
+}
+   .right-inner-addon i
+   {
+    position : absolute;
+    right: 0px;
+    padding:0px;
+    pointer-events: none;
+
+   }
+   
+   .rs-txt-adjs i
+   {
+    margin-right: -8px;
+    font-size: 12px;
+   }
+    /*****************27 april 2016 changes***************/
+ .patient-btn-adjs
+    {
+       padding-bottom: 5px;
+    }    
+.asterisk_input2:after {
+    content: " *";
+    color: #e32;
+    position: absolute;
+    margin: 8px 0px 0px 1%;
+    font-size: large;
+    padding: 0 2px 0 0;
+}
+
+ /*****patinetprofile textbox adjust******/
+    .adjs-textbox
+    {
+       padding-bottom: 5px;
+    }
+/****popup adjust****/
+    .page-content1
+    {
+     padding: 0px;
+     height: 2700px;
+    }
+     .modal-dialog
+    {
+        width: 500px;
+        /*margin: 50px auto;*/
+        /****29 april change css*****/
+        margin: 200px auto;
+     }
+     
+     .modal-lg
+    {
+        width: 460px;
+        overflow-y: scroll;
+        max-height: 85%;
+    }
+     .modal-lg-popup
+     {
+         width: 460px;
+        overflow-y: scroll;
+        max-height: 85%;
+     }
+    .maxheight
+ {
+ 	height: 340px;
+ 	overflow-y:scroll;
+ }
+    .componder-popup-adjs
+    {
+      height: 460px;  
+    }
+    .compounder-modal-dialog-adjs
+     { 
+         margin: 100px auto !important;
+     }
+     .asterisk_input:after {
+    content: " *";
+    color: #e32;
+    position: absolute;
+    margin: 0px 0px 0px -7px;
+    font-size: large;
+    padding: 0 2px 0 0;
+}
+.asterisk_input1:after {
+    content: " *";
+    color: #e32;
+    position: absolute;
+    margin: 0px 0px 0px -7px;
+    font-size: large;
+    padding: 0 2px 0 0;
+}
+@-moz-document url-prefix() {
+   .asterisk_input:after {
+        margin:0px 12px 0px -7px;
+    }
+}
+@-moz-document url-prefix() {
+   .asterisk_input1:after {
+        margin:0px 0px 0px -8.5px;
+    }
+}
+.Agetxt1
+{
+	width:100%;
+}
+.fullmenualign
+{
+	margin-left:20px;
+margin-right: 20px;
+}
+.change-err
+{
+	  text-align: center;
+font-size: 16px;
+color: red;
+margin-left: 365px;
+margin-top: -15px;
+font-weight: 500;
+}
+#topbar .navbar-top-links li > a
+ {
+ }
+ .txt_amount_paid
+{
+   
+}
+}
+/**************************/
+
+@media only screen and (min-width: 480px) and (max-width: 549px) {
+ .txtDivBP
+ {
+ 	width:12%;
+ }
+.navbar-default .navbar-nav .open .dropdown-menu>li>a
+{
+    color:White !important;
+}
+.Agetxt {
+    width: 100% !important;
+}
+     .checkbox
+    {
+    padding-left: 5%;
+    }
+     .Diabetes_chk
+    {
+      left: 0px;
+    }
+    .viewcho-lbl-adjst
+{
+}
+.viewFamilyth-lbl-adjst
+{
+	
+}
+.viewFamilycho-lbl-adjst
+{
+}
+.viewalch-lbl-adjst
+{
+}
+.viewth-lbl-adjst
+{
+}
+    .Family_hyp
+{
+	left: 0%;
+}
+.hyp
+{
+	left: 0%;
+}
+.Chol
+{
+	left: 0%;
+}
+.chol_chk
+{
+    left:0%;
+}
+.Asthma_chk
+{
+    left: 0%;
+}
+.IHD_chk
+{
+    left:0px;
+}
+.TH_chk
+{
+    left:0px;
+}
+.TH_chkk
+{
+    left:0px;
+}
+.Tobacco_chk
+{
+    left:0px;
+}
+.Tob_chk
+{
+    left:0px;
+}
+.ViewTob_chk
+{
+    left:0px;
+}
+.Smoking_chk
+{
+    left:0px;
+}
+.Alcohol_chk
+{
+    left:0px;
+}
+.Alc_chk
+{
+    left:0px;
+}
+.Family_Diabetes_chk
+{
+     left:0px;
+}
+.Family_IHD_chk
+{
+    left:0px;
+}
+.Family_TH_chk
+{
+    left:0px;
+}
+.Family_TH_chkk
+{
+    left:0px;
+}
+.Family_Asthma_chk
+{
+    left: 0%;
+}
+ .pDiabetes_chk
+    {
+      left: 0px;
+    }
+    .pFamily_hyp
+{
+	left: 0%;
+}
+.phyp
+{
+	left: 0%;
+}
+.pChol
+{
+	left: 0%;
+}
+.pAsthma_chk
+{
+    left: 0%;
+}
+.pIHD_chk
+{
+    left:0px;
+}
+.pTH_chk
+{
+    left:0px;
+}
+.pTobacco_chk
+{
+    left:0px;
+}
+.pSmoking_chk
+{
+    left:0px;
+}
+.pAlcohol_chk
+{
+    left:0px;
+}
+.pFamily_Diabetes_chk
+{
+     left:0px;
+}
+.pFamily_IHD_chk
+{
+    left:0px;
+}
+.pFamily_TH_chk
+{
+    left:0px;
+}
+.pFamily_Asthma_chk
+{
+    left: 0%;
+}
+.btn-submit
+{
+    margin-left:170px;
+}
+/*************25 april change added************/
+.kg-txt-adjs
+{
+    float: right;
+    font-size: 12px;
+    margin-top: -30px;
+    margin-right: 1px;
+}
+
+.cm-txt-adjs {
+    float: right;
+    font-size: 12px;
+    margin-top: -30px;
+    margin-right: -1px;
+}
+   .right-inner-addon i
+   {
+    position : absolute;
+    right: 0px;
+    padding:0px;
+    pointer-events: none;
+
+   }
+   
+   .rs-txt-adjs i
+   {
+    margin-right: -8px;
+    font-size: 12px;
+   }
+
+  /*****************27 april 2016 changes***************/
+ .patient-btn-adjs
+    {
+       padding-bottom: 5px;
+    }    
+.asterisk_input2:after {
+    content: " *";
+    color: #e32;
+    position: absolute;
+    margin: 8px 0px 0px 1%;
+    font-size: large;
+    padding: 0 2px 0 0;
+}
+ /*****patinetprofile textbox adjust******/
+    .adjs-textbox
+    {
+       padding-bottom: 5px;
+    }
+     /****popup adjust****/
+    .page-content1
+    {
+     padding: 0px;
+     height: 2700px;
+    }
+     .modal-dialog
+    {
+        width: 400px;
+        margin: 50px auto;
+     }
+     
+     .modal-lg
+    {
+        width: 420px;
+        overflow-y: scroll;
+        max-height: 85%;
+    }
+    .modal-lg-popup
+    {
+        width: 420px;
+        overflow-y: scroll;
+        max-height: 85%;
+    }
+    .maxheight
+ {
+ 	height: 270px;
+ 	overflow-y:scroll;
+ 	
+ }
+    .componder-popup-adjs
+    {
+      height: 460px;  
+    }
+    
+    .compounder-modal-dialog-adjs
+     {
+         margin: 100px auto !important;
+     }
+.asterisk_input:after {
+    content: " *";
+    color: #e32;
+    position: absolute;
+    margin: 0px 0px 0px -7px;
+    font-size: large;
+    padding: 0 2px 0 0;
+}
+.asterisk_input1:after {
+    content: " *";
+    color: #e32;
+    position: absolute;
+    margin: 0px 0px 0px -8px;
+    font-size: large;
+    padding: 0 2px 0 0;
+}
+@-moz-document url-prefix() {
+   .asterisk_input:after {
+        margin:0px 12px 0px -6px;
+    }
+}
+@-moz-document url-prefix() {
+   .asterisk_input1:after {
+        margin:0px 0px 0px -7.5px;
+    }
+}
+.Agetxt1
+{
+	width:100%;
+}
+.fullmenualign
+{
+	margin-left:20px;
+margin-right: 20px;
+}
+.change-err
+{
+	  text-align: center;
+font-size: 16px;
+color: red;
+margin-left: 227px;
+margin-top: -15px;
+font-weight: 500;
+}
+#topbar .navbar-top-links li > a
+ {
+     padding-right: 2px;
+    padding: 0px;
+ }
+ .txt_amount_paid
+{
+    
+}
+}
+
+/**************************/
+@media only screen and (min-width: 414px) and (max-width: 479px) {
+  .txtDivBP
+ {
+ 	width:12%;
+ }
+ .navbar-default .navbar-nav .open .dropdown-menu>li>a
+{
+    color:White !important;
+}
+.Agetxt {
+    width: 100% !important;
+}
+  .checkbox
+    {
+    padding-left: 6%;
+    }
+     .Diabetes_chk
+    {
+        left: 0px;
+    }
+    .viewcho-lbl-adjst
+{
+}
+.viewFamilyth-lbl-adjst
+{
+	
+}
+.viewFamilycho-lbl-adjst
+{
+}
+.viewalch-lbl-adjst
+{
+}
+.viewth-lbl-adjst
+{
+}
+    .Family_hyp
+{
+	left: 0%;
+}
+.hyp
+{
+	left: 0%;
+}
+.Chol
+{
+	left: 0%;
+}
+.chol_chk
+{
+    left:0%;
+}
+.Asthma_chk
+{
+    left: 0%;
+}
+.IHD_chk
+{
+    left:0px;
+}
+.TH_chk
+{
+    left:0px;
+}
+.TH_chkk
+{
+    left:0px;
+}
+.Tobacco_chk
+{
+    left:0px;
+}
+.Tob_chk
+{
+    left:0px;
+}
+.ViewTob_chk
+{
+    left:0px;
+}
+.Smoking_chk
+{
+    left:0px;
+}
+.Alcohol_chk
+{
+    left:0px;
+}
+.Alc_chk
+{
+    left:0px;
+}
+.Family_Diabetes_chk
+{
+     left:0px;
+}
+.Family_IHD_chk
+{
+    left:0px;
+}
+.Family_TH_chk
+{
+    left:0px;
+}
+.Family_TH_chkk
+{
+    left:0px;
+}
+.Family_Asthma_chk
+{
+    left: 0%;
+}
+
+ .pDiabetes_chk
+    {
+        left: 0px;
+    }
+    .pFamily_hyp
+{
+	left: 0%;
+}
+.phyp
+{
+	left: 0%;
+}
+.pChol
+{
+	left: 0%;
+}
+.pAsthma_chk
+{
+    left: 0%;
+}
+.pIHD_chk
+{
+    left:0px;
+}
+.pTH_chk
+{
+    left:0px;
+}
+.pTobacco_chk
+{
+    left:0px;
+}
+.pSmoking_chk
+{
+    left:0px;
+}
+.pAlcohol_chk
+{
+    left:0px;
+}
+.pFamily_Diabetes_chk
+{
+     left:0px;
+}
+.pFamily_IHD_chk
+{
+    left:0px;
+}
+.pFamily_TH_chk
+{
+    left:0px;
+}
+.pFamily_Asthma_chk
+{
+    left: 0%;
+}
+.btn-submit
+{
+    margin-left:118px;
+}
+/*************25 april change added************/
+.kg-txt-adjs
+{
+    float: right;
+    font-size: 12px;
+    margin-top: -30px;
+    margin-right: 1px;
+}
+
+.cm-txt-adjs {
+    float: right;
+    font-size: 12px;
+    margin-top: -30px;
+    margin-right: -1px;
+}
+   .right-inner-addon i
+   {
+    position : absolute;
+    right: 0px;
+    padding:0px;
+    pointer-events: none;
+
+   }
+   
+   .rs-txt-adjs i
+   {
+    margin-right: -8px;
+    font-size: 12px;
+   }
+ /*****************27 april 2016 changes***************/
+ .patient-btn-adjs
+    {
+       padding-bottom: 5px;
+    }    
+.asterisk_input2:after {
+    content: " *";
+    color: #e32;
+    position: absolute;
+    margin: 8px 0px 0px 1%;
+    font-size: large;
+    padding: 0 2px 0 0;
+}
+/*****patinetprofile textbox adjust******/
+    .adjs-textbox
+    {
+       padding-bottom: 5px;
+    }
+
+    
+     /****popup adjust****/
+    .page-content1
+    {
+     padding: 0px;
+     height: 2700px;
+    }
+     .modal-dialog
+    {
+        width: 320px;
+        margin: 50px auto;
+     }
+     
+     .modal-lg
+    {
+        width: 400px;
+        overflow-y: scroll;
+        max-height: 85%;
+    }
+    .modal-lg-popup
+    {
+        width: 400px;
+        overflow-y: scroll;
+        max-height: 85%;
+    }
+    .maxheight
+ {
+ 	height:300px;
+ 	overflow-y:scroll;
+ 	
+ }
+    .componder-popup-adjs
+    {
+      height: 460px;  
+    }
+    .compounder-modal-dialog-adjs
+     {
+     
+         margin: 100px auto !important;
+     }
+    
+     .test-popup-adjs
+    {
+   overflow: auto;
+   overflow-y: auto;
+   overflow-x: none;
+    max-height:100px;  
+   }
+   .asterisk_input:after {
+    content: " *";
+    color: #e32;
+    position: absolute;
+    margin: 0px 0px 0px -7px;
+    font-size: large;
+    padding: 0 2px 0 0;
+}
+.asterisk_input1:after {
+    content: " *";
+    color: #e32;
+    position: absolute;
+    margin: 0px 0px 0px -9px;
+    font-size: large;
+    padding: 0 2px 0 0;
+}
+@-moz-document url-prefix() {
+   .asterisk_input:after {
+        margin:0px 12px 0px -6px;
+    }
+}
+@-moz-document url-prefix() {
+   .asterisk_input1:after {
+        margin:0px 0px 0px -7.5px;
+    }
+}
+.Agetxt1
+{
+	width:100%;
+}
+.fullmenualign
+{
+	margin-left: 20px;
+margin-right: 20px;
+}
+.change-err
+{
+	  text-align: center;
+font-size: 16px;
+color: red;
+margin-left: 109px;
+margin-top: 12px;
+font-weight: 500;
+}
+#topbar .navbar-top-links li > a
+ {
+ }
+ .txt_amount_paid
+{
+   
+}
+}
+
+
+/**************************/
+
+@media only screen and (min-width: 361px) and (max-width: 413px) 
+{
+	 .txtDivBP
+ {
+ 	width:12%;
+ }
+    .navbar-default .navbar-nav .open .dropdown-menu>li>a
+{
+    color:White !important;
+}
+.Agetxt {
+    width: 100% !important;
+}
+   .checkbox
+    {
+    padding-left: 7%;
+    }
+    .Family_hyp
+{
+	left: 0%;
+}
+.hyp
+{
+	left: 0%;
+}
+.Chol
+{
+	left: 0%;
+}
+.chol_chk
+{
+    left:0%;
+}
+     .Diabetes_chk
+    {
+       left: 0px;
+    }
+    .viewcho-lbl-adjst
+{
+}
+.viewFamilyth-lbl-adjst
+{
+	
+}
+.viewFamilycho-lbl-adjst
+{
+}
+.viewalch-lbl-adjst
+{
+}
+.viewth-lbl-adjst
+{
+}
+.IHD_chk
+{
+    left:0px;
+}
+.Asthma_chk
+{
+    left: 0%;
+}
+.TH_chk
+{
+    left:0px;
+}
+.TH_chkk
+{
+    left:0px;
+}
+.Tobacco_chk
+{
+    left:0px;
+}
+.Tob_chk
+{
+    left:0px;
+}
+.ViewTob_chk
+{
+    left:0px;
+}
+.Smoking_chk
+{
+    left:0px;
+}
+.Alcohol_chk
+{
+    left:0px;
+}
+.Alc_chk
+{
+    left:0px;
+}
+.Family_Diabetes_chk
+{
+     left:0px;
+}
+.Family_IHD_chk
+{
+    left:0px;
+}
+.Family_TH_chk
+{
+    left:0px;
+}
+.Family_TH_chkk
+{
+    left:0px;
+}
+.Family_Asthma_chk
+{
+    left: 0%;
+}
+
+ .pFamily_hyp
+{
+	left: 0%;
+}
+.phyp
+{
+	left: 0%;
+}
+.pChol
+{
+	left: 0%;
+}
+     .pDiabetes_chk
+    {
+       left: 0px;
+    }
+.pIHD_chk
+{
+    left:0px;
+}
+.pAsthma_chk
+{
+    left: 0%;
+}
+.pTH_chk
+{
+    left:0px;
+}
+.pTobacco_chk
+{
+    left:0px;
+}
+.pSmoking_chk
+{
+    left:0px;
+}
+.pAlcohol_chk
+{
+    left:0px;
+}
+.pFamily_Diabetes_chk
+{
+     left:0px;
+}
+.pFamily_IHD_chk
+{
+    left:0px;
+}
+.pFamily_TH_chk
+{
+    left:0px;
+}
+.pFamily_Asthma_chk
+{
+    left: 0%;
+}
+.btn-submit
+{
+    margin-left:300px;
+}
+/*************25 april change added************/
+.kg-txt-adjs
+{
+    float: right;
+    font-size: 12px;
+    margin-top: -30px;
+    margin-right: 1px;
+}
+
+.cm-txt-adjs {
+    float: right;
+    font-size: 12px;
+    margin-top: -30px;
+    margin-right: -1px;
+}
+   .right-inner-addon i
+   {
+    position : absolute;
+    right: 0px;
+    padding:0px;
+    pointer-events: none;
+
+   }
+   
+   .rs-txt-adjs i
+   {
+    margin-right: -8px;
+    font-size: 12px;
+   }
+ /*****************27 april 2016 changes***************/
+     .patient-btn-adjs
+    {
+       padding-bottom: 5px;
+    }    
+.asterisk_input2:after {
+    content: " *";
+    color: #e32;
+    position: absolute;
+    margin: 8px 0px 0px 1%;
+    font-size: large;
+    padding: 0 2px 0 0;
+}
+/*****patinetprofile textbox adjust******/
+    .adjs-textbox
+    {
+       padding-bottom: 5px;
+    }
+    
+    /****popup adjust****/
+    .page-content1
+    {
+     padding: 0px;
+     height: 2700px;
+    }
+     .modal-dialog
+    {
+        width: 320px;
+        margin: 50px auto;
+     }
+     
+     .modal-lg
+        {
+            width: 340px;
+            overflow-y: scroll;
+            max-height: 85%;
+        }
+        .modal-lg-popup
+        {
+            width: 340px;
+            overflow-y: scroll;
+            max-height: 85%;
+        }
+        .maxheight
+ {
+ 	height: 250px;
+ 	overflow-y:scroll;
+ 	
+ }
+    .componder-popup-adjs
+    {
+      height: 460px;  
+    }
+    .compounder-modal-dialog-adjs
+     {
+              margin: 40px auto !important;
+     }
+      .test-popup-adjs
+    {
+   overflow: auto;
+   overflow-y: auto;
+   overflow-x: none;
+   max-height:100px;  
+   }
+.asterisk_input:after {
+    content: " *";
+    color: #e32;
+    position: absolute;
+    margin: 0px 0px 0px -7px;
+    font-size: large;
+    padding: 0 2px 0 0;
+}
+.asterisk_input1:after {
+    content: " *";
+    color: #e32;
+    position: absolute;
+    margin: 0px 0px 0px -8px;
+    font-size: large;
+    padding: 0 2px 0 0;
+}
+@-moz-document url-prefix() {
+   .asterisk_input:after {
+        margin:0px 12px 0px -6px;
+    }
+}
+@-moz-document url-prefix() {
+   .asterisk_input1:after {
+        margin:0px 0px 0px -7.5px;
+    }
+}
+.Agetxt1
+{
+	width:100%;
+}
+.fullmenualign
+{
+	margin-left: 20px;
+margin-right: 20px;
+}
+.change-err
+{
+	  text-align: center;
+font-size: 16px;
+color: red;
+margin-left: 100px;
+margin-top: 9px;
+font-weight: 500;
+}
+#topbar .navbar-top-links li > a
+ {
+ }
+ .txt_amount_paid
+{
+   
+}
+}
+
+/**************************/
+
+@media only screen and (min-width: 330px) and (max-width: 360px) 
+{
+	 .txtDivBP
+ {
+ 	width:12%;
+ }
+    .navbar-default .navbar-nav .open .dropdown-menu>li>a
+{
+    color:White !important;
+}
+.Agetxt {
+    width: 100% !important;
+}
+    .checkbox
+    {
+    padding-left: 8%;
+    }
+     .Diabetes_chk
+    {
+        left: 0px;
+    }
+    .viewcho-lbl-adjst
+{
+}
+.viewFamilyth-lbl-adjst
+{
+	
+}
+.viewFamilycho-lbl-adjst
+{
+}
+.viewalch-lbl-adjst
+{
+}
+.viewth-lbl-adjst
+{
+}
+    .Family_hyp
+{
+	left: 0%;
+}
+.hyp
+{
+	left: 0%;
+}
+.Chol
+{
+	left: 0%;
+}
+.chol_chk
+{
+    left:0%;
+}
+.IHD_chk
+{
+    left:0px;
+}
+.TH_chk
+{
+    left:0px;
+}
+.TH_chkk
+{
+    left:0px;
+}
+.Tobacco_chk
+{
+    left:0px;
+}
+.Tob_chk
+{
+    left:0px;
+}
+.ViewTob_chk
+{
+    left:0px;
+}
+
+.Smoking_chk
+{
+    left:0px;
+}
+.Alcohol_chk
+{
+    left:0px;
+}
+.Alc_chk
+{
+    left:0px;
+}
+.Family_Diabetes_chk
+{
+     left:0px;
+}
+.Family_IHD_chk
+{
+    left:0px;
+}
+.Family_TH_chk
+{
+    left:0px;
+}
+.Family_TH_chkk
+{
+    left:0px;
+}
+.Family_Asthma_chk
+{
+    left: 0%;
+}
+
+.pDiabetes_chk
+    {
+        left: 0px;
+    }
+    .pFamily_hyp
+{
+	left: 0%;
+}
+.phyp
+{
+	left: 0%;
+}
+.pChol
+{
+	left: 0%;
+}
+.pIHD_chk
+{
+    left:0px;
+}
+.pTH_chk
+{
+    left:0px;
+}
+.pTobacco_chk
+{
+    left:0px;
+}
+.pSmoking_chk
+{
+    left:0px;
+}
+.pAlcohol_chk
+{
+    left:0px;
+}
+.pFamily_Diabetes_chk
+{
+     left:0px;
+}
+.pFamily_IHD_chk
+{
+    left:0px;
+}
+.pFamily_TH_chk
+{
+    left:0px;
+}
+.pFamily_Asthma_chk
+{
+    left: 0%;
+}
+.btn-submit
+{
+    margin-left:98px;
+}
+/*************25 april change added************/
+.kg-txt-adjs
+{
+    float: right;
+    font-size: 12px;
+    margin-top: -30px;
+    margin-right: 1px;
+}
+
+.cm-txt-adjs {
+    float: right;
+    font-size: 12px;
+    margin-top: -30px;
+    margin-right: -1px;
+}
+   .right-inner-addon i
+   {
+    position : absolute;
+    right: 0px;
+    padding:0px;
+    pointer-events: none;
+
+   }
+   
+   .rs-txt-adjs i
+   {
+    margin-right: -8px;
+    font-size: 12px;
+   }
+
+ /*****************27 april 2016 changes***************/
+ .patient-btn-adjs
+    {
+       padding-bottom: 5px;
+    }    
+.asterisk_input2:after {
+    content: " *";
+    color: #e32;
+    position: absolute;
+    margin: 8px 0px 0px 1%;
+    font-size: large;
+    padding: 0 2px 0 0;
+}
+
+/*****patinetprofile textbox adjust******/
+    .adjs-textbox
+    {
+       padding-bottom: 5px;
+    }
+    
+    /****popup adjust****/
+    .page-content1
+    {
+     padding: 0px;
+     height: 2700px;
+    
+    }
+    
+    .modal-dialog
+    {
+        width: 320px;
+        margin: 50px auto;
+     }
+     .modal-lg
+        {
+            width: 320px;
+            overflow-y: scroll;
+            max-height: 85%;
+        }
+        .modal-lg-popup
+        {
+            width: 320px;
+            overflow-y: scroll;
+            max-height: 85%;
+
+
+        }
+        .maxheight
+ {
+ 	height: 300px;
+ 	overflow-y:scroll;
+ 	
+ }
+   .componder-popup-adjs
+    {
+      height: 460px;  
+    }
+    .compounder-modal-dialog-adjs
+     {
+              margin: 40px auto !important;
+     } 
+      .test-popup-adjs
+    {
+   overflow: auto;
+   overflow-y: auto;
+   overflow-x: none;
+   max-height:100px;  
+   }
+   .asterisk_input:after {
+    content: " *";
+    color: #e32;
+    position: absolute;
+    margin: 0px 0px 0px -7px;
+    font-size: large;
+    padding: 0 2px 0 0;
+} 
+@-moz-document url-prefix() {
+   .asterisk_input:after {
+        margin:0px 12px 0px -6px;
+    }
+}
+  @-moz-document url-prefix() {
+   .asterisk_input1:after {
+        margin:0px 0px 0px -7.5px;
+    }
+} 
+.Agetxt1
+{
+	width:100%;
+} 
+.fullmenualign
+{
+	margin-left:20px;
+margin-right: 20px;
+}
+.change-err
+{
+	  text-align: center;
+font-size: 16px;
+color: red;
+margin-left: 94px;
+margin-top: 9px;
+font-weight: 500;
+}
+#topbar .navbar-top-links li > a
+ {
+ }
+ .txt_amount_paid
+{
+   
+}
+}
+
+
+/**************************/
+@media only screen and (min-width: 300px) and (max-width: 329px) 
+{
+	 .txtDivBP
+ {
+ 	width:12%;
+ }
+   .navbar-default .navbar-nav .open .dropdown-menu>li>a
+{
+    color:White !important;
+}
+.txtdobadj {
+    margin-left: 0px;
+    width: 100%;
+}
+.lbldobadj1 {
+    margin-top: 7px;
+    margin-left: 0px;
+}
+
+.Agetxt {
+    width: 100% !important;
+}
+    .checkbox
+    {
+    padding-left: 9%;
+    }
+    .Family_hyp
+{
+	left: 0%;
+}
+.hyp
+{
+	left: 0%;
+}
+.Asthma_chk
+{
+    left: 0%;
+}
+.Chol
+{
+	left: 0%;
+}
+.chol_chk
+{
+    left:0%;
+}
+     .Diabetes_chk
+    {
+       left: 0px;
+    }
+    .viewcho-lbl-adjst
+{
+}
+.viewFamilyth-lbl-adjst
+{
+	
+}
+.viewFamilycho-lbl-adjst
+{
+}
+.viewalch-lbl-adjst
+{
+}
+.viewth-lbl-adjst
+{
+}
+    .IHD_chk
+    {
+        left:0px;
+    }
+    .TH_chk
+    {
+        left:0px;
+    }
+    .TH_chkk
+    {
+        left:0px;
+    }
+    .Tobacco_chk
+    {
+        left:0px;
+    }
+    .Tob_chk
+    {
+        left:0px;
+    }
+    .ViewTob_chk
+    {
+        left:0px;
+    }
+    .Smoking_chk
+    {
+        left:0px;
+    }
+    .Alcohol_chk
+    {
+        left:0px;
+    }
+    .Alc_chk
+    {
+        left:0px;
+    }
+    .Family_Diabetes_chk
+    {
+         left:0px;
+    }
+    .Family_IHD_chk
+    {
+        left:0px;
+    }
+    .Family_TH_chk
+    {
+        left:0px;
+    }
+    .Family_TH_chkk
+    {
+        left:0px;
+    }
+    .Family_Asthma_chk
+{
+    left: 0%;
+}
+   .pFamily_hyp
+{
+	left: 0%;
+}
+.phyp
+{
+	left: 0%;
+}
+.pAsthma_chk
+{
+    left: 0%;
+}
+.pChol
+{
+	left: 0%;
+}
+     .pDiabetes_chk
+    {
+       left: 0px;
+    }
+    .pIHD_chk
+    {
+        left:0px;
+    }
+    .pTH_chk
+    {
+        left:0px;
+    }
+    .pTobacco_chk
+    {
+        left:0px;
+    }
+    .pSmoking_chk
+    {
+        left:0px;
+    }
+    .pAlcohol_chk
+    {
+        left:0px;
+    }
+    .pFamily_Diabetes_chk
+    {
+         left:0px;
+    }
+    .pFamily_IHD_chk
+    {
+        left:0px;
+    }
+    .pFamily_TH_chk
+    {
+        left:0px;
+    }
+    .pFamily_Asthma_chk
+{
+    left: 0%;
+}
+.btn-submit
+{
+    margin-left:68px;
+}
+/*************25 april change added************/
+.kg-txt-adjs
+{
+    float: right;
+    font-size: 12px;
+    margin-top: -30px;
+    margin-right: 1px;
+}
+
+.cm-txt-adjs {
+    float: right;
+    font-size: 12px;
+    margin-top: -30px;
+    margin-right: -1px;
+}
+   .right-inner-addon i
+   {
+    position : absolute;
+    right: 0px;
+    padding:0px;
+    pointer-events: none;
+
+   }
+   
+   .rs-txt-adjs i
+   {
+    margin-right: -8px;
+    font-size: 12px;
+   }
+ /*****************27 april 2016 changes***************/
+     .patient-btn-adjs
+    {
+       padding-bottom: 5px;
+    }    
+.asterisk_input2:after {
+    content: " *";
+    color: #e32;
+    position: absolute;
+    margin: 8px 0px 0px 1%;
+    font-size: large;
+    padding: 0 2px 0 0;
+}
+    /*****patinetprofile textbox adjust******/
+    .adjs-textbox
+    {
+       padding-bottom: 5px;
+    }
+    /****popup adjust****/
+    .page-content1
+    {
+     padding: 0px;
+     height: 2800px;
+    }
+    
+    .modal-dialog
+    {
+        width: 300px;
+        margin: 105px auto;
+     }
+     
+     .modal-lg
+    {
+        width: 300px;
+        overflow-y: scroll;
+        max-height: 75%;
+    }
+    .modal-lg-popup
+    {
+        width: 300px;
+        overflow-y: scroll;
+        max-height: 85%;
+    }
+    .maxheight
+ {
+ 	height:250px;
+ 	overflow-y:scroll;
+ 	 
+ }
+   .componder-popup-adjs
+    {
+      height: 460px;  
+    }
+    .compounder-modal-dialog-adjs
+     {
+              margin: 40px auto !important;
+     }
+    
+    .test-popup-adjs
+    {
+   overflow: auto;
+   overflow-y: auto;
+   overflow-x: none;
+   max-height:100px;  
+   }
+   
+   .result-popup-adjs
+    {
+   overflow: auto;
+   overflow-y: auto;
+   overflow-x: none;
+   max-height:300px;
+    }
+    .modal-dialog {
+    width: 300px;
+    margin: 10px auto;
+    top: 10px !important;
+    }
+    .asterisk_input:after {
+    content: " *";
+    color: #e32;
+    position: absolute;
+    margin: 0px 0px 0px -7px;
+    font-size: large;
+    padding: 0 2px 0 0;
+}
+@-moz-document url-prefix() {
+   .asterisk_input:after {
+        margin:0px 12px 0px -6px;
+    }
+}
+@-moz-document url-prefix() {
+   .asterisk_input1:after {
+        margin:0px 0px 0px -7.5px;
+    }
+    .change-err
+{
+	  text-align: center;
+font-size: 16px;
+color: red;
+margin-left: 120px;
+margin-top: 9px;
+font-weight: 500;
+}
+#topbar .navbar-top-links li > a
+ {
+ }
+
+}
+.Agetxt1
+{
+	width:100%;
+}
+.fullmenualign
+{
+	margin-left: 20px;
+margin-right: 20px;
+}
+}
+
+.Page_Title_Align
+{
+  text-align: center;
+}
+
+.txtalignfee
+{
+	padding-left:2%;
+}
+
+
+
+.cls_left_aligned
+{
+	text-align:left;
+	    padding-left: 20px;
+    padding-right: 14px;
+}
+
+.cls_right_aligned
+{
+	text-align:right;
+	padding-right: 3px;
+	padding-left: 0px;
+}
+.displaynone
+
+{
+
+      display:none 
+
+}  
+
+.cls_center_aligned
+{
+	text-align:center;
+	
+}
+.cls_center_float
+{
+	text-align:center;
+	float:none;
+	padding-left:10px;
+}
+.cls_left_float
+{
+	float:left;
+	text-align:left;
+	padding-left:18px;
+    
+}
+.cls_left_float_manage
+{
+    float:left;
+	text-align:left;
+	padding-left:7px;
+	padding-bottom: 10px;
+}
+.cls_left_float_Plr
+{
+    float: right;
+    text-align:right;
+    padding-right: 20px;
+}
+
+.cls_right_float
+{
+	float:right;
+	text-align:right;
+	padding-right:7px;
+}
+.cls_right_float_contact
+{
+	float:left;
+	text-align:right;
+	padding-right:7px;
+	padding-left: 5px;
+}
+
+.Headerpad
+{
+        padding-left:2px;
+    padding-right: 1px;
+}
+.multitextarea {
+    resize: none;
+}
+.multitextHegihtM {
+        height: 61px !important;
+}
+.multitextarea_audio {
+   margin-left: 14px;
+    width: 93%;
+    resize: none;
+}
+.multitextarea_balance {
+    resize: none;
+  
+    width: 116%;
+   
+}
+
+.Agetxt
+{
+	width:75%;
+}
+
+.Agetxt1
+{
+	width:102%;
+}
+
+.lbl-or-adj
+{
+    margin-left:-35px;
+}
+.lbldobadj
+{
+    text-align:left;
+}
+/*.txtdobadj
+{
+    margin-left: -15px;
+    width: 27.5%;
+}*/
+.txtdobadj
+{
+    margin-left: -15px;
+    width: 30%;
+}
+.txtregyradj
+{
+    margin-top:13px;
+}
+
+.popupresult
+{
+    height:500%;
+}
+
+.lbldobadj1
+{
+    margin-top:7px;
+    margin-left: -17px;
+}
+.txtbpadj
+{
+   width:50%;
+}
+
+.btn-default {
+   
+     width: 100%;
+   background: -ms-linear-gradient(top, #ffffff 0%, #f6f6f6 47%, #ffffff 100%) !important;
+ background : linear-gradient(to bottom, #ffffff 0%, #f6f6f6 47%, #ffffff 100%) !important;
+   }
+
+ .multiselect-container {
+    width: 100%;
+    background: none ! important;
+    background-color:#ffffff  !important;
+    
+}
+
+.open > .multiselect-container
+{
+  overflow-x: scroll !important;
+  height: 567% ! important;
+  
+}
+.btn {
+  
+    }
+    
+.btn-group
+ {
+   width: 100%;   
+ }
+ 
+ .multiselect-container > li > a {
+   
+    padding: 10px 20px;
+    font-size: 14px;
+   font-family: Courier New !important;
+   color:Black !important;
+      background: -ms-linear-gradient(top, #ffffff 0%, #f6f6f6 47%, #ffffff 100%) !important;
+ background : linear-gradient(to bottom, #ffffff 0%, #f6f6f6 47%, #ffffff 100%) !important;
+
+}
+
+.dropdown-menu
+ {
+   width: 100% ! important;
+ }
+
+@-moz-document url-prefix() 
+{
+    .caret  {
+         margin-top: -5px ! important;
+     }
+}
+.multiselect-selected-text
+{
+  text-overflow: ellipsis ! important;
+    overflow: hidden ! important;
+    white-space: pre-line ! important;  
+     font-size: 14px;
+   font-family: Courier New !important;
+}
+.btn-adj
+{
+    float:right;
+}
+.txtobs-box-adjst
+{
+    margin-left:15%;
+}
+
+@media only screen and (min-width: 800px) and (max-width: 1280px) 
+{
+	 .txtDivBP
+ {
+ 	width:12%;
+ }
+    .lbldobadj {
+    text-align: left;
+    margin-left: -14px;
+}
+.txtdobadj {
+    margin-left: -22px;
+    width: 29% !important;
+}
+.lbl-patient-id-adj
+{
+    padding-left:0px;
+}
+.Smoking_chk {
+    left: 1%;
+}
+.Tob_chk {
+    left: -2%;
+}
+.chol_chk {
+    left: 0%;
+}
+.TH_chkk {
+    left: 0%;
+}
+.Alc_chk {
+    left: -3%;
+}
+.lbl-alc
+{
+    margin-left: -15px;
+}
+.lbl-th
+{
+    margin-left: -38px;
+}
+.lable-adjs-br {
+    margin-right: -15px;
+}
+.Family_TH_chkk {
+    left: 0%;
+}
+.lbldobadj1 {
+    margin-top: 7px;
+    margin-left: -14px;
+}
+}
+
+
+ 
+ @media only screen and (min-width: 1280px) and (max-width: 1280px) 
+{
+    .Smoking_chk {
+    left: 1%;
+    }
+    .Tob_chk {
+        left: -2%;
+    }
+    .Alc_chk {
+        left: -3%;
+    }
+    .lbl-alc
+    {
+        margin-left: -15px;
+    }
+    .fhyp-adjst2  
+	{
+		margin-left:2%;
+	}
+	.fihd-adjst2 {
+    margin-left: 2%;
+}
+}
+
+@media only screen and (min-width: 1680px) and (max-width: 1680px)
+{
+.txtdobadj {
+    margin-left: -29px !important;
+}
+}
+
+@media only screen and (min-width: 1440px) and (max-width: 1440px)
+{
+.txtdobadj {
+    margin-left: -18px;
+}
+}
+ @media only screen and (min-width: 800px) and (max-width: 800px) 
+ {
+
+    .chk_smoking {
+        left: 0%;
+    }
+
+    .chk_alc
+    {
+        left: 0%;
+    }
+    .chk_tob {
+    left: 0%;
+    }
+    .lbl-PV-adj {
+    margin-right: -16px !important;
+}
+.operator-modal-dialog-adjs {
+    width: 733px !important;
+}
+.compounder-modal-dialog-adjs {
+    margin: 100px -80px!important;
+}
+.txtdobadj {
+    margin-left: 0px;
+    width: 100% !important;
+}
+.lbldobadj1 {
+    margin-top: 7px;
+    margin-left: 13px;
+}
+}
+
+.FR_PP_Folder
+{
+    height: auto;
+    overflow-wrap: break-word;
+    min-height: 32px;
+    -ms-word-wrap: break-word;
+    word-break: break-all;
+}
+
+.FR-PP-fa-calender-label
+{
+    text-align:right;
+    padding-right:29px;
+}
+/* 14 Sept*/
+
+.header-fixed-top {
+            position: fixed;
+            top:0;
+            right: 0;
+            left: 0;
+            z-index: 1030;
+            background-color:#3e77ab;
+            min-height:50px;
+        }
+        .labelcolor
+        {
+        	color:#FFF !important;
+        	font-size: 20px;
+font-weight: 800;
+-webkit-border-radius: 0 !important;
+-moz-border-radius: 0 !important;
+border-radius: 0 !important;
+/*padding-left: 22%;*/
+        }
+        .labelchange
+        {
+        	color:#FFF !important;
+        	font-size: 14px;
+        	    border-radius: 0 !important;
+        	    Font-weight: bold;
+}
+        .labelchangesmall
+        {
+        	font-weight: normal;
+color: #FFF;
+font-size: 13px;
+        }
+        
+@media only screen and (min-width: 768px) and (max-width: 768px) 
+{
+.lbl-pervisdetail-adj 
+{
+    margin-right: -18px !important;
+}
+.operator-modal-dialog-adjs {
+    width: 733px !important;
+}
+.compounder-modal-dialog-adjs {
+    margin: 100px -80px!important;
+}
+.txtdobadj {
+    margin-left: 0px;
+    width: 100%;
+}
+.lbldobadj1 {
+    margin-top: 7px;
+    margin-left: 0px;
+}
+.viewlabpopup
+{
+    width: 560px !important;
+}
+.PVpopup
+{
+    width: 688px !important;
+    margin-left: 55px !important;
+}
+}
+
+@media only screen and (min-width: 300px) and (max-width: 768px) 
+{
+.PVPPLabel
+{
+    text-align:center !important;
+}
+.plabelFull 
+{
+    margin-left:0px;
+}
+.PVPPdate
+{
+    float:none !important; 
+}
+.txtdobadj {
+    margin-left: 0px;
+    width: 100%;
+}
+.lbldobadj1 {
+    margin-top: 7px;
+    margin-left: 0px;
+}
+}
+@media only screen and (min-width : 1024px) and (max-width : 1024px)
+{
+    .lbldobadj1 {
+    margin-top: 7px;
+    margin-left: 0px;
+}
+}
+.PR_textbox_adj
+{
+    width:272px !important;
+}
+
+.FR-textbox-adj
+{
+    width:50% !important;
+    float:right;
+}
+.mouseover
+{
+	color:Red;
+}
+
+.ViewMedicinePPBill
+{
+text-align: right;
+padding-right: 11px;
+}
+
+.success-message-box{
+    text-align: center;
+    font-size:16px;
+    color:Green;
+    padding-bottom: 1%;
+}
+.PPgridDays
+{
+    text-align: right;
+    padding-right: 2px;
+}
+
+.PP-color
+{
+    color: Orange;
+}
+
+ @media (min-width: 768px)
+ {
+     .RP_lblinstrution
+     {
+         padding-left: 10px;
+     }
+     .viewlabpopup
+     {
+         width:100%;
+         top:0% !important;
+     }
+     .ShiftPP
+     {
+         padding-left: 22px;
+     }
+ }
+ 
+ .report-receive-label
+ {
+     color: #228B22;
+    font-size: 13px;
+    font-weight: bolder;
+ }
+ 
+ .RP_pendingamount
+ {
+     color:Black;
+    font-size: 15px;
+    font-weight: 800;
+    margin-left: 4%;
+ }
+ 
+ .dashboard_adj
+ {
+    padding: 20px 0px 0px 0px !important;
+    overflow: auto;
+ }
+ 
+ .adjustddldashboard
+ {
+     padding:5px 0px;
+ }
+ 
+ .previousvisitdatesfont
+ {
+     font-size:10.5px;
+ }
+ .printpres
+ {
+     display:none;
+ }
+ .OD_MM_Label
+ {
+     color:Black;
+     font-size:20px;
+     font-weight:bold;
+ }
+ 
+ .OD_NN_Label
+ {
+     color:Green;
+     font-size:30px;
+     font-weight:bold;
+ }
+ 
+ .PP_Medicine_Popup
+ {
+     width:1096px !important;
+ }
+ 
+ .PP_lnk_buttn
+ {
+    font-size: 40px;
+    margin-left: -17px;
+ }
+ 
+ .RF_search_pat
+ {
+     margin-left:8px;
+ }
+ .ShowPrevDiv
+{
+    width:160px;
+	display: block;
+    position: absolute;
+    z-index: 100;
+    background-color: #FFF;
+    border:1px solid #DDD;
+    padding: 5px;
+}
+ .txtDivBP
+ {
+ 	width:12%;
+ }
+ .ddlimg
+ {
+ 	margin-top: 5px;
+ }
+ 
+ .setMarginPP
+ {
+     margin-bottom: 1px !important;
+ }
+ 
+ .lbl-black
+ {
+     font-weight:normal;
+     color:Black;
+ }
+ 
+ .PP-PrevPres-color
+ {
+     color:Gray;
+ }
+ 
+ .labelbold
+ {
+    font-weight: bold;
+   /* color:#075398;*/
+    font-size: 13px;
+     color:#000000;
+ }
+ 
+  .labelPatRegs
+ {
+     font-weight: bold;
+    color: #075398;
+    font-size: 22px;
+ 
+ }
+  .lblpatEegs
+ {
+    font-weight: bold;
+    color:#075398;
+    font-size: 15px;
+ }
+ 
+ 
+  .lblbold_patientReg
+ {
+    font-weight: bold;
+    color:#075398;
+    font-size: 22px;
+   
+ }
+ 
+  .labelbold-Assign
+ {
+    font-weight: bold;
+    color:#075398;
+    font-size: 16px;
+ }
+ .labelboldAmount
+ {
+ }
+ .mrg_Delete
+ {
+     margin:0px;
+     padding:0px;
+     font-weight: bold;
+     color: #075398;
+     font-size: 13px;
+ }
+ 
+ .PPlabelname
+ {
+     padding-left:0px !important;
+ }
+ 
+  .PPlabelPatRegs
+ {
+     padding-left:0px !important;
+     margin-left:4%;
+     width:20%;
+ }
+ 
+  .PPlabelPetsre
+ {
+     padding-left:0px !important;
+     margin-left:1%;
+      width:20%;
+ }
+ 
+ 
+ .PPlabelnewnextpatre
+ {
+     padding-left:0px !important;
+   
+
+ }
+ 
+ 
+ .PP_PrevPres_label
+ {
+     font-weight:normal;
+     color:Gray;
+    /* font-style:italic;
+     font-size:15px;*/
+ }
+.phypFR
+{
+	left: 1%;
+}
+
+.chkFR
+{
+    left: 0%;
+}
+
+.disclaimer
+{
+    color:Gray;
+    font-style:italic;
+     font-size:15px;
+}
+
+
+
+
+/****************MR CSS*********12 Dec 2016************/
+
+/**************Mobile media query***************/
+  
+  @media only screen and (min-width: 300px) and (max-width: 329px) {
+
+    .addreminderresp
+    {
+        padding-left: 9px;
+        margin-bottom: 6px;
+    }
+    
+    .addreminderbtnresp
+    {
+        margin-top: 10px;
+    }
+    
+    .tblresp
+    {
+        width:100%;
+    }
+    .addmedformresp
+    {
+        padding-left: 29px;
+        padding-right: 29px;
+    }
+    .popupresp
+    {
+        top: 1px !important;
+        margin-top: 90px !important;
+    }
+    .labelname1 
+    {
+        font-size: 10px;
+    }
+    
+}
+
+@media only screen and (min-width: 330px) and (max-width: 360px) {
+
+    .addreminderresp
+    {
+        padding-left: 9px;
+        margin-bottom: 6px;
+    }
+    .addreminderbtnresp
+    {
+        margin-top: 10px;
+    }
+    .tblresp
+    {
+        width:100%;
+    }
+    .addmedformresp
+    {
+        padding-left: 29px;
+        padding-right: 29px;
+    }
+    .popupresp
+    {
+        top: 1px !important;
+        margin-top: 35px !important;
+    }
+    #ContentPlaceHolder1_Panel3 .popupresp
+    {
+        top: 20px !important;
+        margin-top: 35px !important;
+    }
+    .labelname1 
+    {
+        font-size: 12px;
+    }
+}
+
+@media only screen and (min-width: 480px) and (max-width: 549px) {
+
+   .addreminderresp
+    {
+        padding-left: 9px;
+        margin-bottom: 6px;
+    }
+    .addreminderbtnresp
+    {
+       margin-top: 10px;
+    }
+    .tblresp
+    {
+        width:100%;
+    }
+    .addmedformresp
+    {
+        padding-left: 29px;
+        padding-right: 29px;
+    }
+    .popupresp
+    {
+        top: 1px !important;
+        margin-top: 15px !important;
+    }
+}
+
+@media only screen and (min-width: 361px) and (max-width: 479px) {
+
+    .addreminderresp
+    {
+        padding-left: 9px;
+        margin-bottom: 6px;
+    }
+    .addreminderbtnresp
+    {
+        margin-top: 10px;
+    }
+    .tblresp
+    {
+        width:100%;
+    }
+    .addmedformresp
+    {
+        padding-left: 29px;
+        padding-right: 29px;
+    }
+    .popupresp
+    {
+        top: 1px !important;
+        margin-top: 43px !important;
+    }
+    .labelname1 
+    {
+        font-size: 13px;
+    }
+    
+     
+}
+
+/*************Tab Media Query Start*************/
+@media only screen and (min-width : 991px) and (max-width : 1024px){
+   .addreminderresp
+    {
+        padding-left: 9px;
+        margin-bottom: 6px;
+    }
+    
+    .tblresp
+    {
+        width:100%;
+    }
+    .addmedformresp
+    {
+        padding-left: 106px;
+        padding-right: 1px;
+    }
+    .popupresp
+    {
+        top: 1px !important;
+        margin-top: 15px !important;
+    }
+    
+}
+
+@media only screen and (min-width: 768px) and (max-width: 990px) {
+.addreminderresp
+    {
+        padding-left: 9px;
+        margin-bottom: 6px;
+    }
+    
+    .tblresp
+    {
+        width:100%;
+    }
+    .addmedformresp
+    {
+        padding-left: 9px;
+        padding-right: 29px;
+    }
+    
+    .addreminderbtnresp
+    {
+        margin-right:10px;
+    }
+    .popupresp
+    {
+        top: 1px !important;
+        margin-top: 15px !important;
+    }
+
+}
+
+@media only screen and (min-width: 550px) and (max-width: 767px) {
+   
+.addreminderresp
+    {
+        padding-left: 9px;
+        margin-bottom: 6px;
+    }
+    .addreminderbtnresp
+    {
+        margin-top: 10px;
+    }
+    .tblresp
+    {
+        width:100%;
+    }
+    .addmedformresp
+    {
+        padding-left: 29px;
+        padding-right: 29px;
+    }
+    .popupresp
+    {
+        top: 171px !important;
+        margin-top: 15px !important;
+    }
+}
+
+/**************Desktop Media Query Start************/
+@media only screen and (min-width : 1681px) and (max-width : 1920px){
+	
+}
+
+@media only screen and (min-width : 1441px) and (max-width : 1680px){
+	
+}
+
+@media only screen and (min-width : 1400px) and (max-width : 1440px)
+{
+    .tblresp
+    {
+        width:73%;
+    }
+    .addmedformresp
+    {
+        padding-left: 29px;
+        padding-right: 51px;
+    }
+     .addreminderresp
+    {
+        padding-left: 9px;
+    }
+	
+}
+@media only screen and (min-width : 1367px) and (max-width : 1399px){
+	
+}
+@media only screen and (min-width : 1281px) and (max-width : 1366px){
+	.tblresp
+    {
+        width:74%;
+    }
+    .addmedformresp
+    {
+        padding-left: 29px;
+        padding-right: 36px;
+    }
+     .addreminderresp
+    {
+        padding-left: 9px;
+    }
+}
+
+@media only screen and (min-width : 1025px) and (max-width : 1280px){
+	.tblresp
+    {
+        width:75%;
+    }
+    .addreminderresp
+    {
+        padding-left: 9px;
+    }
+}
+
+.addreminderdiv
+{
+    background: white;
+    border: 1px Solid #ddd;
+    padding: 10px;
+    overflow: auto;
+    margin-bottom:5px;
+    box-shadow: 1px 1px 1px #999999;
+}
+
+.divaddmed
+{
+    background: white;
+    border: 1px Solid #ddd;
+    padding: 10px;
+    margin-bottom:5px;
+    box-shadow: 1px 1px 1px #999999;
+}
+
+.prevdatesdiv
+{
+    background: white;
+    border: 1px Solid #ddd;
+    padding: 3px 0px;
+    margin-bottom:3px;
+    box-shadow: 1px 1px 1px #999999;
+    overflow: auto;
+}
+
+.addmedrow
+{
+    margin-bottom: 5px;
+}
+
+#divaddmedPopUp .row
+{
+    margin-bottom:7px;
+}
+
+#divshowmed .row
+{
+    margin-bottom:7px;
+}
+
+#divaddmed .row
+{
+    margin-bottom:7px;
+}
+
+#divaddmedpp .row
+{
+    margin-bottom:7px;
+}
+
+ .lnkcursor
+  {
+      cursor:pointer;
+  }
+ 
+.header_margin
+{
+    margin-top:10px;
+}
+.imgbtn
+{
+    height: 25px;
+    width: 70px;
+    float: right;
+    border-width: 0px;
+}
+
+.dropdown-menu
+{
+    min-width: 200px !important;
+}
+
+.cursor
+{
+    cursor:pointer;
+}
+
+.previsitdatealign
+{
+    padding-left: 10px;
+    padding-right: 4px;
+}
+.textalign
+{
+    text-align:left;
+}
+.textright
+{
+    text-align:right;
+}
+ .lbl-orange {
+    font-weight: normal;
+    color: Orange;
+    font-size: 15px;
+}
+
+.lbl-orange-bold {
+    font-weight: bold;
+    color: Orange;
+    font-size: 15px;
+}
+
+.pro_img_adj img
+{
+    height:100px;    
+    margin:auto;
+}
+
+/************aniket****************/
+
+.dropdownshiftPP
+{
+    padding-left:62px;
+}
+.ClinicNameMarg
+{
+    margin-left: 18px;
+}
+
+.ClinicloginsMarg
+{
+    margin-left: 61px;
+}
+
+   
+.ShiftPopDateMrg
+{
+    margin-left: 68px;
+}
+.ShiftTimeMrg
+{
+  margin-left: 67px;
+}
+.CategoryMrg
+{
+   padding-left: 55px;
+}
+.MrgRole
+{
+  margin-left: 67px;
+}
+.LoginNameMrg
+{
+  padding-left: 32px;
+}
+.FyMrg
+{
+    padding-left: 100px;
+}
+
+/* Aniket 25 Jan 17 
+   Recive Payment   */
+
+.MargReason
+{
+  margin-left: 130px;
+}
+#labtestddl .ms-options-wrap > .ms-options
+{
+    text-align:left !important;
+}
+
+#ContentPlaceHolder1_dressing_ddl .ms-options-wrap > .ms-options
+{
+    text-align:left !important;
+}
+
+.daily_collection_row
+{
+    margin-bottom: 63px;
+}
+
+#ContentPlaceHolder1_ddl_Findings .ms-options-wrap > .ms-options
+{
+    text-align:left !important;
+}
+#ContentPlaceHolder1_ddl_Procedure .ms-options-wrap > .ms-options
+{
+    text-align:left !important;
+}
+
+#ContentPlaceHolder1_ddl_Findings ms-options-wrap > .ms-options > ul label
+{
+    text-align:left !important;
+}
+
+.lblImpression
+{
+    padding-left: 4px;
+}
+
+.col_impression
+{
+    text-align: left;
+    padding-left: 0px !important;
+}
+.col_impression_pp
+{
+    text-align: left;
+    padding-left: 0px !important;
+    margin-left: 15px;
+}
+.QRtextWidth
+{
+    width: 107%;
+        height: 43px;
+}
+.newpatientnextww
+{
+      height: 43px;
+      
+}
+.nefontsizepatreg
+{
+    font-size:22px !important;
+}
+.nefontsizelblsiz
+{
+    font-size:25px !important;
+}
+
+ .netpatRegView
+{
+       font-size: 25px !important;
+    font-weight: bold;
+}
+.fontcolorsizew
+{
+background-color: #808080;
+    color: white;
+}
+.newEnterpats
+{
+    width: 78%;
+       margin-left: 7%;
+    font-size: 22px;
+    margin-top: 0%;
+    font-weight: bold;
+}
+.QRtextWidthQuick
+{
+    width: 107%;
+}
+
+.QRDOBtext
+{
+    width: 115%;
+}
+
+
+.QR_FamilyFoldertxt
+{
+    right: 0px !important;
+}
+
+.paddingleft
+{
+    padding-left: 0px !important;
+}
+.paddingright
+{
+    padding-right: 0px;
+}
+
+.marginleftbalance
+{
+   margin-left:1px;
+}
+.popupdivtreat
+{
+   
+    margin-left: -170px !important ;
+}
+
+.offlineserialmenu
+{
+    margin-left: 8px !important ;
+}
+
+.paddingbothempty
+{
+    padding-left: 0px;
+    padding-right: 0px;
+}
+
+.paddingbothempty-Follow
+{
+    padding-left: 14px;
+    padding-right: 0px;
+}
+
+.cm_min
+{
+    margin-top: 8px !important;
+  
+}
+
+.cm_min_label
+{
+font-weight: 400 !important;
+font-size: 14px !important;
+}
+
+.cm_min_offline {
+    margin-top: 8px !important;
+    padding-left: 26px;
+}
+
+ .recivepopupalignterat
+{
+    margin-left: -183px !important;
+}
+
+.printreceiptpadding
+{
+    padding-left: 7px;
+}
+
+.printreceiptmargin
+{
+    margin-bottom: 15px;
+}
+
+.adjustcolmd1 .col-md-1
+{
+    padding-left:0px !important;
+    padding-right:0px !important;
+}
+
+.lineheightbullets
+{
+    line-height: 0px !important;
+    margin-bottom: 0px !important;
+    padding-bottom: 0px !important;
+    margin-top:0px !important;
+}
+
+.labelforReceipt {
+  color: #075398;
+  /*Font-weight:bold;*/
+  font-size:20px;
+}
+
+.wraptext
+{
+    word-wrap: break-word;
+}
+
+.color_red_icon
+{
+    font-weight: normal;
+    color:#bfbf01 !important;
+    font-size: 13px;
+}
+
+.wordbreakgrid
+{
+    word-break: break-all;
+}
+
+.print_labelsize
+{
+    font-size:13px !important;
+    
+}
+
+.plus-icon
+{
+    font-size: 20px !important;
+    margin-top: 10px !important;
+}
+
+.billing_popUp
+{
+    left:220.5px !important
+}
+
+.previous-plus-icon {
+    font-size: 20px !important;
+    margin-top: 3px !important;
+}
+
+.overflow
+{
+    overflow:auto !important;
+}
+
+.redcolor
+{
+    color:Red !important;
+}
+
+.greencolor
+{
+    color:Green !important;
+}
+
+.lblBlackname
+{
+    color:Black;
+    font-size: 14px;
+    font-weight: 800;
+}
+.adj_treatPlan_text
+{
+    width: 80%;
+    height: 24px;
+}
+
+.adj_treatPlan_ddl
+{
+    height: 48px;
+}
+.adj_treatPlan_btn
+{
+    margin-top:4px;
+}
+
+.adj_treatPlanPopUp
+{
+    width:150%;
+}
+
+.adj_treatPanel
+{
+     left: 124.5px !important;
+}
+
+.adj_treatPlan_maxwidth
+{
+    width:100%;
+}
+
+.adj_treatplan_rowmargin
+{
+    margin-top:5px;
+}
+
+.adj_EnterResultPU
+{
+    max-height: 600px !important;
+    overflow-y: scroll !important;
+}
+
+.adj_treatplan_errorborder
+{
+    border:1px solid red;
+}
+
+.adj_treatplan_date
+{
+right: 2px !important;
+}
+
+.displaybuttons
+{
+    display:none !important;
+}
+
+.adj_treatDetail_planDiv
+{
+    /*height: 152px;*/
+    overflow:auto;
+   max-height:152px;
+   /* overflow-y: scroll;*/
+    overflow-x: hidden;
+ }
+ 
+ .datepicker
+ {
+     padding:0px !important;
+     display:block !important;
+     position:initial !important;
+ }
+ 
+ .ui-datepicker{
+ font-size:10px;
+ height:10px;
+}
+
+.datepicker table tr td span
+{
+    height: 23px !important;
+    line-height: 23px !important;
+}
+
+.datepicker table tr td span:hover 
+{
+    background:none !important;
+}
+
+.radiobutton_adj
+{
+    height: 10mm;
+    width: 4mm;
+}
+ 
+ .fa_size
+ {
+     font-size: 15px !important;
+     margin-top:12px;
+ }
+ 
+
+textarea placeholder {
+  color:#999999;
+}
+
+.color_blue
+{
+    color:Blue !important;
+}
+
+.color_green
+{
+    color:Green !important;
+}
+
+.color_orange
+{
+    color:Orange !important;
+}
+.nocursor
+{
+    cursor:default;
+}
+
+textarea::-webkit-input-placeholder { font-size:13px !important; font-weight:normal; color:#D0D0D0 !important }
+textarea::-moz-placeholder { font-size:13px !important; font-weight:normal; color:#D0D0D0 !important} 
+textarea:-ms-input-placeholder { font-size:13px !important;font-weight:normal; color:#D0D0D0 !important} 
+
+input::-webkit-input-placeholder { font-size:13px !important; font-weight:normal; color:#D0D0D0 !important }
+input::-moz-placeholder { font-size:13px !important; font-weight:normal; color:#D0D0D0 !important} 
+input:-ms-input-placeholder { font-size:13px !important;font-weight:normal; color:#D0D0D0 !important} 
+
+.adj_Pat_Reg_PU_Title
+{
+    font-size:17px !important;
+}
+
+.adj_Pat_Reg_PU_Astrick
+{
+    left:2px !important;
+}
+
+.adj_astrick_Pat_Treat
+
+{
+    left: -2px !important;
+}
+
+.date_text_color
+{
+    color:#555 !important;
+}
+
+
+.adj_search_icon
+{
+    top:13px;
+}
+
+.adj_slash
+{
+    top:17px;
+}
+
+.maxheight_Fees {
+    height: 400px;
+    overflow: auto;
+}
+
+.aligndownload_icon
+{
+    margin-top: 30px;
+    font-size:24px !important;
+}
+
+ .breakword
+ {
+     word-break: break-word;
+ }
+ 
+ .adj_Lable_Font
+{
+    font-size:20px !important;
+    color:#075398;
+}
+
+.tooltip-dashboard
+{
+   overflow:hidden; 
+   text-overflow : ellipsis;
+   white-space :nowrap;
+   width:150px;   /*100px;*/
+   cursor: pointer;
+   padding-bottom: 1px;
+}
+
+.tooltip-dashboard-width
+{
+   overflow:hidden; 
+   text-overflow : ellipsis;
+   white-space :nowrap;
+   width:60px;   /*100px;*/
+   cursor: pointer;
+   padding-bottom: 1px;
+}
+
+
+.adj_PV_Popup_btns
+ {
+    font-size: 25px !important;
+    margin-top: 10px !important
+ }
+ 
+/*display: inline-block;
+    width: 0;
+    height: 0;
+    margin-left: 2px;
+    vertical-align: middle;
+    border-top: 4px solid;
+    border-right: 4px solid transparent;
+    border-left: 4px solid transparent;*/
+    
+    
+    .caret-right {
+float:right;
+  display: inline-block;
+  width: 0;
+  height: 0;
+  margin-left: 2px;
+  vertical-align: middle;
+  border-left: 4px solid;
+  border-bottom: 4px solid transparent;
+  border-top: 4px solid transparent;
+  margin-top:4px;
+
+}
+
+.adj_PV_grid_height
+{
+    height: 117px;
+    overflow: auto;
+}
+
+.align_PV_labels
+{
+    line-height:inherit !important;
+}
+
+.adj_height_textarea
+{
+    max-height:34px !important;
+}
+
+.FR_PopUpHeight
+{
+    height:60% !important;
+}
+
+.required::after {
+    content: "*";
+    color: #db4028;
+    left: 100%;
+    position: absolute;
+    font-size: 18px;
+    font-weight: normal;
+    margin-left:-128px;
+}
+
+
+
+.reqpage::after {
+    content: "*";
+    color: #db4028;
+    left: 47%;
+    position: absolute;
+    font-size: 18px;
+    font-weight: normal;
+}
+
+
+.regpagenam::after {
+    content: "*";
+    color: #db4028;
+    left: 15%;
+    position: absolute;
+    font-size: 18px;
+    font-weight: normal;
+}
+
+
+
+.regpagregss::after {
+    content: "*";
+    color: #db4028;
+    left: 17.5%;
+    position: absolute;
+    font-size: 18px;
+    font-weight: normal;
+}
+.adj_checkbox
+{
+    vertical-align: middle;
+}
+
+.ms-options-wrap > .ms-options > ul label 
+{
+    word-wrap: break-word;
+}
+
+.tooltip-OnExam
+{
+   overflow:hidden; 
+   text-overflow : ellipsis;
+   white-space :nowrap;
+   width:107px;  
+   cursor: pointer;
+   padding-bottom: 1px;
+}
+
+.PLR_style
+{
+    color: darkred !important;
+    font-weight: bold !important;
+  
+}
+
+.adj_Rebook_Popup
+{
+    width: 120% !important;
+    margin-left: 1% !important;
+    height: 67% !important;
+    top:10% !important;
+}
+
+.adj_Rebook_Popup1
+{
+    width: 160% !important;
+    margin-left: -28% !important;
+    height: 90% !important;
+    top: 4% !important;
+    overflow: hidden;
+}
+
+
+.adj_Rebook_Popup2
+{
+    width: 105% !important;
+    margin-left: 0% !important;
+    height: 100% !important;
+    top: 4% !important;
+   
+}
+
+.adj_Rebook_modalBody
+{
+    height: 107% !important;
+}
+.adj_Rebook_modalBody1
+{
+    height: 136% !important;
+}
+
+.setmenuwidth
+ {
+     width:260px !important;
+ }
+ 
+ .opr_Enter_Result
+ {
+     text-align: left;
+    font-size: 15px;
+ }
+
+
+ .lbl-RED
+ {
+     font-weight:normal;
+     color:Black;
+     text-decoration: underline;
+     font-size: 15px;
+ }
+
+.new-form-control{
+    font-size: 12px !important;
+    border-radius: 6px !important;
+    display: block;
+    width: 100%;
+    height: 34px;
+    padding:  7px 15px;
+    font-size: 14px;
+    line-height: 1.42857143;
+    color: #fff;
+    background-color: #1f68b1;
+    background-image: none;
+    border: 1px solid #ccc;
+}
+
+
+.new-input-width
+{
+        text-align: left;
+    
+        margin-left: 7px;
+    width: 106%;
+}
+
+.new-in-width
+{
+        text-align: left;
+        padding: 8px;
+    margin-left: -3px;
+    width: 106%;
+}
+
+

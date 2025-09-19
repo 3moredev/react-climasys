@@ -1,0 +1,828 @@
+﻿        
+        
+        
+        .header_margin
+        {
+            margin-top:10px;
+        }
+        .imgbtn
+        {
+            height: 25px;
+            width: 70px;
+            float: right;
+            border-width: 0px;
+        }
+        .Calendar
+        {
+            padding: 0;
+            background: white;
+            border: 1px solid #646464;
+        }
+        .NoDisplay
+        {
+            display: none;
+        }
+        .Calendar .ajax__calendar_footer
+        {
+            display: none;
+        }
+        .Calendar .ajax__calendar_active
+        {
+            color: #E51736;
+            font-weight: bold;
+            background-color: #ddd;
+            border: 2px solid grey;
+            font-size: 12px;
+        }
+        .Background
+        {
+            background-color: Black;
+            filter: alpha(opacity=90);
+            opacity: 0.8;
+        }
+        .Popup
+        {
+            width: 800px;
+            height: 500px;
+        }
+        .Popup_Rebook
+        {
+                width: 800px;
+                height: 781px;
+        }
+        
+        .popupmed
+        {
+             width: 800px;
+        }
+        .lbl
+        {
+            font-size: 16px;
+            font-style: italic;
+            font-weight: bold;
+        }
+        iframe
+        {
+            width: 800px;
+            height: 500px;
+        }
+        sup
+        {
+            position: relative;
+            font-size: 90%;
+            line-height: 0;
+            vertical-align: baseline;
+            top: -0.2em;
+        }
+        
+         .autocomplete_completionListElement
+        {
+            margin: 0px !important;
+            background-color: inherit;
+            color: windowtext;
+            border: buttonshadow;
+            border-width: 1px;
+            border-style: solid;
+            cursor: 'default';
+            overflow: auto;
+            height: 200px;
+            font-family: Tahoma;
+            font-size: small;
+            text-align: left;
+            list-style-type: none;
+        }
+        /* AutoComplete highlighted item */
+        .autocomplete_highlightedListItem
+        {
+            background-color: #ffff99;
+            color: black;
+            padding: 1px;
+        }
+        
+        /* AutoComplete item */
+        .autocomplete_listItem
+        {
+            background-color: window;
+            color: windowtext;
+            padding: 1px;
+        }
+        /**22 april'16 Added**/
+        @media only screen and (min-width: 241px) and (max-width: 319px)
+        {
+            iframe
+            {
+                width: 240px;
+                height: 700px;
+            }
+            .Popup
+            {
+                width: 240px;
+                height: 700px;
+            }
+            .modal-dialog
+            {
+                width: 240px;
+                margin: 10px auto;
+                margin-top: 144px;
+            }
+            table td span
+            {
+                font-size: 11px;
+            }
+            /*table td
+            {
+                width: 25%;
+            }*/
+        }
+        @media only screen and (min-width: 320px) and (max-width: 360px)
+        {
+            iframe
+            {
+                width: 320px;
+                height: 700px;
+            }
+            .Popup
+            {
+                width: 320px;
+                height: 700px;
+            }
+            .modal-dialog
+            {
+                width: 300px;
+                margin: 10px auto;
+                margin-top: 144px;
+            }
+            table td span
+            {
+                font-size: 12px;
+            }
+            /*table td
+            {
+                width: 25%;
+            }*/
+        }
+        @media only screen and (min-width: 361px) and (max-width: 400px)
+        {
+            iframe
+            {
+                width: 360px;
+                height: 700px;
+            }
+            .Popup
+            {
+                width: 360px;
+                height: 700px;
+            }
+            .modal-dialog
+            {
+                width: 350px;
+                margin: 10px auto;
+                margin-top: 144px;
+            }
+            table td span
+            {
+                font-size: 13px;
+            }
+            /*table td
+            {
+                width: 25%;
+            }*/
+        }
+        @media only screen and (min-width: 401px) and (max-width: 480px)
+        {
+            iframe
+            {
+                width: 400px;
+                height: 700px;
+            }
+            .Popup
+            {
+                width: 400px;
+                height: 700px;
+            }
+            .modal-dialog
+            {
+                width: 380px;
+                margin: 10px auto;
+                top: 128px;
+                margin-top: 113px;
+            }
+            table td span
+            {
+                font-size: 13px;
+            }
+            /*table td
+            {
+                width: 25%;
+            }*/
+        }
+        @media only screen and (min-width: 481px) and (max-width: 600px)
+        {
+            .Popup
+            {
+                width: 480px;
+                height: 700px;
+            }
+            iframe
+            {
+                width: 480px;
+                height: 700px;
+            }
+            .modal-dialog
+            {
+                width: 440px;
+                margin: 10px auto;
+                top: 128px;
+                margin-top: 113px;
+            }
+            table td span
+            {
+                font-size: 13px;
+            }
+            /*table td
+            {
+                width: 25%;
+            }*/
+        }
+        @media only screen and (min-width: 601px) and (max-width: 700px)
+        {
+            iframe
+            {
+                width: 600px;
+                height: 700px;
+            }
+            .Popup
+            {
+                width: 600px;
+                height: 700px;
+            }
+            .modal-dialog
+            {
+                width: 550px;
+                margin: 10px auto;
+                top: 44px;
+                margin-top: 113px;
+            }
+            table td span
+            {
+                font-size: 13px;
+            }
+            /*table td
+            {
+                width: 25%;
+            }*/
+        }
+        @media only screen and (min-width: 701px) and (max-width: 767px)
+        {
+            iframe
+            {
+                width: 700px;
+                height: 700px;
+            }
+            .Popup
+            {
+                width: 700px;
+                height: 700px;
+            }
+            
+            .modal-dialog
+            {
+                width: 600px;
+                margin: 10px auto;
+                top: 73px;
+                margin-top: 113px;
+            }
+            table td span
+            {
+                font-size: 14px;
+            }
+           /* table td
+            {
+                width: 25%;
+            }*/
+        }
+        @media only screen and (min-width: 768px) and (max-width: 992px)
+        {
+            iframe
+            {
+                width: 768px;
+                height: 700px;
+            }
+            .modal-dialog
+            {
+                width: 600px;
+                margin: 10px auto;
+                top: 128px;
+                margin-top: 113px;
+            }
+            table td span
+            {
+                font-size: 14px;
+            }
+            /*table td
+            {
+                width: 25%;
+            }*/
+        }
+        
+         @media (min-width: 768px)
+        {
+            .operator-modal-dialog-adjs
+            {
+                width: 850px !important;
+                margin: 60px -126px;
+            }
+        
+            .enter-result-modal-adj
+            {
+                width: 835px;
+                margin: 5px -118px;
+                top:1px !important;
+                height:500px;
+               
+            }
+        }
+        
+ 
+ .loginV2
+{
+    padding-bottom:20px !important;
+    padding-left:20px !important;
+}
+
+.chkshiftPP
+{
+    padding-left:0px;
+}
+.dropdownshiftPP
+{
+    padding-left:9px;
+}
+
+.disclaimer {
+    color: Gray;
+    font-style: italic;
+    font-size: 15px;
+}
+
+hr.style5 {
+    border: 0;
+    height: 0;
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+#TblSymptom td
+{
+    font-weight: normal;
+color: #075398;
+font-size: 13px;
+color:Black !important;
+}
+
+#tblDressing td
+{
+    font-weight: normal;
+color: #075398;
+font-size: 13px;
+color:Black !important;
+}
+
+#tblDisease td
+{
+    font-weight: normal;
+color: #075398;
+font-size: 13px;
+color:Black !important;
+}
+
+#tblMedicine td
+{
+    font-weight: normal;
+color: #075398;
+font-size: 13px;
+color:Black !important;
+}
+#tblTest td
+{
+    font-weight: normal;
+    color: #075398;
+    font-size: 13px;
+}
+#tblPrescription td
+{
+    font-weight: normal;
+    color: #075398;
+    font-size: 13px;
+
+}
+
+#TblLab td
+{
+    font-weight: normal;
+    color: #075398;
+    font-size: 13px;
+
+}
+
+#tbladdmedicene td
+{
+    font-weight: normal;
+    color: #075398;
+    font-size: 13px;
+}
+#tbladdreminder td
+{
+    font-weight: normal;
+    color: #075398;
+    font-size: 13px;
+}
+#tblMRMedicine td
+{
+    font-weight: normal;
+    color: #075398;
+    font-size: 13px;
+}
+#tblreminder td
+{
+    font-weight: normal;
+    color: #075398;
+    font-size: 13px;
+}
+
+.Job_Location_ul
+        {
+            display: none;
+            width: 100%;
+            z-index: 9999999;
+            position: absolute;
+            max-height: 300px;
+            list-style-type: none;
+            background-color: #f8fcee;
+            padding-left: 10px;
+            padding-right: 0px;
+            padding-bottom: 0px;
+            padding-top: 0px;
+            margin: 0px 0px 5px 0px !important;
+            overflow: auto;
+            border-bottom: 1px solid #ccc;
+            border-left: 1px solid #ccc;
+            border-right: 1px solid #ccc;
+            background-color: White;
+            cursor: pointer;
+        }
+        
+  .lnkcursor
+  {
+      cursor:pointer;
+  }
+  
+  .tblprioritytext
+  {
+      width:100%;
+  }
+  .searchul
+    {
+        width:92%;
+    }
+    
+  .tblresponsive
+  {
+      overflow-x:hidden;
+  }
+    
+  /**************Mobile media query***************/
+  
+  @media only screen and (min-width: 300px) and (max-width: 329px) {
+
+    .addreminderresp
+    {
+        padding-left: 9px;
+        margin-bottom: 6px;
+    }
+    
+    .addreminderbtnresp
+    {
+        margin-top: 10px;
+    }
+    
+    .tblresp
+    {
+        width:100%;
+    }
+    .addmedformresp
+    {
+        padding-left: 29px;
+        padding-right: 29px;
+    }
+    .popupresp
+    {
+        top: 1px !important;
+        margin-top: 90px !important;
+    }
+    .labelname1 
+    {
+        font-size: 15px;
+    }
+    
+}
+
+@media only screen and (min-width: 330px) and (max-width: 360px) {
+
+    .addreminderresp
+    {
+        padding-left: 9px;
+        margin-bottom: 6px;
+    }
+    .addreminderbtnresp
+    {
+        margin-top: 10px;
+    }
+    .tblresp
+    {
+        width:100%;
+    }
+    .addmedformresp
+    {
+        padding-left: 29px;
+        padding-right: 29px;
+    }
+    .popupresp
+    {
+        top: 1px !important;
+        margin-top: 35px !important;
+    }
+    .labelname1 
+    {
+        font-size: 15px;
+    }
+}
+
+@media only screen and (min-width: 480px) and (max-width: 549px) {
+
+   .addreminderresp
+    {
+        padding-left: 9px;
+        margin-bottom: 6px;
+    }
+    .addreminderbtnresp
+    {
+       margin-top: 10px;
+    }
+    .tblresp
+    {
+        width:100%;
+    }
+    .addmedformresp
+    {
+        padding-left: 29px;
+        padding-right: 29px;
+    }
+    .popupresp
+    {
+        top: 1px !important;
+        margin-top: 15px !important;
+    }
+}
+
+@media only screen and (min-width: 361px) and (max-width: 479px) {
+
+    .addreminderresp
+    {
+        padding-left: 9px;
+        margin-bottom: 6px;
+    }
+    .addreminderbtnresp
+    {
+        margin-top: 10px;
+    }
+    .tblresp
+    {
+        width:100%;
+    }
+    .addmedformresp
+    {
+        padding-left: 29px;
+        padding-right: 29px;
+    }
+    .popupresp
+    {
+        top: 1px !important;
+        margin-top: 43px !important;
+    }
+    .labelname1 
+    {
+        font-size: 19px;
+    }
+    
+}
+
+/*************Tab Media Query Start*************/
+@media only screen and (min-width : 991px) and (max-width : 1024px){
+   .addreminderresp
+    {
+        padding-left: 9px;
+        margin-bottom: 6px;
+    }
+    
+    .tblresp
+    {
+        width:100%;
+    }
+    .addmedformresp
+    {
+        padding-left: 106px;
+        padding-right: 1px;
+    }
+    .popupresp
+    {
+        top: 1px !important;
+        margin-top: 15px !important;
+    }
+}
+
+@media only screen and (min-width: 768px) and (max-width: 990px) {
+.addreminderresp
+    {
+        padding-left: 9px;
+        margin-bottom: 6px;
+    }
+    
+    .tblresp
+    {
+        width:100%;
+    }
+    .addmedformresp
+    {
+        padding-left: 9px;
+        padding-right: 29px;
+    }
+    
+    .addreminderbtnresp
+    {
+        margin-right:10px;
+    }
+    .popupresp
+    {
+        top: 1px !important;
+        margin-top: 15px !important;
+    }
+
+}
+
+@media only screen and (min-width: 550px) and (max-width: 767px) {
+   
+.addreminderresp
+    {
+        padding-left: 9px;
+        margin-bottom: 6px;
+    }
+    .addreminderbtnresp
+    {
+        margin-top: 10px;
+    }
+    .tblresp
+    {
+        width:100%;
+    }
+    .addmedformresp
+    {
+        padding-left: 29px;
+        padding-right: 29px;
+    }
+    .popupresp
+    {
+        top: 171px !important;
+        margin-top: 15px !important;
+    }
+}
+
+/**************Desktop Media Query Start************/
+@media only screen and (min-width : 1681px) and (max-width : 1920px){
+	
+}
+
+@media only screen and (min-width : 1441px) and (max-width : 1680px){
+	
+}
+
+@media only screen and (min-width : 1400px) and (max-width : 1440px)
+{
+    .tblresp
+    {
+        width:73%;
+    }
+    .addmedformresp
+    {
+        padding-left: 29px;
+        padding-right: 51px;
+    }
+     .addreminderresp
+    {
+        padding-left: 9px;
+    }
+	
+}
+@media only screen and (min-width : 1367px) and (max-width : 1399px){
+	
+}
+@media only screen and (min-width : 1281px) and (max-width : 1366px){
+	.tblresp
+    {
+        width:74%;
+    }
+    .addmedformresp
+    {
+        padding-left: 29px;
+        padding-right: 36px;
+    }
+     .addreminderresp
+    {
+        padding-left: 9px;
+    }
+}
+
+@media only screen and (min-width : 1025px) and (max-width : 1280px){
+	.tblresp
+    {
+        width:75%;
+    }
+    .addreminderresp
+    {
+        padding-left: 9px;
+    }
+}
+
+@media (max-width: 1024px) {
+	
+}
+
+#TblTodaysAppointment td
+{
+    font-weight: normal;
+    font-size: 13px;
+    text-align: left;
+    padding-left: 7px;
+}
+
+#TblPrevMedicine td
+{
+    font-weight: normal;
+    font-size: 13px;
+    text-align: left;
+    padding-left: 7px;
+}
+
+.addreminderdiv
+{
+    background: white;
+    border: 1px Solid #ddd;
+    padding: 10px;
+    overflow: auto;
+    margin-bottom:5px;
+    box-shadow: 1px 1px 1px #999999;
+}
+
+.divaddmed
+{
+    background: white;
+    border: 1px Solid #ddd;
+    padding: 10px;
+    margin-bottom:5px;
+    box-shadow: 1px 1px 1px #999999;
+}
+
+.prevdatesdiv
+{
+    background: white;
+    border: 1px Solid #ddd;
+    padding: 5px;
+    margin-bottom:3px;
+    box-shadow: 1px 1px 1px #999999;
+    overflow: auto;
+}
+
+.addmedrow
+{
+    margin-bottom: 5px;
+}
+
+#divaddmedPopUp .row
+{
+    margin-bottom:7px;
+}
+
+#divshowmed .row
+{
+    margin-bottom:7px;
+}
+
+#divaddmed .row
+{
+    margin-bottom:7px;
+}
+
+#divaddmedpp .row
+{
+    margin-bottom:7px;
+}

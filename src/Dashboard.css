@@ -1,0 +1,57 @@
+﻿.bg
+{
+    background-image: url(../images/Kiosk/Kiosk_back.jpg);
+    background-repeat: no-repeat;
+    background-size: cover;
+}
+
+.circle
+{
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    border: 3px solid #99cfed;
+    padding: 0px;
+    background-color: transparent;
+    position: relative;
+}
+.touch
+{
+    background-color: #CA4200;
+}
+.center_align
+{
+    padding-top: 18%;
+}
+.circle .button_dash
+{
+    width: 135px;
+    height: 135px;
+    border-radius: 50%;
+    background-color: #99cfed;
+    font-size: 26px;
+    color: Black;
+    white-space: normal;
+    position: absolute;
+    transform: translate(3.1%,3.1%);
+    display: block;
+    border: none;
+    outline: none;
+    cursor: none;
+}
+.logo_image
+{
+    padding-top: 12%;
+    height: 41%;
+    width: 45%;
+}
+.image_size
+{
+    height: 90%;
+    width: 90%;
+}
+
+*
+{
+    cursor: none;
+}
