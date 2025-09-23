@@ -1,21 +1,21 @@
 import React, { useEffect } from 'react'
 import {
   Box,
-  Card,
-  CardContent,
   TextField,
   Button,
   Typography,
   Alert,
   CircularProgress,
-  Container,
-  Paper,
+  FormControlLabel,
+  Checkbox,
+  Link,
 } from '@mui/material'
 import GlobalWrapper from '../components/Layout/GlobalWrapper'
 import { useForm, Controller } from 'react-hook-form'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAppSelector, useAppDispatch } from '../store/hooks'
 import { login, clearError } from '../store/slices/authSlice'
+import '../login-styles.css'
 
 interface LoginFormData {
   loginId: string
@@ -59,28 +59,81 @@ export default function LoginPage() {
   }
 
   return (
-    <GlobalWrapper className="login-page-bg">
-      <Box
-        sx={{
-          minHeight: '100vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-      <Container maxWidth="sm">
-        <Paper elevation={10} className="login-form" sx={{ p: 4, borderRadius: 2 }}>
-          <Box textAlign="center" mb={4}>
-            <Typography variant="h4" component="h1" className="login-form-text" gutterBottom>
+    <div className="ptwikki-login-container">
+      {/* Left Section - Climasys Branding and Features */}
+      <div className="ptwikki-left-section">
+        {/* Medical Background Element */}
+        <div className="medical-cross"></div>
+        
+        <div className="ptwikki-welcome-content">
+          <div className="climasys-branding">
+            <Typography variant="h2" className="climasys-brand-name">
+              Climasys®
+            </Typography>
+            <Typography variant="h6" className="climasys-tagline">
+              A Step towards Smart Clinic...
+            </Typography>
+          </div>
+          
+          <div className="climasys-features">
+            <div className="feature-item">
+              <div className="feature-icon">👨‍⚕️</div>
+              <div className="feature-text">
+                Patient Specific <strong>EHR</strong>
+              </div>
+            </div>
+            
+            <div className="feature-item">
+              <div className="feature-icon">📝</div>
+              <div className="feature-text">
+                Comprehensive <strong>Digital prescription</strong>
+              </div>
+            </div>
+            
+            <div className="feature-item">
+              <div className="feature-icon">📊</div>
+              <div className="feature-text">
+                Real-time <strong>Dashboards and Financials</strong>
+              </div>
+            </div>
+            
+            <div className="feature-item">
+              <div className="feature-icon">💬</div>
+              <div className="feature-text">
+                Proactive <strong>Patient Communication</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+      </div>
+
+      {/* Right Section - Login Form */}
+      <div className="ptwikki-right-section">
+        <div className="ptwikki-form-container">
+          {/* Logo and Brand */}
+          <div className="ptwikki-logo-section">
+            <div className="ptwikki-logo">
+              <div className="ptwikki-logo-icon">C</div>
+            </div>
+            <Typography variant="h5" className="ptwikki-brand-text">
               Climasys
             </Typography>
-            <Typography variant="h6" className="login-form-text" color="textSecondary">
-              Clinic Management System
-            </Typography>
-          </Box>
+          </div>
 
-          <form onSubmit={handleSubmit(onSubmit)}>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Typography variant="h4" className="ptwikki-form-title">
+              Login
+            </Typography>
+          
+          {error && (
+            <Alert severity="error" onClose={() => dispatch(clearError())} className="ptwikki-error">
+              {error}
+            </Alert>
+          )}
+
+          <form onSubmit={handleSubmit(onSubmit)} className="ptwikki-form">
+            <div className="ptwikki-input-group">
+              <label className="ptwikki-label">Login ID*</label>
               <Controller
                 name="loginId"
                 control={control}
@@ -89,15 +142,21 @@ export default function LoginPage() {
                   <TextField
                     {...field}
                     fullWidth
-                    label="Login ID"
                     variant="outlined"
                     error={!!errors.loginId}
                     helperText={errors.loginId?.message}
                     disabled={loading}
+                    className="ptwikki-input"
+                    InputProps={{
+                      className: 'ptwikki-input-field'
+                    }}
                   />
                 )}
               />
-
+            </div>
+            
+            <div className="ptwikki-input-group">
+              <label className="ptwikki-label">Password*</label>
               <Controller
                 name="password"
                 control={control}
@@ -106,60 +165,66 @@ export default function LoginPage() {
                   <TextField
                     {...field}
                     fullWidth
-                    label="Password"
                     type="password"
                     variant="outlined"
                     error={!!errors.password}
                     helperText={errors.password?.message}
                     disabled={loading}
+                    className="ptwikki-input"
+                    InputProps={{
+                      className: 'ptwikki-input-field',
+                      endAdornment: (
+                        <span className="ptwikki-eye-icon">👁</span>
+                      )
+                    }}
                   />
                 )}
               />
+            </div>
 
-              {/* Hidden fields for API requirements */}
-              <Controller
-                name="todaysDay"
-                control={control}
-                render={({ field }) => (
-                  <input type="hidden" {...field} />
-                )}
-              />
-              <Controller
-                name="languageId"
-                control={control}
-                render={({ field }) => (
-                  <input type="hidden" {...field} />
-                )}
-              />
-
-              {error && (
-                <Alert severity="error" onClose={() => dispatch(clearError())}>
-                  {error}
-                </Alert>
+            {/* Hidden fields for API requirements */}
+            <Controller
+              name="todaysDay"
+              control={control}
+              render={({ field }) => (
+                <input type="hidden" {...field} />
               )}
+            />
+            <Controller
+              name="languageId"
+              control={control}
+              render={({ field }) => (
+                <input type="hidden" {...field} />
+              )}
+            />
 
-              <Button
-                type="submit"
-                variant="contained"
-                size="large"
-                fullWidth
-                disabled={loading}
-                sx={{ mt: 2 }}
-              >
-                {loading ? <CircularProgress size={24} /> : 'Sign In'}
-              </Button>
+            <Box className="ptwikki-options">
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    className="ptwikki-checkbox"
+                  />
+                }
+                label="Keep me signed in"
+                className="ptwikki-checkbox-label"
+              />
+              <Link href="#" className="ptwikki-forgot-link">
+                Forgot Password?
+              </Link>
             </Box>
-          </form>
 
-          <Box textAlign="center" mt={3}>
-            <Typography variant="body2" color="textSecondary">
-              © 2024 Climasys. All rights reserved.
-            </Typography>
-          </Box>
-        </Paper>
-      </Container>
-      </Box>
-    </GlobalWrapper>
+            <Button
+              type="submit"
+              variant="contained"
+              disabled={loading}
+              className="ptwikki-signin-btn"
+            >
+              {loading ? <CircularProgress size={24} /> : 'Login'}
+            </Button>
+          </form>
+        </div>
+      </div>
+    </div>
   )
 }
 
