@@ -14,6 +14,7 @@ import {
   MenuItem,
   Tabs,
   Tab,
+  Tooltip,
 } from '@mui/material'
 import GlobalWrapper from './GlobalWrapper'
 import {
@@ -29,8 +30,7 @@ import {
   AccountCircle,
 } from '@mui/icons-material'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { useSelector, useDispatch } from 'react-redux'
-import { RootState } from '../../store'
+import { useAppDispatch, useAppSelector } from '../../store/hooks'
 import { logout } from '../../store/slices/authSlice'
 
 interface MainLayoutProps {
@@ -38,27 +38,52 @@ interface MainLayoutProps {
 }
 
 const menuItems = [
-  { text: 'Dashboard', icon: <Dashboard />, path: '/' },
-  { text: 'Patients', icon: <People />, path: '/patients' },
-  { text: 'Appointments', icon: <CalendarToday />, path: '/appointments' },
-  { text: 'Visits', icon: <CalendarToday />, path: '/visits' },
-  { text: 'Lab Tests', icon: <Science />, path: '/lab' },
-  { text: 'Pharmacy', icon: <LocalPharmacy />, path: '/pharmacy' },
-  { text: 'Billing', icon: <Receipt />, path: '/billing' },
-  { text: 'Reports', icon: <Assessment />, path: '/reports' },
-  { text: 'Settings', icon: <Settings />, path: '/settings' },
+  { text: 'Dashboard', path: '/' },
+  { text: 'Opd',  path: '/appointment' },
+  { text: 'Opd Reports',  path: '/reports' },
+  { text: 'Opd Master', path: '#' },
+  { text: 'Settings', path: '/settings' },
 ]
+
+const subMenus: Record<string, Array<{ label: string; path: string }>> = {
+  'Dashboard': [
+    { label: 'Dashboard', path: '/' },
+  ],
+  'OPD': [
+    { label: "Today's Appointments", path: '/appointment' },
+    { label: 'OPD - Collect Patient Dues', path: '/billing?context=opd-dues' },
+    { label: 'Patient - Quick Registration', path: '/registration?type=quick' },
+    { label: 'Patient - Detailed Registration', path: '/registration?type=detailed' },
+    { label: 'Patient - Print Registration Form', path: '/registration?print=1' },
+  ],
+  'OPD Reports': [
+    { label: 'OPD – Daily Collection', path: '/reports?type=daily-collection' },
+    { label: 'OPD - Receipts', path: '/reports?type=receipts' },
+    { label: 'Dashboard & Reports', path: '/reports?type=dashboard' },
+  ],
+  'OPD Master': [
+    { label: 'Treatment Master', path: '/settings?t=treatment' },
+    { label: 'Prescription Master', path: '/settings?t=prescription' },
+    { label: 'Billing', path: '/billing' },
+  ],
+  'Settings': [
+    { label: 'Settings', path: '/settings' },
+  ],
+}
 
 export default function MainLayout({ children }: MainLayoutProps) {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const navigate = useNavigate()
   const location = useLocation()
-  const dispatch = useDispatch()
+  const dispatch = useAppDispatch()
   
-  const { user } = useSelector((state: RootState) => state.auth)
+  const { user } = useAppSelector((state) => state.auth)
   
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null)
+  const [masterEl, setMasterEl] = React.useState<null | HTMLElement>(null)
+  const [tabMenu, setTabMenu] = React.useState<{ index: number; anchor: HTMLElement } | null>(null)
+  const [now, setNow] = React.useState<Date>(new Date())
 
   const handleMenuClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget)
@@ -68,11 +93,31 @@ export default function MainLayout({ children }: MainLayoutProps) {
     setAnchorEl(null)
   }
 
+  const handleMasterOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setMasterEl(event.currentTarget)
+  }
+
+  const handleMasterClose = () => {
+    setMasterEl(null)
+  }
+
+  const openTabMenu = (index: number, event: React.MouseEvent<HTMLElement>) => {
+    setTabMenu({ index, anchor: event.currentTarget as HTMLElement })
+  }
+
+  const closeTabMenu = () => setTabMenu(null)
+
   const handleLogout = () => {
     dispatch(logout())
     navigate('/login')
     handleMenuClose()
   }
+
+  // Tick clock every 30s
+  React.useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 30000)
+    return () => clearInterval(id)
+  }, [])
 
   const handleNavigation = (path: string) => {
     navigate(path)
@@ -81,15 +126,18 @@ export default function MainLayout({ children }: MainLayoutProps) {
   // Get current tab index based on pathname
   const getCurrentTabIndex = () => {
     const currentPath = location.pathname
-    const index = menuItems.findIndex(item => item.path === currentPath)
-    return index >= 0 ? index : 0
+    if (currentPath === '/') return 0
+    if (currentPath.startsWith('/appointment')) return 1
+    if (currentPath.startsWith('/reports')) return 2
+    if (['/patients','/visits','/lab','/pharmacy','/billing'].includes(currentPath)) return 3
+    if (currentPath.startsWith('/settings')) return 4
+    return 1
   }
 
   return (
     <GlobalWrapper>
       <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
         <CssBaseline />
-        
         {/* Top App Bar */}
         <AppBar position="static" sx={{ zIndex: theme.zIndex.drawer + 1 }}>
           <Toolbar sx={{ justifyContent: 'space-between', minHeight: '56px !important', py: 0 }}>
@@ -101,23 +149,23 @@ export default function MainLayout({ children }: MainLayoutProps) {
             </Box>
 
             {/* Navigation Tabs */}
-            <Box sx={{ flexGrow: 1, display: 'flex', justifyContent: 'center', maxWidth: 'calc(100vw - 240px)' }}>
+            <Box sx={{ flexGrow: 1, display: 'flex', justifyContent: 'flex-start', maxWidth: 'calc(100vw - 240px)' }}>
               <Tabs
                 value={getCurrentTabIndex()}
                 onChange={(event, newValue) => {
                   const selectedItem = menuItems[newValue]
-                  if (selectedItem) {
-                    handleNavigation(selectedItem.path)
-                  }
+                  if (!selectedItem) return
+                  openTabMenu(newValue, event as React.MouseEvent<HTMLElement>)
                 }}
-                variant={isMobile ? "scrollable" : "standard"}
-                scrollButtons={isMobile ? "auto" : false}
+                variant={"scrollable"}
+                scrollButtons={"auto"}
                 allowScrollButtonsMobile
                 sx={{
                   '& .MuiTab-root': {
                     minHeight: 48,
                     color: 'rgba(255, 255, 255, 0.7)',
                     padding: '6px 8px',
+                    whiteSpace: 'nowrap',
                     '&.Mui-selected': {
                       color: 'white',
                     },
@@ -132,37 +180,64 @@ export default function MainLayout({ children }: MainLayoutProps) {
                   <Tab
                     key={item.text}
                     label={item.text}
-                    icon={item.icon}
-                    iconPosition="start"
                     sx={{
-                      minWidth: isMobile ? 'auto' : 100,
-                      maxWidth: isMobile ? 'auto' : 120,
+                      minWidth: 'auto',
+                      maxWidth: 'none',
+                      textTransform: 'none',
                       fontSize: isMobile ? '0.7rem' : '0.8rem',
-                      '& .MuiTab-iconWrapper': {
-                        marginRight: '4px',
-                        fontSize: '1rem',
-                      },
                     }}
                   />
                 ))}
               </Tabs>
+              {/* Generic tab dropdown */}
+              <Menu
+                id="menu-tab"
+                anchorEl={tabMenu?.anchor ?? null}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+                transformOrigin={{ vertical: 'top', horizontal: 'center' }}
+                open={Boolean(tabMenu)}
+                onClose={closeTabMenu}
+              >
+                {(tabMenu ? subMenus[menuItems[tabMenu.index].text] || [] : []).map((item) => (
+                  <MenuItem key={item.label} onClick={() => { handleNavigation(item.path); closeTabMenu() }}>
+                    <ListItemIcon>
+                      {/* Placeholder icons can be added as needed */}
+                    </ListItemIcon>
+                    {item.label}
+                  </MenuItem>
+                ))}
+              </Menu>
             </Box>
 
-            {/* User Menu */}
+            {/* Date and User Menu */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Typography component="div" sx={{ color: '#FFFFFF', fontSize: '0.9rem', fontWeight: 600 }}>
+                {(() => {
+                  const d = now
+                  const dd = String(d.getDate()).padStart(2, '0')
+                  const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+                  const mmm = monthNames[d.getMonth()]
+                  const yy = String(d.getFullYear()).slice(-2)
+                  return `${dd}-${mmm}-${yy}`
+                })()}
+              </Typography>
+            </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', minWidth: '120px', justifyContent: 'flex-end' }}>
-              <IconButton
-                size="medium"
-                aria-label="account of current user"
-                aria-controls="menu-appbar"
-                aria-haspopup="true"
-                onClick={handleMenuClick}
-                color="inherit"
-                sx={{ padding: '4px' }}
-              >
-                <Avatar sx={{ width: 28, height: 28 }}>
-                  <AccountCircle />
-                </Avatar>
-              </IconButton>
+              <Tooltip title={user ? `${user.firstName} (${user.roleName})` : 'User'}>
+                <IconButton
+                  size="medium"
+                  aria-label="account of current user"
+                  aria-controls="menu-appbar"
+                  aria-haspopup="true"
+                  onClick={handleMenuClick}
+                  color="inherit"
+                  sx={{ padding: '4px' }}
+                >
+                  <Avatar sx={{ width: 28, height: 28 }}>
+                    <AccountCircle />
+                  </Avatar>
+                </IconButton>
+              </Tooltip>
               <Menu
                 id="menu-appbar"
                 anchorEl={anchorEl}
@@ -182,7 +257,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
                   <ListItemIcon>
                     <AccountCircle fontSize="small" />
                   </ListItemIcon>
-                  Profile
+                  {user ? `${user.firstName} (${user.loginId})` : 'Profile'}
                 </MenuItem>
                 <MenuItem onClick={handleLogout}>
                   <ListItemIcon>

@@ -17,10 +17,11 @@ import Patients from './pages/Patients'
 import Visits from './pages/Visits'
 import Billing from './pages/Billing'
 import RegistrationPage from './pages/Registration'
-import AppointmentsPage from './pages/Appointments'
+// import AppointmentsPage from './pages/Appointments'
 import LabPage from './pages/Lab'
 import PharmacyPage from './pages/Pharmacy'
 import APITest from './components/Test/APITest'
+import Appointment from './pages/Appointment'
 
 const theme = createTheme({
   palette: {
@@ -41,16 +42,18 @@ function App() {
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
+            {/* <Route path="/appointment" element={<Appointment />} /> */}
             <Route
               path="/*"
               element={
                 <AuthGuard>
                   <MainLayout>
                     <Routes>
-                      <Route path="/" element={<Dashboard />} />
+                      <Route path="/" element={<Navigate to="/appointment" />} />
                       <Route path="/patients" element={<Patients />} />
                       <Route path="/registration" element={<RegistrationPage />} />
-                      <Route path="/appointments" element={<AppointmentsPage />} />
+                      {/* <Route path="/appointments" element={<AppointmentsPage />} /> */}
+                      <Route path="/appointment" element={<Appointment />} />
                       <Route path="/visits" element={<Visits />} />
                       <Route path="/lab" element={<LabPage />} />
                       <Route path="/pharmacy" element={<PharmacyPage />} />
