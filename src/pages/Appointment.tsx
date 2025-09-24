@@ -4,6 +4,7 @@ import { List, CreditCard, MoreVert, Add as AddIcon, Save, Delete, Info, FastFor
 import { appointmentService, Appointment } from "../services/appointmentService";
 import { patientService, Patient } from "../services/patientService";
 import { useNavigate, useLocation } from "react-router-dom";
+import AddPatientPage from "./AddPatientPage";
 
 type AppointmentRow = {
     sr: number;
@@ -38,6 +39,7 @@ export default function AppointmentTable() {
     const filterBtnRef = useRef<HTMLButtonElement>(null);
     const navigate = useNavigate();
     const location = useLocation();
+    const [showAddPatient, setShowAddPatient] = useState<boolean>(false);
     const [openActionIndex, setOpenActionIndex] = useState<number | null>(null);
     const [actionMenuPosition, setActionMenuPosition] = useState<{ top: number; left: number } | null>(null);
     const [showFilters, setShowFilters] = useState<boolean>(false);
@@ -621,7 +623,13 @@ export default function AppointmentTable() {
                 >
                     Book Appointment {selectedPatients.length > 0 && `(${selectedPatients.length})`}
                 </button>
-                <button className="btn" style={buttonStyle}>Add Patient</button>
+                <button 
+                    className="btn" 
+                    style={buttonStyle}
+                    onClick={() => setShowAddPatient(true)}
+                >
+                    Add Patient
+                </button>
 
                 {/* 5) Status dropdown */}
                 <select
@@ -1148,6 +1156,11 @@ export default function AppointmentTable() {
                     )}
                 </>
             )}
+            {/* Add Patient Modal */}
+            <AddPatientPage 
+                open={showAddPatient} 
+                onClose={() => setShowAddPatient(false)}
+            />
         </div>
     );
 }
