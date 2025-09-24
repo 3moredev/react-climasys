@@ -516,6 +516,72 @@ export default function AppointmentTable() {
                 height: auto !important;
             }
         }
+        /* Bootstrap-like breakpoints to maintain UI across resolutions */
+        /* <= 1399.98px (Large desktops down) */
+        @media (max-width: 1399.98px) {
+            .d-flex.mb-3.align-items-center { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; gap: 8px; }
+            .d-flex.mb-3.align-items-center .btn { white-space: nowrap; }
+        }
+
+        /* <= 1199.98px (Desktops) */
+        @media (max-width: 1199.98px) {
+            .d-flex.mb-3.align-items-center { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; gap: 8px; }
+            .d-flex.mb-3.align-items-center .btn { white-space: nowrap; }
+        }
+
+        /* <= 991.98px (Tablets) */
+        @media (max-width: 991.98px) {
+            .d-flex.mb-3.align-items-center { flex-direction: column; align-items: stretch; gap: 12px; }
+            .d-flex.mb-3.align-items-center .position-relative { width: 100%; }
+            .d-flex.mb-3.align-items-center .position-relative input { width: 100% !important; min-width: auto !important; }
+            .d-flex.mb-3.align-items-center .form-select { width: 100% !important; height: 38px !important; }
+            .d-flex.mb-3.align-items-center .btn { width: 100%; }
+            .d-flex.mb-3.align-items-center .d-flex.align-items-center.ms-auto { margin-left: 0 !important; align-self: center; }
+        }
+
+        /* <= 767.98px (Landscape phones) */
+        @media (max-width: 767.98px) {
+            .d-flex.mb-3.align-items-center { gap: 10px; }
+            .d-flex.mb-3.align-items-center .form-select { width: 30% !important; height: 30px !important; }
+        }
+
+        /* <= 575.98px (Portrait phones) */
+        @media (max-width: 575.98px) {
+            .d-flex.mb-3.align-items-center { gap: 8px; }
+            .d-flex.mb-3.align-items-center .form-select { width: 30% !important; height: 30px !important; }
+        }
+
+        /*============ Responsive table ============*/
+        /* Large desktops down: enable horizontal scroll if needed */
+        @media (max-width: 1399.98px) {
+            .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+            .appointments-table thead th { white-space: nowrap; }
+            .appointments-table tbody td { white-space: nowrap; }
+        }
+        /* Desktops */
+        @media (max-width: 1199.98px) {
+            .appointments-table { min-width: 1100px; }
+            .appointments-table thead th { padding: 6px 8px !important; }
+            .appointments-table tbody td { padding: 6px 8px !important; }
+        }
+        /* Tablets */
+        @media (max-width: 991.98px) {
+            .appointments-table { min-width: 980px; }
+            .appointments-table thead th { font-size: 0.9rem; }
+            .appointments-table tbody td { font-size: 0.9rem; }
+        }
+        /* Landscape phones */
+        @media (max-width: 767.98px) {
+            .appointments-table { min-width: 900px; }
+            .appointments-table thead th { font-size: 0.85rem; padding: 4px 6px !important; }
+            .appointments-table tbody td { font-size: 0.85rem; padding: 4px 6px !important; }
+        }
+        /* Portrait phones */
+        @media (max-width: 575.98px) {
+            .appointments-table { min-width: 820px; }
+            .appointments-table thead th { font-size: 0.8rem; padding: 3px 5px !important; }
+            .appointments-table tbody td { font-size: 0.8rem; padding: 3px 5px !important; }
+        }
       `}</style>
             {/* Header */}
             <div className="d-flex justify-content-between align-items-center mb-3">
