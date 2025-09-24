@@ -446,6 +446,74 @@ export default function AppointmentTable() {
             border-radius: 4px;
             font-size: 0.9rem;
         }
+        
+        /* Responsive adjustments for d-flex mb-3 align-items-center */
+        @media (max-width: 991px) {
+            .d-flex.mb-3.align-items-center {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 15px;
+            }
+            
+            /* Search input becomes full width */
+            .d-flex.mb-3.align-items-center .position-relative {
+                width: 100%;
+            }
+            
+            .d-flex.mb-3.align-items-center .position-relative input {
+                width: 100% !important;
+                min-width: auto !important;
+            }
+            
+            /* Form selects become full width */
+            .d-flex.mb-3.align-items-center .form-select {
+                width: 100% !important;
+                height: 38px !important;
+            }
+            
+            /* Buttons stack vertically */
+            .d-flex.mb-3.align-items-center .btn {
+                width: 100%;
+                margin-bottom: 8px;
+            }
+            
+            /* List/Card toggle remains centered and properly sized */
+            .d-flex.mb-3.align-items-center .d-flex.align-items-center.ms-auto {
+                margin-left: 0 !important;
+                align-self: center;
+                width: auto !important;
+                height: 38px !important;
+            }
+            
+            .d-flex.mb-3.align-items-center .d-flex.align-items-center.ms-auto .btn {
+                width: auto !important;
+                margin-bottom: 0 !important;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .d-flex.mb-3.align-items-center {
+                gap: 12px;
+            }
+            
+            /* Form selects maintain 30% width and 30px height on mobile */
+            .d-flex.mb-3.align-items-center .form-select {
+                width: 100% !important;
+                height: auto !important;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .d-flex.mb-3.align-items-center {
+                gap: 10px;
+            }
+            
+            /* Form selects maintain 30% width and 30px height on small mobile */
+            .d-flex.mb-3.align-items-center .form-select {
+                width: 100% !important;
+                height: auto !important;
+            }
+        }
       `}</style>
             {/* Header */}
             <div className="d-flex justify-content-between align-items-center mb-3">
@@ -540,7 +608,7 @@ export default function AppointmentTable() {
                     className="form-select"
                     disabled
                     value={"Dr. Tongaonkar - Medicine"}
-                    style={{ height: 38, width: 255, color: '#212121', backgroundColor: '#ECEFF1', padding: '6px 12px', lineHeight: '1.5', fontSize: '1rem', flex: '0 0 255px' }}
+                    style={{ height: 38, width: 255, color: '#212121', backgroundColor: '#ECEFF1', padding: '6px 12px', lineHeight: '1.5', fontSize: '1rem', flex: '0 0 30px' }}
                 >
                     <option>Dr. Tongaonkar - Medicine</option>
                 </select>
@@ -565,10 +633,11 @@ export default function AppointmentTable() {
                     <option value="">Select Status</option>
                     <option value="WAITING">Waiting</option>
                     <option value="WITH DOCTOR">With Doctor</option>
-                    <option value="ON CALL">On Call</option>
                     <option value="CHECK OUT">Check Out</option>
-                    <option value="COMPLETED">Completed</option>
+                    <option value="ON CALL">On Call</option>
                     <option value="SAVED">Saved</option>
+                    <option value="COMPLETED">Completed</option>
+                    
                 </select>
 
                 {/* 6) List/Card toggle */}
@@ -757,7 +826,7 @@ export default function AppointmentTable() {
                                                             fontFamily: "'Roboto', sans-serif",
                                                         }}
                                                     >
-                                                        {["WAITING","WITH DOCTOR","ON CALL","CHECK OUT","COMPLETED","SAVED"].map((status) => (
+                                                        {["WAITING","WITH DOCTOR","CHECK OUT","ON CALL","SAVED","COMPLETED"].map((status) => (
                                                             <div
                                                                 key={status}
                                                                 onClick={() => {
@@ -928,7 +997,7 @@ export default function AppointmentTable() {
                                                     fontFamily: "'Roboto', sans-serif",
                                                 }}
                                             >
-                                                {["WAITING","WITH DOCTOR","ON CALL","CHECK OUT","COMPLETED","SAVED"].map((status) => (
+                                                {["WAITING","WITH DOCTOR","CHECK OUT","ON CALL","SAVED","COMPLETED"].map((status) => (
                                                     <div
                                                         key={status}
                                                         onClick={() => {

@@ -28,6 +28,7 @@ import {
   Settings,
   Logout,
   AccountCircle,
+  KeyboardArrowDown,
 } from '@mui/icons-material'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '../../store/hooks'
@@ -39,9 +40,9 @@ interface MainLayoutProps {
 
 const menuItems = [
   { text: 'Dashboard', path: '/' },
-  { text: 'Opd',  path: '/appointment' },
-  { text: 'Opd Reports',  path: '/reports' },
-  { text: 'Opd Master', path: '#' },
+  { text: 'OPD',  path: '/appointment' },
+  { text: 'OPD Reports',  path: '/reports' },
+  { text: 'OPD Master', path: '#' },
   { text: 'Settings', path: '/settings' },
 ]
 
@@ -163,7 +164,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
                 sx={{
                   '& .MuiTab-root': {
                     minHeight: 48,
-                    color: 'rgba(255, 255, 255, 0.7)',
+                    color: 'white',
                     padding: '6px 8px',
                     whiteSpace: 'nowrap',
                     '&.Mui-selected': {
@@ -179,13 +180,26 @@ export default function MainLayout({ children }: MainLayoutProps) {
                 {menuItems.map((item, index) => (
                   <Tab
                     key={item.text}
-                    label={item.text}
+                    onClick={(event: React.MouseEvent<HTMLElement>) => {
+                      // Always open submenu, even if this tab is already active
+                      openTabMenu(index, event)
+                    }}
+                    label={
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <Typography component="span" sx={{ fontSize: isMobile ? '0.7rem' : '0.8rem' }}>
+                          {item.text}
+                        </Typography>
+                        <KeyboardArrowDown sx={{ fontSize: isMobile ? 16 : 18 }} />
+                      </Box>
+                    }
                     sx={{
                       minWidth: 'auto',
                       maxWidth: 'none',
                       textTransform: 'none',
-                      fontSize: isMobile ? '0.7rem' : '0.8rem',
                     }}
+                    aria-haspopup="menu"
+                    aria-controls={tabMenu ? 'menu-tab' : undefined}
+                    aria-expanded={Boolean(tabMenu) ? 'true' : undefined}
                   />
                 ))}
               </Tabs>
@@ -197,12 +211,21 @@ export default function MainLayout({ children }: MainLayoutProps) {
                 transformOrigin={{ vertical: 'top', horizontal: 'center' }}
                 open={Boolean(tabMenu)}
                 onClose={closeTabMenu}
+                PaperProps={{
+                  sx: {
+                    '& .MuiMenuItem-root': {
+                      pl: 1, // reduce left padding
+                      pr: 2,
+                    },
+                  },
+                }}
               >
                 {(tabMenu ? subMenus[menuItems[tabMenu.index].text] || [] : []).map((item) => (
-                  <MenuItem key={item.label} onClick={() => { handleNavigation(item.path); closeTabMenu() }}>
-                    <ListItemIcon>
-                      {/* Placeholder icons can be added as needed */}
-                    </ListItemIcon>
+                  <MenuItem
+                    key={item.label}
+                    onClick={() => { handleNavigation(item.path); closeTabMenu() }}
+                    sx={{ pl: 1, pr: 2 }}
+                  >
                     {item.label}
                   </MenuItem>
                 ))}

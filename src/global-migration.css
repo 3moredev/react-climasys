@@ -251,7 +251,7 @@ h1, h2, h3, h4, h5, h6,
 p,
 .MuiTypography-body1,
 .MuiTypography-body2 {
-  color: #6d737a;
+  color:whitesmoke;
   font-size: 14px !important;
   line-height: 24px !important;
   margin: 0 0 16px 0;
