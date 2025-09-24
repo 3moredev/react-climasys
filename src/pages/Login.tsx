@@ -1,13 +1,10 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   Box,
-  TextField,
   Button,
   Typography,
   Alert,
   CircularProgress,
-  FormControlLabel,
-  Checkbox,
   Link,
 } from '@mui/material'
 import GlobalWrapper from '../components/Layout/GlobalWrapper'
@@ -29,6 +26,7 @@ export default function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const { loading, error, isAuthenticated } = useAppSelector((state) => state.auth)
+  const [showPassword, setShowPassword] = useState(false)
 
   const { control, handleSubmit, formState: { errors } } = useForm<LoginFormData>({
     defaultValues: {
@@ -139,18 +137,35 @@ export default function LoginPage() {
                 control={control}
                 rules={{ required: 'Login ID is required' }}
                 render={({ field }) => (
-                  <TextField
-                    {...field}
-                    fullWidth
-                    variant="outlined"
-                    error={!!errors.loginId}
-                    helperText={errors.loginId?.message}
-                    disabled={loading}
-                    className="ptwikki-input"
-                    InputProps={{
-                      className: 'ptwikki-input-field'
-                    }}
-                  />
+                  <div>
+                    <input
+                      {...field}
+                      type="text"
+                      disabled={loading}
+                      className="simple-input"
+                      style={{
+                        width: '100%',
+                        padding: '12px 16px',
+                        border: '1px solid #ccc',
+                        borderRadius: '4px',
+                        fontSize: '14px',
+                        outline: 'none',
+                        boxSizing: 'border-box'
+                      }}
+                      onFocus={(e) => {
+                        e.target.style.borderColor = '#ccc';
+                        e.target.style.boxShadow = 'none';
+                      }}
+                      onBlur={(e) => {
+                        e.target.style.borderColor = '#ccc';
+                      }}
+                    />
+                    {errors.loginId && (
+                      <div style={{ color: 'red', fontSize: '12px', marginTop: '4px' }}>
+                        {errors.loginId.message}
+                      </div>
+                    )}
+                  </div>
                 )}
               />
             </div>
@@ -162,22 +177,70 @@ export default function LoginPage() {
                 control={control}
                 rules={{ required: 'Password is required' }}
                 render={({ field }) => (
-                  <TextField
-                    {...field}
-                    fullWidth
-                    type="password"
-                    variant="outlined"
-                    error={!!errors.password}
-                    helperText={errors.password?.message}
-                    disabled={loading}
-                    className="ptwikki-input"
-                    InputProps={{
-                      className: 'ptwikki-input-field',
-                      endAdornment: (
-                        <span className="ptwikki-eye-icon">👁</span>
-                      )
-                    }}
-                  />
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      {...field}
+                      type={showPassword ? "text" : "password"}
+                      disabled={loading}
+                      className="simple-input"
+                      style={{
+                        width: '100%',
+                        padding: '12px 40px 12px 16px',
+                        border: '1px solid #ccc',
+                        borderRadius: '4px',
+                        fontSize: '14px',
+                        outline: 'none',
+                        boxSizing: 'border-box'
+                      }}
+                      onFocus={(e) => {
+                        e.target.style.borderColor = '#ccc';
+                        e.target.style.boxShadow = 'none';
+                      }}
+                      onBlur={(e) => {
+                        e.target.style.borderColor = '#ccc';
+                      }}
+                    />
+                    <span 
+                      className="ptwikki-eye-icon"
+                      onClick={() => setShowPassword(!showPassword)}
+                      style={{
+                        position: 'absolute',
+                        right: '12px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        cursor: 'pointer',
+                        color: '#666666',
+                        userSelect: 'none',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: '20px',
+                        height: '20px'
+                      }}
+                    >
+                      <svg 
+                        width="16" 
+                        height="16" 
+                        viewBox="0 0 24 24" 
+                        fill="none" 
+                        stroke="currentColor" 
+                        strokeWidth="2" 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round"
+                      >
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                        {showPassword && (
+                          <line x1="1" y1="1" x2="23" y2="23" stroke="#ff4444" strokeWidth="2"/>
+                        )}
+                      </svg>
+                    </span>
+                    {errors.password && (
+                      <div style={{ color: 'red', fontSize: '12px', marginTop: '4px' }}>
+                        {errors.password.message}
+                      </div>
+                    )}
+                  </div>
                 )}
               />
             </div>
@@ -199,15 +262,24 @@ export default function LoginPage() {
             />
 
             <Box className="ptwikki-options">
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    className="ptwikki-checkbox"
-                  />
-                }
-                label="Keep me signed in"
-                className="ptwikki-checkbox-label"
-              />
+              <label style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '8px',
+                color: '#333333',
+                fontSize: '13px',
+                cursor: 'pointer'
+              }}>
+                <input 
+                  type="checkbox" 
+                  style={{
+                    width: '16px',
+                    height: '16px',
+                    cursor: 'pointer'
+                  }}
+                />
+                Keep me signed in
+              </label>
               <Link href="#" className="ptwikki-forgot-link">
                 Forgot Password?
               </Link>

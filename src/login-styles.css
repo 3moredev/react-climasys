@@ -358,12 +358,19 @@
 }
 
 .ptwikki-input-field:focus {
-  border-color: #1976d2 !important;
+  border: 1px solid #ccc !important;
   outline: none !important;
   box-shadow: none !important;
 }
 
 .ptwikki-input-field:active {
+  border: 1px solid #ccc !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.ptwikki-input-field:hover {
+  border: 1px solid #ccc !important;
   outline: none !important;
   box-shadow: none !important;
 }
@@ -385,9 +392,21 @@
   outline: none !important;
 }
 
+.ptwikki-input .MuiOutlinedInput-root:hover {
+  border: 1px solid #ccc !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
 .ptwikki-input .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline {
   border: none !important;
   outline: none !important;
+}
+
+.ptwikki-input .MuiOutlinedInput-root.Mui-focused {
+  border: 1px solid #ccc !important;
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 .ptwikki-input .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline {
@@ -395,15 +414,59 @@
   outline: none !important;
 }
 
-.ptwikki-input .MuiOutlinedInput-root.Mui-focused {
-  border: 1px solid #1976d2 !important;
-  outline: none !important;
-}
-
 .ptwikki-input .MuiOutlinedInput-input {
   padding: 8px 12px !important;
   font-size: 14px !important;
   height: 24px !important;
+}
+
+/* Ensure no blue styling anywhere - High specificity overrides */
+.ptwikki-login-container .ptwikki-input *,
+.ptwikki-login-container .ptwikki-input *:focus,
+.ptwikki-login-container .ptwikki-input *:hover,
+.ptwikki-login-container .ptwikki-input *:active {
+  border-color: #ccc !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Override Material-UI default blue focus */
+.ptwikki-login-container .MuiOutlinedInput-root.Mui-focused,
+.ptwikki-login-container .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline,
+.ptwikki-login-container .MuiOutlinedInput-root:hover,
+.ptwikki-login-container .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline {
+  border-color: #ccc !important;
+  border: 1px solid #ccc !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Override any global input styles */
+.ptwikki-login-container input,
+.ptwikki-login-container input:focus,
+.ptwikki-login-container input:hover,
+.ptwikki-login-container input:active {
+  border-color: #ccc !important;
+  border: 1px solid #ccc !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Nuclear option - override everything with maximum specificity */
+.ptwikki-login-container .ptwikki-form .ptwikki-input-group .ptwikki-input .MuiTextField-root .MuiOutlinedInput-root,
+.ptwikki-login-container .ptwikki-form .ptwikki-input-group .ptwikki-input .MuiTextField-root .MuiOutlinedInput-root.Mui-focused,
+.ptwikki-login-container .ptwikki-form .ptwikki-input-group .ptwikki-input .MuiTextField-root .MuiOutlinedInput-root:hover {
+  border: 1px solid #ccc !important;
+  border-color: #ccc !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.ptwikki-login-container .ptwikki-form .ptwikki-input-group .ptwikki-input .MuiTextField-root .MuiOutlinedInput-root .MuiOutlinedInput-notchedOutline,
+.ptwikki-login-container .ptwikki-form .ptwikki-input-group .ptwikki-input .MuiTextField-root .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline,
+.ptwikki-login-container .ptwikki-form .ptwikki-input-group .ptwikki-input .MuiTextField-root .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline {
+  border: none !important;
+  outline: none !important;
 }
 
 .ptwikki-eye-icon {

@@ -303,6 +303,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
             overflow: 'hidden',
             display: 'flex',
             flexDirection: 'column',
+            background: '#f8f9fa', // Match appointment screen background
           }}
         >
           {children}

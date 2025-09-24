@@ -22,6 +22,7 @@ import LabPage from './pages/Lab'
 import PharmacyPage from './pages/Pharmacy'
 import APITest from './components/Test/APITest'
 import Appointment from './pages/Appointment'
+import ExampleTemplatePage from './pages/ExampleTemplatePage'
 
 const theme = createTheme({
   palette: {
@@ -59,6 +60,7 @@ function App() {
                       <Route path="/pharmacy" element={<PharmacyPage />} />
                       <Route path="/billing" element={<Billing />} />
                       <Route path="/api-test" element={<APITest />} />
+                      <Route path="/template-example" element={<ExampleTemplatePage />} />
                       <Route path="/reports" element={<div>Reports (Coming Soon)</div>} />
                       <Route path="/settings" element={<div>Settings (Coming Soon)</div>} />
                       <Route path="*" element={<Navigate to="/" />} />
