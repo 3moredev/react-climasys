@@ -58,7 +58,7 @@ export default function LoginPage() {
 
   return (
     <div className="ptwikki-login-container">
-      {/* Left Section - Climasys Branding and Features */}
+      {/* Left Section - MyHealth Branding and Features */}
       <div className="ptwikki-left-section">
         {/* Medical Background Element */}
         <div className="medical-cross"></div>
@@ -66,7 +66,7 @@ export default function LoginPage() {
         <div className="ptwikki-welcome-content">
           <div className="climasys-branding">
             <Typography variant="h2" className="climasys-brand-name">
-              Climasys®
+              MyHealth
             </Typography>
             <Typography variant="h6" className="climasys-tagline">
               A Step towards Smart Clinic...
@@ -112,10 +112,10 @@ export default function LoginPage() {
           {/* Logo and Brand */}
           <div className="ptwikki-logo-section">
             <div className="ptwikki-logo">
-              <div className="ptwikki-logo-icon">C</div>
+              <div className="ptwikki-logo-icon"></div>
             </div>
             <Typography variant="h5" className="ptwikki-brand-text">
-              Climasys
+              MyHealth
             </Typography>
           </div>
 

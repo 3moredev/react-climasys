@@ -149,8 +149,8 @@ export default function MainLayout({ children }: MainLayoutProps) {
           <Toolbar sx={{ justifyContent: 'space-between', minHeight: '56px !important', py: 0 }}>
             {/* Logo/Brand */}
             <Box sx={{ display: 'flex', alignItems: 'center', minWidth: '120px' }}>
-              <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 'bold', fontSize: '1.1rem' }}>
-                Climasys
+              <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 'bold', fontSize: '1.1rem', color: '#ffffff !important' }}>
+                MyHealth
               </Typography>
             </Box>
 

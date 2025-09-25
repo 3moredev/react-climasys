@@ -6,7 +6,7 @@
   overflow: hidden;
 }
 
-/* Left Section - Climasys Branding and Features */
+/* Left Section - MyHealth Branding and Features */
 .ptwikki-left-section {
   flex: 1.5;
   background: linear-gradient(135deg, #1a252f 0%, #2c3e50 100%);
@@ -97,7 +97,7 @@
   box-shadow: 0 0 15px rgba(255, 107, 53, 0.4);
 }
 
-/* Abstract C Logo with Healthcare Symbols */
+/* MyHealth Logo with M and small H */
 .ptwikki-logo-icon {
   width: 60px;
   height: 60px;
@@ -112,26 +112,33 @@
 }
 
 .ptwikki-logo-icon::before {
-  content: 'C';
-  font-size: 32px;
+  content: 'H';
+  font-size: 28px;
   font-weight: 800;
   color: #ffffff;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
   font-family: 'Arial', sans-serif;
   letter-spacing: -2px;
+  position: relative;
 }
 
-/* Healthcare symbols around the C */
+/* Modern Badge Style - App-style notification badge */
 .ptwikki-logo-icon::after {
-  content: '';
+  content: 'M';
   position: absolute;
-  top: -5px;
-  right: -5px;
+  top: -2px;
+  right: -2px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #ffffff;
+  background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+  border-radius: 50%;
   width: 18px;
   height: 18px;
-  background: #e74c3c;
-  border-radius: 50%;
-  box-shadow: 0 0 12px rgba(231, 76, 60, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(255, 107, 107, 0.4);
   border: 2px solid #ffffff;
 }
 
@@ -156,7 +163,7 @@
   -webkit-backdrop-filter: none !important;
 }
 
-/* Force white color for Climasys brand name and tagline */
+/* Force white color for MyHealth brand name and tagline */
 .ptwikki-left-section .climasys-brand-name,
 .ptwikki-left-section .climasys-brand-name.MuiTypography-root,
 .ptwikki-left-section .climasys-brand-name.MuiTypography-h2,
@@ -298,7 +305,8 @@
   margin-right: 15px;
 }
 
-.ptwikki-logo-icon {
+/* Duplicate logo definition - using the main one above with M and small H */
+/* .ptwikki-logo-icon {
   width: 50px;
   height: 50px;
   background: #1976d2;
@@ -309,7 +317,7 @@
   justify-content: center;
   font-weight: bold;
   font-size: 18px;
-}
+} */
 
 .ptwikki-brand-text {
   color: #1976d2;
