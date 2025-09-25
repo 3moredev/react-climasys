@@ -33,6 +33,7 @@ import {
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '../../store/hooks'
 import { logout } from '../../store/slices/authSlice'
+import { useSession } from '../../store/hooks/useSession'
 
 interface MainLayoutProps {
   children: React.ReactNode
@@ -80,6 +81,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
   const dispatch = useAppDispatch()
   
   const { user } = useAppSelector((state) => state.auth)
+  const { username, doctorName, clinicName, isLoading: sessionLoading, isValid: sessionValid, logout: sessionLogout } = useSession()
   
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null)
   const [masterEl, setMasterEl] = React.useState<null | HTMLElement>(null)
@@ -108,7 +110,10 @@ export default function MainLayout({ children }: MainLayoutProps) {
 
   const closeTabMenu = () => setTabMenu(null)
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    // Logout from session API first
+    await sessionLogout()
+    // Then logout from Redux
     dispatch(logout())
     navigate('/login')
     handleMenuClose()
@@ -246,7 +251,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
               </Typography>
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', minWidth: '120px', justifyContent: 'flex-end' }}>
-              <Tooltip title={user ? `${user.firstName} (${user.roleName})` : 'User'}>
+              <Tooltip title={sessionLoading ? 'Loading...' : `${username} (${doctorName || 'Doctor'})`}>
                 <IconButton
                   size="medium"
                   aria-label="account of current user"
@@ -257,7 +262,13 @@ export default function MainLayout({ children }: MainLayoutProps) {
                   sx={{ padding: '4px' }}
                 >
                   <Avatar sx={{ width: 28, height: 28 }}>
-                    <AccountCircle />
+                    {sessionLoading ? (
+                      <span style={{ fontSize: '12px' }}>⏳</span>
+                    ) : (
+                      <span style={{ fontSize: '12px', fontWeight: 'bold' }}>
+                        {username.charAt(0).toUpperCase()}
+                      </span>
+                    )}
                   </Avatar>
                 </IconButton>
               </Tooltip>
@@ -280,7 +291,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
                   <ListItemIcon>
                     <AccountCircle fontSize="small" />
                   </ListItemIcon>
-                  {user ? `${user.firstName} (${user.loginId})` : 'Profile'}
+                  {sessionLoading ? 'Loading...' : `${username} (${clinicName || 'Clinic'})`}
                 </MenuItem>
                 <MenuItem onClick={handleLogout}>
                   <ListItemIcon>

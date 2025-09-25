@@ -1,4 +1,5 @@
 import api from './api'
+import { sessionService } from './sessionService'
 
 export interface LoginRequest {
   loginId: string
@@ -69,7 +70,10 @@ export const authService = {
     return response.data
   },
 
-  logout(): void {
+  async logout(): Promise<void> {
+    // Logout from session API
+    await sessionService.logout()
+    // Clear local storage
     localStorage.removeItem('token')
     localStorage.removeItem('user')
   },
