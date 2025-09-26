@@ -24,7 +24,7 @@ import APITest from './components/Test/APITest'
 import Appointment from './pages/Appointment'
 import ExampleTemplatePage from './pages/ExampleTemplatePage'
 import SessionTest from './pages/SessionTest'
-
+import QuickRegistration from './pages/QuickRegistration'
 const theme = createTheme({
   palette: {
     primary: {
@@ -54,6 +54,7 @@ function App() {
                       <Route path="/" element={<Navigate to="/appointment" />} />
                       <Route path="/patients" element={<Patients />} />
                       <Route path="/registration" element={<RegistrationPage />} />
+                      <Route path="/registration/quick" element={<QuickRegistration />} />
                       {/* <Route path="/appointments" element={<AppointmentsPage />} /> */}
                       <Route path="/appointment" element={<Appointment />} />
                       <Route path="/visits" element={<Visits />} />

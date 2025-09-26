@@ -1,0 +1,108 @@
+import api from './api'
+
+export interface GenderOption {
+  id: string
+  name: string
+}
+
+// Normalizes various backend payload shapes to { id, name }
+function mapGenderItem(item: any): GenderOption {
+  const id: string = item?.id ?? item?.genderId ?? item?.code ?? ''
+  const display: string =
+    item?.name ?? item?.genderDisplayName ?? item?.genderName ??
+    (id === 'M' ? 'Male' : id === 'F' ? 'Female' : id === 'O' ? 'Other' : String(id))
+  return { id: String(id), name: String(display) }
+}
+
+export async function getGenders(): Promise<GenderOption[]> {
+  const response = await api.get('/reference/genders')
+  const data = Array.isArray(response.data) ? response.data : []
+  return data.map(mapGenderItem)
+}
+
+export interface OptionItem {
+  id: string
+  name: string
+}
+
+function mapOccupationItem(item: any): OptionItem {
+  const id = item?.id ?? item?.occupationId ?? item?.code ?? ''
+  const name = item?.occupationDescription ?? item?.name ?? String(id)
+  return { id: String(id), name: String(name) }
+}
+
+function mapMaritalStatusItem(item: any): OptionItem {
+  const id = item?.id ?? item?.maritalStatusId ?? item?.code ?? ''
+  const name = item?.name ??
+    (id === 'S' ? 'Single' : id === 'M' ? 'Married' : id === 'D' ? 'Divorced' : id === 'W' ? 'Widowed' : String(id))
+  return { id: String(id), name: String(name) }
+}
+
+export async function getOccupations(): Promise<OptionItem[]> {
+  const response = await api.get('/reference/occupations')
+  const data = Array.isArray(response.data) ? response.data : []
+  return data.map(mapOccupationItem)
+}
+
+export async function getMaritalStatuses(): Promise<OptionItem[]> {
+  const response = await api.get('/reference/marital-statuses')
+  const data = Array.isArray(response.data) ? response.data : []
+  return data.map(mapMaritalStatusItem)
+}
+
+
+export interface AreaItem {
+  id: string
+  name: string
+}
+
+function mapAreaItem(item: any): AreaItem {
+  const id = item?.id ?? item?.areaId ?? item?.code ?? ''
+  const name = item?.name ?? item?.areaName ?? String(id)
+  return { id: String(id), name: String(name) }
+}
+
+export async function searchAreas(query?: string): Promise<AreaItem[]> {
+  const trimmed = (query ?? '').trim()
+  if (!trimmed) return []
+
+  const response = await api.get('/reference/areas/search-advanced', {
+    params: { searchStr: trimmed, languageId: 1 }
+  })
+
+  const payload = response?.data ?? {}
+  const basicAreaSearch = Array.isArray(payload.basicAreaSearch) ? payload.basicAreaSearch : []
+
+  return basicAreaSearch.map((item: any) => {
+    const id = item?.areaId ?? item?.id ?? ''
+    const name = item?.areaName ?? item?.name ?? String(id)
+    return { id: String(id), name: String(name) }
+  })
+}
+
+export interface CityItem {
+  id: string
+  name: string
+  stateId?: string
+}
+
+export async function searchCities(query?: string): Promise<CityItem[]> {
+  const trimmed = (query ?? '').trim()
+  if (!trimmed) return []
+
+  const response = await api.get('/reference/cities/search', {
+    params: { searchStr: trimmed, languageId: 1 }
+  })
+
+  const data = Array.isArray(response?.data) ? response.data : []
+  return data
+    .filter((item: any) => !item?.error)
+    .map((item: any) => {
+      const id = item?.cityId ?? item?.id ?? ''
+      const name = item?.cityName ?? item?.name ?? String(id)
+      const stateId = item?.stateId
+      return { id: String(id), name: String(name), stateId: stateId ? String(stateId) : undefined }
+    })
+}
+
+

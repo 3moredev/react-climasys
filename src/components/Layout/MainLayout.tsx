@@ -54,7 +54,7 @@ const subMenus: Record<string, Array<{ label: string; path: string }>> = {
   'OPD': [
     { label: "Today's Appointments", path: '/appointment' },
     { label: 'OPD - Collect Patient Dues', path: '/billing?context=opd-dues' },
-    { label: 'Patient - Quick Registration', path: '/registration?type=quick' },
+    { label: 'Patient - Quick Registration', path: '/registration/quick' },
     { label: 'Patient - Detailed Registration', path: '/registration?type=detailed' },
     { label: 'Patient - Print Registration Form', path: '/registration?print=1' },
   ],

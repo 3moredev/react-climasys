@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import {
   Dialog,
   DialogTitle,
@@ -20,15 +20,19 @@ import {
   FormControlLabel,
   Switch
 } from '@mui/material'
+import Autocomplete from '@mui/material/Autocomplete'
 import { Close, Save, Person, Search, CalendarToday } from '@mui/icons-material'
+import { patientService, QuickRegistrationRequest } from '../services/patientService'
 
 interface AddPatientPageProps {
   open: boolean
   onClose: () => void
   onSave?: (patientData: any) => void
+  doctorId?: string
+  clinicId?: string
 }
 
-export default function AddPatientPage({ open, onClose, onSave }: AddPatientPageProps) {
+export default function AddPatientPage({ open, onClose, onSave, doctorId, clinicId }: AddPatientPageProps) {
   const [formData, setFormData] = useState({
     lastName: '',
     firstName: '',
@@ -54,7 +58,189 @@ export default function AddPatientPage({ open, onClose, onSave }: AddPatientPage
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
+  const [genderOptions, setGenderOptions] = useState<{ id: string; name: string }[]>([])
+  const [occupationOptions, setOccupationOptions] = useState<{ id: string; name: string }[]>([])
+  const [maritalStatusOptions, setMaritalStatusOptions] = useState<{ id: string; name: string }[]>([])
+  const [areaOptions, setAreaOptions] = useState<{ id: string; name: string }[]>([])
+  const [areaInput, setAreaInput] = useState('')
+  const [areaLoading, setAreaLoading] = useState(false)
+  const [cityOptions, setCityOptions] = useState<{ id: string; name: string }[]>([])
+  const [cityInput, setCityInput] = useState('')
+  const [cityLoading, setCityLoading] = useState(false)
+  const [referByOptions, setReferByOptions] = useState<{ id: string; name: string }[]>([])
   const dobInputRef = useRef<HTMLInputElement>(null)
+  
+  // Store doctorId and clinicId from props
+  const [currentDoctorId, setCurrentDoctorId] = useState<string>('')
+  const [currentClinicId, setCurrentClinicId] = useState<string>('')
+
+  // Update doctorId and clinicId when props change
+  useEffect(() => {
+    if (doctorId) {
+      setCurrentDoctorId(doctorId)
+      console.log('=== DOCTOR ID RECEIVED ===')
+      console.log('Doctor ID from props:', doctorId)
+    }
+    if (clinicId) {
+      setCurrentClinicId(clinicId)
+      console.log('=== CLINIC ID RECEIVED ===')
+      console.log('Clinic ID from props:', clinicId)
+    }
+  }, [doctorId, clinicId])
+
+  // Function to map form data to API request format
+  const mapFormDataToApiRequest = (): QuickRegistrationRequest => {
+    // Get the selected area, city, gender, marital status, and occupation objects
+    const selectedArea = areaOptions.find(opt => opt.name === formData.area)
+    const selectedCity = cityOptions.find(opt => opt.name === formData.city)
+    const selectedGender = genderOptions.find(opt => opt.id === formData.gender)
+    const selectedMaritalStatus = maritalStatusOptions.find(opt => opt.id === formData.maritalStatus)
+    const selectedOccupation = occupationOptions.find(opt => opt.id === formData.occupation)
+    const selectedReferBy = referByOptions.find(opt => opt.id === formData.referredBy)
+
+    console.log('=== MAPPING FORM DATA TO API REQUEST ===')
+    console.log('Selected Area:', selectedArea)
+    console.log('Selected City:', selectedCity)
+    console.log('Selected Gender:', selectedGender)
+    console.log('Selected Marital Status:', selectedMaritalStatus)
+    console.log('Selected Occupation:', selectedOccupation)
+    console.log('Selected Refer By:', selectedReferBy)
+
+    const apiRequest: QuickRegistrationRequest = {
+      doctorId: currentDoctorId,
+      lastName: formData.lastName,
+      middleName: formData.middleName || '',
+      firstName: formData.firstName,
+      mobile: formData.mobileNumber,
+      areaId: selectedArea ? parseInt(selectedArea.id) : undefined,
+      cityId: selectedCity ? selectedCity.id : 'PU', // Default to 'PU' for Pune
+      stateId: 'MAH', // Default to Maharashtra
+      countryId: 'IND', // Default to India
+      dob: formData.dateOfBirth || undefined,
+      age: formData.age || undefined,
+      gender: selectedGender ? selectedGender.id : formData.gender,
+      regYear: new Date().getFullYear().toString(),
+      // familyFolder: formData.familyFolder || '',
+      registrationStatus: 'P', // Default to 'P' for Pending
+      userId: 'Recep2', // You might want to get this from session
+      referBy: selectedReferBy ? selectedReferBy.id : formData.referredBy,
+      referDoctorDetails: formData.referralName ? 
+        `${formData.referralName}${formData.referralContact ? ` - ${formData.referralContact}` : ''}${formData.referralEmail ? ` (${formData.referralEmail})` : ''}` : '',
+      maritalStatus: selectedMaritalStatus ? selectedMaritalStatus.id : '',
+      occupation: selectedOccupation ? parseInt(selectedOccupation.id) : undefined,
+      address: formData.address || '',
+      patientEmail: formData.email || '',
+      doctorAddress: formData.referralAddress || '',
+      doctorMobile: formData.referralContact || '',
+      doctorEmail: formData.referralEmail || '',
+      clinicId: currentClinicId
+    }
+
+    console.log('=== FINAL API REQUEST ===')
+    console.log('API Request Object:', apiRequest)
+    console.log('API Request JSON:', JSON.stringify(apiRequest, null, 2))
+
+    return apiRequest
+  }
+
+  useEffect(() => {
+    let cancelled = false
+    async function loadGenders() {
+      try {
+        const { getGenders } = await import('../services/referenceService')
+        const genders = await getGenders()
+        if (!cancelled) setGenderOptions(genders)
+      } catch (e) {
+        console.error('Failed to load genders', e)
+      }
+    }
+    async function loadOccupations() {
+      try {
+        const { getOccupations } = await import('../services/referenceService')
+        const items = await getOccupations()
+        if (!cancelled) setOccupationOptions(items)
+      } catch (e) {
+        console.error('Failed to load occupations', e)
+      }
+    }
+    async function loadMaritalStatuses() {
+      try {
+        const { getMaritalStatuses } = await import('../services/referenceService')
+        const items = await getMaritalStatuses()
+        if (!cancelled) setMaritalStatusOptions(items)
+      } catch (e) {
+        console.error('Failed to load marital statuses', e)
+      }
+    }
+    async function loadReferBy() {
+      try {
+        const { getReferByTranslations } = await import('../services/referralService')
+        const items = await getReferByTranslations(1)
+        if (!cancelled) setReferByOptions(items)
+      } catch (e) {
+        console.error('Failed to load refer-by options', e)
+      }
+    }
+
+    loadGenders()
+    loadOccupations()
+    loadMaritalStatuses()
+    loadReferBy()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    let active = true
+    const fetchAreas = async () => {
+      try {
+        setAreaLoading(true)
+        const { searchAreas } = await import('../services/referenceService')
+        const results = await searchAreas(areaInput)
+        if (active) setAreaOptions(results)
+      } catch (e) {
+        console.error('Failed to search areas', e)
+      } finally {
+        if (active) setAreaLoading(false)
+      }
+    }
+
+    // Debounce user input
+    const handle = setTimeout(() => {
+      fetchAreas()
+    }, 300)
+
+    return () => {
+      active = false
+      clearTimeout(handle)
+    }
+  }, [areaInput])
+
+  useEffect(() => {
+    let active = true
+    const fetchCities = async () => {
+      try {
+        setCityLoading(true)
+        const { searchCities } = await import('../services/referenceService')
+        const results = await searchCities(cityInput)
+        if (active) setCityOptions(results)
+      } catch (e) {
+        console.error('Failed to search cities', e)
+      } finally {
+        if (active) setCityLoading(false)
+      }
+    }
+
+    const handle = setTimeout(() => {
+      fetchCities()
+    }, 300)
+
+    return () => {
+      active = false
+      clearTimeout(handle)
+    }
+  }, [cityInput])
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
@@ -90,27 +276,102 @@ export default function AddPatientPage({ open, onClose, onSave }: AddPatientPage
   }
 
   const handleSave = async () => {
-    if (!validateForm()) return
+    console.log('=== FORM SUBMISSION STARTED ===')
+    console.log('Form validation result:', validateForm())
+    console.log('Current Doctor ID:', currentDoctorId)
+    console.log('Current Clinic ID:', currentClinicId)
+    
+    if (!validateForm()) {
+      console.log('Form validation failed, stopping submission')
+      return
+    }
+
+    console.log('=== FORM DATA BEFORE PROCESSING ===')
+    console.log('Raw form data:', formData)
+    console.log('Form data keys:', Object.keys(formData))
+    console.log('Form data values:', Object.values(formData))
+    
+    // Log individual field values
+    console.log('=== INDIVIDUAL FIELD VALUES ===')
+    // console.log('Family Folder:', formData.familyFolder)
+    console.log('First Name:', formData.firstName)
+    console.log('Middle Name:', formData.middleName)
+    console.log('Last Name:', formData.lastName)
+    console.log('Age:', formData.age)
+    console.log('Date of Birth:', formData.dateOfBirth)
+    console.log('Gender:', formData.gender)
+    console.log('Area:', formData.area)
+    console.log('City:', formData.city)
+    console.log('State:', formData.state)
+    console.log('Marital Status:', formData.maritalStatus)
+    console.log('Occupation:', formData.occupation)
+    console.log('Address:', formData.address)
+    console.log('Mobile Number:', formData.mobileNumber)
+    console.log('Email:', formData.email)
+    console.log('Referred By:', formData.referredBy)
+    console.log('Referral Name:', formData.referralName)
+    console.log('Referral Contact:', formData.referralContact)
+    console.log('Referral Email:', formData.referralEmail)
+    console.log('Referral Address:', formData.referralAddress)
+    console.log('Add to Today\'s Appointment:', formData.addToTodaysAppointment)
 
     setLoading(true)
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      console.log('=== CALLING PATIENT REGISTRATION API ===')
+      console.log('Starting patient registration API call...')
       
-      // Generate patient ID
-      const patientId = `PAT-${Date.now().toString().slice(-6)}`
+      // Map form data to API request format
+      const apiRequest = mapFormDataToApiRequest()
       
-      const patientData = {
-        ...formData,
-        patientId,
-        fullName: `${formData.firstName} ${formData.lastName}`,
-        registrationDate: new Date().toISOString().split('T')[0]
-      }
+      // Call the patient registration API
+      const response = await patientService.quickRegister(apiRequest)
+      
+      console.log('=== API RESPONSE ===')
+      console.log('API Response:', response)
+      
+      if (response.success) {
+        console.log('=== PATIENT REGISTRATION SUCCESSFUL ===')
+        console.log('Patient ID:', response.patientId)
+        console.log('Rows Affected:', response.rowsAffected)
+        console.log('Message:', response.message)
+        
+        // Create patient data for callback
+        const patientData = {
+          ...formData,
+          patientId: response.patientId || `PAT-${Date.now().toString().slice(-6)}`,
+          fullName: `${formData.firstName} ${formData.lastName}`,
+          registrationDate: new Date().toISOString().split('T')[0],
+          doctorId: currentDoctorId,
+          clinicId: currentClinicId,
+          apiResponse: response
+        }
 
-      if (onSave) {
-        onSave(patientData)
+        console.log('=== FINAL PATIENT DATA TO BE SAVED ===')
+        console.log('Complete patient data object:', patientData)
+        console.log('Patient ID:', patientData.patientId)
+        console.log('Full Name:', patientData.fullName)
+        console.log('Registration Date:', patientData.registrationDate)
+        console.log('All patient data keys:', Object.keys(patientData))
+        console.log('All patient data values:', Object.values(patientData))
+
+        console.log('=== CALLING onSave CALLBACK ===')
+        console.log('onSave function exists:', !!onSave)
+        console.log('onSave function type:', typeof onSave)
+        
+        if (onSave) {
+          console.log('Calling onSave with patient data...')
+          onSave(patientData)
+          console.log('onSave called successfully')
+        } else {
+          console.log('No onSave callback provided')
+        }
+      } else {
+        console.error('=== PATIENT REGISTRATION FAILED ===')
+        console.error('Error:', response.error)
+        throw new Error(response.error || 'Patient registration failed')
       }
       
+      console.log('=== RESETTING FORM ===')
       // Reset form
       setFormData({
         lastName: '',
@@ -135,12 +396,27 @@ export default function AddPatientPage({ open, onClose, onSave }: AddPatientPage
         referralAddress: '',
         addToTodaysAppointment: true
       })
+      console.log('Form reset completed')
       
+      console.log('=== CLOSING DIALOG ===')
       onClose()
+      console.log('Dialog closed')
+      
+      console.log('=== FORM SUBMISSION COMPLETED SUCCESSFULLY ===')
     } catch (error) {
+      console.error('=== ERROR DURING PATIENT REGISTRATION ===')
       console.error('Error saving patient:', error)
+      console.error('Error type:', typeof error)
+      console.error('Error message:', error instanceof Error ? error.message : 'Unknown error')
+      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace')
+      
+      // Show error message to user (you might want to add a state for this)
+      alert(`Patient registration failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
+      console.log('=== FINALLY BLOCK ===')
+      console.log('Setting loading to false')
       setLoading(false)
+      console.log('Loading state updated')
     }
   }
 
@@ -365,9 +641,9 @@ export default function AddPatientPage({ open, onClose, onSave }: AddPatientPage
                       displayEmpty
                     >
                       <MenuItem value="">--Select--</MenuItem>
-                      <MenuItem value="Male">Male</MenuItem>
-                      <MenuItem value="Female">Female</MenuItem>
-                      <MenuItem value="Other">Other</MenuItem>
+                      {genderOptions.map(opt => (
+                        <MenuItem key={opt.id} value={opt.id}>{opt.name}</MenuItem>
+                      ))}
                     </Select>
                     {errors.gender && (
                       <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.75 }}>
@@ -382,20 +658,34 @@ export default function AddPatientPage({ open, onClose, onSave }: AddPatientPage
                   <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
                     Area <span style={{ color: 'red' }}>*</span>
                   </Typography>
-                  <TextField
-                    fullWidth
-                    value={formData.area}
-                    onChange={(e) => handleInputChange('area', e.target.value)}
-                    error={!!errors.area}
-                    helperText={errors.area}
-                    disabled={loading}
-                    InputProps={{
-                      endAdornment: (
-                        <InputAdornment position="end">
-                          <Search sx={{ color: '#666' }} />
-                        </InputAdornment>
-                      )
+                  <Autocomplete
+                    options={areaOptions}
+                    loading={areaLoading}
+                    getOptionLabel={(opt) => opt.name}
+                    value={areaOptions.find(o => o.name === formData.area) || null}
+                    onChange={(_, newValue) => {
+                      handleInputChange('area', newValue?.name || '')
                     }}
+                    onInputChange={(_, newInput) => {
+                      setAreaInput(newInput)
+                    }}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        fullWidth
+                        error={!!errors.area}
+                        helperText={errors.area}
+                        disabled={loading}
+                        InputProps={{
+                          ...params.InputProps,
+                          endAdornment: (
+                            <InputAdornment position="end">
+                              <Search sx={{ color: '#666' }} />
+                            </InputAdornment>
+                          )
+                        }}
+                      />
+                    )}
                   />
                 </Box>
               </Grid>
@@ -411,18 +701,32 @@ export default function AddPatientPage({ open, onClose, onSave }: AddPatientPage
                   <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
                     City
                   </Typography>
-                  <TextField
-                    fullWidth
-                    value={formData.city}
-                    onChange={(e) => handleInputChange('city', e.target.value)}
-                    disabled={loading}
-                    InputProps={{
-                      endAdornment: (
-                        <InputAdornment position="end">
-                          <Search sx={{ color: '#666' }} />
-                        </InputAdornment>
-                      )
+                  <Autocomplete
+                    options={cityOptions}
+                    loading={cityLoading}
+                    getOptionLabel={(opt) => opt.name}
+                    value={cityOptions.find(o => o.name === formData.city) || null}
+                    onChange={(_, newValue) => {
+                      handleInputChange('city', newValue?.name || '')
                     }}
+                    onInputChange={(_, newInput) => {
+                      setCityInput(newInput)
+                    }}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        fullWidth
+                        disabled={loading}
+                        InputProps={{
+                          ...params.InputProps,
+                          endAdornment: (
+                            <InputAdornment position="end">
+                              <Search sx={{ color: '#666' }} />
+                            </InputAdornment>
+                          )
+                        }}
+                      />
+                    )}
                   />
                 </Box>
               </Grid>
@@ -456,10 +760,9 @@ export default function AddPatientPage({ open, onClose, onSave }: AddPatientPage
                       displayEmpty
                     >
                       <MenuItem value="">--Select--</MenuItem>
-                      <MenuItem value="Single">Single</MenuItem>
-                      <MenuItem value="Married">Married</MenuItem>
-                      <MenuItem value="Divorced">Divorced</MenuItem>
-                      <MenuItem value="Widowed">Widowed</MenuItem>
+                      {maritalStatusOptions.map(opt => (
+                        <MenuItem key={opt.id} value={opt.id}>{opt.name}</MenuItem>
+                      ))}
                     </Select>
                   </FormControl>
                 </Box>
@@ -477,11 +780,9 @@ export default function AddPatientPage({ open, onClose, onSave }: AddPatientPage
                       displayEmpty
                     >
                       <MenuItem value="">--Select--</MenuItem>
-                      <MenuItem value="Student">Student</MenuItem>
-                      <MenuItem value="Employee">Employee</MenuItem>
-                      <MenuItem value="Business">Business</MenuItem>
-                      <MenuItem value="Retired">Retired</MenuItem>
-                      <MenuItem value="Unemployed">Unemployed</MenuItem>
+                      {occupationOptions.map(opt => (
+                        <MenuItem key={opt.id} value={opt.id}>{opt.name}</MenuItem>
+                      ))}
                     </Select>
                   </FormControl>
                 </Box>
@@ -532,12 +833,13 @@ export default function AddPatientPage({ open, onClose, onSave }: AddPatientPage
                       value={formData.referredBy}
                       onChange={(e) => handleInputChange('referredBy', e.target.value)}
                       disabled={loading}
+                      displayEmpty
                     >
-                      <MenuItem value="Self">Self</MenuItem>
-                      <MenuItem value="Doctor">Doctor</MenuItem>
-                      <MenuItem value="Friend">Friend</MenuItem>
-                      <MenuItem value="Family">Family</MenuItem>
-                      <MenuItem value="Other">Other</MenuItem>
+                      <MenuItem value="">--Select--</MenuItem>
+                      {/** Dynamically render from API-loaded options */}
+                      {referByOptions.map(opt => (
+                        <MenuItem key={opt.id} value={opt.id}>{opt.name}</MenuItem>
+                      ))}
                     </Select>
                   </FormControl>
                 </Box>

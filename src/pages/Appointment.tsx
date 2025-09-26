@@ -5,6 +5,7 @@ import { appointmentService, Appointment } from "../services/appointmentService"
 import { patientService, Patient } from "../services/patientService";
 import { useNavigate, useLocation } from "react-router-dom";
 import AddPatientPage from "./AddPatientPage";
+import { sessionService, SessionInfo } from "../services/sessionService";
 
 type AppointmentRow = {
     sr: number;
@@ -47,6 +48,35 @@ export default function AppointmentTable() {
     const [filterContact, setFilterContact] = useState<string>("");
     const [filterStatus, setFilterStatus] = useState<string>("");
     const [filterSize, setFilterSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
+    
+    // Session data state
+    const [sessionData, setSessionData] = useState<SessionInfo | null>(null);
+    const [doctorId, setDoctorId] = useState<string>('');
+    const [clinicId, setClinicId] = useState<string>('');
+
+    // Fetch session data on component mount
+    useEffect(() => {
+        const fetchSessionData = async () => {
+            try {
+                console.log('=== FETCHING SESSION DATA ===');
+                const result = await sessionService.getSessionInfo();
+                if (result.success && result.data) {
+                    console.log('Session data received:', result.data);
+                    setSessionData(result.data);
+                    setDoctorId(result.data.doctorId);
+                    setClinicId(result.data.clinicId);
+                    console.log('Doctor ID set to:', result.data.doctorId);
+                    console.log('Clinic ID set to:', result.data.clinicId);
+                } else {
+                    console.error('Failed to fetch session data:', result.error);
+                }
+            } catch (error) {
+                console.error('Error fetching session data:', error);
+            }
+        };
+
+        fetchSessionData();
+    }, []);
 
     // Convert Patient data to table format
     const convertToTableFormat = (patients: Patient[]): AppointmentRow[] => {
@@ -1226,6 +1256,8 @@ export default function AppointmentTable() {
             <AddPatientPage 
                 open={showAddPatient} 
                 onClose={() => setShowAddPatient(false)}
+                doctorId={doctorId}
+                clinicId={clinicId}
             />
         </div>
     );

@@ -39,6 +39,45 @@ export interface ErrorResponse {
   error: string;
 }
 
+// Quick registration request interface
+export interface QuickRegistrationRequest {
+  doctorId: string;
+  lastName: string;
+  middleName?: string;
+  firstName: string;
+  mobile: string;
+  areaId?: number;
+  cityId?: string;
+  stateId?: string;
+  countryId?: string;
+  dob?: string;
+  age?: string;
+  gender: string;
+  regYear?: string;
+  familyFolder?: string;
+  registrationStatus?: string;
+  userId: string;
+  referBy?: string;
+  referDoctorDetails?: string;
+  maritalStatus?: string;
+  occupation?: number;
+  address?: string;
+  patientEmail?: string;
+  doctorAddress?: string;
+  doctorMobile?: string;
+  doctorEmail?: string;
+  clinicId: string;
+}
+
+// Quick registration response interface
+export interface QuickRegistrationResponse {
+  success: boolean;
+  patientId?: string;
+  rowsAffected?: number;
+  message?: string;
+  error?: string;
+}
+
 export const patientService = {
   /**
    * Search patients with pagination support
@@ -111,6 +150,32 @@ export const patientService = {
       }
       
       throw new Error(error.response?.data?.message || 'Failed to fetch patient');
+    }
+  },
+
+  /**
+   * Quick register a new patient
+   * @param patientData - Patient registration data
+   * @returns Promise<QuickRegistrationResponse>
+   */
+  async quickRegister(patientData: QuickRegistrationRequest): Promise<QuickRegistrationResponse> {
+    try {
+      console.log('Registering patient with data:', patientData);
+      const response = await api.post<QuickRegistrationResponse>('/patients', patientData);
+      console.log('Patient registration response:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error('Error registering patient:', error);
+      if (error.response?.data) {
+        return {
+          success: false,
+          error: error.response.data.error || 'Registration failed'
+        };
+      }
+      return {
+        success: false,
+        error: 'Network error during registration'
+      };
     }
   },
 
