@@ -30,7 +30,6 @@ interface AddPatientPageProps {
 
 export default function AddPatientPage({ open, onClose, onSave }: AddPatientPageProps) {
   const [formData, setFormData] = useState({
-    familyFolder: '',
     lastName: '',
     firstName: '',
     middleName: '',
@@ -114,7 +113,6 @@ export default function AddPatientPage({ open, onClose, onSave }: AddPatientPage
       
       // Reset form
       setFormData({
-        familyFolder: '',
         lastName: '',
         firstName: '',
         middleName: '',
@@ -636,7 +634,6 @@ export default function AddPatientPage({ open, onClose, onSave }: AddPatientPage
           <Button
             onClick={() => {
               setFormData({
-                familyFolder: '',
                 lastName: '',
                 firstName: '',
                 middleName: '',

@@ -113,7 +113,6 @@ export default function Patients() {
       stateId: 'OTH',
       countryId: 'IND',
       regYear: new Date().getFullYear().toString(),
-      familyFolder: '',
       registrationStatus: 'Q',
       userId: 'system',
       referBy: '',

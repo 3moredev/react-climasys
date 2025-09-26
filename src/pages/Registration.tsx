@@ -31,7 +31,6 @@ export default function RegistrationPage() {
         age: '',
         gender,
         regYear: new Date().getFullYear().toString(),
-        familyFolder: '',
         registrationStatus: 'Q',
         userId: 'system',
         referBy: '',
@@ -52,7 +51,16 @@ export default function RegistrationPage() {
         body: JSON.stringify(payload) 
       })
       const data = await res.json()
-      setMessage(`Patient Registered Successfully! ID: ${data.patientId || 'OK'}`)
+      
+      if (data.SAVE_STATUS === 0) {
+        setMessage(`Duplicate patient found. Please check existing records.`)
+      } else if (data.SAVE_STATUS === 1) {
+        setMessage(`Patient Registered Successfully! ID: ${data.ID}`)
+      } else if (data.ErrorMessage) {
+        setMessage(`Registration failed: ${data.ErrorMessage}`)
+      } else {
+        setMessage(`Patient Registered Successfully! ID: ${data.ID || 'OK'}`)
+      }
       
       // Reset form
       setFirstName('')
