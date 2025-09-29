@@ -1,13 +1,17 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { List, CreditCard, MoreVert, Add as AddIcon, Save, Delete, Info, FastForward, Close, ChatBubbleOutline, Phone, SwapHoriz } from "@mui/icons-material";
-import { appointmentService, Appointment } from "../services/appointmentService";
-import { patientService, Patient } from "../services/patientService";
+import { appointmentService, Appointment, AppointmentRequest, TodayAppointmentsResponse, getDoctorStatusReference } from "../services/appointmentService";
+import { doctorService, DoctorDetail } from "../services/doctorService";
+import { patientService, Patient, formatVisitDateTime, getVisitStatusText } from "../services/patientService";
+import PatientVisit from "../services/patientService";
 import { useNavigate, useLocation } from "react-router-dom";
 import AddPatientPage from "./AddPatientPage";
 import { sessionService, SessionInfo } from "../services/sessionService";
 
 type AppointmentRow = {
+    reports_received: any;
+    appointmentId?: string;
     sr: number;
     patient: string;
     patientId: number;
@@ -25,6 +29,10 @@ type AppointmentRow = {
 
 
 export default function AppointmentTable() {
+    const [doctorDetails, setDoctorDetails] = useState<DoctorDetail[] | null>(null);
+    const [doctorError, setDoctorError] = useState<string>("");
+    const [doctorFirstName, setDoctorFirstName] = useState<string>("");
+    const [providerOptions, setProviderOptions] = useState<string[]>([]);
     const [appointments, setAppointments] = useState<AppointmentRow[]>([]);
     const [openStatusIndex, setOpenStatusIndex] = useState<number | null>(null);
     const [searchTerm, setSearchTerm] = useState<string>("");
@@ -78,6 +86,11 @@ export default function AppointmentTable() {
         fetchSessionData();
     }, []);
 
+    const [availableStatuses, setAvailableStatuses] = useState<string[]>([]);
+    const [previousVisits, setPreviousVisits] = useState<Record<number, PatientVisit[]>>({});
+    const [loadingVisits, setLoadingVisits] = useState<Record<number, boolean>>({});
+
+
     // Convert Patient data to table format
     const convertToTableFormat = (patients: Patient[]): AppointmentRow[] => {
         return patients.map((patient, index) => {
@@ -96,13 +109,142 @@ export default function AppointmentTable() {
                 patient: `${patient.first_name} ${patient.last_name}`,
                 age: resolvedAge,
                 contact: patient.mobile_1 || "",
-                time: new Date().toLocaleString(), // Current time as placeholder
+                time: "10:00", // Current time as placeholder
                 provider: "Dr.Tongaonkar", // Placeholder - you might want to get this from another API
-                online: "No", // Default value
+                online: "", // Default value
                 status: 'WAITING',
                 statusColor: getStatusColor('WAITING'),
                 lastOpd: "27 Sep 2025", // Placeholder
                 labs: "No Reports", // Placeholder
+                reports_received: patient.reports_received,
+                actions: true
+            };
+        });
+    };
+
+    const formatProviderLabel = (name?: string): string => {
+        const raw = String(name || '').trim();
+        if (!raw) return '';
+        const lower = raw.toLowerCase();
+        if (lower.startsWith('dr.') || lower.startsWith('dr ')) return raw;
+        return `Dr. ${raw}`;
+    };
+
+    // Convert SP endpoint resultSet1 rows to AppointmentRow format (best-effort field resolution)
+    const convertSPResultToRows = (rows: any[]): AppointmentRow[] => {
+        const toStringSafe = (v: any) => (v === null || v === undefined) ? '' : String(v);
+        const toNumberSafe = (v: any) => {
+            const n = Number(v);
+            return Number.isFinite(n) ? n : 0;
+        };
+        const getField = (obj: any, candidates: string[], fallback: any = ''): any => {
+            for (const key of candidates) {
+                if (obj && obj[key] !== undefined && obj[key] !== null && toStringSafe(obj[key]).trim() !== '') {
+                    return obj[key];
+                }
+            }
+            return fallback;
+        };
+        return rows.map((row, index) => {
+            // Use patient_id from the API response as the actual database patient ID
+            const patientIdRaw = getField(row, ['patient_id','patientId','id','patientID'], '0');
+            const patientName = toStringSafe(getField(row, ['patientName','patient_name','fullName','full_name','name'], ''));
+            const age = toNumberSafe(getField(row, ['age_given','age','patientAge','patient_age'], 0));
+            const mobile = toStringSafe(getField(row, ['mobileNumber','mobile_number','contact','phone','mobile'], ''));
+            const apptDate = toStringSafe(getField(row, ['appointmentDate','appointment_date','visitDate','visit_date'], new Date().toISOString().split('T')[0]));
+            const apptTime = toStringSafe(getField(row, ['visit_time','appointmentTime','appointment_time','visitTime'], ''));
+            const doctor = toStringSafe(getField(row, ['doctor_name','doctorName','provider','providerName'], doctorFirstName || 'Tongaonkar'));
+            const status = toStringSafe(getField(row, ['status_description','status','appointmentStatus','appointment_status'], 'WAITING')).toUpperCase();
+            const lastOpd = toStringSafe(getField(row, ['lastOpdVisit','last_opd_visit','lastVisit','last_visit'], ''));
+            const onlineTime = toStringSafe(getField(row, ['onlineAppointmentTime','online_time','onlineTime'], ''));
+            const reportsAsked = !!getField(row, ['reportsAsked','reports_asked','reportsReceived','reports_received'], false);
+            
+            // Fix time formatting - ensure proper HH:mm format
+            let formattedTime = '00:00'; // Default fallback
+            
+            
+            if (apptTime && apptTime !== 'null' && apptTime !== 'undefined') {
+                const timeStr = String(apptTime).trim();
+                
+                if (timeStr.includes(':')) {
+                    // Already in HH:mm format
+                    const parts = timeStr.split(':');
+                    if (parts.length >= 2) {
+                        const hours = parseInt(parts[0], 10);
+                        const minutes = parseInt(parts[1], 10);
+                        if (!isNaN(hours) && !isNaN(minutes)) {
+                            formattedTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+                        }
+                    }
+                } else if (timeStr.length === 4 && /^\d{4}$/.test(timeStr)) {
+                    // HHMM format (e.g., "1430")
+                    const hours = parseInt(timeStr.substring(0, 2), 10);
+                    const minutes = parseInt(timeStr.substring(2, 4), 10);
+                    if (!isNaN(hours) && !isNaN(minutes)) {
+                        formattedTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+                    }
+                } else if (timeStr.length === 3 && /^\d{3}$/.test(timeStr)) {
+                    // HMM format (e.g., "930")
+                    const hours = parseInt(timeStr.substring(0, 1), 10);
+                    const minutes = parseInt(timeStr.substring(1, 3), 10);
+                    if (!isNaN(hours) && !isNaN(minutes)) {
+                        formattedTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+                    }
+                } else if (!isNaN(Number(timeStr)) && Number(timeStr) > 0) {
+                    // Numeric time (e.g., 1430, 930)
+                    const numTime = Number(timeStr);
+                    if (numTime < 100) {
+                        // Just minutes (e.g., 30)
+                        formattedTime = `00:${String(numTime).padStart(2, '0')}`;
+                    } else if (numTime < 1000) {
+                        // HMM format (e.g., 930)
+                        const hours = Math.floor(numTime / 100);
+                        const minutes = numTime % 100;
+                        formattedTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+                    } else {
+                        // HHMM format (e.g., 1430)
+                        const hours = Math.floor(numTime / 100);
+                        const minutes = numTime % 100;
+                        formattedTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+                    }
+                }
+            }
+            
+            const timeString = `${apptDate}T${formattedTime}:00`;
+            
+            // Store the formatted time directly instead of creating a Date object
+            let displayTime: string;
+            try {
+                const dateObj = new Date(timeString);
+                if (isNaN(dateObj.getTime())) {
+                    // If date parsing fails, use formatted time as fallback
+                    displayTime = formattedTime;
+                } else {
+                    // Use the formatted time directly, not the Date object
+                    displayTime = formattedTime;
+                }
+            } catch (error) {
+                console.error('Date parsing error:', error, 'timeString:', timeString);
+                displayTime = formattedTime;
+            }
+            
+            const finalPatientId = toNumberSafe(patientIdRaw);
+            
+            return {
+                appointmentId: toStringSafe(getField(row, ['appointmentId','appointment_id','id'], '')),
+                sr: index + 1,
+                patientId: finalPatientId,
+                patient: patientName,
+                age: age,
+                contact: mobile,
+                time: displayTime,
+                provider: formatProviderLabel(doctor),
+                online: onlineTime || '',
+                status: status,
+                statusColor: getStatusColor(status),
+                lastOpd: lastOpd,
+                labs: '',
+                reports_received: reportsAsked,
                 actions: true
             };
         });
@@ -121,7 +263,32 @@ export default function AppointmentTable() {
         }
     };
 
-    // Search for patients using backend API
+    // Convert backend Appointment objects to AppointmentRow format
+    const convertAppointmentsToRows = (items: Appointment[]): AppointmentRow[] => {
+        return items.map((item, index) => {
+            const timeString = `${item.appointmentDate}T${String(item.appointmentTime || '00:00').padStart(5, '0')}:00`;
+            const status = (item.status || '').toUpperCase();
+            return {
+                appointmentId: item.appointmentId,
+                sr: index + 1,
+                patientId: Number.parseInt(item.patientId, 10) || 0,
+                patient: item.patientName || '',
+                age: typeof item.age === 'number' ? item.age : 0,
+                contact: item.mobileNumber || '',
+                time: new Date(timeString).toString(),
+                provider: formatProviderLabel(item.doctorName || doctorFirstName || 'Tongaonkar'),
+                online: item.onlineAppointmentTime || '',
+                status: status,
+                statusColor: getStatusColor(status),
+                lastOpd: String(item.lastOpdVisit || ''),
+                labs: '',
+                reports_received: item.reportsAsked ?? false,
+                actions: true
+            };
+        });
+    };
+
+    // Enhanced search for patients using backend API
     const searchPatients = async (query: string) => {
         if (!query.trim()) {
             setSearchResults([]);
@@ -138,11 +305,116 @@ export default function AppointmentTable() {
                 query: query,
                 status: 'all',
                 page: 0,
-                size: 20
+                size: 50 // Increased size to get more results for comprehensive search
             });
             
-            setSearchResults(response.patients);
-            setShowDropdown(response.patients.length > 0);
+            const q = query.trim().toLowerCase();
+            const patients = response.patients || [];
+            
+            
+            // Enhanced search with multiple criteria and priority
+            const searchResults = patients.filter((p: any) => {
+                const patientId = String(p.id || '').toLowerCase();
+                const firstName = String(p.first_name || '').toLowerCase();
+                const lastName = String(p.last_name || '').toLowerCase();
+                const fullName = `${firstName} ${lastName}`.trim().toLowerCase();
+                const contact = String(p.mobile_1 || '').replace(/\D/g, ''); // Remove non-digits
+                const queryDigits = q.replace(/\D/g, ''); // Remove non-digits from query
+                
+                // Check if query matches any of the search criteria
+                return (
+                    // Exact patient ID match (highest priority)
+                    patientId === q ||
+                    // Patient ID contains query
+                    patientId.includes(q) ||
+                    // First name starts with query
+                    firstName.startsWith(q) ||
+                    // Last name starts with query
+                    lastName.startsWith(q) ||
+                    // Full name contains query
+                    fullName.includes(q) ||
+                    // Contact number exact match (if query is numeric)
+                    (queryDigits.length >= 3 && contact.includes(queryDigits)) ||
+                    // First name contains query
+                    firstName.includes(q) ||
+                    // Last name contains query
+                    lastName.includes(q)
+                );
+            });
+            
+            
+            // Sort results by priority and relevance
+            const sortedResults = searchResults.sort((a: any, b: any) => {
+                const aId = String(a.id || '').toLowerCase();
+                const aFirstName = String(a.first_name || '').toLowerCase();
+                const aLastName = String(a.last_name || '').toLowerCase();
+                const aFullName = `${aFirstName} ${aLastName}`.trim().toLowerCase();
+                const aContact = String(a.mobile_1 || '').replace(/\D/g, '');
+                const queryDigits = q.replace(/\D/g, '');
+                
+                const bId = String(b.id || '').toLowerCase();
+                const bFirstName = String(b.first_name || '').toLowerCase();
+                const bLastName = String(b.last_name || '').toLowerCase();
+                const bFullName = `${bFirstName} ${bLastName}`.trim().toLowerCase();
+                const bContact = String(b.mobile_1 || '').replace(/\D/g, '');
+                
+                // Priority scoring system
+                const getScore = (patient: any) => {
+                    const id = String(patient.id || '').toLowerCase();
+                    const firstName = String(patient.first_name || '').toLowerCase();
+                    const lastName = String(patient.last_name || '').toLowerCase();
+                    const fullName = `${firstName} ${lastName}`.trim().toLowerCase();
+                    const contact = String(patient.mobile_1 || '').replace(/\D/g, '');
+                    
+                    let score = 0;
+                    
+                    // Exact patient ID match (highest priority)
+                    if (id === q) score += 1000;
+                    // Patient ID starts with query
+                    else if (id.startsWith(q)) score += 800;
+                    // Patient ID contains query
+                    else if (id.includes(q)) score += 600;
+                    
+                    // First name starts with query
+                    if (firstName.startsWith(q)) score += 500;
+                    // Last name starts with query
+                    if (lastName.startsWith(q)) score += 400;
+                    // Full name starts with query
+                    if (fullName.startsWith(q)) score += 300;
+                    
+                    // Contact exact match
+                    if (queryDigits.length >= 3 && contact === queryDigits) score += 200;
+                    // Contact contains query
+                    if (queryDigits.length >= 3 && contact.includes(queryDigits)) score += 100;
+                    
+                    // First name contains query
+                    if (firstName.includes(q)) score += 50;
+                    // Last name contains query
+                    if (lastName.includes(q)) score += 40;
+                    // Full name contains query
+                    if (fullName.includes(q)) score += 30;
+                    
+                    return score;
+                };
+                
+                const aScore = getScore(a);
+                const bScore = getScore(b);
+                
+                // Sort by score (descending), then by name
+                if (aScore !== bScore) {
+                    return bScore - aScore;
+                }
+                
+                // If scores are equal, sort alphabetically by first name, then last name
+                if (aFirstName !== bFirstName) {
+                    return aFirstName.localeCompare(bFirstName);
+                }
+                return aLastName.localeCompare(bLastName);
+            });
+            
+
+            setSearchResults(sortedResults);
+            setShowDropdown(sortedResults.length > 0);
         } catch (error: any) {
             console.error("Error searching patients:", error);
             setSearchResults([]);
@@ -153,19 +425,110 @@ export default function AppointmentTable() {
         }
     };
 
+     // Example: fetch doctor details for a fixed doctor (replace with actual selected doctorId)
+      useEffect(() => {
+        const doctorId = 'DR-00010';
+        (async () => {
+            try {
+                const details = await doctorService.getDoctorDetails(doctorId);
+                setDoctorDetails(details);
+                setDoctorError("");
+                 const fname = await doctorService.getDoctorFirstName(doctorId);
+                 setDoctorFirstName(fname || "");
+                 // Build provider dropdown options from details
+                 const extractName = (row: any): string | null => {
+                     const candidates = ['firstName','first_name','firstname','doctorFirstName','doctor_first_name','givenName','given_name','name','fullName','full_name','doctorName','doctor_name'];
+                     for (const key of candidates) {
+                         if (row && row[key]) {
+                             const val = String(row[key]).trim();
+                             if (!val) continue;
+                             // If it's a full name, take the first token
+                             if (/\s/.test(val) && (key === 'name' || key === 'fullName' || key === 'full_name' || key === 'doctorName' || key === 'doctor_name')) {
+                                 return val.split(/\s+/)[0];
+                             }
+                             return val;
+                         }
+                     }
+                     return null;
+                 };
+                 const names = Array.from(new Set((details || []).map(extractName).filter(Boolean))) as string[];
+                 setProviderOptions(names);
+            } catch (e: any) {
+                setDoctorDetails(null);
+                setDoctorError(e?.message || 'Failed to load doctor details');
+                 setDoctorFirstName("");
+                 setProviderOptions([]);
+            }
+        })();
+    }, []);
+
+    // Load today's appointments on first render via SP-based endpoint
+    useEffect(() => {
+        (async () => {
+            try {
+                const today = new Date().toISOString().split('T')[0];
+                const doctorId = 'DR-00010';
+                const clinicId = 'CL-00001';
+                const resp: TodayAppointmentsResponse = await appointmentService.getAppointmentsForDateSP({
+                    doctorId,
+                    clinicId,
+                    futureDate: today,
+                    languageId: 1
+                });
+                console.log('📅 Today\'s appointments loaded:', (resp?.resultSet1 || []).length, 'appointments');
+                const rows = convertSPResultToRows(resp?.resultSet1 || []);
+                setAppointments(rows);
+            } catch (e) {
+                console.error('Failed to load today\'s appointments (SP endpoint)', e);
+            }
+        })();
+    }, []);
+
+    // Load status reference for dynamic statuses
+    useEffect(() => {
+        (async () => {
+            try {
+                const ref = await getDoctorStatusReference();
+                
+                const pickLabel = (row: any): string | null => {
+                    const candidates = ['status_description','statusDescription','description','name','label','status'];
+                    for (const key of candidates) {
+                        if (row && row[key]) {
+                            const val = String(row[key]).trim();
+                            if (val) return val.toUpperCase();
+                        }
+                    }
+                    return null;
+                };
+                
+                const labels = Array.from(new Set((ref || []).map(pickLabel).filter(Boolean))) as string[];
+                setAvailableStatuses(labels);
+            } catch (e) {
+                console.error('❌ Failed to load status reference', e);
+                setAvailableStatuses([]);
+            }
+        })();
+    }, []);
+
+    // Fetch previous visits for all appointments when appointments change
+    useEffect(() => {
+        if (appointments.length > 0) {
+            appointments.forEach(appointment => {
+                fetchPreviousVisits(appointment.patientId);
+            });
+        }
+    }, [appointments]);
+
     // Handle search input change
     const handleSearchChange = (value: string) => {
         setSearchTerm(value);
         searchPatients(value);
     };
 
-    // Handle patient selection from dropdown
+    // Handle patient selection from dropdown - only allow one patient
     const handlePatientSelect = (patient: Patient) => {
-        const isAlreadySelected = selectedPatients.some(p => p.id === patient.id);
-        
-        if (!isAlreadySelected) {
-            setSelectedPatients(prev => [...prev, patient]);
-        }
+        // Clear any existing selection and select only this patient
+        setSelectedPatients([patient]);
         
         setSearchTerm("");
         setSearchResults([]);
@@ -177,17 +540,138 @@ export default function AppointmentTable() {
         setSelectedPatients(prev => prev.filter(p => p.id !== patientId));
     };
 
-    // Book appointment - add selected patients to table
-    const handleBookAppointment = () => {
+    // Fetch previous visits for a patient
+    const fetchPreviousVisits = async (patientId: number) => {
+        if (previousVisits[patientId] || loadingVisits[patientId]) {
+            return; // Already loaded or loading
+        }
+
+        try {
+            setLoadingVisits(prev => ({ ...prev, [patientId]: true }));
+            const response = await patientService.getPreviousVisitDates(patientId.toString());
+            
+            setPreviousVisits(prev => ({ ...prev, [patientId]: response.visits }));
+        } catch (error) {
+            console.error(`❌ Failed to fetch previous visits for patient ${patientId}:`, error);
+            setPreviousVisits(prev => ({ ...prev, [patientId]: [] }));
+        } finally {
+            setLoadingVisits(prev => ({ ...prev, [patientId]: false }));
+        }
+    };
+
+    // Format last visit display according to requirements: date-provider-L format
+    const formatLastVisitDisplay = (patientId: number, reportsReceived: boolean): string => {
+        const visits = previousVisits[patientId];
+        
+        if (!visits || visits.length === 0) {
+            return "No previous visits";
+        }
+
+        // Get the most recent visit (first in the array since they're ordered by date DESC)
+        const lastVisit = visits[0];
+        
+        // Format date as DD-MM-YY
+        const visitDate = new Date(lastVisit.visit_date);
+        const formattedDate = `${String(visitDate.getDate()).padStart(2, '0')}-${String(visitDate.getMonth() + 1).padStart(2, '0')}-${String(visitDate.getFullYear()).slice(-2)}`;
+        
+        // Get provider name from doctor_id
+        let providerName = 'Unknown Provider';
+        if (lastVisit.doctor_id) {
+            // Handle different doctor_id formats
+            if (lastVisit.doctor_id.startsWith('DR-')) {
+                providerName = `Dr. ${lastVisit.doctor_id.replace('DR-', '')}`;
+            } else {
+                providerName = `Dr. ${lastVisit.doctor_id}`;
+            }
+        }
+        
+        // Build the display string: date - provider
+        let displayText = `${formattedDate} - ${providerName}`;
+        
+        // Add "L" if reports were received
+        if (reportsReceived) {
+            displayText += ' - L';
+        }
+        
+        return displayText;
+    };
+
+    // Book appointment - immediately call API
+    const handleBookAppointment = async () => {
         if (selectedPatients.length === 0) {
-            alert("Please select at least one patient to book an appointment.");
+            alert("Please select a patient to book an appointment.");
             return;
         }
 
-        const newAppointments = convertToTableFormat(selectedPatients);
-        setAppointments(prev => [...prev, ...newAppointments]);
-        setSelectedPatients([]);
-        alert(`Successfully booked ${newAppointments.length} appointment(s)!`);
+        if (selectedPatients.length > 1) {
+            alert("Please select only one patient at a time.");
+            return;
+        }
+
+        const patient = selectedPatients[0];
+        
+        try {
+            // Block booking if patient has any non-COMPLETED appointment today
+            const hasNonCompletedAppointment = appointments.some(
+                (a) => a.patientId === patient.id && String(a.status || '').toUpperCase() !== 'COMPLETED'
+            );
+            if (hasNonCompletedAppointment) {
+                alert("This patient has an existing appointment that is not COMPLETED. Please complete it before booking a new one.");
+                return;
+            }
+
+            const now = new Date();
+            const hh = String(now.getHours()).padStart(2, '0');
+            const mm = String(now.getMinutes()).padStart(2, '0');
+            const currentVisitTime = `${hh}:${mm}`;
+
+            const appointmentData: AppointmentRequest = {
+                visitDate: new Date().toISOString().split('T')[0], // Today's date in YYYY-MM-DD format
+                shiftId: 1, // Default shift ID
+                clinicId: "CL-00001", // Default clinic ID
+                doctorId: "DR-00010", // Default doctor ID
+                patientId: patient.id.toString(),
+                visitTime: currentVisitTime, // Real-time visit time (HH:mm)
+                reportsReceived: false, // Default value
+                inPerson: true // Default to in-person appointment
+            };
+            
+            console.log('Booking appointment with data:', appointmentData);
+
+            const result = await appointmentService.bookAppointment(appointmentData);
+            console.log('Booking result:', result);
+            
+            if (result.success) {
+                // Refresh appointments from server to get the correct status and time
+                try {
+                    const today = new Date().toISOString().split('T')[0];
+                    const doctorId = 'DR-00010';
+                    const clinicId = 'CL-00001';
+                    const resp: TodayAppointmentsResponse = await appointmentService.getAppointmentsForDateSP({
+                        doctorId,
+                        clinicId,
+                        futureDate: today,
+                        languageId: 1
+                    });
+                    const rows = convertSPResultToRows(resp?.resultSet1 || []);
+                    setAppointments(rows);
+                    setSelectedPatients([]);
+                    alert(`Successfully booked appointment for ${patient.first_name} ${patient.last_name}!`);
+                } catch (refreshError) {
+                    console.error('Failed to refresh appointments after booking:', refreshError);
+                    // Fallback: add with default status
+                    const newAppointments = convertToTableFormat([patient]);
+                    setAppointments(prev => [...prev, ...newAppointments]);
+                    setSelectedPatients([]);
+                    alert(`Successfully booked appointment for ${patient.first_name} ${patient.last_name}!`);
+                }
+            } else {
+                alert(`Failed to book appointment: ${result.error || 'Unknown error'}`);
+            }
+        } catch (error) {
+            console.error("Error booking appointment:", error);
+            alert("Failed to book appointment. Please try again.");
+        }
     };
 
     // Toggle view functions
@@ -269,23 +753,42 @@ export default function AppointmentTable() {
         return () => window.removeEventListener('resize', measure);
     }, []);
 
+    // Update field by shared index - used by both views
+    const updateAppointmentField = (index: number, field: keyof AppointmentRow, value: any) => {
+        setAppointments(prev => {
+            const updated = [...prev];
+            (updated[index] as any)[field] = value;
+            return updated;
+        });
+    };
+
     const handleOnlineChange = (index: number, value: string) => {
-        const updated = [...appointments];
-        updated[index].online = value;
-        setAppointments(updated);
+        updateAppointmentField(index, 'online', value);
     };
 
     const handleProviderChange = (index: number, value: string) => {
-        const updated = [...appointments];
-        updated[index].provider = value;
-        setAppointments(updated);
+        updateAppointmentField(index, 'provider', value);
     };
 
     const extractTime = (dateTimeStr: string): string => {
-        const date = new Date(dateTimeStr);
-        const hh = String(date.getHours()).padStart(2, "0");
-        const mm = String(date.getMinutes()).padStart(2, "0");
-        return `${hh}:${mm}`;
+        // If the string is already in HH:mm format, return it directly
+        if (/^\d{2}:\d{2}$/.test(dateTimeStr)) {
+            return dateTimeStr;
+        }
+        
+        // Otherwise, try to parse it as a date and extract time
+        try {
+            const date = new Date(dateTimeStr);
+            if (isNaN(date.getTime())) {
+                return '00:00'; // Fallback for invalid dates
+            }
+            const hh = String(date.getHours()).padStart(2, "0");
+            const mm = String(date.getMinutes()).padStart(2, "0");
+            return `${hh}:${mm}`;
+        } catch (error) {
+            console.error('Error extracting time from:', dateTimeStr, error);
+            return '00:00';
+        }
     };
 
     const formatYearToTwoDigits = (dateLabel: string): string => {
@@ -310,6 +813,24 @@ export default function AppointmentTable() {
         fontWeight: 500,
         height: "38px"
     };
+
+    // Derive counts by status for header badges
+    const statusCounts = useMemo(() => {
+        const counts: Record<string, number> = {
+            'WAITING': 0,
+            'WITH DOCTOR': 0,
+            'ON CALL': 0,
+            'CHECK OUT': 0,
+            'COMPLETED': 0,
+            'SAVED': 0
+        };
+        for (const appt of appointments) {
+            const key = String(appt.status || '').toUpperCase();
+            if (!(key in counts)) counts[key] = 0;
+            counts[key] += 1;
+        }
+        return counts;
+    }, [appointments]);
 
     return (
         <div className="container-fluid mt-3" style={{ fontFamily: "'Roboto', sans-serif" }}>
@@ -359,12 +880,12 @@ export default function AppointmentTable() {
         .appointments-table .content-gap-small { margin-bottom: 8px !important; }
         
         /* Card view styles - CRM-like */
-        .card-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+        .card-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
         .appointment-card {
             background: #FFFFFF;
             border-radius: 10px;
             padding: 12px;
-            margin-bottom: 16px;
+            margin-bottom: 6px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.10);
             position: relative;
             min-height: 150px;
@@ -617,17 +1138,17 @@ export default function AppointmentTable() {
             <div className="d-flex justify-content-between align-items-center mb-3">
                 <h2>Appointments</h2>
                 <div className="d-flex align-items-center" style={{ fontSize: '0.85rem', color: '#455A64', gap: '8px', whiteSpace: 'nowrap' }}>
-                    <span className="me-1"><span className="rounded-circle d-inline-block bg-primary" style={{ width: 10, height: 10 }}></span> 10 </span>
+                    <span className="me-1"><span className="rounded-circle d-inline-block bg-primary" style={{ width: 10, height: 10 }}></span> {statusCounts['WAITING'] || 0} </span>
                     |
-                    <span className="mx-1"><span className="rounded-circle d-inline-block bg-success" style={{ width: 10, height: 10 }}></span> 0 </span>
+                    <span className="mx-1"><span className="rounded-circle d-inline-block bg-success" style={{ width: 10, height: 10 }}></span> {statusCounts['WITH DOCTOR'] || 0} </span>
                     |
-                    <span className="mx-1"><span className="rounded-circle d-inline-block bg-info" style={{ width: 10, height: 10 }}></span> 0 </span>
+                    <span className="mx-1"><span className="rounded-circle d-inline-block bg-info" style={{ width: 10, height: 10 }}></span> {statusCounts['ON CALL'] || 0} </span>
                     |
-                    <span className="mx-1"><span className="rounded-circle d-inline-block bg-warning" style={{ width: 10, height: 10 }}></span> 0 </span>
+                    <span className="mx-1"><span className="rounded-circle d-inline-block bg-warning" style={{ width: 10, height: 10 }}></span> {statusCounts['CHECK OUT'] || 0} </span>
                     |
-                    <span className="mx-1"><span className="rounded-circle d-inline-block bg-dark" style={{ width: 10, height: 10 }}></span> 0 </span>
+                    <span className="mx-1"><span className="rounded-circle d-inline-block bg-dark" style={{ width: 10, height: 10 }}></span> {statusCounts['COMPLETED'] || 0} </span>
                     |
-                    <span className="ms-1"><span className="rounded-circle d-inline-block bg-danger" style={{ width: 10, height: 10 }}></span> 0 </span>
+                    <span className="ms-1"><span className="rounded-circle d-inline-block bg-danger" style={{ width: 10, height: 10 }}></span> {statusCounts['SAVED'] || 0} </span>
                 </div>
             </div>
 
@@ -638,7 +1159,7 @@ export default function AppointmentTable() {
                 <div className="position-relative" ref={searchRef}>
                     <input
                         type="text"
-                        placeholder="Search with Patient ID / Patient Name / Contact Number"
+                        placeholder="Search by Patient ID, First Name, Last Name, Full Name, or Contact Number"
                         className="form-control"
                         value={searchTerm}
                         onChange={(e) => handleSearchChange(e.target.value)}
@@ -679,12 +1200,27 @@ export default function AppointmentTable() {
                                             onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#f8f9fa"}
                                             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "white"}
                                         >
-                                            <div className="fw-bold">{patient.first_name} {patient.last_name}</div>
-                                            <div className="text-muted small">
-                                                ID: {patient.id} | Folder: {patient.folder_no} | Age: {age} | Contact: {patient.mobile_1}
+                                            <div className="fw-bold d-flex align-items-center">
+                                                <i className="fas fa-user me-2 text-primary"></i>
+                                                {patient.first_name} {patient.last_name}
                                             </div>
-                                            <div className="text-muted small">
-                                                Status: {patient.registration_status} | Registered: {new Date(patient.date_of_registration).toLocaleDateString()}
+                                            <div className="text-muted small mt-1">
+                                                <i className="fas fa-id-card me-1"></i>
+                                                <strong>ID:</strong> {patient.id} | 
+                                                <i className="fas fa-folder me-1 ms-2"></i>
+                                                <strong>Folder:</strong> {patient.folder_no} | 
+                                                <i className="fas fa-birthday-cake me-1 ms-2"></i>
+                                                <strong>Age:</strong> {age}
+                                            </div>
+                                            <div className="text-muted small mt-1">
+                                                <i className="fas fa-phone me-1"></i>
+                                                <strong>Contact:</strong> {patient.mobile_1 || 'N/A'} | 
+                                                <i className="fas fa-info-circle me-1 ms-2"></i>
+                                                <strong>Status:</strong> {patient.registration_status}
+                                            </div>
+                                            <div className="text-muted small mt-1">
+                                                <i className="fas fa-calendar me-1"></i>
+                                                <strong>Registered:</strong> {new Date(patient.date_of_registration).toLocaleDateString()}
                                             </div>
                                         </div>
                                     );
@@ -717,7 +1253,7 @@ export default function AppointmentTable() {
                     style={{ ...buttonStyle }}
                     onClick={handleBookAppointment}
                 >
-                    Book Appointment {selectedPatients.length > 0 && `(${selectedPatients.length})`}
+                    Book Appointment {selectedPatients.length > 0 && `(1)`}
                 </button>
                 <button 
                     className="btn" 
@@ -728,6 +1264,12 @@ export default function AppointmentTable() {
                 </button>
 
                 {/* 5) Status dropdown */}
+                {(() => {
+                    const statusOptions = availableStatuses.length ? availableStatuses : [
+                        'WAITING','WITH DOCTOR','CHECK OUT','ON CALL','SAVED','COMPLETED'
+                    ];
+                    return null;
+                })()}
                 <select
                     className="form-select"
                     value={filterStatus}
@@ -735,12 +1277,11 @@ export default function AppointmentTable() {
                     style={{ height: '38px', width: '160px', color: filterStatus ? '#212121' : '#6c757d', padding: '6px 12px', lineHeight: '1.5', fontSize: '1rem' }}
                 >
                     <option value="">Select Status</option>
-                    <option value="WAITING">Waiting</option>
-                    <option value="WITH DOCTOR">With Doctor</option>
-                    <option value="CHECK OUT">Check Out</option>
-                    <option value="ON CALL">On Call</option>
-                    <option value="SAVED">Saved</option>
-                    <option value="COMPLETED">Completed</option>
+                    {(availableStatuses.length ? availableStatuses : [
+                        'WAITING','WITH DOCTOR','CHECK OUT','ON CALL','SAVED','COMPLETED'
+                    ]).map(s => (
+                        <option key={s} value={s}>{s}</option>
+                    ))}
                     
                 </select>
 
@@ -802,10 +1343,10 @@ export default function AppointmentTable() {
 
             {/* No extra filter row; status filter is inline above */}
 
-            {/* Selected Patients */}
+            {/* Selected Patient */}
             {selectedPatients.length > 0 && (
                 <div className="mb-3">
-                    <h6 className="mb-2">Selected Patients ({selectedPatients.length}):</h6>
+                    <h6 className="mb-2">Selected Patient:</h6>
                     <div className="d-flex flex-wrap gap-2">
                         {selectedPatients.map((patient) => (
                             <div
@@ -834,7 +1375,7 @@ export default function AppointmentTable() {
                         <i className="fas fa-calendar-plus" style={{ fontSize: "3rem", color: "#6c757d" }}></i>
                     </div>
                     <h5 className="text-muted">No Appointments Booked</h5>
-                    <p className="text-muted">Search for patients and click "Book Appointment" to add them to your schedule.</p>
+                    <p className="text-muted">Search for a patient and click "Book Appointment" to add them to your schedule.</p>
                 </div>
             ) : (
                 <>
@@ -869,11 +1410,14 @@ export default function AppointmentTable() {
                                             <td className="provider-col">
                                                 <select
                                                     className="form-select form-select-sm"
-                                                    value={a.provider || 'Dr.Tongaonkar'}
+                                                    value={formatProviderLabel(a.provider || doctorFirstName || '')}
                                                     onChange={(e) => handleProviderChange(originalIndex, e.target.value)}
-                                                    // style={{ width: '18ch' }}
                                                 >
-                                                    <option value="Dr.Tongaonkar">Dr. Tongaonkar</option>
+                                                    {(providerOptions.length ? providerOptions : (doctorFirstName ? [doctorFirstName] : ['Tongaonkar']))
+                                                        .map((name) => {
+                                                            const label = formatProviderLabel(name);
+                                                            return <option key={label} value={label}>{label}</option>;
+                                                        })}
                                                 </select>
                                             </td>
                                             <td className="online-cell">
@@ -930,14 +1474,12 @@ export default function AppointmentTable() {
                                                             fontFamily: "'Roboto', sans-serif",
                                                         }}
                                                     >
-                                                        {["WAITING","WITH DOCTOR","CHECK OUT","ON CALL","SAVED","COMPLETED"].map((status) => (
+                                                        {(availableStatuses.length ? availableStatuses : ["WAITING","WITH DOCTOR","CHECK OUT","ON CALL","SAVED","COMPLETED"]).map((status) => (
                                                             <div
                                                                 key={status}
                                                                 onClick={() => {
-                                                                    const updated = [...appointments];
-                                                                    updated[originalIndex].status = status;
-                                                                    updated[originalIndex].statusColor = getStatusColor(status);
-                                                                    setAppointments(updated);
+                                                                    updateAppointmentField(originalIndex, 'status', status);
+                                                                    updateAppointmentField(originalIndex, 'statusColor', getStatusColor(status));
                                                                     setOpenStatusIndex(null);
                                                                     setMenuPosition(null);
                                                                 }}
@@ -962,11 +1504,17 @@ export default function AppointmentTable() {
                                             <td className="last-col">
                                                 <a
                                                     href={`/patients/${a.patientId}/visits`}
-                                                    title={`Dr.Tongaonkar`}
+                                                    title={`View visit history`}
                                                     style={{ textDecoration: "underline", color: "#1E88E5" }}
                                                 >
-                                                    {/* {`${formatYearToTwoDigits(a.lastOpd)} - Dr.Tongaonkar${(a.labs || '').toLowerCase() === 'reports' ? ' -L' : ''}`} */}
-                                                    {`${formatYearToTwoDigits(a.lastOpd)}`} - Dr.Tongaonkar-L
+                                                    {loadingVisits[a.patientId] ? (
+                                                        <span className="text-muted">
+                                                            <i className="fas fa-spinner fa-spin me-1"></i>
+                                                            Loading...
+                                                        </span>
+                                                    ) : (
+                                                        formatLastVisitDisplay(a.patientId, a.reports_received)
+                                                    )}
                                                 </a>
                                             </td>
                                             <td className="action-col" style={{ whiteSpace: "nowrap", position: 'relative' }}>
@@ -1101,14 +1649,12 @@ export default function AppointmentTable() {
                                                     fontFamily: "'Roboto', sans-serif",
                                                 }}
                                             >
-                                                {["WAITING","WITH DOCTOR","CHECK OUT","ON CALL","SAVED","COMPLETED"].map((status) => (
+                                                {(availableStatuses.length ? availableStatuses : ["WAITING","WITH DOCTOR","CHECK OUT","ON CALL","SAVED","COMPLETED"]).map((status) => (
                                                     <div
                                                         key={status}
                                                         onClick={() => {
-                                                            const updated = [...appointments];
-                                                            updated[originalIndex].status = status;
-                                                            updated[originalIndex].statusColor = getStatusColor(status);
-                                                            setAppointments(updated);
+                                                            updateAppointmentField(originalIndex, 'status', status);
+                                                            updateAppointmentField(originalIndex, 'statusColor', getStatusColor(status));
                                                             setOpenStatusIndex(null);
                                                             setMenuPosition(null);
                                                         }}
@@ -1131,18 +1677,40 @@ export default function AppointmentTable() {
                                         <div className="card-details">
                                             <div className="kv"><span className="k">Age:</span><span className="v">{appointment.age}</span></div>
                                             <div className="kv"><span className="k">Contact:</span><span className="v">{appointment.contact}</span></div>
-                                            {/* <div className="kv"><span className="k">Last Visit:</span><span className="v"><a href={`/patients/${appointment.patientId}/visits`} title={`Dr.Tongaonkar`} style={{ textDecoration: 'underline', color: '#1E88E5' }}>{`${formatYearToTwoDigits(appointment.lastOpd)}${(appointment.labs || '').toLowerCase() === 'reports' ? ' -L' : ''}`}</a></span></div> */}
-                                            <div className="kv"><span className="k">Last Visit:</span><span className="v"><a href={`/patients/${appointment.patientId}/visits`} title={`Dr.Tongaonkar`} style={{ textDecoration: 'underline', color: '#1E88E5' }}>{`${formatYearToTwoDigits(appointment.lastOpd)}`} -L</a></span></div>
+                                            <div className="kv">
+                                                <span className="k">Last Visit:</span>
+                                                <span className="v">
+                                                    <a 
+                                                        href={`/patients/${appointment.patientId}/visits`} 
+                                                        title={`View visit history`} 
+                                                        style={{ textDecoration: 'underline', color: '#1E88E5' }}
+                                                    >
+                                                        {loadingVisits[appointment.patientId] ? (
+                                                            <span className="text-muted">
+                                                                <i className="fas fa-spinner fa-spin me-1"></i>
+                                                                Loading...
+                                                            </span>
+                                                        ) : (
+                                                            formatLastVisitDisplay(appointment.patientId, appointment.reports_received)
+                                                        )}
+                                                    </a>
+                                                </span>
+                                            </div>
+                                            {/* <div className="kv"><span className="k">Last Visit:</span><span className="v"><a href={`/patients/${appointment.patientId}/visits`} title={`Dr.Tongaonkar`} style={{ textDecoration: 'underline', color: '#1E88E5' }}>{`${formatYearToTwoDigits(appointment.lastOpd)}`} -L</a></span></div> */}
                                             <div className="kv"><span className="k">Dr. Tongaonkar</span></div>
                                             <div className="kv"><span className="k">Time:</span><span className="v">{extractTime(appointment.time)}</span></div>
                                             <div className="kv"><span className="k">Provider:</span><span className="v">
                                                 <select
                                                     className="form-select"
-                                                    value={appointment.provider || 'Dr. Tongaonkar'}
+                                                    value={formatProviderLabel(appointment.provider || doctorFirstName || '')}
                                                     onChange={(e) => handleProviderChange(originalIndex, e.target.value)}
-                                                    style={{ width: '107px', height: '28px', padding: " 3px !important", fontSize:9 }}
+                                                    style={{ width: '110px', height: '28px', padding: '2px', fontSize: 11 }}
                                                 >
-                                                    <option value="Dr. Tongaonkar">Dr. Tongaonkar</option>
+                                                    {(providerOptions.length ? providerOptions : (doctorFirstName ? [doctorFirstName] : ['Tongaonkar']))
+                                                        .map((name) => {
+                                                            const label = formatProviderLabel(name);
+                                                            return <option key={label} value={label}>{label}</option>;
+                                                        })}
                                                 </select>
                                             </span></div>
                                             
