@@ -18,11 +18,13 @@ import {
   InputAdornment,
   Checkbox,
   FormControlLabel,
-  Switch
+  Switch,
+  Snackbar
 } from '@mui/material'
 import Autocomplete from '@mui/material/Autocomplete'
 import { Close, Save, Person, Search, CalendarToday } from '@mui/icons-material'
 import { patientService, QuickRegistrationRequest } from '../services/patientService'
+import { appointmentService, AppointmentRequest } from '../services/appointmentService'
 
 interface AddPatientPageProps {
   open: boolean
@@ -68,6 +70,8 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
   const [cityInput, setCityInput] = useState('')
   const [cityLoading, setCityLoading] = useState(false)
   const [referByOptions, setReferByOptions] = useState<{ id: string; name: string }[]>([])
+  const [snackbarOpen, setSnackbarOpen] = useState(false)
+  const [snackbarMessage, setSnackbarMessage] = useState('')
   const dobInputRef = useRef<HTMLInputElement>(null)
   
   // Store doctorId and clinicId from props
@@ -119,20 +123,18 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
       dob: formData.dateOfBirth || undefined,
       age: formData.age || undefined,
       gender: selectedGender ? selectedGender.id : formData.gender,
-      regYear: new Date().getFullYear().toString(),
-      // familyFolder: formData.familyFolder || '',
+      regYear: '5', // Match Swagger format
       registrationStatus: 'P', // Default to 'P' for Pending
       userId: 'Recep2', // You might want to get this from session
-      referBy: selectedReferBy ? selectedReferBy.id : formData.referredBy,
-      referDoctorDetails: formData.referralName ? 
-        `${formData.referralName}${formData.referralContact ? ` - ${formData.referralContact}` : ''}${formData.referralEmail ? ` (${formData.referralEmail})` : ''}` : '',
+      referBy: selectedReferBy ? selectedReferBy.id : '',
+      referDoctorDetails: '',
       maritalStatus: selectedMaritalStatus ? selectedMaritalStatus.id : '',
       occupation: selectedOccupation ? parseInt(selectedOccupation.id) : undefined,
       address: formData.address || '',
       patientEmail: formData.email || '',
-      doctorAddress: formData.referralAddress || '',
-      doctorMobile: formData.referralContact || '',
-      doctorEmail: formData.referralEmail || '',
+      doctorAddress: '',
+      doctorMobile: formData.mobileNumber, // Use patient's mobile as doctor mobile
+      doctorEmail: '',
       clinicId: currentClinicId
     }
 
@@ -329,16 +331,17 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
       console.log('=== API RESPONSE ===')
       console.log('API Response:', response)
       
-      if (response.success) {
+      // Check for successful registration based on backend response format
+      if (response.SAVE_STATUS === 1 || response.success) {
         console.log('=== PATIENT REGISTRATION SUCCESSFUL ===')
-        console.log('Patient ID:', response.patientId)
-        console.log('Rows Affected:', response.rowsAffected)
+        console.log('Patient ID:', response.ID)
+        console.log('Save Status:', response.SAVE_STATUS)
         console.log('Message:', response.message)
         
         // Create patient data for callback
         const patientData = {
           ...formData,
-          patientId: response.patientId || `PAT-${Date.now().toString().slice(-6)}`,
+          patientId: response.ID || `PAT-${Date.now().toString().slice(-6)}`,
           fullName: `${formData.firstName} ${formData.lastName}`,
           registrationDate: new Date().toISOString().split('T')[0],
           doctorId: currentDoctorId,
@@ -354,6 +357,56 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
         console.log('All patient data keys:', Object.keys(patientData))
         console.log('All patient data values:', Object.values(patientData))
 
+        // Check if we need to book an appointment for today
+        if (formData.addToTodaysAppointment && response.ID) {
+          console.log('=== BOOKING APPOINTMENT FOR TODAY ===')
+          console.log('Add to Today\'s Appointments is enabled')
+          console.log('Patient ID for appointment:', response.ID)
+          console.log('Doctor ID:', currentDoctorId)
+          console.log('Clinic ID:', currentClinicId)
+          
+          try {
+            const now = new Date();
+            const hh = String(now.getHours()).padStart(2, '0');
+            const mm = String(now.getMinutes()).padStart(2, '0');
+            const currentVisitTime = `${hh}:${mm}`;
+
+            const appointmentData: AppointmentRequest = {
+              visitDate: new Date().toISOString().split('T')[0], // Today's date in YYYY-MM-DD format
+              shiftId: 1, // Default shift ID
+              clinicId: currentClinicId || "CL-00001", // Use current clinic ID or default
+              doctorId: currentDoctorId || "DR-00010", // Use current doctor ID or default
+              patientId: response.ID, // Use the patient ID from registration response
+              visitTime: currentVisitTime, // Real-time visit time (HH:mm)
+              reportsReceived: false, // Default value
+              inPerson: true // Default to in-person appointment
+            };
+            
+            console.log('=== APPOINTMENT DATA ===')
+            console.log('Appointment data:', appointmentData)
+            
+            const appointmentResult = await appointmentService.bookAppointment(appointmentData);
+            console.log('=== APPOINTMENT BOOKING RESULT ===')
+            console.log('Appointment booking result:', appointmentResult)
+            
+            if (appointmentResult.success) {
+              console.log('=== APPOINTMENT BOOKED SUCCESSFULLY ===')
+              console.log('Appointment booked for patient:', response.ID)
+            } else {
+              console.error('=== APPOINTMENT BOOKING FAILED ===')
+              console.error('Appointment booking failed:', appointmentResult.error || 'Unknown error')
+            }
+          } catch (appointmentError) {
+            console.error('=== ERROR BOOKING APPOINTMENT ===')
+            console.error('Error booking appointment:', appointmentError)
+            // Don't throw here - we still want to proceed with patient registration success
+          }
+        } else {
+          console.log('=== SKIPPING APPOINTMENT BOOKING ===')
+          console.log('Add to Today\'s Appointments:', formData.addToTodaysAppointment)
+          console.log('Patient ID available:', !!response.ID)
+        }
+
         console.log('=== CALLING onSave CALLBACK ===')
         console.log('onSave function exists:', !!onSave)
         console.log('onSave function type:', typeof onSave)
@@ -365,44 +418,55 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
         } else {
           console.log('No onSave callback provided')
         }
+
+        // Show success snackbar
+        const successMessage = formData.addToTodaysAppointment 
+          ? 'Patient added and appointment booked successfully!' 
+          : 'Patient added successfully!'
+        setSnackbarMessage(successMessage)
+        setSnackbarOpen(true)
+        
+        // Wait for 2 seconds to show snackbar, then close form
+        setTimeout(() => {
+          console.log('=== RESETTING FORM ===')
+          // Reset form
+          setFormData({
+            lastName: '',
+            firstName: '',
+            middleName: '',
+            age: '',
+            dateOfBirth: '',
+            gender: '',
+            area: 'pune',
+            city: 'Pune',
+            patientId: '',
+            maritalStatus: '',
+            occupation: '',
+            address: '',
+            mobileNumber: '',
+            email: '',
+            state: 'Maharashtra',
+            referredBy: 'Self',
+            referralName: '',
+            referralContact: '',
+            referralEmail: '',
+            referralAddress: '',
+            addToTodaysAppointment: true
+          })
+          console.log('Form reset completed')
+          
+          console.log('=== CLOSING DIALOG ===')
+          onClose()
+          console.log('Dialog closed')
+          
+          console.log('=== FORM SUBMISSION COMPLETED SUCCESSFULLY ===')
+        }, 2000) // 2 second delay
       } else {
         console.error('=== PATIENT REGISTRATION FAILED ===')
-        console.error('Error:', response.error)
-        throw new Error(response.error || 'Patient registration failed')
+        console.error('Save Status:', response.SAVE_STATUS)
+        console.error('Error:', response.error || response.message)
+        throw new Error(response.error || response.message || 'Patient registration failed')
       }
-      
-      console.log('=== RESETTING FORM ===')
-      // Reset form
-      setFormData({
-        lastName: '',
-        firstName: '',
-        middleName: '',
-        age: '',
-        dateOfBirth: '',
-        gender: '',
-        area: 'pune',
-        city: 'Pune',
-        patientId: '',
-        maritalStatus: '',
-        occupation: '',
-        address: '',
-        mobileNumber: '',
-        email: '',
-        state: 'Maharashtra',
-        referredBy: 'Self',
-        referralName: '',
-        referralContact: '',
-        referralEmail: '',
-        referralAddress: '',
-        addToTodaysAppointment: true
-      })
-      console.log('Form reset completed')
-      
-      console.log('=== CLOSING DIALOG ===')
-      onClose()
-      console.log('Dialog closed')
-      
-      console.log('=== FORM SUBMISSION COMPLETED SUCCESSFULLY ===')
     } catch (error) {
       console.error('=== ERROR DURING PATIENT REGISTRATION ===')
       console.error('Error saving patient:', error)
@@ -450,7 +514,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
         padding: '10px 20px 2px 20px'
       }}>
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#1976d2', m: 0 }}>
+          <Typography variant="h6" sx={{ fontWeight: 'bold', m: 0 }}>
             Add Patient
           </Typography>
         </Box>
@@ -476,14 +540,49 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
         '& .MuiTextField-root, & .MuiFormControl-root': { width: '100%' },
         // Remove right padding on last column so fields align with actions
         '& .MuiGrid-container > .MuiGrid-item:last-child': { paddingRight: 0 },
-        '& .MuiTextField-root .MuiOutlinedInput-root, & .MuiFormControl-root .MuiOutlinedInput-root': { height: 40 },
-        // Remove extra global border applied to inputs inside TextField
-        '& .MuiTextField-root input': { border: 'none !important', boxShadow: 'none !important', outline: 'none', backgroundColor: 'transparent' },
-        '& .MuiTextField-root input:focus': { border: 'none !important', boxShadow: 'none !important', outline: 'none', backgroundColor: 'transparent' },
-        '& .MuiOutlinedInput-root.Mui-focused': { boxShadow: 'none !important ' },
-        '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': { boxShadow: 'none' },
+        // Match Appointment page input/select height (38px)
+        '& .MuiTextField-root .MuiOutlinedInput-root, & .MuiFormControl-root .MuiOutlinedInput-root': { height: 38 },
+        // Typography and padding to match Appointment inputs
+        '& .MuiInputBase-input, & .MuiSelect-select': {
+          fontFamily: "'Roboto', sans-serif",
+          fontWeight: 500,
+          padding: '6px 12px',
+          lineHeight: 1.5
+        },
+        // Outline thickness and colors (normal and focused)
+        '& .MuiOutlinedInput-root .MuiOutlinedInput-notchedOutline': {
+          borderWidth: '2px',
+          borderColor: '#B7B7B7'
+        },
+        '& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline': {
+          borderColor: '#999'
+        },
+        '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
+          borderWidth: '2px',
+          borderColor: '#1E88E5'
+        },
+        // Keep inputs clean of shadows
+        '& .MuiOutlinedInput-root': { boxShadow: 'none' },
+        '& .MuiOutlinedInput-root.Mui-focused': { boxShadow: 'none !important' },
+        // Disabled look similar to Appointment header select
+        '& .MuiOutlinedInput-root.Mui-disabled .MuiOutlinedInput-input, & .MuiOutlinedInput-root.Mui-disabled .MuiSelect-select': {
+          backgroundColor: '#ECEFF1',
+          WebkitTextFillColor: 'inherit'
+        },
+        // Autocomplete input opacity (visible)
+        '& .MuiAutocomplete-root .MuiAutocomplete-input': {
+          opacity: 1
+        },
+        // Remove global input borders on this page only
+        '& input, & textarea, & select, & .MuiTextField-root input, & .MuiFormControl-root input': {
+          border: 'none !important'
+        },
         '& .MuiBox-root': { mb: 0.75 },
-        '& .MuiTypography-root': { mb: 0.25 }
+        '& .MuiTypography-root': { mb: 0.25 },
+        // Local override for headings inside this dialog only
+        '& h1, & h2, & h3, & h4, & h5, & h6, & .MuiTypography-h1, & .MuiTypography-h2, & .MuiTypography-h3, & .MuiTypography-h4, & .MuiTypography-h5, & .MuiTypography-h6': {
+          margin: '0 0 2px 0 !important'
+        }
       }}>
         <Grid container spacing={3}>
           {/* Row 1: Patient ID, First Name, Middle Name, Last Name */}
@@ -639,8 +738,14 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                       onChange={(e) => handleInputChange('gender', e.target.value)}
                       disabled={loading}
                       displayEmpty
+                      renderValue={(selected) => {
+                        if (selected === '' || selected === null || selected === undefined) {
+                          return <span style={{ color: 'rgba(0,0,0,0.6)' }}>Select Gender</span>
+                        }
+                        const option = genderOptions.find(opt => opt.id === selected)
+                        return option ? option.name : String(selected ?? '')
+                      }}
                     >
-                      <MenuItem value="">--Select--</MenuItem>
                       {genderOptions.map(opt => (
                         <MenuItem key={opt.id} value={opt.id}>{opt.name}</MenuItem>
                       ))}
@@ -673,6 +778,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                       <TextField
                         {...params}
                         fullWidth
+                        placeholder="Search Area"
                         error={!!errors.area}
                         helperText={errors.area}
                         disabled={loading}
@@ -716,6 +822,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                       <TextField
                         {...params}
                         fullWidth
+                        placeholder="Search City"
                         disabled={loading}
                         InputProps={{
                           ...params.InputProps,
@@ -758,8 +865,14 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                       onChange={(e) => handleInputChange('maritalStatus', e.target.value)}
                       disabled={loading}
                       displayEmpty
+                      renderValue={(selected) => {
+                        if (selected === '' || selected === null || selected === undefined) {
+                          return <span style={{ color: 'rgba(0,0,0,0.6)' }}>Select Marital Status</span>
+                        }
+                        const option = maritalStatusOptions.find(opt => opt.id === selected)
+                        return option ? option.name : String(selected ?? '')
+                      }}
                     >
-                      <MenuItem value="">--Select--</MenuItem>
                       {maritalStatusOptions.map(opt => (
                         <MenuItem key={opt.id} value={opt.id}>{opt.name}</MenuItem>
                       ))}
@@ -778,8 +891,14 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                       onChange={(e) => handleInputChange('occupation', e.target.value)}
                       disabled={loading}
                       displayEmpty
+                      renderValue={(selected) => {
+                        if (selected === '' || selected === null || selected === undefined) {
+                          return <span style={{ color: 'rgba(0,0,0,0.6)' }}>Select Occupation</span>
+                        }
+                        const option = occupationOptions.find(opt => opt.id === selected)
+                        return option ? option.name : String(selected ?? '')
+                      }}
                     >
-                      <MenuItem value="">--Select--</MenuItem>
                       {occupationOptions.map(opt => (
                         <MenuItem key={opt.id} value={opt.id}>{opt.name}</MenuItem>
                       ))}
@@ -834,8 +953,14 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                       onChange={(e) => handleInputChange('referredBy', e.target.value)}
                       disabled={loading}
                       displayEmpty
+                      renderValue={(selected) => {
+                        if (selected === '' || selected === null || selected === undefined) {
+                          return <span style={{ color: 'rgba(0,0,0,0.6)' }}>Referred By</span>
+                        }
+                        const option = referByOptions.find(opt => opt.id === selected)
+                        return option ? option.name : String(selected ?? '')
+                      }}
                     >
-                      <MenuItem value="">--Select--</MenuItem>
                       {/** Dynamically render from API-loaded options */}
                       {referByOptions.map(opt => (
                         <MenuItem key={opt.id} value={opt.id}>{opt.name}</MenuItem>
@@ -982,6 +1107,22 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
           </Button>
         </Box>
       </DialogActions>
+
+      {/* Success Snackbar */}
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={2000}
+        onClose={() => setSnackbarOpen(false)}
+        message={snackbarMessage}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        sx={{
+          '& .MuiSnackbarContent-root': {
+            backgroundColor: '#4caf50',
+            color: 'white',
+            fontWeight: 'bold'
+          }
+        }}
+      />
     </Dialog>
   )
 }

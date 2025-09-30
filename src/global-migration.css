@@ -243,8 +243,8 @@ h1, h2, h3, h4, h5, h6,
 .MuiTypography-h4,
 .MuiTypography-h5,
 .MuiTypography-h6 {
-  color: #334559 !important;
-  font-family: "Lucida Grande", "Lucida Sans Unicode", "Lucida Sans", Geneva, Verdana, sans-serif !important;
+  /* color: #334559 !important; */
+  /* font-family: "Lucida Grande", "Lucida Sans Unicode", "Lucida Sans", Geneva, Verdana, sans-serif !important; */
   margin: 0 0 16px 0 !important;
 }
 

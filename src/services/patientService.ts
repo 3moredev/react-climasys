@@ -71,10 +71,12 @@ export interface QuickRegistrationRequest {
 
 // Quick registration response interface
 export interface QuickRegistrationResponse {
-  success: boolean;
+  ID?: string;
+  message?: string;
+  SAVE_STATUS?: number;
+  success?: boolean;
   patientId?: string;
   rowsAffected?: number;
-  message?: string;
   error?: string;
 }
 

@@ -34,7 +34,7 @@ function mapOccupationItem(item: any): OptionItem {
 function mapMaritalStatusItem(item: any): OptionItem {
   const id = item?.id ?? item?.maritalStatusId ?? item?.code ?? ''
   const name = item?.name ??
-    (id === 'S' ? 'Single' : id === 'M' ? 'Married' : id === 'D' ? 'Divorced' : id === 'W' ? 'Widowed' : String(id))
+    (id === 'U' ? 'Single' : id === 'M' ? 'Married' : id === 'D' ? 'Divorced' : id === 'W' ? 'Widowed' : String(id))
   return { id: String(id), name: String(name) }
 }
 
