@@ -2,6 +2,14 @@ import api from './api'
 
 export type DoctorDetail = Record<string, any>;
 
+export interface Doctor {
+  id: string;
+  name: string;
+  specialty?: string;
+  firstName?: string;
+  lastName?: string;
+}
+
 export const doctorService = {
   async getDoctorDetails(doctorId: string): Promise<DoctorDetail[]> {
     const res = await api.get<DoctorDetail[]>(`/doctors/${doctorId}/details`);
@@ -27,6 +35,35 @@ export const doctorService = {
       if (parts.length > 0) return parts[0];
     }
     return null;
+  },
+  /**
+   * Get all available doctors in the system
+   */
+  async getAllDoctors(): Promise<Doctor[]> {
+    try {
+      console.log('Fetching doctors from /doctors/all endpoint...');
+      const response = await api.get('/doctors/all');
+      console.log('Raw API response:', response.data);
+      
+      const doctors = response.data || [];
+      
+      // Transform the response to match our Doctor interface
+      const transformedDoctors = doctors.map((doctor: any) => ({
+        id: doctor.id || doctor.doctorId || doctor.doctor_id || '',
+        name: doctor.name || doctor.doctorName || doctor.doctor_name || 
+              `${doctor.firstName || doctor.first_name || ''} ${doctor.lastName || doctor.last_name || ''}`.trim() ||
+              `${doctor.specialty || ''} - ${doctor.firstName || doctor.first_name || ''}`.trim(),
+        specialty: doctor.specialty || doctor.specialization || doctor.department,
+        firstName: doctor.firstName || doctor.first_name,
+        lastName: doctor.lastName || doctor.last_name
+      }));
+      
+      console.log('Transformed doctors:', transformedDoctors);
+      return transformedDoctors;
+    } catch (error) {
+      console.error('Error fetching all doctors:', error);
+      throw new Error('Failed to fetch doctors from server');
+    }
   }
 };
 

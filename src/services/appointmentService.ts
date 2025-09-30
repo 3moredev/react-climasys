@@ -166,6 +166,69 @@ export const appointmentService = {
       console.error('Search Appointments API Error:', error)
       return []
     }
+  },
+
+  /**
+   * Delete an appointment by patient, visit date, and doctor
+   * Mirrors backend @DeleteMapping("/appointments") with query params
+   */
+  async deleteAppointment(params: { patientId: string; visitDate: string; doctorId: string; userId?: string }): Promise<any> {
+    const { patientId, visitDate, doctorId, userId = 'system' } = params
+    try {
+      const response = await api.delete('/appointments', {
+        params: { patientId, visitDate, doctorId, userId }
+      })
+      console.log('Delete appointment response:', response.data)
+      return response.data
+    } catch (error) {
+      console.error('Delete Appointment API Error:', error)
+      throw error
+    }
+  },
+
+  /**
+   * Update today's appointment: online time, doctor and status
+   * Mirrors backend @PutMapping("/appointments/online-time-doctor")
+   */
+  async updateTodaysAppointment(params: {
+    patientId: string
+    patientVisitNo: number
+    shiftId: number
+    clinicId: string
+    onlineAppointmentTime?: string
+    doctorId: string
+    statusId: number
+    userId?: string
+  }): Promise<any> {
+    const {
+      patientId,
+      patientVisitNo,
+      shiftId,
+      clinicId,
+      onlineAppointmentTime,
+      doctorId,
+      statusId,
+      userId = 'system'
+    } = params
+    try {
+      const response = await api.put('/appointments/online-time-doctor', null, {
+        params: {
+          patientId,
+          patientVisitNo,
+          shiftId,
+          clinicId,
+          onlineAppointmentTime,
+          doctorId,
+          statusId,
+          userId
+        }
+      })
+      console.log('Update todays appointment response:', response.data)
+      return response.data
+    } catch (error) {
+      console.error('Update Todays Appointment API Error:', error)
+      throw error
+    }
   }
 }
 
@@ -180,6 +243,19 @@ export async function getDoctorStatusReference(): Promise<any[]> {
   } catch (error) {
     console.error('Status-reference API Error:', error)
     return []
+  }
+}
+
+/**
+ * Get status options filtered by clinicId
+ */
+export async function getStatusOptionsByClinic(clinicId: string): Promise<{ success: boolean; statusOptions: any[]; clinicId: string }> {
+  try {
+    const response = await api.get('/appointments/status-options', { params: { clinicId } })
+    return response.data as { success: boolean; statusOptions: any[]; clinicId: string }
+  } catch (error) {
+    console.error('Status-options (by clinic) API Error:', error)
+    return { success: false, statusOptions: [], clinicId }
   }
 }
 

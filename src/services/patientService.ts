@@ -14,6 +14,8 @@ export interface Patient {
   registration_status: string;
   date_of_registration: string;
   age_given: number;
+  reports_received: boolean;
+  doctor_id: string;
 }
 
 // Search response interface
@@ -78,6 +80,25 @@ export interface QuickRegistrationResponse {
   patientId?: string;
   rowsAffected?: number;
   error?: string;
+}
+
+// Visit interface for previous visit dates
+export interface PatientVisit {
+  visit_date: string;
+  visit_time: string;
+  visit_number: number;
+  visit_id: number;
+  doctor_id: string;
+  clinic_id: string;
+  visit_status: number;
+  visit_type: number;
+}
+
+// Previous visit dates response interface
+export interface PreviousVisitDatesResponse {
+  visits: PatientVisit[];
+  total_visits: number;
+  patient_id: string;
 }
 
 export const patientService = {
@@ -216,7 +237,88 @@ export const patientService = {
       
       throw new Error(error.response?.data?.message || 'Failed to fetch patients');
     }
+  },
+
+  /**
+   * Get previous visit dates for a patient
+   * @param patientId - Patient ID from the database (not folder number)
+   * @returns Promise<PreviousVisitDatesResponse>
+   */
+  async getPreviousVisitDates(patientId: string): Promise<PreviousVisitDatesResponse> {
+    try {
+      console.log(`Fetching previous visit dates for patient ID: ${patientId}`);
+      
+      // Use the patient_id from the database, not the folder number or other identifier
+      const response = await api.get(`/patients/${patientId}/visits/dates`);
+      console.log('Get previous visit dates response:', response.data);
+      
+      return response.data;
+    } catch (error: any) {
+      console.error('Get previous visit dates API Error:', error);
+      
+      if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
+        throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
+      }
+      
+      if (error.response?.status === 404) {
+        throw new Error('Patient not found or no visits found.');
+      } else if (error.response?.status === 500) {
+        throw new Error('Server error occurred while fetching visit dates.');
+      }
+      
+      // Handle backend-specific errors
+      if (error.response?.data?.error) {
+        throw new Error(error.response.data.error);
+      }
+      
+      throw new Error(error.response?.data?.message || 'Failed to fetch previous visit dates');
+    }
   }
+};
+
+// Utility function to format visit date and time
+export const formatVisitDateTime = (visit: PatientVisit): string => {
+  try {
+    const visitDate = new Date(visit.visit_date);
+    const visitTime = visit.visit_time;
+    
+    const formattedDate = visitDate.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+    
+    // Format time if available
+    let formattedTime = '';
+    if (visitTime && visitTime !== '00:00:00') {
+      const timeParts = visitTime.split(':');
+      if (timeParts.length >= 2) {
+        const hours = parseInt(timeParts[0], 10);
+        const minutes = timeParts[1];
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        const displayHours = hours % 12 || 12;
+        formattedTime = ` at ${displayHours}:${minutes} ${ampm}`;
+      }
+    }
+    
+    return `${formattedDate}${formattedTime}`;
+  } catch (error) {
+    console.error('Error formatting visit date:', error);
+    return visit.visit_date;
+  }
+};
+
+// Utility function to get visit status text
+export const getVisitStatusText = (statusId: number): string => {
+  const statusMap: { [key: number]: string } = {
+    1: 'Scheduled',
+    2: 'In Progress',
+    3: 'Completed',
+    4: 'Cancelled',
+    5: 'No Show'
+  };
+  
+  return statusMap[statusId] || `Status ${statusId}`;
 };
 
 export default patientService;

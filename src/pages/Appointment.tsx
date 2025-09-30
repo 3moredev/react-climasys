@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { List, CreditCard, MoreVert, Add as AddIcon, Save, Delete, Info, FastForward, Close, ChatBubbleOutline, Phone, SwapHoriz } from "@mui/icons-material";
-import { appointmentService, Appointment, AppointmentRequest, TodayAppointmentsResponse, getDoctorStatusReference } from "../services/appointmentService";
-import { doctorService, DoctorDetail } from "../services/doctorService";
+import { appointmentService, Appointment, AppointmentRequest, TodayAppointmentsResponse, getDoctorStatusReference, getStatusOptionsByClinic } from "../services/appointmentService";
+import { doctorService, DoctorDetail, Doctor } from "../services/doctorService";
 import { patientService, Patient, formatVisitDateTime, getVisitStatusText } from "../services/patientService";
-import PatientVisit from "../services/patientService";
+import type { PatientVisit } from "../services/patientService";
 import { useNavigate, useLocation } from "react-router-dom";
 import AddPatientPage from "./AddPatientPage";
 import { sessionService, SessionInfo } from "../services/sessionService";
@@ -14,7 +14,8 @@ type AppointmentRow = {
     appointmentId?: string;
     sr: number;
     patient: string;
-    patientId: number;
+    patientId: string;
+    visitDate?: string;
     age: number;
     contact: string;
     time: string;
@@ -24,6 +25,7 @@ type AppointmentRow = {
     status: string;
     lastOpd: string;
     labs: string;
+    doctorId?: string;
     actions: boolean;
 };
 
@@ -61,6 +63,11 @@ export default function AppointmentTable() {
     const [sessionData, setSessionData] = useState<SessionInfo | null>(null);
     const [doctorId, setDoctorId] = useState<string>('');
     const [clinicId, setClinicId] = useState<string>('');
+    
+    // Doctor selection state
+    const [allDoctors, setAllDoctors] = useState<Doctor[]>([]);
+    const [selectedDoctorId, setSelectedDoctorId] = useState<string>('');
+    const [loadingDoctors, setLoadingDoctors] = useState<boolean>(false);
 
     // Fetch session data on component mount
     useEffect(() => {
@@ -86,9 +93,36 @@ export default function AppointmentTable() {
         fetchSessionData();
     }, []);
 
+    // Fetch all doctors when component mounts
+    useEffect(() => {
+        const fetchAllDoctors = async () => {
+            setLoadingDoctors(true);
+            try {
+                console.log('Fetching all doctors...');
+                const doctors = await doctorService.getAllDoctors();
+                setAllDoctors(doctors);
+                
+                // Set the first doctor as default selection if none is selected
+                if (doctors.length > 0 && !selectedDoctorId) {
+                    setSelectedDoctorId(doctors[0].id);
+                }
+                
+                console.log('All doctors loaded:', doctors);
+            } catch (error) {
+                console.error('Error fetching all doctors:', error);
+            } finally {
+                setLoadingDoctors(false);
+            }
+        };
+
+        fetchAllDoctors();
+    }, [selectedDoctorId]);
+
     const [availableStatuses, setAvailableStatuses] = useState<string[]>([]);
-    const [previousVisits, setPreviousVisits] = useState<Record<number, PatientVisit[]>>({});
-    const [loadingVisits, setLoadingVisits] = useState<Record<number, boolean>>({});
+    const [previousVisits, setPreviousVisits] = useState<Record<string, PatientVisit[]>>({});
+    const [loadingVisits, setLoadingVisits] = useState<Record<string, boolean>>({});
+    const searchInputRef = useRef<HTMLInputElement | null>(null);
+    const [searchMenuPosition, setSearchMenuPosition] = useState<{ top: number; left: number; width: number } | null>(null);
 
 
     // Convert Patient data to table format
@@ -105,7 +139,7 @@ export default function AppointmentTable() {
             
             return {
                 sr: appointments.length + index + 1,
-                patientId: patient.id,
+                patientId: String(patient.id),
                 patient: `${patient.first_name} ${patient.last_name}`,
                 age: resolvedAge,
                 contact: patient.mobile_1 || "",
@@ -146,8 +180,8 @@ export default function AppointmentTable() {
             return fallback;
         };
         return rows.map((row, index) => {
-            // Use patient_id from the API response as the actual database patient ID
-            const patientIdRaw = getField(row, ['patient_id','patientId','id','patientID'], '0');
+            // Use patient_id from the API response as the actual database patient ID (string, can be alphanumeric)
+            const patientIdRaw = getField(row, ['patient_id','patientId','id','patientID'], '');
             const patientName = toStringSafe(getField(row, ['patientName','patient_name','fullName','full_name','name'], ''));
             const age = toNumberSafe(getField(row, ['age_given','age','patientAge','patient_age'], 0));
             const mobile = toStringSafe(getField(row, ['mobileNumber','mobile_number','contact','phone','mobile'], ''));
@@ -228,39 +262,76 @@ export default function AppointmentTable() {
                 displayTime = formattedTime;
             }
             
-            const finalPatientId = toNumberSafe(patientIdRaw);
+            const finalPatientId = String(patientIdRaw || '');
             
             return {
                 appointmentId: toStringSafe(getField(row, ['appointmentId','appointment_id','id'], '')),
                 sr: index + 1,
                 patientId: finalPatientId,
                 patient: patientName,
+                visitDate: toStringSafe(getField(row, ['appointmentDate','appointment_date','visitDate','visit_date'], '')),
                 age: age,
                 contact: mobile,
                 time: displayTime,
-                provider: formatProviderLabel(doctor),
+                provider: doctorId,
                 online: onlineTime || '',
                 status: status,
                 statusColor: getStatusColor(status),
                 lastOpd: lastOpd,
                 labs: '',
                 reports_received: reportsAsked,
+                doctorId: toStringSafe(getField(row, ['doctor_id','doctorId'], '')),
                 actions: true
             };
         });
     };
 
+    // Normalize status for display
+    const normalizeStatusLabel = (status: string): string => {
+        const s = String(status || '').trim().toUpperCase();
+        if (s === 'ON CALL') return 'WITH DOCTOR (ON PHONE)';
+        if (s === 'COMPLETED') return 'COMPLETE';
+        if (s === 'SAVED') return 'SAVE';
+        return s;
+    };
+
     // Get status color mapping for appointment workflow
     const getStatusColor = (status: string): string => {
-        switch ((status || '').toUpperCase()) {
-            case 'WAITING': return 'bg-primary'; // blue
-            case 'WITH DOCTOR': return 'bg-success'; // green
-            case 'CHECK OUT': return 'bg-warning'; // orange
-            case 'COMPLETED': return 'bg-dark'; // black
-            case 'SAVED': return 'bg-danger'; // red
-            case 'ON CALL': return 'bg-info';
+        const normalized = normalizeStatusLabel(status);
+        switch (normalized) {
+            case 'WAITING': return 'bg-primary';
+            case 'WITH DOCTOR': return 'bg-success';
+            case 'WITH DOCTOR (ON PHONE)': return 'bg-info';
+            case 'CHECK OUT': return 'bg-warning';
+            case 'COMPLETE': return 'bg-dark';
+            case 'SAVE': return 'bg-danger';
             default: return 'bg-secondary';
         }
+    };
+
+    // Map UI status label to backend statusId
+    const mapStatusLabelToId = (status: string): number => {
+        const s = normalizeStatusLabel(status);
+        switch (s) {
+            case 'WAITING': return 1;
+            case 'WITH DOCTOR': return 2;
+            case 'COMPLETED': return 3;
+            case 'CHECK OUT': return 4;
+            case 'ON CALL': return 5;
+            case 'SAVE': return 6;
+            default: return 1;
+        }
+    };
+
+    // Get latest (max) visit number for a patient from loaded visits
+    const getLatestVisitNumber = (patientId: string | number): number => {
+        const key = String(patientId);
+        const visits = previousVisits[key] || [];
+        if (!visits.length) return 1;
+        return visits.reduce((max, v) => {
+            const n = typeof v.visit_number === 'number' ? v.visit_number : Number(v.visit_number) || 0;
+            return n > max ? n : max;
+        }, 1);
     };
 
     // Convert backend Appointment objects to AppointmentRow format
@@ -271,8 +342,9 @@ export default function AppointmentTable() {
             return {
                 appointmentId: item.appointmentId,
                 sr: index + 1,
-                patientId: Number.parseInt(item.patientId, 10) || 0,
+                patientId: String(item.patientId || ''),
                 patient: item.patientName || '',
+                visitDate: item.appointmentDate || '',
                 age: typeof item.age === 'number' ? item.age : 0,
                 contact: item.mobileNumber || '',
                 time: new Date(timeString).toString(),
@@ -283,6 +355,7 @@ export default function AppointmentTable() {
                 lastOpd: String(item.lastOpdVisit || ''),
                 labs: '',
                 reports_received: item.reportsAsked ?? false,
+                doctorId: '',
                 actions: true
             };
         });
@@ -425,64 +498,75 @@ export default function AppointmentTable() {
         }
     };
 
-     // Example: fetch doctor details for a fixed doctor (replace with actual selected doctorId)
+     // Fetch doctor details for the session doctor (for backward compatibility)
       useEffect(() => {
-        const doctorId = 'DR-00010';
+        const doctorId = sessionData?.doctorId || '';
+        if (!doctorId) return;
+        
         (async () => {
             try {
-                const details = await doctorService.getDoctorDetails(doctorId);
-                setDoctorDetails(details);
-                setDoctorError("");
-                 const fname = await doctorService.getDoctorFirstName(doctorId);
-                 setDoctorFirstName(fname || "");
-                 // Build provider dropdown options from details
-                 const extractName = (row: any): string | null => {
-                     const candidates = ['firstName','first_name','firstname','doctorFirstName','doctor_first_name','givenName','given_name','name','fullName','full_name','doctorName','doctor_name'];
-                     for (const key of candidates) {
-                         if (row && row[key]) {
-                             const val = String(row[key]).trim();
-                             if (!val) continue;
-                             // If it's a full name, take the first token
-                             if (/\s/.test(val) && (key === 'name' || key === 'fullName' || key === 'full_name' || key === 'doctorName' || key === 'doctor_name')) {
-                                 return val.split(/\s+/)[0];
-                             }
-                             return val;
-                         }
-                     }
-                     return null;
-                 };
-                 const names = Array.from(new Set((details || []).map(extractName).filter(Boolean))) as string[];
-                 setProviderOptions(names);
+                // Try to get the doctor's first name from the all doctors list first
+                if (allDoctors.length > 0) {
+                    const sessionDoctor = allDoctors.find(doctor => doctor.id === doctorId);
+                    if (sessionDoctor) {
+                        // Extract first name from the doctor's name
+                        const firstName = sessionDoctor.firstName || 
+                                        sessionDoctor.name.split(' ')[0] || 
+                                        'Doctor';
+                        setDoctorFirstName(firstName);
+                        setDoctorError("");
+                        return;
+                    }
+                }
+                
+                // Fallback: try to get doctor details (this might fail if endpoint doesn't exist)
+                try {
+                    const details = await doctorService.getDoctorDetails(doctorId);
+                    setDoctorDetails(details);
+                    setDoctorError("");
+                    const fname = await doctorService.getDoctorFirstName(doctorId);
+                    setDoctorFirstName(fname || "");
+                } catch (detailsError) {
+                    console.warn('Doctor details endpoint not available, using fallback:', detailsError);
+                    // Use a fallback first name
+                    setDoctorFirstName('Doctor');
+                    setDoctorError("");
+                }
             } catch (e: any) {
+                console.error('Error fetching doctor information:', e);
                 setDoctorDetails(null);
-                setDoctorError(e?.message || 'Failed to load doctor details');
-                 setDoctorFirstName("");
-                 setProviderOptions([]);
+                setDoctorError(e?.message || 'Failed to fetch doctor details');
+                setDoctorFirstName('Doctor'); // Fallback
             }
         })();
-    }, []);
+    }, [sessionData?.doctorId, allDoctors]);
 
-    // Load today's appointments on first render via SP-based endpoint
+    // Load today's appointments based on selected doctor via SP-based endpoint
     useEffect(() => {
+        if (!selectedDoctorId || !sessionData?.clinicId) return;
+        
         (async () => {
             try {
                 const today = new Date().toISOString().split('T')[0];
-                const doctorId = 'DR-00010';
-                const clinicId = 'CL-00001';
+                const doctorId = selectedDoctorId; // Use selected doctor from dropdown
+                const clinicId = sessionData.clinicId;
+                
+                console.log('📅 Loading appointments for selected doctor:', doctorId, 'clinic:', clinicId);
+                
                 const resp: TodayAppointmentsResponse = await appointmentService.getAppointmentsForDateSP({
                     doctorId,
                     clinicId,
                     futureDate: today,
                     languageId: 1
                 });
-                console.log('📅 Today\'s appointments loaded:', (resp?.resultSet1 || []).length, 'appointments');
+                console.log('📅 Today\'s appointments loaded for doctor', doctorId, ':', (resp?.resultSet1 || []).length, 'appointments');
                 const rows = convertSPResultToRows(resp?.resultSet1 || []);
                 setAppointments(rows);
             } catch (e) {
                 console.error('Failed to load today\'s appointments (SP endpoint)', e);
             }
         })();
-    }, []);
+    }, [selectedDoctorId, sessionData?.clinicId]);
 
     // Load status reference for dynamic statuses
     useEffect(() => {
@@ -514,7 +598,10 @@ export default function AppointmentTable() {
     useEffect(() => {
         if (appointments.length > 0) {
             appointments.forEach(appointment => {
-                fetchPreviousVisits(appointment.patientId);
+                // Ensure patientId is passed as string key (supports alphanumeric IDs)
+                if (appointment.patientId) {
+                    fetchPreviousVisits(appointment.patientId);
+                }
             });
         }
     }, [appointments]);
@@ -541,30 +628,38 @@ export default function AppointmentTable() {
     };
 
     // Fetch previous visits for a patient
-    const fetchPreviousVisits = async (patientId: number) => {
-        if (previousVisits[patientId] || loadingVisits[patientId]) {
+    const fetchPreviousVisits = async (patientId: string | number) => {
+        const key = String(patientId);
+        if (previousVisits[key] || loadingVisits[key]) {
             return; // Already loaded or loading
         }
 
         try {
-            setLoadingVisits(prev => ({ ...prev, [patientId]: true }));
-            const response = await patientService.getPreviousVisitDates(patientId.toString());
-            
-            setPreviousVisits(prev => ({ ...prev, [patientId]: response.visits }));
+            setLoadingVisits(prev => ({ ...prev, [key]: true }));
+            const response = await patientService.getPreviousVisitDates(key);
+            // Sort by visit_number descending so highest visit_number is first
+            const sortedVisits = [...(response.visits || [])].sort((a, b) => {
+                const an = typeof a.visit_number === 'number' ? a.visit_number : Number(a.visit_number) || 0;
+                const bn = typeof b.visit_number === 'number' ? b.visit_number : Number(b.visit_number) || 0;
+                return an - bn;
+            });
+
+            setPreviousVisits(prev => ({ ...prev, [key]: sortedVisits }));
         } catch (error) {
-            console.error(`❌ Failed to fetch previous visits for patient ${patientId}:`, error);
-            setPreviousVisits(prev => ({ ...prev, [patientId]: [] }));
+            console.error(`❌ Failed to fetch previous visits for patient ${key}:`, error);
+            setPreviousVisits(prev => ({ ...prev, [key]: [] }));
         } finally {
-            setLoadingVisits(prev => ({ ...prev, [patientId]: false }));
+            setLoadingVisits(prev => ({ ...prev, [key]: false }));
         }
     };
 
     // Format last visit display according to requirements: date-provider-L format
-    const formatLastVisitDisplay = (patientId: number, reportsReceived: boolean): string => {
-        const visits = previousVisits[patientId];
+    const formatLastVisitDisplay = (patientId: string | number, reportsReceived: boolean): string => {
+        const key = String(patientId);
+        const visits = previousVisits[key];
         
         if (!visits || visits.length === 0) {
-            return "No previous visits";
+            return "-";
         }
 
         // Get the most recent visit (first in the array since they're ordered by date DESC)
@@ -574,14 +669,14 @@ export default function AppointmentTable() {
         const visitDate = new Date(lastVisit.visit_date);
         const formattedDate = `${String(visitDate.getDate()).padStart(2, '0')}-${String(visitDate.getMonth() + 1).padStart(2, '0')}-${String(visitDate.getFullYear()).slice(-2)}`;
         
-        // Get provider name from doctor_id
-        let providerName = 'Unknown Provider';
-        if (lastVisit.doctor_id) {
-            // Handle different doctor_id formats
-            if (lastVisit.doctor_id.startsWith('DR-')) {
-                providerName = `Dr. ${lastVisit.doctor_id.replace('DR-', '')}`;
+        // Get provider name from doctor_id (prefer mapping to real doctor name)
+        let providerName = getDoctorLabelById(lastVisit.doctor_id);
+        if (!providerName) {
+            const rawId = String(lastVisit.doctor_id || '').trim();
+            if (rawId) {
+                providerName = rawId.startsWith('DR-') ? `Dr. ${rawId.slice(3)}` : formatProviderLabel(rawId);
             } else {
-                providerName = `Dr. ${lastVisit.doctor_id}`;
+                providerName = 'Unknown Provider';
             }
         }
         
@@ -596,6 +691,52 @@ export default function AppointmentTable() {
         return displayText;
     };
 
+    // Get selected doctor name for display
+    const getSelectedDoctorName = () => {
+        const selectedDoctor = allDoctors.find(doctor => doctor.id === selectedDoctorId);
+        return selectedDoctor ? selectedDoctor.name : (doctorFirstName || 'Dr. Tongaonkar');
+    };
+
+    // Map doctorId to display label (Dr. Name)
+    const getDoctorLabelById = (id?: string) => {
+        if (!id) return '';
+        const doc = allDoctors.find(d => d.id === id);
+        return doc ? formatProviderLabel(doc.name) : '';
+    };
+
+    // Build provider options with selected doctor first
+    const getProviderOptionsWithSelectedFirst = () => {
+        if (!allDoctors.length) return [] as { id: string; label: string }[];
+        const selectedId = selectedDoctorId;
+        const options = allDoctors.map(d => ({ id: d.id, label: formatProviderLabel(d.name) }));
+        if (!selectedId) return options;
+        // Move selected to the top
+        return options.sort((a, b) => (a.id === selectedId ? -1 : b.id === selectedId ? 1 : a.label.localeCompare(b.label)));
+    };
+
+    // Refresh appointments for the selected doctor
+    const refreshAppointmentsForSelectedDoctor = async () => {
+        if (!selectedDoctorId || !sessionData?.clinicId) return;
+        
+        try {
+            const today = new Date().toISOString().split('T')[0];
+            console.log('🔄 Refreshing appointments for selected doctor:', selectedDoctorId);
+            
+            const resp: TodayAppointmentsResponse = await appointmentService.getAppointmentsForDateSP({
+                doctorId: selectedDoctorId,
+                clinicId: sessionData.clinicId,
+                futureDate: today,
+                languageId: 1
+            });
+            
+            const rows = convertSPResultToRows(resp?.resultSet1 || []);
+            setAppointments(rows);
+            console.log('✅ Appointments refreshed for doctor', selectedDoctorId, ':', rows.length, 'appointments');
+        } catch (error) {
+            console.error('Failed to refresh appointments for selected doctor:', error);
+        }
+    };
+
     // Book appointment - immediately call API
     const handleBookAppointment = async () => {
         if (selectedPatients.length === 0) {
@@ -608,12 +749,17 @@ export default function AppointmentTable() {
             return;
         }
 
+        if (!selectedDoctorId) {
+            alert("Please select a doctor for the appointment.");
+            return;
+        }
+
         const patient = selectedPatients[0];
         
         try {
             // Block booking if patient has any non-COMPLETED appointment today
             const hasNonCompletedAppointment = appointments.some(
-                (a) => a.patientId === patient.id && String(a.status || '').toUpperCase() !== 'COMPLETED'
+                (a) => a.patientId === String(patient.id) && String(a.status || '').toUpperCase() !== 'COMPLETED'
             );
             if (hasNonCompletedAppointment) {
                 alert("This patient has an existing appointment that is not COMPLETED. Please complete it before booking a new one.");
@@ -628,13 +774,16 @@ export default function AppointmentTable() {
             const appointmentData: AppointmentRequest = {
                 visitDate: new Date().toISOString().split('T')[0], // Today's date in YYYY-MM-DD format
                 shiftId: 1, // Default shift ID
-                clinicId: "CL-00001", // Default clinic ID
-                doctorId: "DR-00010", // Default doctor ID
-                patientId: patient.id.toString(),
+                clinicId: sessionData?.clinicId ?? '', // Default clinic ID
+                doctorId: selectedDoctorId, // Use selected doctor from dropdown (this is the key change)
+                patientId: String(patient.id),
                 visitTime: currentVisitTime, // Real-time visit time (HH:mm)
                 reportsReceived: false, // Default value
                 inPerson: true // Default to in-person appointment
             };
+            
+            console.log('Selected doctor ID for appointment:', selectedDoctorId);
+            console.log('Selected doctor name:', getSelectedDoctorName());
             
             console.log('Booking appointment with data:', appointmentData);
 
@@ -643,10 +792,14 @@ export default function AppointmentTable() {
             
             if (result.success) {
                 // Refresh appointments from server to get the correct status and time
+                // Note: This uses selected doctor ID to refresh the selected doctor's appointment view
                 try {
                     const today = new Date().toISOString().split('T')[0];
-                    const doctorId = 'DR-00010';
-                    const clinicId = 'CL-00001';
+                    const doctorId = selectedDoctorId; // Use selected doctor for refreshing appointment view
+                    const clinicId = (sessionData?.clinicId ?? '');
+                    
+                    console.log('🔄 Refreshing appointments for selected doctor after booking:', doctorId);
+                    
                     const resp: TodayAppointmentsResponse = await appointmentService.getAppointmentsForDateSP({
                         doctorId,
                         clinicId,
@@ -655,6 +808,20 @@ export default function AppointmentTable() {
                     });
                     const rows = convertSPResultToRows(resp?.resultSet1 || []);
                     setAppointments(rows);
+                    // Log and fetch previous visits using booked patientId
+            console.log('📌 Booked patientId (from appointmentData):', appointmentData.patientId);
+                    try {
+                        const visitsResp = await patientService.getPreviousVisitDates(appointmentData.patientId);
+                        console.log('🧾 Visits fetched for booked patientId:', visitsResp);
+                    } catch (e) {
+                        console.warn('⚠️ Failed to fetch visits for booked patientId (string):', appointmentData.patientId, e);
+                    }
+            try {
+                console.log('🔁 Also pushing into state via string patientId:', appointmentData.patientId);
+                await fetchPreviousVisits(appointmentData.patientId);
+            } catch (e) {
+                console.warn('⚠️ fetchPreviousVisits failed for string pid:', appointmentData.patientId, e);
+            }
                     setSelectedPatients([]);
                     alert(`Successfully booked appointment for ${patient.first_name} ${patient.last_name}!`);
                 } catch (refreshError) {
@@ -662,6 +829,20 @@ export default function AppointmentTable() {
                     // Fallback: add with default status
                     const newAppointments = convertToTableFormat([patient]);
                     setAppointments(prev => [...prev, ...newAppointments]);
+                    // Log and fetch previous visits using booked patientId (fallback path)
+            console.log('📌 Booked patientId (from appointmentData):', appointmentData.patientId);
+                    try {
+                        const visitsResp = await patientService.getPreviousVisitDates(appointmentData.patientId);
+                        console.log('🧾 Visits fetched for booked patientId:', visitsResp);
+                    } catch (e) {
+                        console.warn('⚠️ Failed to fetch visits for booked patientId (string):', appointmentData.patientId, e);
+                    }
+            try {
+                console.log('🔁 Also pushing into state via string patientId:', appointmentData.patientId);
+                await fetchPreviousVisits(appointmentData.patientId);
+            } catch (e) {
+                console.warn('⚠️ fetchPreviousVisits failed for string pid:', appointmentData.patientId, e);
+            }
                     setSelectedPatients([]);
                     alert(`Successfully booked appointment for ${patient.first_name} ${patient.last_name}!`);
                 }
@@ -710,7 +891,7 @@ export default function AppointmentTable() {
         setCurrentPage(1);
     }, [appointments.length]);
 
-    // Handle click outside to close dropdown
+    // Handle click outside to close dropdowns and menus
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
@@ -727,7 +908,8 @@ export default function AppointmentTable() {
             if (openActionIndex !== null) {
                 const target = event.target as HTMLElement;
                 const isActionMenu = target.closest('.action-menu');
-                if (!isActionMenu) {
+                const isActionTrigger = target.closest('[title="Actions"]');
+                if (!isActionMenu && !isActionTrigger) {
                     setOpenActionIndex(null);
                     setActionMenuPosition(null);
                 }
@@ -738,7 +920,7 @@ export default function AppointmentTable() {
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
-    }, []);
+    }, [openStatusIndex, openActionIndex]);
 
     // Measure Filter button to size filter inputs the same
     useEffect(() => {
@@ -814,18 +996,18 @@ export default function AppointmentTable() {
         height: "38px"
     };
 
-    // Derive counts by status for header badges
+    // Derive counts by status for header badges (normalized)
     const statusCounts = useMemo(() => {
         const counts: Record<string, number> = {
             'WAITING': 0,
             'WITH DOCTOR': 0,
-            'ON CALL': 0,
+            'WITH DOCTOR (ON PHONE)': 0,
             'CHECK OUT': 0,
-            'COMPLETED': 0,
-            'SAVED': 0
+            'COMPLETE': 0,
+            'SAVE': 0
         };
         for (const appt of appointments) {
-            const key = String(appt.status || '').toUpperCase();
+            const key = normalizeStatusLabel(appt.status);
             if (!(key in counts)) counts[key] = 0;
             counts[key] += 1;
         }
@@ -918,7 +1100,7 @@ export default function AppointmentTable() {
         .kv .v { color: #111827; font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .crm-actions { display: grid; grid-template-columns: repeat(4, 32px); gap: 8px; }
         .crm-btn { width: 36px; height: 36px; border-radius: 6px; background: #ECEFF1; display: inline-flex; align-items: center; justify-content: center; color: #607D8B; border: 1px solid #CFD8DC; }
-        .crm-btn:hover { background: #E3F2FD; color: #1565C0; border-color: #90CAF9; }
+        .crm-btn:hover { background: #E3F2FD; color:black; border-color: #90CAF9; }
         .status-indicator {
             width: 12px;
             height: 12px;
@@ -1142,28 +1324,29 @@ export default function AppointmentTable() {
                     |
                     <span className="mx-1"><span className="rounded-circle d-inline-block bg-success" style={{ width: 10, height: 10 }}></span> {statusCounts['WITH DOCTOR'] || 0} </span>
                     |
-                    <span className="mx-1"><span className="rounded-circle d-inline-block bg-info" style={{ width: 10, height: 10 }}></span> {statusCounts['ON CALL'] || 0} </span>
+                    <span className="mx-1"><span className="rounded-circle d-inline-block bg-info" style={{ width: 10, height: 10 }}></span> {statusCounts['WITH DOCTOR (ON PHONE)'] || 0} </span>
                     |
                     <span className="mx-1"><span className="rounded-circle d-inline-block bg-warning" style={{ width: 10, height: 10 }}></span> {statusCounts['CHECK OUT'] || 0} </span>
                     |
-                    <span className="mx-1"><span className="rounded-circle d-inline-block bg-dark" style={{ width: 10, height: 10 }}></span> {statusCounts['COMPLETED'] || 0} </span>
+                    <span className="mx-1"><span className="rounded-circle d-inline-block bg-dark" style={{ width: 10, height: 10 }}></span> {statusCounts['COMPLETE'] || 0} </span>
                     |
-                    <span className="ms-1"><span className="rounded-circle d-inline-block bg-danger" style={{ width: 10, height: 10 }}></span> {statusCounts['SAVED'] || 0} </span>
+                    <span className="ms-1"><span className="rounded-circle d-inline-block bg-danger" style={{ width: 10, height: 10 }}></span> {statusCounts['SAVE'] || 0} </span>
                 </div>
             </div>
 
             {/* Primary row with controls will include CTAs */}
 
             {/* Search + Filter */}
-            <div className="d-flex mb-3 align-items-center" style={{ gap: '8px' }}>
+            <div className="d-flex mb-3 align-items-center" style={{ gap: '8px',overflow: 'visible' }}>
                 <div className="position-relative" ref={searchRef}>
                     <input
                         type="text"
-                        placeholder="Search by Patient ID, First Name, Last Name, Full Name, or Contact Number"
+                        placeholder="Search by Patient ID/Name/ContactNumber"
                         className="form-control"
                         value={searchTerm}
                         onChange={(e) => handleSearchChange(e.target.value)}
-                        style={{ borderWidth: "2px", height: "38px", fontFamily: "'Roboto', sans-serif", fontWeight: 500, minWidth: "520px", width: "520px" }}
+                        ref={searchInputRef}
+                        style={{ borderWidth: "2px", height: "38px", fontFamily: "'Roboto', sans-serif", fontWeight: 500, minWidth: "300px", width: "400px" }}
                     />
                     
                     {/* Search Dropdown */}
@@ -1173,7 +1356,7 @@ export default function AppointmentTable() {
                             style={{ 
                                 top: "100%", 
                                 left: 0, 
-                                zIndex: 1000, 
+                                zIndex: 1051, 
                                 maxHeight: "300px", 
                                 overflowY: "auto",
                                 fontFamily: "'Roboto', sans-serif"
@@ -1204,24 +1387,22 @@ export default function AppointmentTable() {
                                                 <i className="fas fa-user me-2 text-primary"></i>
                                                 {patient.first_name} {patient.last_name}
                                             </div>
-                                            <div className="text-muted small mt-1">
+                                            <div className="text-muted small mt-1 text-nowrap">
                                                 <i className="fas fa-id-card me-1"></i>
-                                                <strong>ID:</strong> {patient.id} | 
-                                                <i className="fas fa-folder me-1 ms-2"></i>
-                                                <strong>Folder:</strong> {patient.folder_no} | 
+                                                <strong>ID:</strong> {patient.id} |  
                                                 <i className="fas fa-birthday-cake me-1 ms-2"></i>
-                                                <strong>Age:</strong> {age}
-                                            </div>
-                                            <div className="text-muted small mt-1">
+                                                <strong>Age:</strong> {age} |
                                                 <i className="fas fa-phone me-1"></i>
-                                                <strong>Contact:</strong> {patient.mobile_1 || 'N/A'} | 
+                                                <strong>Contact:</strong> {patient.mobile_1 || 'N/A'}
+                                            </div>
+                                            {/* <div className="text-muted small mt-1"> | 
                                                 <i className="fas fa-info-circle me-1 ms-2"></i>
                                                 <strong>Status:</strong> {patient.registration_status}
                                             </div>
                                             <div className="text-muted small mt-1">
                                                 <i className="fas fa-calendar me-1"></i>
                                                 <strong>Registered:</strong> {new Date(patient.date_of_registration).toLocaleDateString()}
-                                            </div>
+                                            </div> */}
                                         </div>
                                     );
                                 })
@@ -1237,14 +1418,34 @@ export default function AppointmentTable() {
                     )}
                 </div>
 
-                {/* 2) Provider (disabled preset) */}
+                {/* 2) Provider (enabled with all doctors) - Changes filter appointments by selected doctor */}
                 <select
                     className="form-select"
-                    disabled
-                    value={"Dr. Tongaonkar - Medicine"}
-                    style={{ height: 38, width: 255, color: '#212121', backgroundColor: '#ECEFF1', padding: '6px 12px', lineHeight: '1.5', fontSize: '1rem', flex: '0 0 30px' }}
+                    value={selectedDoctorId}
+                    onChange={(e) => setSelectedDoctorId(e.target.value)}
+                    disabled={loadingDoctors}
+                    style={{ 
+                        height: 38, 
+                        width: 255, 
+                        color: '#212121', 
+                        backgroundColor: loadingDoctors ? '#ECEFF1' : '#FFFFFF', 
+                        padding: '6px 12px', 
+                        lineHeight: '1.5', 
+                        fontSize: '1rem', 
+                        flex: '0 0 255px' 
+                    }}
                 >
-                    <option>Dr. Tongaonkar - Medicine</option>
+                    {loadingDoctors ? (
+                        <option>Loading doctors...</option>
+                    ) : allDoctors.length > 0 ? (
+                        allDoctors.map((doctor) => (
+                            <option key={doctor.id} value={doctor.id}>
+                                {doctor.name}
+                            </option>
+                        ))
+                    ) : (
+                        <option>No doctors available</option>
+                    )}
                 </select>
 
                 {/* 3) Book and 4) Add buttons */}
@@ -1410,14 +1611,12 @@ export default function AppointmentTable() {
                                             <td className="provider-col">
                                                 <select
                                                     className="form-select form-select-sm"
-                                                    value={formatProviderLabel(a.provider || doctorFirstName || '')}
+                                                    value={a.provider || getDoctorLabelById(selectedDoctorId) || ''}
                                                     onChange={(e) => handleProviderChange(originalIndex, e.target.value)}
                                                 >
-                                                    {(providerOptions.length ? providerOptions : (doctorFirstName ? [doctorFirstName] : ['Tongaonkar']))
-                                                        .map((name) => {
-                                                            const label = formatProviderLabel(name);
-                                                            return <option key={label} value={label}>{label}</option>;
-                                                        })}
+                                                    {getProviderOptionsWithSelectedFirst().map(opt => (
+                                                        <option key={opt.id} value={opt.label}>{opt.label}</option>
+                                                    ))}
                                                 </select>
                                             </td>
                                             <td className="online-cell">
@@ -1426,7 +1625,7 @@ export default function AppointmentTable() {
                                                     className="form-control form-control-sm"
                                                     value={a.online}
                                                     onChange={(e) => handleOnlineChange(originalIndex, e.target.value)}
-                                                    placeholder="11:15"
+                                                    placeholder="HH:mm"
                                                     style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 500, height: "28px", padding: "2px 6px" }}
                                                 />
                                             </td>
@@ -1435,9 +1634,31 @@ export default function AppointmentTable() {
                                                     <span className={`d-inline-block rounded-circle ${a.statusColor}`} style={{ width: "14px", height: "14px" }}></span>
                                                     <span style={{ fontSize: '0.9rem', color: '#263238' }}>{a.status}</span>
                                                     <div
-                                                        onClick={(e) => {
+                                                        onClick={async (e) => {
                                                             const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
                                                             setMenuPosition({ top: rect.bottom + 6, left: rect.left - 66 });
+                                                            // Fetch clinic-based status options on open
+                                                            try {
+                                                                const activeClinicId = clinicId || (sessionData?.clinicId ?? '');
+                                                                const resp = await getStatusOptionsByClinic(activeClinicId);
+                                                                if (resp?.success) {
+                                                                    const pickLabel = (row: any): string | null => {
+                                                                        const candidates = ['status_description','statusDescription','description','name','label','status'];
+                                                                        for (const key of candidates) {
+                                                                            if (row && row[key]) {
+                                                                                const val = String(row[key]).trim();
+                                                                                if (val) return val.toUpperCase();
+                                                                            }
+                                                                        }
+                                                                        return null;
+                                                                    };
+                                                                    const labels = Array.from(new Set((resp.statusOptions || []).map(pickLabel).filter(Boolean))) as string[];
+                                                                    const ensured = labels.includes('WAITING') ? labels : ['WAITING', ...labels];
+                                                                    setAvailableStatuses(ensured);
+                                                                }
+                                                            } catch (err) {
+                                                                console.error('Failed loading clinic status options', err);
+                                                            }
                                                             setOpenStatusIndex(openStatusIndex === originalIndex ? null : originalIndex);
                                                         }}
                                                         aria-label="Change Status"
@@ -1560,15 +1781,61 @@ export default function AppointmentTable() {
                                                             { key: 'save', label: 'Save', icon: <Save fontSize='small' /> },
                                                             { key: 'delete', label: 'Delete', icon: <Delete fontSize='small' /> },
                                                             { key: 'info', label: 'Visit Details', icon: <Info fontSize='small' /> },
-                                                            { key: 'forward', label: 'Treatment', icon: <FastForward fontSize='small' /> },
+                                                            { key: 'forward', label: 'Collection', icon: <FastForward fontSize='small' /> },
                                                             { key: 'add', label: 'Lab Details', icon: <AddIcon fontSize='small' /> },
                                                         ].map((item) => (
                                                             <div
                                                                 key={item.key}
                                                                 title={item.label}
-                                                                onClick={() => {
+                                                                onClick={async () => {
                                                                     setOpenActionIndex(null);
                                                                     setActionMenuPosition(null);
+                                                                    if (item.key === 'delete') {
+                                                                        try {
+                                                                            const pid = a.patientId;
+                                                                            const vdate = String(a.visitDate || new Date().toISOString().split('T')[0]);
+                                                                            const did = a.doctorId || selectedDoctorId;
+                                                                            if (!pid || !vdate || !did) {
+                                                                                alert('Missing identifiers to delete appointment');
+                                                                                return;
+                                                                            }
+                                                                            const confirmDelete = window.confirm('Delete this appointment?');
+                                                                            if (!confirmDelete) return;
+                                                                            await appointmentService.deleteAppointment({ patientId: String(pid), visitDate: String(vdate), doctorId: String(did), userId: String(sessionData?.userId || 'system') });
+                                                                            setAppointments(prev => prev.filter((_, i) => i !== originalIndex));
+                                                                        } catch (err) {
+                                                                            console.error('Delete appointment failed:', err);
+                                                                            alert('Failed to delete appointment');
+                                                                        }
+                                                                    } else if (item.key === 'save') {
+                                                                        try {
+                                                                            const pid = a.patientId;
+                                                                            const vno = getLatestVisitNumber(a.patientId);
+                                                                            const shift = 1;
+                                                                            const clinic = sessionData?.clinicId || '';
+                                                                            const onlineTime = (a.online || '').trim() || undefined;
+                                                                            const doctor = selectedDoctorId || a.doctorId || '';
+                                                                            const statusId = mapStatusLabelToId(a.status);
+                                                                            if (!pid || !clinic || !doctor) {
+                                                                                alert('Missing identifiers to update appointment');
+                                                                                return;
+                                                                            }
+                                                                            await appointmentService.updateTodaysAppointment({
+                                                                                patientId: String(pid),
+                                                                                patientVisitNo: Number(vno),
+                                                                                shiftId: Number(shift),
+                                                                                clinicId: String(clinic),
+                                                                                onlineAppointmentTime: onlineTime,
+                                                                                doctorId: String(doctor),
+                                                                                statusId: Number(statusId),
+                                                                                userId: String(sessionData?.userId || 'system')
+                                                                            });
+                                                                            alert('Appointment updated');
+                                                                        } catch (err) {
+                                                                            console.error('Update appointment failed:', err);
+                                                                            alert('Failed to update appointment');
+                                                                        }
+                                                                    }
                                                                 }}
                                                                 style={{
                                                                     display: 'flex',
@@ -1702,15 +1969,13 @@ export default function AppointmentTable() {
                                             <div className="kv"><span className="k">Provider:</span><span className="v">
                                                 <select
                                                     className="form-select"
-                                                    value={formatProviderLabel(appointment.provider || doctorFirstName || '')}
+                                                    value={appointment.provider || getDoctorLabelById(selectedDoctorId) || ''}
                                                     onChange={(e) => handleProviderChange(originalIndex, e.target.value)}
-                                                    style={{ width: '110px', height: '28px', padding: '2px', fontSize: 11 }}
+                                                    style={{ width: '151px', height: '28px', padding: '2px', fontSize: 11 }}
                                                 >
-                                                    {(providerOptions.length ? providerOptions : (doctorFirstName ? [doctorFirstName] : ['Tongaonkar']))
-                                                        .map((name) => {
-                                                            const label = formatProviderLabel(name);
-                                                            return <option key={label} value={label}>{label}</option>;
-                                                        })}
+                                                    {getProviderOptionsWithSelectedFirst().map(opt => (
+                                                        <option key={opt.id} value={opt.label}>{opt.label}</option>
+                                                    ))}
                                                 </select>
                                             </span></div>
                                             
@@ -1723,8 +1988,66 @@ export default function AppointmentTable() {
                                         </div> */}
                                         <div className="d-flex align-items-center" style={{ gap: '8px' }}>
                                             <div className="crm-actions" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, max-content)', alignItems: 'center', gap: '8px' }}>
-                                                <div className="crm-btn" title="Save"><Save fontSize="small" /></div>
-                                                <div className="crm-btn" title="Delete"><Delete fontSize="small" /></div>
+                                                <div
+                                                    className="crm-btn"
+                                                    title="Save"
+                                                    onClick={async () => {
+                                                        try {
+                                                            const pid = appointment.patientId;
+                                                            const vno = getLatestVisitNumber(appointment.patientId);
+                                                            const shift = 1; // using default shift
+                                                            const clinic = sessionData?.clinicId || '';
+                                                            const onlineTime = (appointment.online || '').trim() || undefined;
+                                                            const doctor = selectedDoctorId || appointment.doctorId || '';
+                                                            const statusId: number = mapStatusLabelToId(appointment.status);
+                                                            if (!pid || !clinic || !doctor) {
+                                                                alert('Missing identifiers to update appointment');
+                                                                return;
+                                                            }
+                                                            await appointmentService.updateTodaysAppointment({
+                                                                patientId: String(pid),
+                                                                patientVisitNo: Number(vno),
+                                                                shiftId: Number(shift),
+                                                                clinicId: String(clinic),
+                                                                onlineAppointmentTime: onlineTime,
+                                                                doctorId: String(doctor),
+                                                                statusId: Number(statusId),
+                                                                userId: String(sessionData?.userId || 'system')
+                                                            });
+                                                            alert('Appointment updated');
+                                                        } catch (err) {
+                                                            console.error('Update appointment failed:', err);
+                                                            alert('Failed to update appointment');
+                                                        }
+                                                    }}
+                                                >
+                                                    <Save fontSize="small" />
+                                                </div>
+                                                <div
+                                                    className="crm-btn"
+                                                    title="Delete"
+                                                    onClick={async () => {
+                                                        try {
+                                                            const pid = appointment.patientId;
+                                                            const vdate = String(appointment.visitDate || new Date().toISOString().split('T')[0]);
+                                                            const did = appointment.doctorId || selectedDoctorId;
+                                                            if (!pid || !vdate || !did) {
+                                                                alert('Missing identifiers to delete appointment');
+                                                                return;
+                                                            }
+                                                            const confirmDelete = window.confirm('Delete this appointment?');
+                                                            if (!confirmDelete) return;
+                                                            await appointmentService.deleteAppointment({ patientId: String(pid), visitDate: String(vdate), doctorId: String(did), userId: String(sessionData?.userId || 'system') });
+                                                            // Remove from UI
+                                                            setAppointments(prev => prev.filter((_, i) => i !== originalIndex));
+                                                        } catch (err) {
+                                                            console.error('Delete appointment failed:', err);
+                                                            alert('Failed to delete appointment');
+                                                        }
+                                                    }}
+                                                >
+                                                    <Delete fontSize="small" />
+                                                </div>
                                                 <div className="crm-btn" title="Visit Details"><Info fontSize="small" /></div>
                                                 <div className="crm-btn" title="Lab details"><AddIcon fontSize="small" /></div>
                                                 <div className="kv">
@@ -1733,7 +2056,7 @@ export default function AppointmentTable() {
                                                         <input
                                                             type="text"
                                                             className="form-control form-control-sm"
-                                                            placeholder="11:15"
+                                                            placeholder="HH:mm"
                                                             value={appointment.online}
                                                             onChange={(e) => handleOnlineChange(originalIndex, e.target.value)}
                                                             style={{ width: '80px', height: '28px', padding: '2px 6px', display: 'inline-block' }}
@@ -1741,7 +2064,7 @@ export default function AppointmentTable() {
                                                     </span>
                                                 </div>
                                             </div>
-                                            <div className="crm-btn ms-auto" title="Treatment"><FastForward fontSize="small" /></div>
+                                            <div className="crm-btn ms-auto" title="Collection"><FastForward fontSize="small" /></div>
                                         </div>
                                     </div>
                                     </div>
@@ -1824,7 +2147,7 @@ export default function AppointmentTable() {
             <AddPatientPage 
                 open={showAddPatient} 
                 onClose={() => setShowAddPatient(false)}
-                doctorId={doctorId}
+                doctorId={selectedDoctorId || doctorId}
                 clinicId={clinicId}
             />
         </div>

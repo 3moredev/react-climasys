@@ -185,6 +185,26 @@ select,
   font-family: Arial, Helvetica, sans-serif !important;
 }
 
+/* Lighter placeholder color across the app */
+input::placeholder,
+textarea::placeholder,
+select::placeholder,
+.MuiTextField-root input::placeholder,
+.MuiFormControl-root input::placeholder {
+  color: #bdbdbd !important; /* light gray */
+  opacity: 1; /* ensure consistent color across browsers */
+}
+
+/* Vendor-specific placeholder selectors for broader support */
+input::-webkit-input-placeholder,
+textarea::-webkit-input-placeholder { color: #bdbdbd !important; }
+input::-moz-placeholder,
+textarea::-moz-placeholder { color: #bdbdbd !important; }
+input:-ms-input-placeholder,
+textarea:-ms-input-placeholder { color: #bdbdbd !important; }
+input::-ms-input-placeholder,
+textarea::-ms-input-placeholder { color: #bdbdbd !important; }
+
 input:focus,
 textarea:focus,
 select:focus,

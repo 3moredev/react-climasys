@@ -106,3 +106,20 @@ export async function searchCities(query?: string): Promise<CityItem[]> {
 }
 
 
+export interface ClinicItem {
+  id: string
+  name: string
+}
+
+function mapClinicItem(item: any): ClinicItem {
+  const id = item?.id ?? item?.clinicId ?? item?.code ?? ''
+  const name = item?.name ?? item?.clinicName ?? String(id)
+  return { id: String(id), name: String(name) }
+}
+
+export async function getClinics(): Promise<ClinicItem[]> {
+  const response = await api.get('/clinics')
+  const data = Array.isArray(response?.data) ? response.data : []
+  return data.map(mapClinicItem)
+}
+
