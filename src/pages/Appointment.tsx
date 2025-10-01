@@ -64,6 +64,15 @@ export default function AppointmentTable() {
     const [doctorId, setDoctorId] = useState<string>('');
     const [clinicId, setClinicId] = useState<string>('');
     
+    // User role state
+    const [userRole, setUserRole] = useState<string>('');
+    const [isReceptionist, setIsReceptionist] = useState<boolean>(false);
+    const [isDoctor, setIsDoctor] = useState<boolean>(false);
+    
+    // Snackbar state
+    const [showSnackbar, setShowSnackbar] = useState<boolean>(false);
+    const [snackbarMessage, setSnackbarMessage] = useState<string>('');
+    
     // Doctor selection state
     const [allDoctors, setAllDoctors] = useState<Doctor[]>([]);
     const [selectedDoctorId, setSelectedDoctorId] = useState<string>('');
@@ -80,6 +89,39 @@ export default function AppointmentTable() {
                     setSessionData(result.data);
                     setDoctorId(result.data.doctorId);
                     setClinicId(result.data.clinicId);
+                    
+                    // Determine user role based on sessionType or userId
+                    const sessionType = result.data.sessionType?.toLowerCase() || '';
+                    const userId = result.data.userId;
+                    
+                    // Set role based on sessionType or userId
+                    if (sessionType.includes('receptionist') || userId === 1) {
+                        setUserRole('Receptionist');
+                        setIsReceptionist(true);
+                        setIsDoctor(false);
+                    } else if (sessionType.includes('doctor') || userId === 7) {
+                        setUserRole('Doctor');
+                        setIsReceptionist(false);
+                        setIsDoctor(true);
+                    } else {
+                        // Default fallback - check userId
+                        if (userId === 1) {
+                            setUserRole('Receptionist');
+                            setIsReceptionist(true);
+                            setIsDoctor(false);
+                        } else if (userId === 2) {
+                            setUserRole('Doctor');
+                            setIsReceptionist(false);
+                            setIsDoctor(true);
+                        } else {
+                            // Default to receptionist if role cannot be determined
+                            setUserRole('Receptionist');
+                            setIsReceptionist(true);
+                            setIsDoctor(false);
+                        }
+                    }
+                    
+                    console.log('User role determined:', userRole, 'isReceptionist:', isReceptionist, 'isDoctor:', isDoctor);
                     console.log('Doctor ID set to:', result.data.doctorId);
                     console.log('Clinic ID set to:', result.data.clinicId);
                 } else {
@@ -315,10 +357,10 @@ export default function AppointmentTable() {
         switch (s) {
             case 'WAITING': return 1;
             case 'WITH DOCTOR': return 2;
-            case 'COMPLETED': return 3;
+            case 'COMPLETE': return 5;
             case 'CHECK OUT': return 4;
-            case 'ON CALL': return 5;
-            case 'SAVE': return 6;
+            case 'WITH DOCTOR (ON PHONE)': return 3;
+            case 'SAVE': return 9;
             default: return 1;
         }
     };
@@ -394,24 +436,27 @@ export default function AppointmentTable() {
                 const contact = String(p.mobile_1 || '').replace(/\D/g, ''); // Remove non-digits
                 const queryDigits = q.replace(/\D/g, ''); // Remove non-digits from query
                 
+                // Split query into individual words for multi-word search
+                const queryWords = q.split(/\s+/).filter(word => word.length > 0);
+                
                 // Check if query matches any of the search criteria
                 return (
                     // Exact patient ID match (highest priority)
                     patientId === q ||
                     // Patient ID contains query
                     patientId.includes(q) ||
-                    // First name starts with query
-                    firstName.startsWith(q) ||
-                    // Last name starts with query
-                    lastName.startsWith(q) ||
-                    // Full name contains query
-                    fullName.includes(q) ||
                     // Contact number exact match (if query is numeric)
                     (queryDigits.length >= 3 && contact.includes(queryDigits)) ||
-                    // First name contains query
-                    firstName.includes(q) ||
-                    // Last name contains query
-                    lastName.includes(q)
+                    // Multi-word name search - all words must be found in the full name
+                    (queryWords.length > 1 && queryWords.every(word => fullName.includes(word))) ||
+                    // Single word name search
+                    (queryWords.length === 1 && (
+                        firstName.startsWith(q) ||
+                        lastName.startsWith(q) ||
+                        fullName.includes(q) ||
+                        firstName.includes(q) ||
+                        lastName.includes(q)
+                    ))
                 );
             });
             
@@ -438,6 +483,7 @@ export default function AppointmentTable() {
                     const lastName = String(patient.last_name || '').toLowerCase();
                     const fullName = `${firstName} ${lastName}`.trim().toLowerCase();
                     const contact = String(patient.mobile_1 || '').replace(/\D/g, '');
+                    const queryWords = q.split(/\s+/).filter(word => word.length > 0);
                     
                     let score = 0;
                     
@@ -448,24 +494,40 @@ export default function AppointmentTable() {
                     // Patient ID contains query
                     else if (id.includes(q)) score += 600;
                     
-                    // First name starts with query
-                    if (firstName.startsWith(q)) score += 500;
-                    // Last name starts with query
-                    if (lastName.startsWith(q)) score += 400;
-                    // Full name starts with query
-                    if (fullName.startsWith(q)) score += 300;
-                    
                     // Contact exact match
                     if (queryDigits.length >= 3 && contact === queryDigits) score += 200;
                     // Contact contains query
                     if (queryDigits.length >= 3 && contact.includes(queryDigits)) score += 100;
                     
-                    // First name contains query
-                    if (firstName.includes(q)) score += 50;
-                    // Last name contains query
-                    if (lastName.includes(q)) score += 40;
-                    // Full name contains query
-                    if (fullName.includes(q)) score += 30;
+                    // Multi-word name search scoring
+                    if (queryWords.length > 1) {
+                        const allWordsFound = queryWords.every(word => fullName.includes(word));
+                        if (allWordsFound) {
+                            // Check if full name starts with the query
+                            if (fullName.startsWith(q)) score += 500;
+                            // Check if first word matches first name start
+                            else if (firstName.startsWith(queryWords[0])) score += 450;
+                            // Check if last word matches last name start
+                            else if (lastName.startsWith(queryWords[queryWords.length - 1])) score += 400;
+                            // All words found but not at start
+                            else score += 350;
+                        }
+                    } else {
+                        // Single word name search scoring
+                        // First name starts with query
+                        if (firstName.startsWith(q)) score += 500;
+                        // Last name starts with query
+                        if (lastName.startsWith(q)) score += 400;
+                        // Full name starts with query
+                        if (fullName.startsWith(q)) score += 300;
+                        
+                        // First name contains query
+                        if (firstName.includes(q)) score += 50;
+                        // Last name contains query
+                        if (lastName.includes(q)) score += 40;
+                        // Full name contains query
+                        if (fullName.includes(q)) score += 30;
+                    }
                     
                     return score;
                 };
@@ -622,6 +684,35 @@ export default function AppointmentTable() {
         setShowDropdown(false);
     };
 
+    // Handle search button click - check if patient has appointment today
+    const handleSearchButtonClick = () => {
+        if (selectedPatients.length === 0) {
+            setSnackbarMessage("Please select a patient first!");
+            setShowSnackbar(true);
+            setTimeout(() => setShowSnackbar(false), 3000);
+            return;
+        }
+
+        const selectedPatient = selectedPatients[0];
+        const patientId = String(selectedPatient.id);
+        
+        // Check if patient exists in current appointments
+        const hasAppointment = appointments.some(appointment => 
+            appointment.patientId === patientId
+        );
+
+        if (!hasAppointment) {
+            setSnackbarMessage("This patient doesn't have an appointment today!!");
+            setShowSnackbar(true);
+            setTimeout(() => setShowSnackbar(false), 3000);
+        } else {
+            // Patient has appointment - could show success message or highlight the appointment
+            setSnackbarMessage("Patient found in today's appointments!");
+            setShowSnackbar(true);
+            setTimeout(() => setShowSnackbar(false), 2000);
+        }
+    };
+
     // Remove selected patient
     const removeSelectedPatient = (patientId: number) => {
         setSelectedPatients(prev => prev.filter(p => p.id !== patientId));
@@ -662,8 +753,10 @@ export default function AppointmentTable() {
             return "-";
         }
 
-        // Get the most recent visit (first in the array since they're ordered by date DESC)
-        const lastVisit = visits[0];
+        // Get the 2nd last visit (index 1 in the array since they're ordered by date DESC)
+        // If only one visit exists, use that one
+        const visitIndex = visits.length > 1 ? 1 : 0;
+        const lastVisit = visits[visitIndex];
         
         // Format date as DD-MM-YY
         const visitDate = new Date(lastVisit.visit_date);
@@ -869,6 +962,14 @@ export default function AppointmentTable() {
         const nameOk = filterName ? a.patient.toLowerCase().includes(filterName.toLowerCase()) : true;
         const contactOk = filterContact ? (a.contact || '').toString().includes(filterContact) : true;
         const statusOk = filterStatus ? (a.status || '').toUpperCase() === filterStatus.toUpperCase() : true;
+        
+        // For doctor screen, only show patients with "WITH DOCTOR" or "WITH DOCTOR (ON PHONE)" status
+        if (isDoctor) {
+            const normalizedStatus = normalizeStatusLabel(a.status);
+            const doctorStatusOk = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'WITH DOCTOR (ON PHONE)';
+            return nameOk && contactOk && statusOk && doctorStatusOk;
+        }
+        
         return nameOk && contactOk && statusOk;
     });
     const totalPages = Math.ceil(filteredAppointments.length / pageSize);
@@ -1006,20 +1107,31 @@ export default function AppointmentTable() {
             'COMPLETE': 0,
             'SAVE': 0
         };
-        for (const appt of appointments) {
+        
+        // For doctor screen, only count patients with "WITH DOCTOR" or "WITH DOCTOR (ON PHONE)" status
+        const appointmentsToCount = isDoctor 
+            ? appointments.filter(appt => {
+                const normalizedStatus = normalizeStatusLabel(appt.status);
+                return normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'WITH DOCTOR (ON PHONE)';
+            })
+            : appointments;
+            
+        for (const appt of appointmentsToCount) {
             const key = normalizeStatusLabel(appt.status);
             if (!(key in counts)) counts[key] = 0;
             counts[key] += 1;
         }
         return counts;
-    }, [appointments]);
+    }, [appointments, isDoctor]);
 
-    return (
-        <div className="container-fluid mt-3" style={{ fontFamily: "'Roboto', sans-serif" }}>
-            <style>{`
-        /* Let table size to content, not force 100% */
-        // .table.appointments-table { table-layout: auto !important; width: auto !important; max-width: 100%; }
-         .table.appointments-table { table-layout: auto !important; width: 100%;}
+    // Doctor Screen Component - Same UI but different functionality
+    const DoctorScreen = () => {
+        return (
+            <div className="container-fluid mt-3" style={{ fontFamily: "'Roboto', sans-serif" }}>
+                
+                <style>{`
+        /* Fixed table layout to respect column widths */
+        .table.appointments-table { table-layout: fixed !important; width: 100%;}
         /* Keep cells on a single line so content determines width */
         .appointments-table th, .appointments-table td { white-space: wrap; }
         /* Inputs inside cells shouldn't stretch the column */
@@ -1030,21 +1142,18 @@ export default function AppointmentTable() {
         // .appointments-table .btn.btn-sm { padding: 2px 6px !important; height: 28px; line-height: 1; }
         // .appointments-table .form-control-sm { padding: 2px 6px !important; height: 28px; }
         // .appointments-table .form-check-input { width: 16px; height: 16px; }
-        /* Force a narrow Online column */
-        .appointments-table th.online-col { width: 10px; }
-        .appointments-table td.online-cell { width: 10px; }
-        .appointments-table td.online-cell .form-control { width: 90px !important; min-width: 90px !important; }
-        /* Column widths: Last Visit takes 20%, others auto to utilize remaining */
-        .appointments-table th.last-col, .appointments-table td.last-col { width: 15%; }
-        .appointments-table th.sr-col, .appointments-table td.sr-col { width: auto; }
-        .appointments-table th.name-col, .appointments-table td.name-col { width: auto; }
-        .appointments-table th.age-col, .appointments-table td.age-col { width: auto; }
-        .appointments-table th.contact-col, .appointments-table td.contact-col { width: auto; }
-        .appointments-table th.time-col, .appointments-table td.time-col { width: auto; }
-        .appointments-table th.provider-col, .appointments-table td.provider-col { width: auto; }
-        .appointments-table th.status-col, .appointments-table td.status-col { width: auto; }
-        /* Labs column removed */
-        .appointments-table th.action-col, .appointments-table td.action-col { width: auto; }
+        /* Fixed column widths: 10% for Sr, Age, Online, Action; 20% for Patient Name, Contact, Provider, Status, Last Visit */
+        .appointments-table th.sr-col, .appointments-table td.sr-col { width: 5%; }
+        .appointments-table th.name-col, .appointments-table td.name-col { width: 15%; }
+        .appointments-table th.age-col, .appointments-table td.age-col { width: 5%; }
+        .appointments-table th.contact-col, .appointments-table td.contact-col { width: 10%; }
+        .appointments-table th.time-col, .appointments-table td.time-col { width: 5%; }
+        .appointments-table th.provider-col, .appointments-table td.provider-col { width: 15%; }
+        .appointments-table th.online-col, .appointments-table td.online-cell { width: 9%; }
+        .appointments-table td.online-cell .form-control { width: 70px !important; min-width: 40px !important; }
+        .appointments-table th.status-col, .appointments-table td.status-col { width: 20%; }
+        .appointments-table th.last-col, .appointments-table td.last-col { width: 30%; }
+        .appointments-table th.action-col, .appointments-table td.action-col { width: 10%; }
         /* Borderless table */
         .appointments-table, .appointments-table th, .appointments-table td { border: 0 !important; }
         .appointments-table tbody tr + tr { border-top: 0 !important; }
@@ -1099,7 +1208,1059 @@ export default function AppointmentTable() {
         .kv .k { color: #607D8B; font-size: 0.76rem; }
         .kv .v { color: #111827; font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .crm-actions { display: grid; grid-template-columns: repeat(4, 32px); gap: 8px; }
-        .crm-btn { width: 36px; height: 36px; border-radius: 6px; background: #ECEFF1; display: inline-flex; align-items: center; justify-content: center; color: #607D8B; border: 1px solid #CFD8DC; }
+        .crm-btn { width: 36px; height: 36px; border-radius: 6px; background: #ECEFF1; display: inline-flex; align-items: center; justify-content: center; color: #607D8B; border: 1px solid #CFD8DC; cursor: pointer; }
+        .crm-btn:hover { background: #E3F2FD; color:black; border-color: #90CAF9; }
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        
+        /* Pagination styles */
+        .pagination-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+            padding: 15px 0;
+            border-top: 1px solid #e0e0e0;
+        }
+        .pagination-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-size: 0.9rem;
+            color: #666;
+        }
+        .page-size-selector {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+        }
+        .pagination-controls {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .page-btn {
+            padding: 6px 12px;
+            border: 1px solid #ddd;
+            background: white;
+            color: #333;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+        }
+        .page-btn:hover:not(:disabled) {
+            background: #f5f5f5;
+            border-color: #999;
+        }
+        .page-btn.active {
+            background: #1E88E5;
+            color: white;
+            border-color: #1E88E5;
+        }
+        .page-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        /* Prev/Next buttons as black */
+        .nav-btn {
+            background: #000;
+            color: #fff;
+            border-color: #000;
+        }
+        .nav-btn:hover:not(:disabled) {
+            background: #111;
+            color: #fff;
+            border-color: #000;
+        }
+        .nav-btn:disabled {
+            background: #000;
+            color: #fff;
+            opacity: 0.35;
+        }
+        .page-size-select {
+            padding: 4px 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+        
+        /* Responsive adjustments for d-flex mb-3 align-items-center */
+        @media (max-width: 991px) {
+            .d-flex.mb-3.align-items-center {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 15px;
+            }
+            
+            /* Search input becomes full width */
+            .d-flex.mb-3.align-items-center .position-relative {
+                width: 100%;
+            }
+            
+            .d-flex.mb-3.align-items-center .position-relative input {
+                width: 100% !important;
+                min-width: auto !important;
+            }
+            
+            /* Form selects become full width */
+            .d-flex.mb-3.align-items-center .form-select {
+                width: 100% !important;
+                height: 38px !important;
+            }
+            
+            /* Buttons stack vertically */
+            .d-flex.mb-3.align-items-center .btn {
+                width: 100%;
+                margin-bottom: 8px;
+            }
+            
+            /* List/Card toggle remains centered and properly sized */
+            .d-flex.mb-3.align-items-center .d-flex.align-items-center.ms-auto {
+                margin-left: 0 !important;
+                align-self: center;
+                width: auto !important;
+                height: 38px !important;
+            }
+            
+            .d-flex.mb-3.align-items-center .d-flex.align-items-center.ms-auto .btn {
+                width: auto !important;
+                margin-bottom: 0 !important;
+            }
+        }
+        
+                
+        /* Snackbar animation */
+        @keyframes slideInUp {
+            from {
+                transform: translateY(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+            
+        @media (max-width: 768px) {
+            .d-flex.mb-3.align-items-center {
+                gap: 12px;
+            }
+            
+            /* Form selects maintain 30% width and 30px height on mobile */
+            .d-flex.mb-3.align-items-center .form-select {
+                width: 100% !important;
+                height: auto !important;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .d-flex.mb-3.align-items-center {
+                gap: 10px;
+            }
+            
+            /* Form selects maintain 30% width and 30px height on small mobile */
+            .d-flex.mb-3.align-items-center .form-select {
+                width: 100% !important;
+                height: auto !important;
+            }
+        }
+        /* Bootstrap-like breakpoints to maintain UI across resolutions */
+        /* <= 1399.98px (Large desktops down) */
+        @media (max-width: 1399.98px) {
+            .d-flex.mb-3.align-items-center { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; gap: 8px; }
+            .d-flex.mb-3.align-items-center .btn { white-space: nowrap; }
+        }
+
+        /* <= 1199.98px (Desktops) */
+        @media (max-width: 1199.98px) {
+            .d-flex.mb-3.align-items-center { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; gap: 8px; }
+            .d-flex.mb-3.align-items-center .btn { white-space: nowrap; }
+        }
+
+        /* <= 991.98px (Tablets) */
+        @media (max-width: 991.98px) {
+            .d-flex.mb-3.align-items-center { flex-direction: column; align-items: stretch; gap: 12px; }
+            .d-flex.mb-3.align-items-center .position-relative { width: 100%; }
+            .d-flex.mb-3.align-items-center .position-relative input { width: 100% !important; min-width: auto !important; }
+            .d-flex.mb-3.align-items-center .form-select { width: 100% !important; height: 38px !important; }
+            .d-flex.mb-3.align-items-center .btn { width: 100%; }
+            .d-flex.mb-3.align-items-center .d-flex.align-items-center.ms-auto { margin-left: 0 !important; align-self: center; }
+        }
+
+        /* <= 767.98px (Landscape phones) */
+        @media (max-width: 767.98px) {
+            .d-flex.mb-3.align-items-center { gap: 10px; }
+            .d-flex.mb-3.align-items-center .form-select { width: 30% !important; height: 30px !important; }
+        }
+
+        /* <= 575.98px (Portrait phones) */
+        @media (max-width: 575.98px) {
+            .d-flex.mb-3.align-items-center { gap: 8px; }
+            .d-flex.mb-3.align-items-center .form-select { width: 30% !important; height: 30px !important; }
+        }
+
+        /*============ Responsive table ============*/
+        /* Large desktops down: enable horizontal scroll if needed */
+        @media (max-width: 1399.98px) {
+            .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+            .appointments-table thead th { white-space: nowrap; }
+            .appointments-table tbody td { white-space: nowrap; }
+        }
+        /* Ensure table is always visible with horizontal scroll on smaller screens */
+        .container-fluid { overflow-x: auto; }
+        
+        /* Desktops */
+        @media (max-width: 1199.98px) {
+            .appointments-table { min-width: 100%; }
+            .appointments-table thead th { padding: 6px 8px !important; }
+            .appointments-table tbody td { padding: 6px 8px !important; }
+        }
+        /* Tablets */
+        @media (max-width: 991.98px) {
+            .appointments-table { min-width: 100%; }
+            .appointments-table thead th { font-size: 0.9rem; }
+            .appointments-table tbody td { font-size: 0.9rem; }
+        }
+        /* Landscape phones */
+        @media (max-width: 767.98px) {
+            .appointments-table { min-width: 100%; }
+            .appointments-table thead th { font-size: 0.85rem; padding: 4px 6px !important; }
+            .appointments-table tbody td { font-size: 0.85rem; padding: 4px 6px !important; }
+        }
+        /* Portrait phones */
+        @media (max-width: 575.98px) {
+            .appointments-table { min-width: 100%; }
+            .appointments-table thead th { font-size: 0.8rem; padding: 3px 5px !important; }
+            .appointments-table tbody td { font-size: 0.8rem; padding: 3px 5px !important; }
+        }
+      `}</style>
+      
+                {/* Header with Doctor-specific title */}
+                <div className="d-flex justify-content-between align-items-center mb-3">
+                    <h2>Appoinments</h2>
+                    <div className="d-flex align-items-center" style={{ fontSize: '0.85rem', color: '#455A64', gap: '8px', whiteSpace: 'nowrap' }}>
+                        <span className="me-1"><span className="rounded-circle d-inline-block bg-primary" style={{ width: 10, height: 10 }}></span> {statusCounts['WAITING'] || 0} </span>
+                        |
+                        <span className="mx-1"><span className="rounded-circle d-inline-block bg-success" style={{ width: 10, height: 10 }}></span> {statusCounts['WITH DOCTOR'] || 0} </span>
+                        |
+                        <span className="mx-1"><span className="rounded-circle d-inline-block bg-info" style={{ width: 10, height: 10 }}></span> {statusCounts['WITH DOCTOR (ON PHONE)'] || 0} </span>
+                        |
+                        <span className="mx-1"><span className="rounded-circle d-inline-block bg-warning" style={{ width: 10, height: 10 }}></span> {statusCounts['CHECK OUT'] || 0} </span>
+                        |
+                        <span className="mx-1"><span className="rounded-circle d-inline-block bg-dark" style={{ width: 10, height: 10 }}></span> {statusCounts['COMPLETE'] || 0} </span>
+                        |
+                        <span className="ms-1"><span className="rounded-circle d-inline-block bg-danger" style={{ width: 10, height: 10 }}></span> {statusCounts['SAVE'] || 0} </span>
+                    </div>
+                </div>
+
+                {/* Doctor-specific controls - No booking, only viewing and status updates */}
+                <div className="d-flex mb-3 align-items-center" style={{ gap: '8px', overflow: 'visible' }}>
+                    {/* Search for patients - Read only for doctors */}
+                    <div className="position-relative">
+                        <input
+                            type="text"
+                            placeholder="Search by Patient ID/Name/ContactNumber"
+                            className="form-control"
+                            value={searchTerm}
+                            onChange={(e) => handleSearchChange(e.target.value)}
+                            ref={searchInputRef}
+                            style={{ borderWidth: "2px", height: "38px", fontFamily: "'Roboto', sans-serif", fontWeight: 500, minWidth: "300px", width: "400px" }}
+                        />
+                        
+                        {/* Search Dropdown for Doctor Screen */}
+                        {showDropdown && (
+                            <div 
+                                className="position-absolute w-100 bg-white border border-secondary rounded shadow-lg"
+                                style={{ 
+                                    top: "100%", 
+                                    left: 0, 
+                                    zIndex: 1051, 
+                                    maxHeight: "300px", 
+                                    overflowY: "auto",
+                                    fontFamily: "'Roboto', sans-serif"
+                                }}
+                            >
+                                {loading ? (
+                                    <div className="p-3 text-center">
+                                        <div className="spinner-border spinner-border-sm text-primary" role="status">
+                                            <span className="visually-hidden">Loading...</span>
+                                        </div>
+                                        <span className="ms-2">Searching...</span>
+                                    </div>
+                                ) : searchResults.length > 0 ? (
+                                    searchResults.map((patient) => {
+                                        const age = patient.date_of_birth ? 
+                                            Math.floor((new Date().getTime() - new Date(patient.date_of_birth).getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : 0;
+                                        
+                                            return (
+                                                <div
+                                                    key={patient.id}
+                                                    className="p-3 border-bottom cursor-pointer"
+                                                    style={{ cursor: "pointer" }}
+                                                    onClick={() => handlePatientSelect(patient)}
+                                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#f8f9fa"}
+                                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "white"}
+                                                >
+                                                    <div className="fw-bold d-flex align-items-center">
+                                                        <i className="fas fa-user me-2 text-primary"></i>
+                                                        {patient.first_name} {patient.last_name}
+                                                    </div>
+                                                    <div className="text-muted small mt-1 text-nowrap">
+                                                        <i className="fas fa-id-card me-1"></i>
+                                                        <strong>ID:</strong> {patient.id} |  
+                                                        <i className="fas fa-birthday-cake me-1 ms-2"></i>
+                                                        <strong>Age:</strong> {age} |
+                                                        <i className="fas fa-phone me-1"></i>
+                                                        <strong>Contact:</strong> {patient.mobile_1 || 'N/A'}
+                                                    </div>
+                                                    {/* <div className="text-muted small mt-1"> | 
+                                                        <i className="fas fa-info-circle me-1 ms-2"></i>
+                                                        <strong>Status:</strong> {patient.registration_status}
+                                                    </div>
+                                                    <div className="text-muted small mt-1">
+                                                        <i className="fas fa-calendar me-1"></i>
+                                                        <strong>Registered:</strong> {new Date(patient.date_of_registration).toLocaleDateString()}
+                                                    </div> */}
+                                                </div>
+                                            );
+                                        })
+                                    ) : searchError ? (
+                                        <div className="p-3 text-danger text-center">
+                                            <i className="fas fa-exclamation-triangle me-2"></i>
+                                            {searchError}
+                                        </div>
+                                    ): (
+                                    <div className="p-3 text-muted text-center">No patients found</div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Search Button for Doctor Screen */}
+                    <button 
+                        className="btn"
+                        onClick={handleSearchButtonClick}
+                        style={{ 
+                            backgroundColor: "#28a745",
+                            color: "white",
+                            borderColor: "#28a745",
+                            height: "38px",
+                            padding: "6px 16px",
+                            fontSize: "0.9rem",
+                            borderRadius: "6px",
+                            fontFamily: "'Roboto', sans-serif",
+                            fontWeight: 500
+                        }}
+                        title="Check if selected patient has appointment today"
+                    >
+                        <i className="fas fa-search me-1"></i>
+                        Search
+                    </button>
+
+                    {/* Status filter */}
+                    <select
+                        className="form-select"
+                        value={filterStatus}
+                        onChange={(e) => setFilterStatus(e.target.value)}
+                        style={{ height: '38px', width: '160px', color: filterStatus ? '#212121' : '#6c757d', padding: '6px 12px', lineHeight: '1.5', fontSize: '1rem' }}
+                    >
+                        <option value="">Select Status</option>
+                        {(availableStatuses.length ? availableStatuses : [
+                            'WAITING','WITH DOCTOR','WITH DOCTOR (ON PHONE)','CHECK OUT','SAVE','COMPLETE'
+                        ]).map(s => (
+                            <option key={s} value={s}>{s}</option>
+                        ))}
+                    </select>
+
+                    {/* List/Card toggle */}
+                    <div 
+                        className="d-flex align-items-center ms-auto"
+                        style={{
+                            height: "38px",
+                            backgroundColor: "#607D8B",
+                            borderColor: "#B7B7B7",
+                            color: "#fff",
+                            fontFamily: "'Roboto', sans-serif",
+                            borderRadius: "6px",
+                            border: "1px solid #B7B7B7",
+                            overflow: "hidden"
+                        }}
+                    >
+                        <button
+                            className="btn d-flex align-items-center justify-content-center"
+                            style={{
+                                height: "100%",
+                                backgroundColor: activeView === 'list' ? "#4CAF50" : "transparent",
+                                border: "none",
+                                color: "#fff",
+                                fontFamily: "'Roboto', sans-serif",
+                                opacity: activeView === 'list' ? 0.7 : 1,
+                                cursor: activeView === 'list' ? 'not-allowed' : 'pointer',
+                                padding: "0 12px",
+                                minWidth: "40px"
+                            }}
+                            onClick={handleListClick}
+                            disabled={activeView === 'list'}
+                            title="List View"
+                        >
+                            <List />
+                        </button>
+                        <div style={{ width: '1px', height: '100%', backgroundColor: '#fff', opacity: 0.7 }} />
+                        <button
+                            className="btn d-flex align-items-center justify-content-center"
+                            style={{
+                                height: "100%",
+                                backgroundColor: activeView === 'card' ? "#4CAF50" : "transparent",
+                                border: "none",
+                                color: "#fff",
+                                fontFamily: "'Roboto', sans-serif",
+                                opacity: activeView === 'card' ? 0.7 : 1,
+                                cursor: activeView === 'card' ? 'not-allowed' : 'pointer',
+                                padding: "0 12px",
+                                minWidth: "40px"
+                            }}
+                            onClick={handleCardClick}
+                            disabled={activeView === 'card'}
+                            title="Card View"
+                        >
+                            <CreditCard />
+                        </button>
+                    </div>
+                </div>
+
+                {/* Content Area - Same as receptionist but without booking functionality */}
+                {filteredAppointments.length === 0 ? (
+                    <div className="text-center py-5">
+                        <div className="mb-3">
+                            <i className="fas fa-calendar-check" style={{ fontSize: "3rem", color: "#6c757d" }}></i>
+                        </div>
+                        <h5 className="text-muted">No Patients Currently With You</h5>
+                        <p className="text-muted">No patients have "WITH DOCTOR" or "WITH DOCTOR (ON PHONE)" status at the moment.</p>
+                    </div>
+                ) : (
+                    <>
+                        {/* List View - Same as receptionist */}
+                        {activeView === 'list' && (
+                            <div className="table-responsive">
+                                <table className="table table-borderless align-middle appointments-table">
+                                    <thead>
+                                        <tr>
+                                            <th className="sr-col">Sr.</th>
+                                            <th className="name-col">Patient Name</th>
+                                            <th className="age-col text-start">Age</th>
+                                            <th className="contact-col text-start">Contact</th>
+                                            <th className="time-col text-start">Time</th>
+                                            <th className="online-col text-start">Online</th>
+                                            <th className="status-col text-start">Status</th>
+                                            <th className="last-col text-start">Last Visit</th>
+                                            <th className="action-col text-start">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {currentAppointments.map((a, i) => {
+                                            const originalIndex = startIndex + i;
+                                            return (
+                                            <tr key={i} style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 500 }}>
+                                                <td className="sr-col">{a.sr}</td>
+                                                <td className="name-col"><a href={`/patients/${a.patientId}`} style={{ textDecoration: "underline", color: "#1E88E5" }}>{a.patient}</a></td>
+                                                <td className="age-col">{a.age}</td>
+                                                <td className="contact-col">{(a.contact || '').toString().slice(0, 12)}</td>
+                                                <td className="time-col">{extractTime(a.time)}</td>
+                                                <td className="online-cell">
+                                                    <input
+                                                        type="text"
+                                                        className="form-control form-control-sm"
+                                                        value={a.online}
+                                                        onChange={(e) => handleOnlineChange(originalIndex, e.target.value)}
+                                                        placeholder="HH:mm"
+                                                        style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 500, height: "28px", padding: "2px 6px" }}
+                                                    />
+                                                </td>
+                                                <td style={{ position: "relative" }} title={a.status}>
+                                                    <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+                                                        <span className={`d-inline-block rounded-circle ${a.statusColor}`} style={{ width: "14px", height: "14px" }}></span>
+                                                        <span style={{ fontSize: '0.9rem', color: '#263238' }}>{a.status}</span>
+                                                        <div
+                                                            onClick={async (e) => {
+                                                                const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                                                                setMenuPosition({ top: rect.bottom + 6, left: rect.left - 66 });
+                                                                setOpenStatusIndex(openStatusIndex === originalIndex ? null : originalIndex);
+                                                            }}
+                                                            aria-label="Change Status"
+                                                            title="Change Status"
+                                                            style={{
+                                                                display: "inline-flex",
+                                                                alignItems: "center",
+                                                                justifyContent: "center",
+                                                                width: "28px",
+                                                                height: "28px",
+                                                                cursor: "pointer",
+                                                                color: "#607D8B",
+                                                                backgroundColor: "transparent",
+                                                                borderRadius: "4px",
+                                                            }}
+                                                        >
+                                                            <MoreVert fontSize="small" />
+                                                        </div>
+                                                    </div>
+
+                                                    {openStatusIndex === originalIndex && menuPosition && (
+                                                        <div
+                                                            className="status-menu"
+                                                            style={{
+                                                                position: "fixed",
+                                                                top: menuPosition.top,
+                                                                left: menuPosition.left,
+                                                                background: "#ffffff",
+                                                                border: "1px solid #ccc",
+                                                                borderRadius: "6px",
+                                                                boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
+                                                                zIndex: 2000,
+                                                                minWidth: "180px",
+                                                                fontFamily: "'Roboto', sans-serif",
+                                                            }}
+                                                        >
+                                                            {(availableStatuses.length ? availableStatuses : ["WAITING","WITH DOCTOR","WITH DOCTOR (ON PHONE)","CHECK OUT","SAVE","COMPLETE"]).map((status) => (
+                                                                <div
+                                                                    key={status}
+                                                                    onClick={() => {
+                                                                        updateAppointmentField(originalIndex, 'status', status);
+                                                                        updateAppointmentField(originalIndex, 'statusColor', getStatusColor(status));
+                                                                        setOpenStatusIndex(null);
+                                                                        setMenuPosition(null);
+                                                                    }}
+                                                                    style={{
+                                                                        padding: "8px 12px",
+                                                                        cursor: "pointer",
+                                                                        fontSize: "14px",
+                                                                        color: "#212121",
+                                                                        backgroundColor: "#fff",
+                                                                        textAlign: "left",
+                                                                    }}
+                                                                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#f5f5f5")}
+                                                                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#fff")}
+                                                                >
+                                                                    {status}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </td>
+                                                <td className="last-col">
+                                                    <a
+                                                        href={`/patients/${a.patientId}/visits`}
+                                                        title={`View visit history`}
+                                                        style={{ textDecoration: "underline", color: "#1E88E5" }}
+                                                    >
+                                                        {loadingVisits[a.patientId] ? (
+                                                            <span className="text-muted">
+                                                                <i className="fas fa-spinner fa-spin me-1"></i>
+                                                                Loading...
+                                                            </span>
+                                                        ) : (
+                                                            formatLastVisitDisplay(a.patientId, a.reports_received)
+                                                        )}
+                                                    </a>
+                                                </td>
+                                                <td className="action-col" style={{ whiteSpace: "nowrap", position: 'relative' }}>
+                                                    <div
+                                                        onClick={(e) => {
+                                                            const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                                                            setActionMenuPosition({ top: rect.bottom + 6, left: rect.left - 120 });
+                                                            setOpenActionIndex(openActionIndex === originalIndex ? null : originalIndex);
+                                                        }}
+                                                        title="Actions"
+                                                        style={{
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            width: '28px',
+                                                            height: '28px',
+                                                            cursor: 'pointer',
+                                                            color: '#607D8B',
+                                                            backgroundColor: 'transparent',
+                                                            borderRadius: '4px'
+                                                        }}
+                                                    >
+                                                        <MoreVert fontSize="small" />
+                                                    </div>
+
+                                                    {openActionIndex === originalIndex && actionMenuPosition && (
+                                                        <div
+                                                            className="action-menu"
+                                                            style={{
+                                                                position: 'fixed',
+                                                                top: actionMenuPosition.top,
+                                                                left: actionMenuPosition.left,
+                                                                background: '#fff',
+                                                                border: '1px solid #ccc',
+                                                                borderRadius: '6px',
+                                                                boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+                                                                zIndex: 2000,
+                                                                minWidth: '180px',
+                                                                fontFamily: "'Roboto', sans-serif",
+                                                            }}
+                                                        >
+                                                            {[
+                                                                { key: 'save', label: 'Save', icon: <Save fontSize='small' />, disabled: true },
+                                                                { key: 'info', label: 'Visit Details', icon: <Info fontSize='small' />, disabled: true },
+                                                                { key: 'forward', label: 'Treatment', icon: <FastForward fontSize='small' />, disabled: false },
+                                                                { key: 'add', label: 'Lab Details', icon: <AddIcon fontSize='small' />, disabled: true },
+                                                            ].map((item) => (
+                                                                <div
+                                                                    key={item.key}
+                                                                    title={item.label}
+                                                                    onClick={async () => {
+                                                                        if (item.disabled) return;
+                                                                        setOpenActionIndex(null);
+                                                                        setActionMenuPosition(null);
+                                                                        if (item.key === 'save') {
+                                                                            try {
+                                                                                const pid = a.patientId;
+                                                                                const vno = getLatestVisitNumber(a.patientId);
+                                                                                const shift = 1;
+                                                                                const clinic = sessionData?.clinicId || '';
+                                                                                const onlineTime = (a.online || '').trim() || undefined;
+                                                                                const doctor = selectedDoctorId || a.doctorId || '';
+                                                                                const statusId = mapStatusLabelToId(a.status);
+                                                                                if (!pid || !clinic || !doctor) {
+                                                                                    alert('Missing identifiers to update appointment');
+                                                                                    return;
+                                                                                }
+                                                                                await appointmentService.updateTodaysAppointment({
+                                                                                    patientId: String(pid),
+                                                                                    patientVisitNo: Number(vno),
+                                                                                    shiftId: Number(shift),
+                                                                                    clinicId: String(clinic),
+                                                                                    onlineAppointmentTime: onlineTime,
+                                                                                    doctorId: String(doctor),
+                                                                                    statusId: Number(statusId),
+                                                                                    userId: String(sessionData?.userId || 'system')
+                                                                                });
+                                                                                alert('Appointment updated');
+                                                                            } catch (err) {
+                                                                                console.error('Update appointment failed:', err);
+                                                                                alert('Failed to update appointment');
+                                                                            }
+                                                                        }
+                                                                    }}
+                                                                    style={{
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        gap: '8px',
+                                                                        padding: '8px 12px',
+                                                                        cursor: item.disabled ? 'not-allowed' : 'pointer',
+                                                                        fontSize: '14px',
+                                                                        color: item.disabled ? '#9e9e9e' : '#212121',
+                                                                        backgroundColor: '#fff',
+                                                                        opacity: item.disabled ? 0.5 : 1,
+                                                                    }}
+                                                                    onMouseEnter={(e) => {
+                                                                        if (!item.disabled) {
+                                                                            e.currentTarget.style.backgroundColor = '#f5f5f5';
+                                                                        }
+                                                                    }}
+                                                                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#fff')}
+                                                                >
+                                                                    {item.icon}
+                                                                    <span>{item.label}</span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+
+                        {/* Card View - Same as receptionist */}
+                        {activeView === 'card' && (
+                            <div className="card-grid">
+                                {currentAppointments.map((appointment, index) => {
+                                    const originalIndex = startIndex + index;
+                                    return (
+                                    <div key={index}>
+                                        <div className="appointment-card">
+                                            <div className="card-header">
+                                                <div className="d-flex align-items-center" style={{ gap: '8px' }}>
+                                                    <span className={`d-inline-block rounded-circle ${appointment.statusColor}`} style={{ width: '10px', height: '10px' }}></span>
+                                                    <a href={`/patients/${appointment.patientId}`} className="patient-name" style={{ textDecoration: 'underline', color: '#1E88E5' }}>{appointment.patient}</a>
+                                                </div>
+                                                <div
+                                                    onClick={(e) => {
+                                                        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                                                        setMenuPosition({ top: rect.bottom + 6, left: rect.left - 120 });
+                                                        setOpenStatusIndex(openStatusIndex === originalIndex ? null : originalIndex);
+                                                    }}
+                                                    title="Change Status"
+                                                    style={{
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        width: '28px',
+                                                        height: '28px',
+                                                        cursor: 'pointer',
+                                                        color: '#607D8B',
+                                                        backgroundColor: 'transparent',
+                                                        borderRadius: '4px'
+                                                    }}
+                                                >
+                                                    <MoreVert fontSize="small" />
+                                                </div>
+                                            </div>
+                                            {openStatusIndex === originalIndex && menuPosition && (
+                                                <div
+                                                    className="status-menu"
+                                                    style={{
+                                                        position: 'fixed',
+                                                        top: menuPosition.top,
+                                                        left: menuPosition.left,
+                                                        background: '#ffffff',
+                                                        border: '1px solid #ccc',
+                                                        borderRadius: '6px',
+                                                        boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+                                                        zIndex: 2000,
+                                                        minWidth: '180px',
+                                                        fontFamily: "'Roboto', sans-serif",
+                                                    }}
+                                                >
+                                                    {(availableStatuses.length ? availableStatuses : ["WAITING","WITH DOCTOR","WITH DOCTOR (ON PHONE)","CHECK OUT","SAVE","COMPLETE"]).map((status) => (
+                                                        <div
+                                                            key={status}
+                                                            onClick={() => {
+                                                                updateAppointmentField(originalIndex, 'status', status);
+                                                                updateAppointmentField(originalIndex, 'statusColor', getStatusColor(status));
+                                                                setOpenStatusIndex(null);
+                                                                setMenuPosition(null);
+                                                            }}
+                                                            style={{
+                                                                padding: '8px 12px',
+                                                                cursor: 'pointer',
+                                                                fontSize: '14px',
+                                                                color: '#212121',
+                                                                backgroundColor: '#fff',
+                                                                textAlign: 'left',
+                                                            }}
+                                                            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f5f5f5')}
+                                                            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#fff')}
+                                                        >
+                                                            {status}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                            <div className="card-details">
+                                                <div className="kv"><span className="k">Age:</span><span className="v">{appointment.age}</span></div>
+                                                <div className="kv"><span className="k">Contact:</span><span className="v">{appointment.contact}</span></div>
+                                                <div className="kv">
+                                                    <span className="k">Last Visit:</span>
+                                                    <span className="v">
+                                                        <a 
+                                                            href={`/patients/${appointment.patientId}/visits`} 
+                                                            title={`View visit history`} 
+                                                            style={{ textDecoration: 'underline', color: '#1E88E5' }}
+                                                        >
+                                                            {loadingVisits[appointment.patientId] ? (
+                                                                <span className="text-muted">
+                                                                    <i className="fas fa-spinner fa-spin me-1"></i>
+                                                                    Loading...
+                                                                </span>
+                                                            ) : (
+                                                                formatLastVisitDisplay(appointment.patientId, appointment.reports_received)
+                                                            )}
+                                                        </a>
+                                                    </span>
+                                                </div>
+                                                <div className="kv"><span className="k">Time:</span><span className="v">{extractTime(appointment.time)}</span></div>
+                                            </div>
+                                            <div className="d-flex align-items-center" style={{ gap: '8px' }}>
+                                                <div className="crm-actions" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, max-content)', alignItems: 'center', gap: '8px' }}>
+                                                    <div
+                                                        className="crm-btn"
+                                                        title="Save (Disabled)"
+                                                        style={{ 
+                                                            opacity: 0.5, 
+                                                            cursor: 'not-allowed',
+                                                            backgroundColor: '#f5f5f5',
+                                                            color: '#9e9e9e'
+                                                        }}
+                                                    >
+                                                        <Save fontSize="small" />
+                                                    </div>
+                                                    <div 
+                                                        className="crm-btn" 
+                                                        title="Visit Details (Disabled)"
+                                                        style={{ 
+                                                            opacity: 0.5, 
+                                                            cursor: 'not-allowed',
+                                                            backgroundColor: '#f5f5f5',
+                                                            color: '#9e9e9e'
+                                                        }}
+                                                    >
+                                                        <Info fontSize="small" />
+                                                    </div>
+                                                    <div 
+                                                        className="crm-btn" 
+                                                        title="Lab details (Disabled)"
+                                                        style={{ 
+                                                            opacity: 0.5, 
+                                                            cursor: 'not-allowed',
+                                                            backgroundColor: '#f5f5f5',
+                                                            color: '#9e9e9e'
+                                                        }}
+                                                    >
+                                                        <AddIcon fontSize="small" />
+                                                    </div>
+                                                    <div className="kv">
+                                                        <span className="k">Online:</span>
+                                                        <span className="v">
+                                                            <input
+                                                                type="text"
+                                                                className="form-control form-control-sm"
+                                                                placeholder="HH:mm"
+                                                                value={appointment.online}
+                                                                onChange={(e) => handleOnlineChange(originalIndex, e.target.value)}
+                                                                style={{ width: '80px', height: '28px', padding: '2px 6px', display: 'inline-block' }}
+                                                            />
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <div 
+                                                    className="crm-btn ms-auto" 
+                                                    title="Treatment"
+                                                    onClick={() => {
+                                                        // Collection button functionality - can be implemented as needed
+                                                        console.log('Collection clicked for patient:', appointment.patientId);
+                                                    }}
+                                                    style={{ 
+                                                        cursor: 'pointer',
+                                                        backgroundColor: '#ECEFF1',
+                                                        color: '#607D8B',
+                                                        border: '1px solid #CFD8DC'
+                                                    }}
+                                                >
+                                                    <FastForward fontSize="small" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+
+                        {/* Pagination - Same as receptionist */}
+                        {filteredAppointments.length > 0 && (
+                            <div className="pagination-container">
+                                <div className="pagination-info">
+                                    <span>
+                                        Showing {startIndex + 1} to {Math.min(endIndex, filteredAppointments.length)} of {filteredAppointments.length} appointments
+                                    </span>
+                                    <div className="page-size-selector">
+                                        <span>Show:</span>
+                                        <select 
+                                            className="page-size-select"
+                                            value={pageSize}
+                                            onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                                        >
+                                            <option value={5}>5</option>
+                                            <option value={10}>10</option>
+                                            <option value={20}>20</option>
+                                            <option value={50}>50</option>
+                                        </select>
+                                        <span style={{ whiteSpace: 'nowrap' }}>per page</span>
+                                    </div>
+                                </div>
+                                
+                                <div className="pagination-controls">
+                                    <button 
+                                        className="page-btn nav-btn"
+                                        onClick={() => handlePageChange(currentPage - 1)}
+                                        disabled={currentPage === 1}
+                                    >
+                                        Previous
+                                    </button>
+                                    
+                                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                                        if (
+                                            page === 1 || 
+                                            page === totalPages || 
+                                            (page >= currentPage - 1 && page <= currentPage + 1)
+                                        ) {
+                                            return (
+                                                <button
+                                                    key={page}
+                                                    className={`page-btn ${currentPage === page ? 'active' : ''}`}
+                                                    onClick={() => handlePageChange(page)}
+                                                >
+                                                    {page}
+                                                </button>
+                                            );
+                                        } else if (
+                                            page === currentPage - 2 || 
+                                            page === currentPage + 2
+                                        ) {
+                                            return <span key={page} className="page-btn" style={{ border: 'none', background: 'none' }}>...</span>;
+                                        }
+                                        return null;
+                                    })}
+                                    
+                                    <button 
+                                        className="page-btn nav-btn"
+                                        onClick={() => handlePageChange(currentPage + 1)}
+                                        disabled={currentPage === totalPages}
+                                    >
+                                        Next
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </>
+                )}
+
+                {/* Snackbar for search results */}
+                {showSnackbar && (
+                    <div
+                        style={{
+                            position: 'fixed',
+                            bottom: '20px',
+                            right: '20px',
+                            backgroundColor: snackbarMessage.includes("doesn't have") ? '#dc3545' : '#28a745',
+                            color: 'white',
+                            padding: '12px 20px',
+                            borderRadius: '6px',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                            zIndex: 9999,
+                            fontFamily: "'Roboto', sans-serif",
+                            fontWeight: 500,
+                            fontSize: '0.9rem',
+                            maxWidth: '400px',
+                            animation: 'slideInUp 0.3s ease-out'
+                        }}
+                    >
+                        <div className="d-flex align-items-center">
+                            <i className={`fas ${snackbarMessage.includes("doesn't have") ? 'fa-exclamation-triangle' : 'fa-check-circle'} me-2`}></i>
+                            <span>{snackbarMessage}</span>
+                            <button
+                                onClick={() => setShowSnackbar(false)}
+                                style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    color: 'white',
+                                    fontSize: '1.2rem',
+                                    marginLeft: '10px',
+                                    cursor: 'pointer',
+                                    opacity: 0.8
+                                }}
+                            >
+                                ×
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
+    };
+
+    // Conditional rendering based on user role
+    if (isDoctor) {
+        return <DoctorScreen />;
+    }
+
+    // Default receptionist screen
+    return (
+        <div className="container-fluid mt-3" style={{ fontFamily: "'Roboto', sans-serif" }}>
+            <style>{`
+        /* Fixed table layout to respect column widths */
+        .table.appointments-table { table-layout: fixed !important; width: 100%;}
+        /* Keep cells on a single line so content determines width */
+        .appointments-table th, .appointments-table td { white-space: wrap; }
+        /* Inputs inside cells shouldn't stretch the column */
+        .appointments-table .form-control, .appointments-table .form-control-sm { width: auto; min-width: 10px; display: inline-block; }
+        // // /* Compact table to fit ~10 rows */
+        // .appointments-table thead th { padding: 6px 8px !important; font-size: 0.9rem; line-height: 1.1; }
+        // .appointments-table tbody td { padding: 6px 8px !important; font-size: 0.9rem; line-height: 1.1; }
+        // .appointments-table .btn.btn-sm { padding: 2px 6px !important; height: 28px; line-height: 1; }
+        // .appointments-table .form-control-sm { padding: 2px 6px !important; height: 28px; }
+        // .appointments-table .form-check-input { width: 16px; height: 16px; }
+        /* Fixed column widths: 10% for Sr, Age, Online, Action; 20% for Patient Name, Contact, Provider, Status, Last Visit */
+        .appointments-table th.sr-col, .appointments-table td.sr-col { width: 5%; }
+        .appointments-table th.name-col, .appointments-table td.name-col { width: 15%; }
+        .appointments-table th.age-col, .appointments-table td.age-col { width: 5%; }
+        .appointments-table th.contact-col, .appointments-table td.contact-col { width: 10%; }
+        .appointments-table th.time-col, .appointments-table td.time-col { width: 5%; }
+        .appointments-table th.provider-col, .appointments-table td.provider-col { width: 15%; }
+        .appointments-table th.online-col, .appointments-table td.online-cell { width: 9%; }
+        .appointments-table td.online-cell .form-control { width: 70px !important; min-width: 40px !important; }
+        .appointments-table th.status-col, .appointments-table td.status-col { width: 20%; }
+        .appointments-table th.last-col, .appointments-table td.last-col { width: 30%; }
+        .appointments-table th.action-col, .appointments-table td.action-col { width: 10%; }
+        /* Borderless table */
+        .appointments-table, .appointments-table th, .appointments-table td { border: 0 !important; }
+        .appointments-table tbody tr + tr { border-top: 0 !important; }
+        /* Status menu */
+        .status-menu { position: absolute; background: #fff; border: 1px solid #e0e0e0; border-radius: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.08); padding: 6px 0; z-index: 10; }
+        .status-menu button { background: transparent; border: 0; padding: 6px 12px; width: 100%; text-align: left; font-size: 0.9rem; }
+        .status-menu button:hover { background: #f5f5f5; }
+        /* Compact layout to fit 10 rows without scroll on 1080p */
+        .appointments-table thead th { padding: 4px 8px !important; font-size: 0.9rem; line-height: 1.1; }
+        .appointments-table tbody td { padding: 4px 8px !important; font-size: 0.9rem; line-height: 1.1; }
+        .appointments-table .btn.btn-sm { padding: 2px 6px !important; height: 28px; line-height: 1; }
+        .appointments-table .form-control-sm { padding: 2px 6px !important; height: 28px; }
+        .appointments-table .form-check-input { width: 14px; height: 14px; }
+        .appointments-table .rounded-circle { width: 12px !important; height: 12px !important; }
+        .appointments-table .content-gap-small { margin-bottom: 8px !important; }
+        
+        /* Card view styles - CRM-like */
+        .card-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
+        .appointment-card {
+            background: #FFFFFF;
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 6px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.10);
+            position: relative;
+            min-height: 150px;
+        }
+        .appointment-card:before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 10px;
+            box-shadow: inset 0 0 0 2px #90CAF9;
+            pointer-events: none;
+        }
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+        .patient-name {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #000000;
+            font-family: 'Roboto', sans-serif;
+        }
+        .price-text { font-weight: 700; color: #2E7D32; font-family: 'Roboto', sans-serif; }
+        .subtitle { color: #6b7280; margin-bottom: 8px; font-size: 0.85rem; font-family: 'Roboto', sans-serif; }
+        .card-details { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; margin-bottom: 10px; }
+        .kv { display: flex; gap: 6px; align-items: center; min-width: 0; }
+        .kv .k { color: #607D8B; font-size: 0.76rem; }
+        .kv .v { color: #111827; font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .crm-actions { display: grid; grid-template-columns: repeat(4, 32px); gap: 8px; }
+        .crm-btn { width: 36px; height: 36px; border-radius: 6px; background: #ECEFF1; display: inline-flex; align-items: center; justify-content: center; color: #607D8B; border: 1px solid #CFD8DC; cursor: pointer; }
         .crm-btn:hover { background: #E3F2FD; color:black; border-color: #90CAF9; }
         .status-indicator {
             width: 12px;
@@ -1291,27 +2452,30 @@ export default function AppointmentTable() {
             .appointments-table thead th { white-space: nowrap; }
             .appointments-table tbody td { white-space: nowrap; }
         }
+        /* Ensure table is always visible with horizontal scroll on smaller screens */
+        .container-fluid { overflow-x: auto; }
+        
         /* Desktops */
         @media (max-width: 1199.98px) {
-            .appointments-table { min-width: 1100px; }
+            .appointments-table { min-width: 100%; }
             .appointments-table thead th { padding: 6px 8px !important; }
             .appointments-table tbody td { padding: 6px 8px !important; }
         }
         /* Tablets */
         @media (max-width: 991.98px) {
-            .appointments-table { min-width: 980px; }
+            .appointments-table { min-width: 100%; }
             .appointments-table thead th { font-size: 0.9rem; }
             .appointments-table tbody td { font-size: 0.9rem; }
         }
         /* Landscape phones */
         @media (max-width: 767.98px) {
-            .appointments-table { min-width: 900px; }
+            .appointments-table { min-width: 100%; }
             .appointments-table thead th { font-size: 0.85rem; padding: 4px 6px !important; }
             .appointments-table tbody td { font-size: 0.85rem; padding: 4px 6px !important; }
         }
         /* Portrait phones */
         @media (max-width: 575.98px) {
-            .appointments-table { min-width: 820px; }
+            .appointments-table { min-width: 100%; }
             .appointments-table thead th { font-size: 0.8rem; padding: 3px 5px !important; }
             .appointments-table tbody td { font-size: 0.8rem; padding: 3px 5px !important; }
         }
@@ -1479,7 +2643,7 @@ export default function AppointmentTable() {
                 >
                     <option value="">Select Status</option>
                     {(availableStatuses.length ? availableStatuses : [
-                        'WAITING','WITH DOCTOR','CHECK OUT','ON CALL','SAVED','COMPLETED'
+                        'WAITING','WITH DOCTOR','WITH DOCTOR (ON PHONE)','CHECK OUT','SAVE','COMPLETE'
                     ]).map(s => (
                         <option key={s} value={s}>{s}</option>
                     ))}
@@ -1591,9 +2755,8 @@ export default function AppointmentTable() {
                                         <th className="age-col text-start">Age</th>
                                         <th className="contact-col text-start">Contact</th>
                                         <th className="time-col text-start">Time</th>
-                                        <th className="provider-col text-start">Provider</th>
                                         <th className="online-col text-start">Online</th>
-                                        <th className="status-col text-center">Status</th>
+                                        <th className="status-col text-start">Status</th>
                                         <th className="last-col text-start">Last Visit</th>
                                         <th className="action-col text-start">Action</th>
                                     </tr>
@@ -1608,17 +2771,6 @@ export default function AppointmentTable() {
                                             <td className="age-col">{a.age}</td>
                                             <td className="contact-col">{(a.contact || '').toString().slice(0, 12)}</td>
                                             <td className="time-col">{extractTime(a.time)}</td>
-                                            <td className="provider-col">
-                                                <select
-                                                    className="form-select form-select-sm"
-                                                    value={a.provider || getDoctorLabelById(selectedDoctorId) || ''}
-                                                    onChange={(e) => handleProviderChange(originalIndex, e.target.value)}
-                                                >
-                                                    {getProviderOptionsWithSelectedFirst().map(opt => (
-                                                        <option key={opt.id} value={opt.label}>{opt.label}</option>
-                                                    ))}
-                                                </select>
-                                            </td>
                                             <td className="online-cell">
                                                 <input
                                                     type="text"
@@ -1629,7 +2781,7 @@ export default function AppointmentTable() {
                                                     style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 500, height: "28px", padding: "2px 6px" }}
                                                 />
                                             </td>
-                                            <td className="text-center center-cell" style={{ position: "relative" }} title={a.status}>
+                                            <td  style={{ position: "relative" }} title={a.status}>
                                                 <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
                                                     <span className={`d-inline-block rounded-circle ${a.statusColor}`} style={{ width: "14px", height: "14px" }}></span>
                                                     <span style={{ fontSize: '0.9rem', color: '#263238' }}>{a.status}</span>
@@ -1695,7 +2847,7 @@ export default function AppointmentTable() {
                                                             fontFamily: "'Roboto', sans-serif",
                                                         }}
                                                     >
-                                                        {(availableStatuses.length ? availableStatuses : ["WAITING","WITH DOCTOR","CHECK OUT","ON CALL","SAVED","COMPLETED"]).map((status) => (
+                                                        {(availableStatuses.length ? availableStatuses : ["WAITING","WITH DOCTOR","WITH DOCTOR (ON PHONE)","CHECK OUT","SAVE","COMPLETE"]).map((status) => (
                                                             <div
                                                                 key={status}
                                                                 onClick={() => {
@@ -1916,7 +3068,7 @@ export default function AppointmentTable() {
                                                     fontFamily: "'Roboto', sans-serif",
                                                 }}
                                             >
-                                                {(availableStatuses.length ? availableStatuses : ["WAITING","WITH DOCTOR","CHECK OUT","ON CALL","SAVED","COMPLETED"]).map((status) => (
+                                                {(availableStatuses.length ? availableStatuses : ["WAITING","WITH DOCTOR","WITH DOCTOR (ON PHONE)","CHECK OUT","SAVE","COMPLETE"]).map((status) => (
                                                     <div
                                                         key={status}
                                                         onClick={() => {
@@ -1966,18 +3118,6 @@ export default function AppointmentTable() {
                                             {/* <div className="kv"><span className="k">Last Visit:</span><span className="v"><a href={`/patients/${appointment.patientId}/visits`} title={`Dr.Tongaonkar`} style={{ textDecoration: 'underline', color: '#1E88E5' }}>{`${formatYearToTwoDigits(appointment.lastOpd)}`} -L</a></span></div> */}
                                             <div className="kv"><span className="k">Dr. Tongaonkar</span></div>
                                             <div className="kv"><span className="k">Time:</span><span className="v">{extractTime(appointment.time)}</span></div>
-                                            <div className="kv"><span className="k">Provider:</span><span className="v">
-                                                <select
-                                                    className="form-select"
-                                                    value={appointment.provider || getDoctorLabelById(selectedDoctorId) || ''}
-                                                    onChange={(e) => handleProviderChange(originalIndex, e.target.value)}
-                                                    style={{ width: '151px', height: '28px', padding: '2px', fontSize: 11 }}
-                                                >
-                                                    {getProviderOptionsWithSelectedFirst().map(opt => (
-                                                        <option key={opt.id} value={opt.label}>{opt.label}</option>
-                                                    ))}
-                                                </select>
-                                            </span></div>
                                             
                                         </div>
                                         {/* <div className="crm-actions">
