@@ -113,8 +113,8 @@ export default function Visits() {
   const { control: visitControl, handleSubmit: handleVisitSubmit, reset: resetVisit } = useForm<VisitFormData>({
     defaultValues: {
       patientId: '',
-      doctorId: user?.userId || 'DR-00001',
-      clinicId: user?.clinicId || 'CL-00001',
+      doctorId: user?.doctorId || '',
+      clinicId: user?.clinicId || '',
       visitDate: new Date().toISOString().split('T')[0],
       shiftId: 1,
       visitType: 'consultation',
@@ -138,12 +138,12 @@ export default function Visits() {
   })
 
   useEffect(() => {
-    if (user?.clinicId) {
+    if (user?.clinicId && user?.doctorId) {
       dispatch(getTodaysVisits({
-        doctorId: user.userId || 'DR-00001',
+        doctorId: user.doctorId,
         shiftId: '1',
         clinicId: user.clinicId,
-        roleId: user.role,
+        roleId: user.roleId,
       }))
     }
   }, [dispatch, user])

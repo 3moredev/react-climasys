@@ -16,7 +16,17 @@ export async function getReferByTranslations(languageId: number = 1): Promise<Re
     params: { languageId }
   })
   const data = Array.isArray(response?.data) ? response.data : []
-  return data.map(mapReferByTranslation)
+  
+  console.log('=== REFERRAL SERVICE DEBUG ===')
+  console.log('Raw API response:', response?.data)
+  console.log('Data array:', data)
+  
+  const mappedData = data.map(mapReferByTranslation)
+  console.log('Mapped data:', mappedData)
+  console.log('=== END REFERRAL SERVICE DEBUG ===')
+  
+  // Backend now handles deduplication, so we just return the mapped data
+  return mappedData
 }
 
 

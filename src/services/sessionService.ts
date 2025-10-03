@@ -57,16 +57,16 @@ export const sessionService = {
   /**
    * Get username from session
    */
-  async getUsername(): Promise<string> {
+  async getUsername(): Promise<string | null> {
     try {
       const result = await this.getSessionInfo()
       if (result.success && result.data) {
-        return result.data.firstName || result.data.loginId || 'Guest'
+        return result.data.firstName || result.data.loginId || null
       }
-      return 'Guest'
+      return null
     } catch (error) {
       console.error('Error getting username:', error)
-      return 'Guest'
+      return null
     }
   },
 

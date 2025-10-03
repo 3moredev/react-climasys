@@ -19,7 +19,7 @@ export default function GlobalWrapper({ children, className = '' }: GlobalWrappe
         width: '100%',
         margin: 0,
         padding: 0,
-        overflow: 'hidden',
+        overflow: 'visible', // Changed from 'hidden' to 'visible' to allow dropdowns to be visible
         display: 'flex',
         flexDirection: 'column',
       }}

@@ -34,7 +34,7 @@ const initialState: AuthState = {
   availableRoles: [],
   systemParams: [],
   licenseKey: null,
-  isAuthenticated: !!localStorage.getItem('user'),
+  isAuthenticated: false, // Start as false, will be validated by AuthGuard
   loading: false,
   error: null,
 }
@@ -52,7 +52,12 @@ export const login = createAsyncThunk(
 )
 
 export const logout = createAsyncThunk('auth/logout', async () => {
-  await authService.logout()
+  try {
+    await authService.logout()
+  } catch (error) {
+    console.error('Logout error:', error)
+    // Even if logout fails, we should still clear local state
+  }
 })
 
 const authSlice = createSlice({
@@ -71,6 +76,9 @@ const authSlice = createSlice({
       if (user) {
         state.user = user
         state.isAuthenticated = true
+      } else {
+        state.user = null
+        state.isAuthenticated = false
       }
     },
   },
@@ -129,6 +137,17 @@ const authSlice = createSlice({
         state.licenseKey = null
       })
       .addCase(logout.fulfilled, (state) => {
+        state.user = null
+        state.userDetails = null
+        state.shiftTimes = []
+        state.availableRoles = []
+        state.systemParams = []
+        state.licenseKey = null
+        state.isAuthenticated = false
+        state.error = null
+      })
+      .addCase(logout.rejected, (state) => {
+        // Even if logout fails, clear the state
         state.user = null
         state.userDetails = null
         state.shiftTimes = []

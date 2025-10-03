@@ -71,11 +71,53 @@ export const authService = {
   },
 
   async logout(): Promise<void> {
-    // Logout from session API
-    await sessionService.logout()
+    try {
+      // Logout from session API
+      await sessionService.logout()
+    } catch (error) {
+      console.error('Session logout error:', error)
+      // Continue with local cleanup even if session logout fails
+    }
     // Clear local storage
     localStorage.removeItem('token')
     localStorage.removeItem('user')
+  },
+
+  /**
+   * Force logout - clears all data and redirects to login
+   */
+  forceLogout(): void {
+    // Clear all local data
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
+    // Force page reload to login
+    window.location.href = '/login'
+  },
+
+  /**
+   * Logout with timeout - attempts graceful logout but falls back to force logout
+   */
+  async logoutWithTimeout(timeoutMs: number = 3000): Promise<void> {
+    return new Promise((resolve) => {
+      const timeoutId = setTimeout(() => {
+        console.warn('Logout timeout reached, forcing logout')
+        this.forceLogout()
+        resolve()
+      }, timeoutMs)
+
+      this.logout()
+        .then(() => {
+          clearTimeout(timeoutId)
+          this.forceLogout()
+          resolve()
+        })
+        .catch((error) => {
+          console.error('Logout failed:', error)
+          clearTimeout(timeoutId)
+          this.forceLogout()
+          resolve()
+        })
+    })
   },
 
   getCurrentUser(): any {

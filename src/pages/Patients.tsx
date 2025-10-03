@@ -105,8 +105,15 @@ export default function Patients() {
   }
 
   const handleCreatePatient = async (data: PatientFormData) => {
+    const { user } = useSelector((state: RootState) => state.auth)
+    
+    if (!user?.doctorId || !user?.clinicId) {
+      alert('Please login to create patients')
+      return
+    }
+    
     const patientData = {
-      doctorId: 'DR-00001',
+      doctorId: user.doctorId,
       ...data,
       areaId: 0,
       cityId: 'OTH',
@@ -114,13 +121,13 @@ export default function Patients() {
       countryId: 'IND',
       regYear: new Date().getFullYear().toString(),
       registrationStatus: 'Q',
-      userId: 'system',
+      userId: user.loginId,
       referBy: '',
       referDoctorDetails: '',
       doctorAddress: '',
       doctorMobile: '',
       doctorEmail: '',
-      clinicId: 'CL-00001'
+      clinicId: user.clinicId
     }
     
     dispatch(createPatient(patientData))

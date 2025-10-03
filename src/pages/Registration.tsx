@@ -1,8 +1,11 @@
 import { useState } from 'react'
 import { Box, Typography, Paper, TextField, Button, Alert, Grid, FormControl, InputLabel, Select, MenuItem } from '@mui/material'
 import { PersonAdd, Person, Phone, Email, LocationOn } from '@mui/icons-material'
+import { useSelector } from 'react-redux'
+import { RootState } from '../store'
 
 export default function RegistrationPage() {
+  const { user } = useSelector((state: RootState) => state.auth)
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [mobile, setMobile] = useState('')
@@ -16,9 +19,15 @@ export default function RegistrationPage() {
     setMessage(null)
     setLoading(true)
     
+    if (!user?.doctorId || !user?.clinicId) {
+      setMessage('Please login to register patients')
+      setLoading(false)
+      return
+    }
+    
     try {
       const payload = {
-        doctorId: 'DR-00001',
+        doctorId: user.doctorId,
         lastName,
         middleName: '',
         firstName,
@@ -32,7 +41,7 @@ export default function RegistrationPage() {
         gender,
         regYear: new Date().getFullYear().toString(),
         registrationStatus: 'Q',
-        userId: 'system',
+        userId: user.loginId,
         referBy: '',
         referDoctorDetails: '',
         maritalStatus: 'S',
@@ -42,7 +51,7 @@ export default function RegistrationPage() {
         doctorAddress: '',
         doctorMobile: '',
         doctorEmail: '',
-        clinicId: 'CL-00001'
+        clinicId: user.clinicId
       }
       
       const res = await fetch('/api/patients', { 

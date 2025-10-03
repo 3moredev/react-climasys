@@ -34,6 +34,9 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '../../store/hooks'
 import { logout } from '../../store/slices/authSlice'
 import { useSession } from '../../store/hooks/useSession'
+import { authService } from '../../services/authService'
+import SessionTimeoutHandler from '../Session/SessionTimeoutHandler'
+import { getSessionConfig } from '../../config/sessionConfig'
 
 interface MainLayoutProps {
   children: React.ReactNode
@@ -81,12 +84,14 @@ export default function MainLayout({ children }: MainLayoutProps) {
   const dispatch = useAppDispatch()
   
   const { user } = useAppSelector((state) => state.auth)
-  const { username, doctorName, clinicName, isLoading: sessionLoading, isValid: sessionValid, logout: sessionLogout } = useSession()
+  const { username, doctorName, clinicName, isLoading: sessionLoading, isValid: sessionValid, logout: sessionLogout, error: sessionError } = useSession()
   
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null)
   const [masterEl, setMasterEl] = React.useState<null | HTMLElement>(null)
   const [tabMenu, setTabMenu] = React.useState<{ index: number; anchor: HTMLElement } | null>(null)
   const [now, setNow] = React.useState<Date>(new Date())
+  const [isLoggingOut, setIsLoggingOut] = React.useState(false)
+  const [showSessionWarning, setShowSessionWarning] = React.useState(false)
 
   const handleMenuClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget)
@@ -111,12 +116,17 @@ export default function MainLayout({ children }: MainLayoutProps) {
   const closeTabMenu = () => setTabMenu(null)
 
   const handleLogout = async () => {
-    // Logout from session API first
-    await sessionLogout()
-    // Then logout from Redux
-    dispatch(logout())
-    navigate('/login')
-    handleMenuClose()
+    try {
+      setIsLoggingOut(true)
+      handleMenuClose()
+      
+      // Use logout with timeout - will force logout after 3 seconds if not complete
+      await authService.logoutWithTimeout(3000)
+    } catch (error) {
+      console.error('Logout error:', error)
+      // Fallback to force logout
+      authService.forceLogout()
+    }
   }
 
   // Tick clock every 30s
@@ -124,6 +134,46 @@ export default function MainLayout({ children }: MainLayoutProps) {
     const id = setInterval(() => setNow(new Date()), 30000)
     return () => clearInterval(id)
   }, [])
+
+  // Handle session expiration
+  React.useEffect(() => {
+    if (sessionError && (sessionError.includes('expired') || sessionError.includes('invalid'))) {
+      console.log('Session expired, redirecting to login...')
+      setShowSessionWarning(true)
+      // Clear local storage and redirect to login after a brief delay
+      const timeoutId = setTimeout(() => {
+        localStorage.removeItem('user')
+        localStorage.removeItem('token')
+        navigate('/login', { replace: true })
+      }, 2000)
+      
+      return () => clearTimeout(timeoutId)
+    }
+  }, [sessionError, navigate])
+
+  // Handle session timeout from API interceptor
+  React.useEffect(() => {
+    const handleSessionTimeout = () => {
+      setShowSessionWarning(true)
+      // The API interceptor will handle the actual redirect
+    }
+
+    // Listen for custom session timeout events
+    window.addEventListener('sessionTimeout', handleSessionTimeout)
+    
+    return () => {
+      window.removeEventListener('sessionTimeout', handleSessionTimeout)
+    }
+  }, [])
+
+  // Show session warning when session is about to expire
+  React.useEffect(() => {
+    if (!sessionValid && !sessionLoading && sessionError) {
+      setShowSessionWarning(true)
+    } else {
+      setShowSessionWarning(false)
+    }
+  }, [sessionValid, sessionLoading, sessionError])
 
   const handleNavigation = (path: string) => {
     navigate(path)
@@ -266,7 +316,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
                       <span style={{ fontSize: '12px' }}>⏳</span>
                     ) : (
                       <span style={{ fontSize: '12px', fontWeight: 'bold' }}>
-                        {username.charAt(0).toUpperCase()}
+                        {username ? username.charAt(0).toUpperCase() : 'U'}
                       </span>
                     )}
                   </Avatar>
@@ -293,11 +343,11 @@ export default function MainLayout({ children }: MainLayoutProps) {
                   </ListItemIcon>
                   {sessionLoading ? 'Loading...' : `${username} (${clinicName || 'Clinic'})`}
                 </MenuItem>
-                <MenuItem onClick={handleLogout}>
+                <MenuItem onClick={handleLogout} disabled={isLoggingOut}>
                   <ListItemIcon>
                     <Logout fontSize="small" />
                   </ListItemIcon>
-                  Logout
+                  {isLoggingOut ? 'Logging out...' : 'Logout'}
                 </MenuItem>
               </Menu>
             </Box>
@@ -317,8 +367,38 @@ export default function MainLayout({ children }: MainLayoutProps) {
             background: '#f8f9fa', // Match appointment screen background
           }}
         >
+          {/* Session Warning */}
+          {showSessionWarning && (
+            <Box
+              sx={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                zIndex: 9999,
+                backgroundColor: '#ff9800',
+                color: 'white',
+                padding: 2,
+                textAlign: 'center',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+              }}
+            >
+              <Typography variant="body1">
+                Session expired. Redirecting to login page...
+              </Typography>
+            </Box>
+          )}
           {children}
         </Box>
+        
+        {/* Session Timeout Handler */}
+        <SessionTimeoutHandler 
+          warningTimeMinutes={getSessionConfig().warningTimeMinutes}
+          sessionTimeoutMinutes={getSessionConfig().sessionTimeoutMinutes}
+          onSessionTimeout={() => {
+            console.log('Session timeout handled by SessionTimeoutHandler')
+          }}
+        />
       </Box>
     </GlobalWrapper>
   )

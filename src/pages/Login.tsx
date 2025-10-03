@@ -40,7 +40,8 @@ export default function LoginPage() {
   useEffect(() => {
     console.log('Login useEffect - isAuthenticated:', isAuthenticated)
     if (isAuthenticated) {
-      const from = (location.state as any)?.from?.pathname || '/'
+      // Redirect to appointments screen after successful login
+      const from = (location.state as any)?.from?.pathname || '/appointment'
       console.log('Navigating to:', from)
       navigate(from, { replace: true })
     }
