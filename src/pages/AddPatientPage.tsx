@@ -22,6 +22,10 @@ import {
   Snackbar
 } from '@mui/material'
 import Autocomplete from '@mui/material/Autocomplete'
+import { DateField } from '@mui/x-date-pickers/DateField'
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
+import dayjs from 'dayjs'
 import { Close, Save, Person, Search, CalendarToday } from '@mui/icons-material'
 import { patientService, QuickRegistrationRequest } from '../services/patientService'
 import { appointmentService, AppointmentRequest } from '../services/appointmentService'
@@ -41,6 +45,9 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
     middleName: '',
     age: '',
     dateOfBirth: '',
+    dobDate: null as Date | null,
+    field1: '',
+    field2: 'Years',
     gender: '',
     area: 'pune',
     city: 'Pune',
@@ -245,7 +252,44 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
   }, [cityInput])
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }))
+    setFormData(prev => {
+      const next = { ...prev, [field]: value }
+      // Reverse sync: when Age (field1) changes, compute DoB using today's month/day
+      if (field === 'field1') {
+        const trimmed = String(value || '').trim()
+        if (trimmed === '') {
+          next.dobDate = null
+          next.dateOfBirth = ''
+        } else {
+          const num = parseInt(trimmed, 10)
+          if (Number.isFinite(num) && num >= 0) {
+          const unit = next.field2 || 'Years'
+          const base = dayjs()
+          const dob = unit === 'Months' ? base.subtract(num, 'month') : base.subtract(num, 'year')
+          next.dobDate = dob as unknown as Date // keep compatibility with DateField usage
+          next.dateOfBirth = dob.format('YYYY-MM-DD')
+          if (unit === 'Years') {
+            next.age = String(num)
+          }
+          }
+        }
+      }
+      // If unit (Years/Months) changes and we have a numeric age, recompute DoB from today
+      if (field === 'field2') {
+        const trimmed = String(next.field1 || '').trim()
+        const num = parseInt(trimmed, 10)
+        if (Number.isFinite(num) && num >= 0) {
+          const base = dayjs()
+          const dob = value === 'Months' ? base.subtract(num, 'month') : base.subtract(num, 'year')
+          next.dobDate = dob as unknown as Date
+          next.dateOfBirth = dob.format('YYYY-MM-DD')
+          if (value === 'Years') {
+            next.age = String(num)
+          }
+        }
+      }
+      return next
+    })
     // Clear error when user starts typing
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }))
@@ -436,6 +480,9 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
             middleName: '',
             age: '',
             dateOfBirth: '',
+            dobDate: null,
+            field1: '',
+            field2: '',
             gender: '',
             area: 'pune',
             city: 'Pune',
@@ -490,7 +537,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
     }
   }
 
-  return (
+  return (<>
     <Dialog
       open={open}
       onClose={handleClose}
@@ -552,17 +599,23 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
         // Outline thickness and colors (normal and focused)
         '& .MuiOutlinedInput-root .MuiOutlinedInput-notchedOutline': {
           borderWidth: '2px',
-          borderColor: '#B7B7B7'
+          borderColor: '#B7B7B7',
+          borderRadius: '8px'
         },
         '& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline': {
-          borderColor: '#999'
+          borderColor: '#999',
+          borderRadius: '8px'
         },
         '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
           borderWidth: '2px',
-          borderColor: '#1E88E5'
+          borderColor: '#1E88E5',
+          borderRadius: '8px'
         },
-        // Keep inputs clean of shadows
-        '& .MuiOutlinedInput-root': { boxShadow: 'none' },
+        // Add border radius to all input elements
+        '& .MuiOutlinedInput-root': {
+          borderRadius: '8px',
+          boxShadow: 'none'
+        },
         '& .MuiOutlinedInput-root.Mui-focused': { boxShadow: 'none !important' },
         // Disabled look similar to Appointment header select
         '& .MuiOutlinedInput-root.Mui-disabled .MuiOutlinedInput-input, & .MuiOutlinedInput-root.Mui-disabled .MuiSelect-select': {
@@ -577,7 +630,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
         '& input, & textarea, & select, & .MuiTextField-root input, & .MuiFormControl-root input': {
           border: 'none !important'
         },
-        '& .MuiBox-root': { mb: 0.75 },
+        '& .MuiBox-root': { mb: 0 },
         '& .MuiTypography-root': { mb: 0.25 },
         // Local override for headings inside this dialog only
         '& h1, & h2, & h3, & h4, & h5, & h6, & .MuiTypography-h1, & .MuiTypography-h2, & .MuiTypography-h3, & .MuiTypography-h4, & .MuiTypography-h5, & .MuiTypography-h6': {
@@ -676,55 +729,95 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
               </Grid>
               <Grid item xs={12} md={3}>
                 <Box sx={{ mb: 2 }}>
-                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
-                    Age(Yrs) <span style={{ color: 'red' }}>*</span>
-                  </Typography>
-                  <TextField
-                    fullWidth
-                    placeholder="Enter Age"
-                    value={formData.age}
-                    onChange={(e) => handleInputChange('age', e.target.value.replace(/[^0-9]/g, ''))}
-                    error={!!errors.age}
-                    helperText={errors.age}
-                    disabled={loading}
-                    InputProps={{
-                      endAdornment: (
-                        <InputAdornment position="end">
-                          <Box 
-                            sx={{ 
-                              display: 'flex', 
-                              alignItems: 'center', 
-                              justifyContent: 'center',
-                              cursor: 'pointer',
-                              padding: '4px'
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Box sx={{ width: '50% !important' }}>
+                      <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
+                        DoB(DD-MM-YYYY) <span style={{ color: 'red' }}>*</span>
+                      </Typography>
+                      <LocalizationProvider dateAdapter={AdapterDayjs}>
+                        <DateField
+                          fullWidth
+                          value={formData.dobDate}
+                          slotProps={{ textField: { sx: { mb: 0 } } }}
+                          onChange={(newValue: any) => {
+                            if (newValue) {
+                              const formattedDate = dayjs(newValue).format('YYYY-MM-DD')
+                              const today = dayjs()
+                              const dobDate = dayjs(newValue)
+                              let years = today.year() - dobDate.year()
+                              const m = today.month() - dobDate.month()
+                              if (m < 0 || (m === 0 && today.date() < dobDate.date())) {
+                                years--
+                              }
+                              const calculatedAge = Math.max(0, years)
+                              setFormData(prev => ({ 
+                                ...prev, 
+                                dobDate: newValue, 
+                                dateOfBirth: formattedDate, 
+                                age: String(calculatedAge),
+                                field1: String(calculatedAge) // Update NN field with calculated age
+                              }))
+                            } else {
+                              // When date is cleared, also clear the NN field
+                              setFormData(prev => ({ 
+                                ...prev, 
+                                dobDate: null, 
+                                dateOfBirth: '', 
+                                age: '',
+                                field1: '' // Clear NN field when date is cleared
+                              }))
+                            }
+                          }}
+                          disabled={loading}
+                          format="DD/MM/YYYY"
+                        />
+                      </LocalizationProvider>
+                    </Box>
+                    <Box sx={{ width: '50% !important' }}>
+                      <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
+                        Age (Completed)
+                      </Typography>
+                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+                        <TextField
+                          sx={{ width: '55% !important', mb: 0 }}
+                          placeholder="NN"
+                          value={formData.field1 || ''}
+                          onChange={(e) => handleInputChange('field1', e.target.value)}
+                          disabled={loading}
+                        />
+                        <FormControl sx={{ width: '50%' }}>
+                          <Select
+                            value={formData.field2 || 'Years'}
+                            onChange={(e) => handleInputChange('field2', e.target.value)}
+                            displayEmpty
+                            disabled={loading}
+                            renderValue={(selected) => {
+                              if (selected === '' || selected === null || selected === undefined) {
+                                return <span style={{ color: 'rgba(0, 0, 0, 0.6)' }}>Years</span>
+                              }
+                              return selected
                             }}
-                            onClick={() => dobInputRef.current?.showPicker?.() || dobInputRef.current?.click()}
+                            sx={{
+                              '& .MuiSelect-select': {
+                                paddingRight: 0
+                              }
+                            }}
+                            MenuProps={{
+                              PaperProps: {
+                                style: {
+                                  maxHeight: 200,
+                                  overflow: 'auto'
+                                }
+                              }
+                            }}
                           >
-                            <CalendarToday fontSize="small" sx={{ color: '#666' }} />
-                          </Box>
-                        </InputAdornment>
-                      )
-                    }}
-                  />
-                  {/* Hidden date input to calculate age */}
-                  <input
-                    ref={dobInputRef}
-                    type="date"
-                    style={{ display: 'none' }}
-                    onChange={(e) => {
-                      const dob = new Date(e.target.value)
-                      if (!isNaN(dob.getTime())) {
-                        const today = new Date()
-                        let years = today.getFullYear() - dob.getFullYear()
-                        const m = today.getMonth() - dob.getMonth()
-                        if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) {
-                          years--
-                        }
-                        handleInputChange('age', String(Math.max(0, years)))
-                        handleInputChange('dateOfBirth', e.target.value)
-                      }
-                    }}
-                  />
+                            <MenuItem value="Years">Years</MenuItem>
+                            <MenuItem value="Months">Months</MenuItem>
+                          </Select>
+                        </FormControl>
+                      </Box>
+                    </Box>
+                  </Box>
                 </Box>
               </Grid>
               <Grid item xs={12} md={3}>
@@ -1066,6 +1159,9 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                 middleName: '',
                 age: '',
                 dateOfBirth: '',
+                dobDate: null,
+                field1: '',
+                field2: '',
                 gender: '',
                 area: 'pune',
                 city: 'Pune',
@@ -1107,22 +1203,22 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
           </Button>
         </Box>
       </DialogActions>
-
-      {/* Success Snackbar */}
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={2000}
-        onClose={() => setSnackbarOpen(false)}
-        message={snackbarMessage}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-        sx={{
-          '& .MuiSnackbarContent-root': {
-            backgroundColor: '#4caf50',
-            color: 'white',
-            fontWeight: 'bold'
-          }
-        }}
-      />
     </Dialog>
-  )
+
+    {/* Success Snackbar (outside Dialog so it persists after close) */}
+    <Snackbar
+      open={snackbarOpen}
+      autoHideDuration={2000}
+      onClose={() => setSnackbarOpen(false)}
+      message={snackbarMessage}
+      anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      sx={{
+        '& .MuiSnackbarContent-root': {
+          backgroundColor: '#4caf50',
+          color: 'white',
+          fontWeight: 'bold'
+        }
+      }}
+    />
+  </>)
 }

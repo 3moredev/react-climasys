@@ -7,6 +7,7 @@ import { patientService, Patient, formatVisitDateTime, getVisitStatusText } from
 import type { PatientVisit } from "../services/patientService";
 import { useNavigate, useLocation } from "react-router-dom";
 import AddPatientPage from "./AddPatientPage";
+import PatientVisitDetails from "./PatientVisitDetails";
 import { sessionService, SessionInfo } from "../services/sessionService";
 import PatientFormTest from "../components/Test/PatientFormTest";
 
@@ -30,6 +31,7 @@ type AppointmentRow = {
     doctorId?: string;
     visitNumber?: number;
     actions: boolean;
+    gender_description?: string;
 };
 
 
@@ -63,6 +65,8 @@ export default function AppointmentTable() {
     const [filterContact, setFilterContact] = useState<string>("");
     const [filterStatus, setFilterStatus] = useState<string>("");
     const [filterSize, setFilterSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
+    const [showVisitDetails, setShowVisitDetails] = useState<boolean>(false);
+    const [selectedPatientForVisit, setSelectedPatientForVisit] = useState<AppointmentRow | null>(null);
     
     // Session data state
     const [sessionData, setSessionData] = useState<SessionInfo | null>(null);
@@ -257,6 +261,7 @@ export default function AppointmentTable() {
             const onlineTime = toStringSafe(getField(row, ['Online_Appointment_Time','onlineAppointmentTime','online_time','onlineTime'], ''));
             const reportsAsked = !!getField(row, ['reportsAsked','reports_asked','reportsReceived','reports_received'], false);
             const visitNumber = toNumberSafe(getField(row, ['patient_visit_no','Patient_Visit_No','visitNumber','visit_number'], 1));
+            const genderDescription = toStringSafe(getField(row, ['gender_description','genderDescription','gender','sex'], ''));
             
             // Fix time formatting - ensure proper HH:mm format
             let formattedTime = '00:00'; // Default fallback
@@ -348,7 +353,8 @@ export default function AppointmentTable() {
                 reports_received: reportsAsked,
                 doctorId: toStringSafe(getField(row, ['doctor_id','doctorId'], '')),
                 visitNumber: visitNumber,
-                actions: true
+                actions: true,
+                gender_description: genderDescription
             };
         });
     };
@@ -1989,21 +1995,32 @@ export default function AppointmentTable() {
                                                             <Delete fontSize="small" />
                                                         </div>
 
-                                                        {/* Checkout Button - Disabled for Doctor */}
+                                                        {/* Checkout Button - Open Patient Visit Details Popup */}
                                                         <div
-                                                            title="Checkout (Disabled)"
+                                                            title="Checkout"
+                                                            onClick={() => {
+                                                                setSelectedPatientForVisit(a as any);
+                                                                setShowVisitDetails(true);
+                                                            }}
                                                             style={{
                                                                 display: 'inline-flex',
                                                                 alignItems: 'center',
                                                                 justifyContent: 'center',
                                                                 width: '28px',
                                                                 height: '28px',
-                                                                cursor: 'not-allowed',
-                                                                color: '#9e9e9e',
-                                                                backgroundColor: '#f5f5f5',
+                                                                cursor: 'pointer',
+                                                                color: '#607D8B',
+                                                                backgroundColor: 'transparent',
                                                                 borderRadius: '4px',
-                                                                border: '1px solid #ddd',
-                                                                opacity: 0.5
+                                                                border: '1px solid #ddd'
+                                                            }}
+                                                            onMouseEnter={(e) => {
+                                                                e.currentTarget.style.backgroundColor = '#E3F2FD';
+                                                                e.currentTarget.style.borderColor = '#64B5F6';
+                                                            }}
+                                                            onMouseLeave={(e) => {
+                                                                e.currentTarget.style.backgroundColor = 'transparent';
+                                                                e.currentTarget.style.borderColor = '#ddd';
                                                             }}
                                                         >
                                                             <ShoppingCart fontSize="small" />
@@ -2193,12 +2210,16 @@ export default function AppointmentTable() {
                                                     </div>
                                                     <div 
                                                         className="crm-btn" 
-                                                        title="Checkout (Disabled)"
+                                                        title="Checkout"
+                                                        onClick={() => {
+                                                            setSelectedPatientForVisit(appointment as any);
+                                                            setShowVisitDetails(true);
+                                                        }}
                                                         style={{ 
-                                                            opacity: 0.5, 
-                                                            cursor: 'not-allowed',
-                                                            backgroundColor: '#f5f5f5',
-                                                            color: '#9e9e9e'
+                                                            cursor: 'pointer',
+                                                            backgroundColor: '#ECEFF1',
+                                                            color: '#607D8B',
+                                                            border: '1px solid #CFD8DC'
                                                         }}
                                                     >
                                                         <ShoppingCart fontSize="small" />
@@ -3233,8 +3254,8 @@ export default function AppointmentTable() {
                                                     <div
                                                         title="Checkout"
                                                         onClick={() => {
-                                                            // Navigate to checkout or open modal
-                                                            console.log('Checkout clicked for patient:', a.patientId);
+                                                            setSelectedPatientForVisit(a as any);
+                                                            setShowVisitDetails(true);
                                                         }}
                                                         style={{
                                                             display: 'inline-flex',
@@ -3497,7 +3518,17 @@ export default function AppointmentTable() {
                                                 >
                                                     <Delete fontSize="small" />
                                                 </div>
-                                                <div className="crm-btn" title="Checkout"><ShoppingCart fontSize="small" /></div>
+                                                <div 
+                                                    className="crm-btn" 
+                                                    title="Checkout"
+                                                    onClick={() => {
+                                                        setSelectedPatientForVisit(appointment as any);
+                                                        setShowVisitDetails(true);
+                                                    }}
+                                                    style={{ cursor: 'pointer' }}
+                                                >
+                                                    <ShoppingCart fontSize="small" />
+                                                </div>
                                                 <div className="kv">
                                                     <span className="k">Online:</span>
                                                     <span className="v">
@@ -3596,6 +3627,27 @@ export default function AppointmentTable() {
                 open={showAddPatient} 
                 onClose={() => setShowAddPatient(false)}
                 doctorId={selectedDoctorId || doctorId}
+                onSave={() => {
+                    (async () => {
+                        try {
+                            const today = new Date().toISOString().split('T')[0];
+                            const doctorId = 'DR-00010';
+                            const clinicId = 'CL-00001';
+                            const resp: TodayAppointmentsResponse = await appointmentService.getAppointmentsForDateSP({
+                                doctorId,
+                                clinicId,
+                                futureDate: today,
+                                languageId: 1
+                            });
+                            const rows = convertSPResultToRows(resp?.resultSet1 || []);
+                            setAppointments(rows);
+                        } catch (e) {
+                            console.error('Failed to refresh appointments after adding patient', e);
+                        } finally {
+                            setShowAddPatient(false);
+                        }
+                    })();
+                }}
                 clinicId={clinicId}
             />
 
@@ -3673,6 +3725,18 @@ export default function AppointmentTable() {
                         <PatientFormTest />
                     </div>
                 </div>
+            )}
+
+            {/* Patient Visit Details Popup */}
+            {showVisitDetails && selectedPatientForVisit && (
+                <PatientVisitDetails 
+                    open={true}
+                    onClose={() => {
+                        setShowVisitDetails(false);
+                        setSelectedPatientForVisit(null);
+                    }}
+                    patientData={selectedPatientForVisit as any}
+                />
             )}
         </div>
     );
