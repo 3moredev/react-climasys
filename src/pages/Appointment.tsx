@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
-import { List, CreditCard, MoreVert, Add as AddIcon, Save, Delete, Info, FastForward, Close, ChatBubbleOutline, Phone, SwapHoriz } from "@mui/icons-material";
+import { List, CreditCard, MoreVert, Add as AddIcon, Save, Delete, Info, FastForward, Close, ChatBubbleOutline, Phone, SwapHoriz, ShoppingCart } from "@mui/icons-material";
 import { appointmentService, Appointment, AppointmentRequest, TodayAppointmentsResponse, getDoctorStatusReference, getStatusOptionsByClinic } from "../services/appointmentService";
 import { doctorService, DoctorDetail, Doctor } from "../services/doctorService";
 import { patientService, Patient, formatVisitDateTime, getVisitStatusText } from "../services/patientService";
@@ -8,6 +8,7 @@ import type { PatientVisit } from "../services/patientService";
 import { useNavigate, useLocation } from "react-router-dom";
 import AddPatientPage from "./AddPatientPage";
 import { sessionService, SessionInfo } from "../services/sessionService";
+import PatientFormTest from "../components/Test/PatientFormTest";
 
 type AppointmentRow = {
     reports_received: any;
@@ -17,6 +18,7 @@ type AppointmentRow = {
     patientId: string;
     visitDate?: string;
     age: number;
+    gender: string;
     contact: string;
     time: string;
     provider: string;
@@ -54,6 +56,8 @@ export default function AppointmentTable() {
     const [openActionIndex, setOpenActionIndex] = useState<number | null>(null);
     const [actionMenuPosition, setActionMenuPosition] = useState<{ top: number; left: number } | null>(null);
     const [showFilters, setShowFilters] = useState<boolean>(false);
+    const [showPatientFormDialog, setShowPatientFormDialog] = useState<boolean>(false);
+    const [selectedPatientForForm, setSelectedPatientForForm] = useState<any>(null);
     const [filterName, setFilterName] = useState<string>("");
     const [filterContact, setFilterContact] = useState<string>("");
     const [filterStatus, setFilterStatus] = useState<string>("");
@@ -184,6 +188,8 @@ export default function AppointmentTable() {
                 patientId: String(patient.id),
                 patient: `${patient.first_name} ${patient.last_name}`,
                 age: resolvedAge,
+                // gender: getGenderName(patient.gender_id),
+                gender:'Male',
                 contact: patient.mobile_1 || "",
                 time: "10:00", // Current time as placeholder
                 provider: "Dr.Tongaonkar", // Placeholder - you might want to get this from another API
@@ -206,6 +212,18 @@ export default function AppointmentTable() {
         return `Dr. ${raw}`;
     };
 
+    // Map gender_id to gender name
+    const getGenderName = (genderId?: number): string => {
+        if (!genderId) return '';
+        // Common gender mappings - you might want to fetch this from an API
+        switch (genderId) {
+            case 1: return 'Male';
+            case 2: return 'Female';
+            case 3: return 'Other';
+            default: return `Gender ${genderId}`;
+        }
+    };
+
     // Convert SP endpoint resultSet1 rows to AppointmentRow format (best-effort field resolution)
     const convertSPResultToRows = (rows: any[]): AppointmentRow[] => {
         const toStringSafe = (v: any) => (v === null || v === undefined) ? '' : String(v);
@@ -226,6 +244,7 @@ export default function AppointmentTable() {
             const patientIdRaw = getField(row, ['patient_id','patientId','id','patientID'], '');
             const patientName = toStringSafe(getField(row, ['patientName','patient_name','fullName','full_name','name'], ''));
             const age = toNumberSafe(getField(row, ['age_given','age','patientAge','patient_age'], 0));
+            const gender = toStringSafe(getField(row, ['gender','genderName','gender_name','patientGender','patient_gender'], ''));
             const mobile = toStringSafe(getField(row, ['mobileNumber','mobile_number','contact','phone','mobile'], ''));
             const apptDate = toStringSafe(getField(row, ['appointmentDate','appointment_date','visitDate','visit_date'], new Date().toISOString().split('T')[0]));
             const apptTime = toStringSafe(getField(row, ['visit_time','appointmentTime','appointment_time','visitTime'], ''));
@@ -313,6 +332,7 @@ export default function AppointmentTable() {
                 patient: patientName,
                 visitDate: toStringSafe(getField(row, ['appointmentDate','appointment_date','visitDate','visit_date'], '')),
                 age: age,
+                gender: 'Male',
                 contact: mobile,
                 time: displayTime,
                 provider: doctorId,
@@ -388,6 +408,7 @@ export default function AppointmentTable() {
                 patient: item.patientName || '',
                 visitDate: item.appointmentDate || '',
                 age: typeof item.age === 'number' ? item.age : 0,
+                gender: '', // Gender not available in Appointment interface
                 contact: item.mobileNumber || '',
                 time: new Date(timeString).toString(),
                 provider: formatProviderLabel(item.doctorName || doctorFirstName || 'Tongaonkar'),
@@ -712,6 +733,34 @@ export default function AppointmentTable() {
             setTimeout(() => setShowSnackbar(false), 2000);
         }
     };
+
+    const handleLastVisitClick = (patientId: string, patientName: string) => {
+        setSelectedPatientForForm({
+            id: patientId,
+            name: patientName
+        });
+        setShowPatientFormDialog(true);
+    };
+
+    // Handle ESC key to close dialog
+    useEffect(() => {
+        const handleEscKey = (event: KeyboardEvent) => {
+            if (event.key === 'Escape' && showPatientFormDialog) {
+                setShowPatientFormDialog(false);
+            }
+        };
+
+        if (showPatientFormDialog) {
+            document.addEventListener('keydown', handleEscKey);
+            // Prevent body scroll when dialog is open
+            document.body.style.overflow = 'hidden';
+        }
+
+        return () => {
+            document.removeEventListener('keydown', handleEscKey);
+            document.body.style.overflow = 'unset';
+        };
+    }, [showPatientFormDialog]);
 
     // Remove selected patient
     const removeSelectedPatient = (patientId: number) => {
@@ -1144,10 +1193,10 @@ export default function AppointmentTable() {
         // .appointments-table .form-check-input { width: 16px; height: 16px; }
         /* Fixed column widths: 10% for Sr, Age, Online, Action; 20% for Patient Name, Contact, Provider, Status, Last Visit */
         .appointments-table th.sr-col, .appointments-table td.sr-col { width: 5%; }
-        .appointments-table th.name-col, .appointments-table td.name-col { width: 15%; }
-        .appointments-table th.age-col, .appointments-table td.age-col { width: 5%; }
-        .appointments-table th.contact-col, .appointments-table td.contact-col { width: 10%; }
-        .appointments-table th.time-col, .appointments-table td.time-col { width: 5%; }
+        .appointments-table th.name-col, .appointments-table td.name-col { width: 10%;}
+        .appointments-table th.age-col, .appointments-table td.age-col { width: 2%; }
+        .appointments-table th.contact-col, .appointments-table td.contact-col { width: 5%; }
+        .appointments-table th.time-col, .appointments-table td.time-col { width: 3%; }
         .appointments-table th.provider-col, .appointments-table td.provider-col { width: 15%; }
         .appointments-table th.online-col, .appointments-table td.online-cell { width: 9%; }
         .appointments-table td.online-cell .form-control { width: 70px !important; min-width: 40px !important; }
@@ -1463,7 +1512,7 @@ export default function AppointmentTable() {
                 {/* Doctor-specific controls - No booking, only viewing and status updates */}
                 <div className="d-flex mb-3 align-items-center" style={{ gap: '8px', overflow: 'visible' }}>
                     {/* Search for patients - Read only for doctors */}
-                    <div className="position-relative">
+                    <div className="position-relative" ref={searchRef}>
                         <input
                             type="text"
                             placeholder="Search by Patient ID/Name/ContactNumber"
@@ -1496,8 +1545,8 @@ export default function AppointmentTable() {
                                     </div>
                                 ) : searchResults.length > 0 ? (
                                     searchResults.map((patient) => {
-                                        const age = patient.date_of_birth ? 
-                                            Math.floor((new Date().getTime() - new Date(patient.date_of_birth).getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : 0;
+                                        const age = patient.age_given; 
+                                            // Math.floor((new Date().getTime() - new Date(patient.date_of_birth).getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : 0;
                                         
                                             return (
                                                 <div
@@ -1755,9 +1804,13 @@ export default function AppointmentTable() {
                                                 </td>
                                                 <td className="last-col">
                                                     <a
-                                                        href={`/patients/${a.patientId}/visits`}
+                                                        href="#"
                                                         title={`View visit history`}
-                                                        style={{ textDecoration: "underline", color: "#1E88E5" }}
+                                                        style={{ textDecoration: "underline", color: "#1E88E5", cursor: "pointer" }}
+                                                        onClick={(e) => {
+                                                            e.preventDefault();
+                                                            handleLastVisitClick(a.patientId, a.patient);
+                                                        }}
                                                     >
                                                         {loadingVisits[a.patientId] ? (
                                                             <span className="text-muted">
@@ -1769,112 +1822,124 @@ export default function AppointmentTable() {
                                                         )}
                                                     </a>
                                                 </td>
-                                                <td className="action-col" style={{ whiteSpace: "nowrap", position: 'relative' }}>
-                                                    <div
-                                                        onClick={(e) => {
-                                                            const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                                                            setActionMenuPosition({ top: rect.bottom + 6, left: rect.left - 120 });
-                                                            setOpenActionIndex(openActionIndex === originalIndex ? null : originalIndex);
-                                                        }}
-                                                        title="Actions"
-                                                        style={{
-                                                            display: 'inline-flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                            width: '28px',
-                                                            height: '28px',
-                                                            cursor: 'pointer',
-                                                            color: '#607D8B',
-                                                            backgroundColor: 'transparent',
-                                                            borderRadius: '4px'
-                                                        }}
-                                                    >
-                                                        <MoreVert fontSize="small" />
-                                                    </div>
-
-                                                    {openActionIndex === originalIndex && actionMenuPosition && (
+                                                <td className="action-col" style={{ whiteSpace: "nowrap" }}>
+                                                    <div style={{ 
+                                                        display: 'flex', 
+                                                        alignItems: 'center', 
+                                                        gap: '8px',
+                                                        justifyContent: 'flex-start'
+                                                    }}>
+                                                        {/* Lab Details Button - Disabled for Doctor */}
                                                         <div
-                                                            className="action-menu"
+                                                            title="Lab Details (Disabled)"
                                                             style={{
-                                                                position: 'fixed',
-                                                                top: actionMenuPosition.top,
-                                                                left: actionMenuPosition.left,
-                                                                background: '#fff',
-                                                                border: '1px solid #ccc',
-                                                                borderRadius: '6px',
-                                                                boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
-                                                                zIndex: 2000,
-                                                                minWidth: '180px',
-                                                                fontFamily: "'Roboto', sans-serif",
+                                                                display: 'inline-flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                width: '28px',
+                                                                height: '28px',
+                                                                cursor: 'not-allowed',
+                                                                color: '#9e9e9e',
+                                                                backgroundColor: '#f5f5f5',
+                                                                borderRadius: '4px',
+                                                                border: '1px solid #ddd',
+                                                                opacity: 0.5
                                                             }}
                                                         >
-                                                            {[
-                                                                { key: 'save', label: 'Save', icon: <Save fontSize='small' />, disabled: true },
-                                                                { key: 'info', label: 'Visit Details', icon: <Info fontSize='small' />, disabled: true },
-                                                                { key: 'forward', label: 'Treatment', icon: <FastForward fontSize='small' />, disabled: false },
-                                                                { key: 'add', label: 'Lab Details', icon: <AddIcon fontSize='small' />, disabled: true },
-                                                            ].map((item) => (
-                                                                <div
-                                                                    key={item.key}
-                                                                    title={item.label}
-                                                                    onClick={async () => {
-                                                                        if (item.disabled) return;
-                                                                        setOpenActionIndex(null);
-                                                                        setActionMenuPosition(null);
-                                                                        if (item.key === 'save') {
-                                                                            try {
-                                                                                const pid = a.patientId;
-                                                                                const vno = getLatestVisitNumber(a.patientId);
-                                                                                const shift = 1;
-                                                                                const clinic = sessionData?.clinicId || '';
-                                                                                const onlineTime = (a.online || '').trim() || undefined;
-                                                                                const doctor = selectedDoctorId || a.doctorId || '';
-                                                                                const statusId = mapStatusLabelToId(a.status);
-                                                                                if (!pid || !clinic || !doctor) {
-                                                                                    alert('Missing identifiers to update appointment');
-                                                                                    return;
-                                                                                }
-                                                                                await appointmentService.updateTodaysAppointment({
-                                                                                    patientId: String(pid),
-                                                                                    patientVisitNo: Number(vno),
-                                                                                    shiftId: Number(shift),
-                                                                                    clinicId: String(clinic),
-                                                                                    onlineAppointmentTime: onlineTime,
-                                                                                    doctorId: String(doctor),
-                                                                                    statusId: Number(statusId),
-                                                                                    userId: String(sessionData?.userId || 'system')
-                                                                                });
-                                                                                alert('Appointment updated');
-                                                                            } catch (err) {
-                                                                                console.error('Update appointment failed:', err);
-                                                                                alert('Failed to update appointment');
-                                                                            }
-                                                                        }
-                                                                    }}
-                                                                    style={{
-                                                                        display: 'flex',
-                                                                        alignItems: 'center',
-                                                                        gap: '8px',
-                                                                        padding: '8px 12px',
-                                                                        cursor: item.disabled ? 'not-allowed' : 'pointer',
-                                                                        fontSize: '14px',
-                                                                        color: item.disabled ? '#9e9e9e' : '#212121',
-                                                                        backgroundColor: '#fff',
-                                                                        opacity: item.disabled ? 0.5 : 1,
-                                                                    }}
-                                                                    onMouseEnter={(e) => {
-                                                                        if (!item.disabled) {
-                                                                            e.currentTarget.style.backgroundColor = '#f5f5f5';
-                                                                        }
-                                                                    }}
-                                                                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#fff')}
-                                                                >
-                                                                    {item.icon}
-                                                                    <span>{item.label}</span>
-                                                                </div>
-                                                            ))}
+                                                            <AddIcon fontSize="small" />
                                                         </div>
-                                                    )}
+
+                                                        {/* Save Button - Disabled for Doctor */}
+                                                        <div
+                                                            title="Save (Disabled)"
+                                                            style={{
+                                                                display: 'inline-flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                width: '28px',
+                                                                height: '28px',
+                                                                cursor: 'not-allowed',
+                                                                color: '#9e9e9e',
+                                                                backgroundColor: '#f5f5f5',
+                                                                borderRadius: '4px',
+                                                                border: '1px solid #ddd',
+                                                                opacity: 0.5
+                                                            }}
+                                                        >
+                                                            <Save fontSize="small" />
+                                                        </div>
+
+                                                        {/* Delete Button - Disabled for Doctor */}
+                                                        <div
+                                                            title="Delete (Disabled)"
+                                                            style={{
+                                                                display: 'inline-flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                width: '28px',
+                                                                height: '28px',
+                                                                cursor: 'not-allowed',
+                                                                color: '#9e9e9e',
+                                                                backgroundColor: '#f5f5f5',
+                                                                borderRadius: '4px',
+                                                                border: '1px solid #ddd',
+                                                                opacity: 0.5
+                                                            }}
+                                                        >
+                                                            <Delete fontSize="small" />
+                                                        </div>
+
+                                                        {/* Checkout Button - Disabled for Doctor */}
+                                                        <div
+                                                            title="Checkout (Disabled)"
+                                                            style={{
+                                                                display: 'inline-flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                width: '28px',
+                                                                height: '28px',
+                                                                cursor: 'not-allowed',
+                                                                color: '#9e9e9e',
+                                                                backgroundColor: '#f5f5f5',
+                                                                borderRadius: '4px',
+                                                                border: '1px solid #ddd',
+                                                                opacity: 0.5
+                                                            }}
+                                                        >
+                                                            <ShoppingCart fontSize="small" />
+                                                        </div>
+
+                                                        {/* Treatment Button - Enabled for Doctor */}
+                                                        <div
+                                                            title="Treatment"
+                                                            onClick={() => {
+                                                                // Navigate to treatment or open modal
+                                                                console.log('Treatment clicked for patient:', a.patientId);
+                                                            }}
+                                                            style={{
+                                                                display: 'inline-flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                width: '28px',
+                                                                height: '28px',
+                                                                cursor: 'pointer',
+                                                                color: '#607D8B',
+                                                                backgroundColor: 'transparent',
+                                                                borderRadius: '4px',
+                                                                border: '1px solid #ddd'
+                                                            }}
+                                                            onMouseEnter={(e) => {
+                                                                e.currentTarget.style.backgroundColor = '#FFF3E0';
+                                                                e.currentTarget.style.borderColor = '#FF9800';
+                                                            }}
+                                                            onMouseLeave={(e) => {
+                                                                e.currentTarget.style.backgroundColor = 'transparent';
+                                                                e.currentTarget.style.borderColor = '#ddd';
+                                                            }}
+                                                        >
+                                                            <FastForward fontSize="small" />
+                                                        </div>
+                                                    </div>
                                                 </td>
                                             </tr>
                                             );
@@ -1967,9 +2032,13 @@ export default function AppointmentTable() {
                                                     <span className="k">Last Visit:</span>
                                                     <span className="v">
                                                         <a 
-                                                            href={`/patients/${appointment.patientId}/visits`} 
+                                                            href="#"
                                                             title={`View visit history`} 
-                                                            style={{ textDecoration: 'underline', color: '#1E88E5' }}
+                                                            style={{ textDecoration: 'underline', color: '#1E88E5', cursor: 'pointer' }}
+                                                            onClick={(e) => {
+                                                                e.preventDefault();
+                                                                handleLastVisitClick(appointment.patientId, appointment.patient);
+                                                            }}
                                                         >
                                                             {loadingVisits[appointment.patientId] ? (
                                                                 <span className="text-muted">
@@ -1986,6 +2055,18 @@ export default function AppointmentTable() {
                                             </div>
                                             <div className="d-flex align-items-center" style={{ gap: '8px' }}>
                                                 <div className="crm-actions" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, max-content)', alignItems: 'center', gap: '8px' }}>
+                                                    <div 
+                                                        className="crm-btn" 
+                                                        title="Lab Details (Disabled)"
+                                                        style={{ 
+                                                            opacity: 0.5, 
+                                                            cursor: 'not-allowed',
+                                                            backgroundColor: '#f5f5f5',
+                                                            color: '#9e9e9e'
+                                                        }}
+                                                    >
+                                                        <AddIcon fontSize="small" />
+                                                    </div>
                                                     <div
                                                         className="crm-btn"
                                                         title="Save (Disabled)"
@@ -2000,7 +2081,7 @@ export default function AppointmentTable() {
                                                     </div>
                                                     <div 
                                                         className="crm-btn" 
-                                                        title="Visit Details (Disabled)"
+                                                        title="Delete (Disabled)"
                                                         style={{ 
                                                             opacity: 0.5, 
                                                             cursor: 'not-allowed',
@@ -2008,11 +2089,11 @@ export default function AppointmentTable() {
                                                             color: '#9e9e9e'
                                                         }}
                                                     >
-                                                        <Info fontSize="small" />
+                                                        <Delete fontSize="small" />
                                                     </div>
                                                     <div 
                                                         className="crm-btn" 
-                                                        title="Lab details (Disabled)"
+                                                        title="Checkout (Disabled)"
                                                         style={{ 
                                                             opacity: 0.5, 
                                                             cursor: 'not-allowed',
@@ -2020,28 +2101,28 @@ export default function AppointmentTable() {
                                                             color: '#9e9e9e'
                                                         }}
                                                     >
-                                                        <AddIcon fontSize="small" />
+                                                        <ShoppingCart fontSize="small" />
                                                     </div>
-                                                    <div className="kv">
-                                                        <span className="k">Online:</span>
-                                                        <span className="v">
-                                                            <input
-                                                                type="text"
-                                                                className="form-control form-control-sm"
-                                                                placeholder="HH:mm"
-                                                                value={appointment.online}
-                                                                onChange={(e) => handleOnlineChange(originalIndex, e.target.value)}
-                                                                style={{ width: '80px', height: '28px', padding: '2px 6px', display: 'inline-block' }}
-                                                            />
-                                                        </span>
-                                                    </div>
+                                                </div>
+                                                <div className="kv">
+                                                    <span className="k">Online:</span>
+                                                    <span className="v">
+                                                        <input
+                                                            type="text"
+                                                            className="form-control form-control-sm"
+                                                            placeholder="HH:mm"
+                                                            value={appointment.online}
+                                                            onChange={(e) => handleOnlineChange(originalIndex, e.target.value)}
+                                                            style={{ width: '80px', height: '28px', padding: '2px 6px', display: 'inline-block' }}
+                                                        />
+                                                    </span>
                                                 </div>
                                                 <div 
                                                     className="crm-btn ms-auto" 
                                                     title="Treatment"
                                                     onClick={() => {
-                                                        // Collection button functionality - can be implemented as needed
-                                                        console.log('Collection clicked for patient:', appointment.patientId);
+                                                        // Treatment button functionality - can be implemented as needed
+                                                        console.log('Treatment clicked for patient:', appointment.patientId);
                                                     }}
                                                     style={{ 
                                                         cursor: 'pointer',
@@ -2195,16 +2276,17 @@ export default function AppointmentTable() {
         // .appointments-table .form-control-sm { padding: 2px 6px !important; height: 28px; }
         // .appointments-table .form-check-input { width: 16px; height: 16px; }
         /* Fixed column widths: 10% for Sr, Age, Online, Action; 20% for Patient Name, Contact, Provider, Status, Last Visit */
-        .appointments-table th.sr-col, .appointments-table td.sr-col { width: 5%; }
-        .appointments-table th.name-col, .appointments-table td.name-col { width: 15%; }
-        .appointments-table th.age-col, .appointments-table td.age-col { width: 5%; }
-        .appointments-table th.contact-col, .appointments-table td.contact-col { width: 10%; }
-        .appointments-table th.time-col, .appointments-table td.time-col { width: 5%; }
+        .appointments-table th.sr-col, .appointments-table td.sr-col { width: 2%; }
+        .appointments-table th.name-col, .appointments-table td.name-col { width: 12%; }
+        .appointments-table th.gender-col, .appointments-table td.gender-col { width: 6%; }
+        .appointments-table th.age-col, .appointments-table td.age-col { width: 3%; }
+        .appointments-table th.contact-col, .appointments-table td.contact-col { width: 8%; }
+        .appointments-table th.time-col, .appointments-table td.time-col { width:3%; }
         .appointments-table th.provider-col, .appointments-table td.provider-col { width: 15%; }
-        .appointments-table th.online-col, .appointments-table td.online-cell { width: 9%; }
+        .appointments-table th.online-col, .appointments-table td.online-cell { width: 5%; }
         .appointments-table td.online-cell .form-control { width: 70px !important; min-width: 40px !important; }
-        .appointments-table th.status-col, .appointments-table td.status-col { width: 20%; }
-        .appointments-table th.last-col, .appointments-table td.last-col { width: 30%; }
+        .appointments-table th.status-col, .appointments-table td.status-col { width: 15%; }
+        .appointments-table th.last-col, .appointments-table td.last-col { width: 15%; }
         .appointments-table th.action-col, .appointments-table td.action-col { width: 10%; }
         /* Borderless table */
         .appointments-table, .appointments-table th, .appointments-table td { border: 0 !important; }
@@ -2535,8 +2617,8 @@ export default function AppointmentTable() {
                                 </div>
                             ) : searchResults.length > 0 ? (
                                 searchResults.map((patient) => {
-                                    const age = patient.date_of_birth ? 
-                                        Math.floor((new Date().getTime() - new Date(patient.date_of_birth).getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : 0;
+                                    const age = patient.age_given; 
+                                        // Math.floor((new Date().getTime() - new Date(patient.date_of_birth).getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : 0;
                                     
                                     return (
                                         <div
@@ -2604,7 +2686,7 @@ export default function AppointmentTable() {
                     ) : allDoctors.length > 0 ? (
                         allDoctors.map((doctor) => (
                             <option key={doctor.id} value={doctor.id}>
-                                {doctor.name}
+                                {formatProviderLabel(doctor.name)}
                             </option>
                         ))
                     ) : (
@@ -2752,9 +2834,11 @@ export default function AppointmentTable() {
                                     <tr>
                                         <th className="sr-col">Sr.</th>
                                         <th className="name-col">Patient Name</th>
+                                        <th className="gender-col text-start">Gender</th>
                                         <th className="age-col text-start">Age</th>
                                         <th className="contact-col text-start">Contact</th>
                                         <th className="time-col text-start">Time</th>
+                                        <th className="provider-col text-start">Provider</th>
                                         <th className="online-col text-start">Online</th>
                                         <th className="status-col text-start">Status</th>
                                         <th className="last-col text-start">Last Visit</th>
@@ -2768,9 +2852,21 @@ export default function AppointmentTable() {
                                         <tr key={i} style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 500 }}>
                                             <td className="sr-col">{a.sr}</td>
                                             <td className="name-col"><a href={`/patients/${a.patientId}`} style={{ textDecoration: "underline", color: "#1E88E5" }}>{a.patient}</a></td>
+                                            <td className="gender-col">{a.gender}</td>
                                             <td className="age-col">{a.age}</td>
                                             <td className="contact-col">{(a.contact || '').toString().slice(0, 12)}</td>
                                             <td className="time-col">{extractTime(a.time)}</td>
+                                            <td className="provider-col">
+                                                <select
+                                                    className="form-select form-select-sm"
+                                                    value={a.provider || getDoctorLabelById(selectedDoctorId) || ''}
+                                                    onChange={(e) => handleProviderChange(originalIndex, e.target.value)}
+                                                >
+                                                    {getProviderOptionsWithSelectedFirst().map(opt => (
+                                                        <option key={opt.id} value={opt.label}>{opt.label}</option>
+                                                    ))}
+                                                </select>
+                                            </td>
                                             <td className="online-cell">
                                                 <input
                                                     type="text"
@@ -2876,9 +2972,13 @@ export default function AppointmentTable() {
                                             {/* <td><a href={`/patients/${a.patientId}/visits`} style={{ textDecoration: "underline", color: "#1E88E5" }}>{a.lastOpd}</a></td> */}
                                             <td className="last-col">
                                                 <a
-                                                    href={`/patients/${a.patientId}/visits`}
+                                                    href="#"
                                                     title={`View visit history`}
-                                                    style={{ textDecoration: "underline", color: "#1E88E5" }}
+                                                    style={{ textDecoration: "underline", color: "#1E88E5", cursor: "pointer" }}
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        handleLastVisitClick(a.patientId, a.patient);
+                                                    }}
                                                 >
                                                     {loadingVisits[a.patientId] ? (
                                                         <span className="text-muted">
@@ -2890,124 +2990,207 @@ export default function AppointmentTable() {
                                                     )}
                                                 </a>
                                             </td>
-                                            <td className="action-col" style={{ whiteSpace: "nowrap", position: 'relative' }}>
-                                                <div
-                                                    onClick={(e) => {
-                                                        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                                                        setActionMenuPosition({ top: rect.bottom + 6, left: rect.left - 120 });
-                                                        setOpenActionIndex(openActionIndex === originalIndex ? null : originalIndex);
-                                                    }}
-                                                    title="Actions"
-                                                    style={{
-                                                        display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                                                        width: '28px',
-                                                        height: '28px',
-                                                        cursor: 'pointer',
-                                                        color: '#607D8B',
-                                                        backgroundColor: 'transparent',
-                                                        borderRadius: '4px'
-                                                    }}
-                                                >
-                                                    <MoreVert fontSize="small" />
-                                                </div>
-
-                                                {openActionIndex === originalIndex && actionMenuPosition && (
+                                            <td className="action-col" style={{ whiteSpace: "nowrap" }}>
+                                                <div style={{ 
+                                                    display: 'flex', 
+                                                    alignItems: 'center', 
+                                                    gap: '8px',
+                                                    justifyContent: 'flex-start'
+                                                }}>
+                                                    {/* Lab Details Button */}
                                                     <div
-                                                        className="action-menu"
+                                                        title="Lab Details"
+                                                        onClick={() => {
+                                                            // Navigate to lab details or open modal
+                                                            console.log('Lab Details clicked for patient:', a.patientId);
+                                                        }}
                                                         style={{
-                                                            position: 'fixed',
-                                                            top: actionMenuPosition.top,
-                                                            left: actionMenuPosition.left,
-                                                            background: '#fff',
-                                                            border: '1px solid #ccc',
-                                                            borderRadius: '6px',
-                                                            boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
-                                                            zIndex: 2000,
-                                                            minWidth: '180px',
-                                                            fontFamily: "'Roboto', sans-serif",
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            width: '28px',
+                                                            height: '28px',
+                                                            cursor: 'pointer',
+                                                            color: '#607D8B',
+                                                            backgroundColor: 'transparent',
+                                                            borderRadius: '4px',
+                                                            border: '1px solid #ddd'
+                                                        }}
+                                                        onMouseEnter={(e) => {
+                                                            e.currentTarget.style.backgroundColor = '#F3E5F5';
+                                                            e.currentTarget.style.borderColor = '#9C27B0';
+                                                        }}
+                                                        onMouseLeave={(e) => {
+                                                            e.currentTarget.style.backgroundColor = 'transparent';
+                                                            e.currentTarget.style.borderColor = '#ddd';
                                                         }}
                                                     >
-                                                        {[
-                                                            { key: 'save', label: 'Save', icon: <Save fontSize='small' /> },
-                                                            { key: 'delete', label: 'Delete', icon: <Delete fontSize='small' /> },
-                                                            { key: 'info', label: 'Visit Details', icon: <Info fontSize='small' /> },
-                                                            { key: 'forward', label: 'Collection', icon: <FastForward fontSize='small' /> },
-                                                            { key: 'add', label: 'Lab Details', icon: <AddIcon fontSize='small' /> },
-                                                        ].map((item) => (
-                                                            <div
-                                                                key={item.key}
-                                                                title={item.label}
-                                                                onClick={async () => {
-                                                                    setOpenActionIndex(null);
-                                                                    setActionMenuPosition(null);
-                                                                    if (item.key === 'delete') {
-                                                                        try {
-                                                                            const pid = a.patientId;
-                                                                            const vdate = String(a.visitDate || new Date().toISOString().split('T')[0]);
-                                                                            const did = a.doctorId || selectedDoctorId;
-                                                                            if (!pid || !vdate || !did) {
-                                                                                alert('Missing identifiers to delete appointment');
-                                                                                return;
-                                                                            }
-                                                                            const confirmDelete = window.confirm('Delete this appointment?');
-                                                                            if (!confirmDelete) return;
-                                                                            await appointmentService.deleteAppointment({ patientId: String(pid), visitDate: String(vdate), doctorId: String(did), userId: String(sessionData?.userId || 'system') });
-                                                                            setAppointments(prev => prev.filter((_, i) => i !== originalIndex));
-                                                                        } catch (err) {
-                                                                            console.error('Delete appointment failed:', err);
-                                                                            alert('Failed to delete appointment');
-                                                                        }
-                                                                    } else if (item.key === 'save') {
-                                                                        try {
-                                                                            const pid = a.patientId;
-                                                                            const vno = getLatestVisitNumber(a.patientId);
-                                                                            const shift = 1;
-                                                                            const clinic = sessionData?.clinicId || '';
-                                                                            const onlineTime = (a.online || '').trim() || undefined;
-                                                                            const doctor = selectedDoctorId || a.doctorId || '';
-                                                                            const statusId = mapStatusLabelToId(a.status);
-                                                                            if (!pid || !clinic || !doctor) {
-                                                                                alert('Missing identifiers to update appointment');
-                                                                                return;
-                                                                            }
-                                                                            await appointmentService.updateTodaysAppointment({
-                                                                                patientId: String(pid),
-                                                                                patientVisitNo: Number(vno),
-                                                                                shiftId: Number(shift),
-                                                                                clinicId: String(clinic),
-                                                                                onlineAppointmentTime: onlineTime,
-                                                                                doctorId: String(doctor),
-                                                                                statusId: Number(statusId),
-                                                                                userId: String(sessionData?.userId || 'system')
-                                                                            });
-                                                                            alert('Appointment updated');
-                                                                        } catch (err) {
-                                                                            console.error('Update appointment failed:', err);
-                                                                            alert('Failed to update appointment');
-                                                                        }
-                                                                    }
-                                                                }}
-                                                                style={{
-                                                                    display: 'flex',
-                                                                    alignItems: 'center',
-                                                                    gap: '8px',
-                                                                    padding: '8px 12px',
-                                                                    cursor: 'pointer',
-                                                                    fontSize: '14px',
-                                                                    color: '#212121',
-                                                                    backgroundColor: '#fff',
-                                                                }}
-                                                                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f5f5f5')}
-                                                                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#fff')}
-                                                            >
-                                                                {item.icon}
-                                                                <span>{item.label}</span>
-                                                            </div>
-                                                        ))}
+                                                        <AddIcon fontSize="small" />
                                                     </div>
-                                                )}
+
+                                                    {/* Save Button */}
+                                                    <div
+                                                        title="Save"
+                                                        onClick={async () => {
+                                                            try {
+                                                                const pid = a.patientId;
+                                                                const vno = getLatestVisitNumber(a.patientId);
+                                                                const shift = 1;
+                                                                const clinic = sessionData?.clinicId || '';
+                                                                const onlineTime = (a.online || '').trim() || undefined;
+                                                                const doctor = selectedDoctorId || a.doctorId || '';
+                                                                const statusId = mapStatusLabelToId(a.status);
+                                                                if (!pid || !clinic || !doctor) {
+                                                                    alert('Missing identifiers to update appointment');
+                                                                    return;
+                                                                }
+                                                                await appointmentService.updateTodaysAppointment({
+                                                                    patientId: String(pid),
+                                                                    patientVisitNo: Number(vno),
+                                                                    shiftId: Number(shift),
+                                                                    clinicId: String(clinic),
+                                                                    onlineAppointmentTime: onlineTime,
+                                                                    doctorId: String(doctor),
+                                                                    statusId: Number(statusId),
+                                                                    userId: String(sessionData?.userId || 'system')
+                                                                });
+                                                                alert('Appointment updated');
+                                                            } catch (err) {
+                                                                console.error('Update appointment failed:', err);
+                                                                alert('Failed to update appointment');
+                                                            }
+                                                        }}
+                                                        style={{
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            width: '28px',
+                                                            height: '28px',
+                                                            cursor: 'pointer',
+                                                            color: '#607D8B',
+                                                            backgroundColor: 'transparent',
+                                                            borderRadius: '4px',
+                                                            border: '1px solid #ddd'
+                                                        }}
+                                                        onMouseEnter={(e) => {
+                                                            e.currentTarget.style.backgroundColor = '#E3F2FD';
+                                                            e.currentTarget.style.borderColor = '#90CAF9';
+                                                        }}
+                                                        onMouseLeave={(e) => {
+                                                            e.currentTarget.style.backgroundColor = 'transparent';
+                                                            e.currentTarget.style.borderColor = '#ddd';
+                                                        }}
+                                                    >
+                                                        <Save fontSize="small" />
+                                                    </div>
+
+                                                    {/* Delete Button */}
+                                                    <div
+                                                        title="Delete"
+                                                        onClick={async () => {
+                                                            try {
+                                                                const pid = a.patientId;
+                                                                const vdate = String(a.visitDate || new Date().toISOString().split('T')[0]);
+                                                                const did = a.doctorId || selectedDoctorId;
+                                                                if (!pid || !vdate || !did) {
+                                                                    alert('Missing identifiers to delete appointment');
+                                                                    return;
+                                                                }
+                                                                const confirmDelete = window.confirm('Delete this appointment?');
+                                                                if (!confirmDelete) return;
+                                                                await appointmentService.deleteAppointment({ patientId: String(pid), visitDate: String(vdate), doctorId: String(did), userId: String(sessionData?.userId || 'system') });
+                                                                setAppointments(prev => prev.filter((_, i) => i !== originalIndex));
+                                                            } catch (err) {
+                                                                console.error('Delete appointment failed:', err);
+                                                                alert('Failed to delete appointment');
+                                                            }
+                                                        }}
+                                                        style={{
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            width: '28px',
+                                                            height: '28px',
+                                                            cursor: 'pointer',
+                                                            color: '#607D8B',
+                                                            backgroundColor: 'transparent',
+                                                            borderRadius: '4px',
+                                                            border: '1px solid #ddd'
+                                                        }}
+                                                        onMouseEnter={(e) => {
+                                                            e.currentTarget.style.backgroundColor = '#FFEBEE';
+                                                            e.currentTarget.style.borderColor = '#EF5350';
+                                                        }}
+                                                        onMouseLeave={(e) => {
+                                                            e.currentTarget.style.backgroundColor = 'transparent';
+                                                            e.currentTarget.style.borderColor = '#ddd';
+                                                        }}
+                                                    >
+                                                        <Delete fontSize="small" />
+                                                    </div>
+
+                                                    {/* Checkout Button */}
+                                                    <div
+                                                        title="Checkout"
+                                                        onClick={() => {
+                                                            // Navigate to checkout or open modal
+                                                            console.log('Checkout clicked for patient:', a.patientId);
+                                                        }}
+                                                        style={{
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            width: '28px',
+                                                            height: '28px',
+                                                            cursor: 'pointer',
+                                                            color: '#607D8B',
+                                                            backgroundColor: 'transparent',
+                                                            borderRadius: '4px',
+                                                            border: '1px solid #ddd'
+                                                        }}
+                                                        onMouseEnter={(e) => {
+                                                            e.currentTarget.style.backgroundColor = '#E8F5E8';
+                                                            e.currentTarget.style.borderColor = '#4CAF50';
+                                                        }}
+                                                        onMouseLeave={(e) => {
+                                                            e.currentTarget.style.backgroundColor = 'transparent';
+                                                            e.currentTarget.style.borderColor = '#ddd';
+                                                        }}
+                                                    >
+                                                        <ShoppingCart fontSize="small" />
+                                                    </div>
+
+                                                    {/* Collection Button */}
+                                                    <div
+                                                        title="Collection"
+                                                        onClick={() => {
+                                                            // Navigate to collection or open modal
+                                                            console.log('Collection clicked for patient:', a.patientId);
+                                                        }}
+                                                        style={{
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            width: '28px',
+                                                            height: '28px',
+                                                            cursor: 'pointer',
+                                                            color: '#607D8B',
+                                                            backgroundColor: 'transparent',
+                                                            borderRadius: '4px',
+                                                            border: '1px solid #ddd'
+                                                        }}
+                                                        onMouseEnter={(e) => {
+                                                            e.currentTarget.style.backgroundColor = '#FFF3E0';
+                                                            e.currentTarget.style.borderColor = '#FF9800';
+                                                        }}
+                                                        onMouseLeave={(e) => {
+                                                            e.currentTarget.style.backgroundColor = 'transparent';
+                                                            e.currentTarget.style.borderColor = '#ddd';
+                                                        }}
+                                                    >
+                                                        <FastForward fontSize="small" />
+                                                    </div>
+                                                </div>
                                             </td>
                                         </tr>
                                         );
@@ -3095,30 +3278,46 @@ export default function AppointmentTable() {
                                         )}
                                         <div className="card-details">
                                             <div className="kv"><span className="k">Age:</span><span className="v">{appointment.age}</span></div>
+                                            <div className="kv"><span className="k">Gender:</span><span className="v">{appointment.gender}</span></div>
                                             <div className="kv"><span className="k">Contact:</span><span className="v">{appointment.contact}</span></div>
-                                            <div className="kv">
-                                                <span className="k">Last Visit:</span>
-                                                <span className="v">
-                                                    <a 
-                                                        href={`/patients/${appointment.patientId}/visits`} 
-                                                        title={`View visit history`} 
-                                                        style={{ textDecoration: 'underline', color: '#1E88E5' }}
-                                                    >
-                                                        {loadingVisits[appointment.patientId] ? (
-                                                            <span className="text-muted">
-                                                                <i className="fas fa-spinner fa-spin me-1"></i>
-                                                                Loading...
-                                                            </span>
-                                                        ) : (
-                                                            formatLastVisitDisplay(appointment.patientId, appointment.reports_received)
-                                                        )}
-                                                    </a>
-                                                </span>
-                                            </div>
+                                                <div className="kv">
+                                                    <span className="k">Last Visit:</span>
+                                                    <span className="v">
+                                                        <a 
+                                                            href="#"
+                                                            title={`View visit history`} 
+                                                            style={{ textDecoration: 'underline', color: '#1E88E5', cursor: 'pointer' }}
+                                                            onClick={(e) => {
+                                                                e.preventDefault();
+                                                                handleLastVisitClick(appointment.patientId, appointment.patient);
+                                                            }}
+                                                        >
+                                                            {loadingVisits[appointment.patientId] ? (
+                                                                <span className="text-muted">
+                                                                    <i className="fas fa-spinner fa-spin me-1"></i>
+                                                                    Loading...
+                                                                </span>
+                                                            ) : (
+                                                                formatLastVisitDisplay(appointment.patientId, appointment.reports_received)
+                                                            )}
+                                                        </a>
+                                                    </span>
+                                                </div>
                                             {/* <div className="kv"><span className="k">Last Visit:</span><span className="v"><a href={`/patients/${appointment.patientId}/visits`} title={`Dr.Tongaonkar`} style={{ textDecoration: 'underline', color: '#1E88E5' }}>{`${formatYearToTwoDigits(appointment.lastOpd)}`} -L</a></span></div> */}
                                             <div className="kv"><span className="k">Dr. Tongaonkar</span></div>
                                             <div className="kv"><span className="k">Time:</span><span className="v">{extractTime(appointment.time)}</span></div>
-                                            
+                                            <div className="kv"><span className="k">Provider:</span><span className="v">
+                                                <select
+                                                    className="form-select"
+                                                    value={appointment.provider || getDoctorLabelById(selectedDoctorId) || ''}
+                                                    onChange={(e) => handleProviderChange(originalIndex, e.target.value)}
+                                                    style={{ width: '151px', height: '28px', padding: '2px', fontSize: 11 }}
+                                                >
+                                                    {getProviderOptionsWithSelectedFirst().map(opt => (
+                                                        <option key={opt.id} value={opt.label}>{opt.label}</option>
+                                                    ))}
+                                                </select>
+                                            </span></div>
                                         </div>
                                         {/* <div className="crm-actions">
                                             <div className="crm-btn" title="Chat"><ChatBubbleOutline fontSize="small" /></div>
@@ -3128,6 +3327,16 @@ export default function AppointmentTable() {
                                         </div> */}
                                         <div className="d-flex align-items-center" style={{ gap: '8px' }}>
                                             <div className="crm-actions" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, max-content)', alignItems: 'center', gap: '8px' }}>
+                                                <div
+                                                    className="crm-btn"
+                                                    title="Lab Details"
+                                                    onClick={() => {
+                                                        // Navigate to lab details or open modal
+                                                        console.log('Lab Details clicked for patient:', appointment.patientId);
+                                                    }}
+                                                >
+                                                    <AddIcon fontSize="small" />
+                                                </div>
                                                 <div
                                                     className="crm-btn"
                                                     title="Save"
@@ -3188,8 +3397,7 @@ export default function AppointmentTable() {
                                                 >
                                                     <Delete fontSize="small" />
                                                 </div>
-                                                <div className="crm-btn" title="Visit Details"><Info fontSize="small" /></div>
-                                                <div className="crm-btn" title="Lab details"><AddIcon fontSize="small" /></div>
+                                                <div className="crm-btn" title="Checkout"><ShoppingCart fontSize="small" /></div>
                                                 <div className="kv">
                                                     <span className="k">Online:</span>
                                                     <span className="v">
@@ -3290,6 +3498,82 @@ export default function AppointmentTable() {
                 doctorId={selectedDoctorId || doctorId}
                 clinicId={clinicId}
             />
+
+            {/* Patient Form Dialog */}
+            {showPatientFormDialog && (
+                <div 
+                    style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                        zIndex: 9999,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '20px'
+                    }}
+                    onClick={(e) => {
+                        // Close dialog when clicking on the overlay (outside the form)
+                        if (e.target === e.currentTarget) {
+                            setShowPatientFormDialog(false);
+                        }
+                    }}
+                >
+                    <div 
+                        style={{
+                            backgroundColor: 'white',
+                            borderRadius: '8px',
+                            width: '95%',
+                            maxWidth: '1200px',
+                            maxHeight: '90vh',
+                            overflow: 'auto',
+                            position: 'relative'
+                        }}
+                        onClick={(e) => {
+                            // Prevent closing when clicking inside the form content
+                            e.stopPropagation();
+                        }}
+                    >
+                        {/* Close button */}
+                        <button
+                            onClick={() => setShowPatientFormDialog(false)}
+                            style={{
+                                position: 'absolute',
+                                top: '15px',
+                                right: '15px',
+                                background: 'none',
+                                border: 'none',
+                                fontSize: '24px',
+                                cursor: 'pointer',
+                                color: '#666',
+                                zIndex: 10000,
+                                width: '30px',
+                                height: '30px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                borderRadius: '50%',
+                                transition: 'background-color 0.2s ease'
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = '#f5f5f5';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = 'transparent';
+                            }}
+                            title="Close"
+                        >
+                            ×
+                        </button>
+                        
+                        {/* Patient Form Content */}
+                        <PatientFormTest />
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
