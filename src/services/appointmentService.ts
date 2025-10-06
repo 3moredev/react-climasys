@@ -16,6 +16,7 @@ export interface Appointment {
   lastOpdVisit?: string
   onlineAppointmentTime?: string
   reportsAsked?: boolean
+  visitNumber?: number
 }
 
 export interface AppointmentParams {

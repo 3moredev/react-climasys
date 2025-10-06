@@ -87,11 +87,15 @@ export interface PatientVisit {
   visit_date: string;
   visit_time: string;
   visit_number: number;
+  patient_visit_no: number;
   visit_id: number;
   doctor_id: string;
   clinic_id: string;
   visit_status: number;
+  status_id: number;
+  shift_id: number;
   visit_type: number;
+  patient_last_visit_no?: number;
 }
 
 // Previous visit dates response interface
@@ -99,6 +103,7 @@ export interface PreviousVisitDatesResponse {
   visits: PatientVisit[];
   total_visits: number;
   patient_id: string;
+  uses_patient_last_visit_no?: boolean;
 }
 
 export const patientService = {
@@ -244,12 +249,13 @@ export const patientService = {
    * @param patientId - Patient ID from the database (not folder number)
    * @returns Promise<PreviousVisitDatesResponse>
    */
-  async getPreviousVisitDates(patientId: string): Promise<PreviousVisitDatesResponse> {
+  async getPreviousVisitDates(patientId: string, queryParams?: string): Promise<PreviousVisitDatesResponse> {
     try {
-      console.log(`Fetching previous visit dates for patient ID: ${patientId}`);
+      console.log(`Fetching previous visit dates for patient ID: ${patientId}${queryParams ? ` with params: ${queryParams}` : ''}`);
       
       // Use the patient_id from the database, not the folder number or other identifier
-      const response = await api.get(`/patients/${patientId}/visits/dates`);
+      const url = queryParams ? `/patients/${patientId}/visits/dates?${queryParams}` : `/patients/${patientId}/visits/dates`;
+      const response = await api.get(url);
       console.log('Get previous visit dates response:', response.data);
       
       return response.data;

@@ -28,6 +28,7 @@ type AppointmentRow = {
     lastOpd: string;
     labs: string;
     doctorId?: string;
+    visitNumber?: number;
     actions: boolean;
 };
 
@@ -196,9 +197,10 @@ export default function AppointmentTable() {
                 online: "", // Default value
                 status: 'WAITING',
                 statusColor: getStatusColor('WAITING'),
-                lastOpd: "27 Sep 2025", // Placeholder
+                lastOpd: "", // Will be populated by formatLastVisitDisplay
                 labs: "No Reports", // Placeholder
                 reports_received: patient.reports_received,
+                visitNumber: 1, // New patients start with visit number 1
                 actions: true
             };
         });
@@ -250,9 +252,11 @@ export default function AppointmentTable() {
             const apptTime = toStringSafe(getField(row, ['Visit_Time','visit_time','appointmentTime','appointment_time','visitTime'], ''));
             const doctor = toStringSafe(getField(row, ['Doctor_Name','doctor_name','doctorName','provider','providerName'], doctorFirstName || 'Tongaonkar'));
             const status = toStringSafe(getField(row, ['status_description','status','appointmentStatus','appointment_status'], 'WAITING')).toUpperCase();
-            const lastOpd = toStringSafe(getField(row, ['lastOpdVisit','last_opd_visit','lastVisit','last_visit'], ''));
+            // Don't populate lastOpd from backend - it will be handled by formatLastVisitDisplay
+            const lastOpd = "";
             const onlineTime = toStringSafe(getField(row, ['Online_Appointment_Time','onlineAppointmentTime','online_time','onlineTime'], ''));
             const reportsAsked = !!getField(row, ['reportsAsked','reports_asked','reportsReceived','reports_received'], false);
+            const visitNumber = toNumberSafe(getField(row, ['patient_visit_no','Patient_Visit_No','visitNumber','visit_number'], 1));
             
             // Fix time formatting - ensure proper HH:mm format
             let formattedTime = '00:00'; // Default fallback
@@ -343,6 +347,7 @@ export default function AppointmentTable() {
                 labs: '',
                 reports_received: reportsAsked,
                 doctorId: toStringSafe(getField(row, ['doctor_id','doctorId'], '')),
+                visitNumber: visitNumber,
                 actions: true
             };
         });
@@ -437,10 +442,11 @@ export default function AppointmentTable() {
                 online: item.onlineAppointmentTime || '',
                 status: status,
                 statusColor: getStatusColor(status),
-                lastOpd: String(item.lastOpdVisit || ''),
+                lastOpd: "", // Will be populated by formatLastVisitDisplay
                 labs: '',
                 reports_received: item.reportsAsked ?? false,
                 doctorId: '',
+                visitNumber: (item as any).visitNumber || 1, // Use visit number from API or default to 1
                 actions: true
             };
         });
@@ -700,16 +706,17 @@ export default function AppointmentTable() {
     }, []);
 
     // Fetch previous visits for all appointments when appointments change
-    useEffect(() => {
-        if (appointments.length > 0) {
-            appointments.forEach(appointment => {
-                // Ensure patientId is passed as string key (supports alphanumeric IDs)
-                if (appointment.patientId) {
-                    fetchPreviousVisits(appointment.patientId);
-                }
-            });
-        }
-    }, [appointments]);
+    // Removed automatic fetching of previous visits - now only fetch when user clicks on last visit link
+    // useEffect(() => {
+    //     if (appointments.length > 0) {
+    //         appointments.forEach(appointment => {
+    //             // Ensure patientId is passed as string key (supports alphanumeric IDs)
+    //             if (appointment.patientId) {
+    //                 fetchPreviousVisits(appointment.patientId);
+    //             }
+    //         });
+    //     }
+    // }, [appointments]);
 
     // Handle search input change
     const handleSearchChange = (value: string) => {
@@ -798,15 +805,47 @@ export default function AppointmentTable() {
 
         try {
             setLoadingVisits(prev => ({ ...prev, [key]: true }));
-            const response = await patientService.getPreviousVisitDates(key);
-            // Sort by visit_number descending so highest visit_number is first
-            const sortedVisits = [...(response.visits || [])].sort((a, b) => {
-                const an = typeof a.visit_number === 'number' ? a.visit_number : Number(a.visit_number) || 0;
-                const bn = typeof b.visit_number === 'number' ? b.visit_number : Number(b.visit_number) || 0;
-                return an - bn;
+            
+            // Build query parameters for doctor and clinic context
+            const params = new URLSearchParams();
+            if (doctorId) params.append('doctorId', doctorId);
+            if (clinicId) params.append('clinicId', clinicId);
+            
+            console.log(`🔍 Fetching previous visits for patient ${key} with doctorId: ${doctorId}, clinicId: ${clinicId}`);
+            const response = await (patientService.getPreviousVisitDates as any)(key, params.toString());
+            
+            console.log(`🔍 Fetched visits for patient ${key}:`, {
+                totalVisits: response.total_visits,
+                usesDirectQuery: (response as any).uses_direct_query,
+                completedStatusId: (response as any).completed_status_id,
+                statusFilterUsed: (response as any).status_filter_used,
+                doctorId: (response as any).doctor_id,
+                clinicId: (response as any).clinic_id,
+                visits: response.visits
             });
+            
+            // Debug: Log the first few visits in detail
+            if (response.visits && response.visits.length > 0) {
+                console.log(`📋 Visit details for patient ${key}:`);
+                response.visits.slice(0, 3).forEach((visit: any, index: number) => {
+                    console.log(`  Visit ${index}: Date=${visit.visit_date}, Time=${visit.visit_time}, VisitNo=${visit.patient_visit_no}, Status=${visit.status_id}, Doctor=${visit.doctor_id}`);
+                });
+            }
+            
+            // With the updated API, visits are already filtered to show only completed visits
+            // No need to sort again, but we can add some validation
+            const validVisits = (response.visits || []).filter((visit: PatientVisit) => {
+                // Ensure we have valid visit data
+                const isValid = visit.visit_date && visit.doctor_id && (visit as any).patient_visit_no;
+                if (!isValid) {
+                    console.log(`⚠️ Invalid visit filtered out for patient ${key}:`, visit);
+                }
+                return isValid;
+            });
+            
+            console.log(`✅ Found ${validVisits.length} completed visits for patient ${key} (status filter: ${(response as any).status_filter_used})`);
 
-            setPreviousVisits(prev => ({ ...prev, [key]: sortedVisits }));
+            setPreviousVisits(prev => ({ ...prev, [key]: validVisits }));
         } catch (error) {
             console.error(`❌ Failed to fetch previous visits for patient ${key}:`, error);
             setPreviousVisits(prev => ({ ...prev, [key]: [] }));
@@ -816,27 +855,66 @@ export default function AppointmentTable() {
     };
 
     // Format last visit display according to requirements: date-provider-L format
-    const formatLastVisitDisplay = (patientId: string | number, reportsReceived: boolean): string => {
+    const formatLastVisitDisplay = (patientId: string | number, reportsReceived: boolean, isNewPatient: boolean = false): string => {
         const key = String(patientId);
         const visits = previousVisits[key];
         
-        if (!visits || visits.length === 0) {
+        // If this is a new patient (first visit), show "-"
+        if (isNewPatient) {
+            return "-";
+        }
+        
+        // If no previous visits data is loaded yet, show "Loading..." or fetch the data
+        if (!visits) {
+            // Trigger fetch for this patient if not already loading
+            if (!loadingVisits[key]) {
+                fetchPreviousVisits(patientId);
+            }
+            return "Loading...";
+        }
+        
+        // If visits array is empty, this means patient has no valid previous visits
+        // (all visits were cancelled/no-show or patient is truly new)
+        if (visits.length === 0) {
             return "-";
         }
 
-        // Get the 2nd last visit (index 1 in the array since they're ordered by date DESC)
-        // If only one visit exists, use that one
-        const visitIndex = visits.length > 1 ? 1 : 0;
-        const lastVisit = visits[visitIndex];
+        // With the updated API, visits are now filtered by status and sorted by date DESC
+        // The first visit in the array should be the most recent valid visit
+        
+        // With the updated API, visits are now sorted by date DESC (newest first)
+        // So the first visit in the array is the latest completed visit (including today's if completed)
+        // This is exactly what we want to show as "Last Visit"
+        
+        const displayVisit = visits[0]; // First visit is the latest completed visit
+        const visitIndex = 0;
+        
+        console.log(`🔍 Formatting last visit for patient ${key}:`, {
+            totalVisits: visits.length,
+            isNewPatient: isNewPatient,
+            allVisits: visits.map((v, i) => ({
+                index: i,
+                date: v.visit_date,
+                visitNo: v.patient_visit_no,
+                status: v.status_id
+            })),
+            selectedVisit: {
+                index: visitIndex,
+                date: displayVisit.visit_date,
+                visitNo: displayVisit.patient_visit_no,
+                status: displayVisit.status_id,
+                reason: visits.length === 1 ? "Only one visit" : "Latest completed visit"
+            }
+        });
         
         // Format date as DD-MM-YY
-        const visitDate = new Date(lastVisit.visit_date);
+        const visitDate = new Date(displayVisit.visit_date);
         const formattedDate = `${String(visitDate.getDate()).padStart(2, '0')}-${String(visitDate.getMonth() + 1).padStart(2, '0')}-${String(visitDate.getFullYear()).slice(-2)}`;
         
         // Get provider name from doctor_id (prefer mapping to real doctor name)
-        let providerName = getDoctorLabelById(lastVisit.doctor_id);
+        let providerName = getDoctorLabelById(displayVisit.doctor_id);
         if (!providerName) {
-            const rawId = String(lastVisit.doctor_id || '').trim();
+            const rawId = String(displayVisit.doctor_id || '').trim();
             if (rawId) {
                 providerName = rawId.startsWith('DR-') ? `Dr. ${rawId.slice(3)}` : formatProviderLabel(rawId);
             } else {
@@ -1840,7 +1918,7 @@ export default function AppointmentTable() {
                                                                 Loading...
                                                             </span>
                                                         ) : (
-                                                            formatLastVisitDisplay(a.patientId, a.reports_received)
+                                                            formatLastVisitDisplay(a.patientId, a.reports_received, a.visitNumber === 1)
                                                         )}
                                                     </a>
                                                 </td>
@@ -2068,7 +2146,7 @@ export default function AppointmentTable() {
                                                                     Loading...
                                                                 </span>
                                                             ) : (
-                                                                formatLastVisitDisplay(appointment.patientId, appointment.reports_received)
+                                                                formatLastVisitDisplay(appointment.patientId, appointment.reports_received, appointment.visitNumber === 1)
                                                             )}
                                                         </a>
                                                     </span>
@@ -3008,7 +3086,7 @@ export default function AppointmentTable() {
                                                             Loading...
                                                         </span>
                                                     ) : (
-                                                        formatLastVisitDisplay(a.patientId, a.reports_received)
+                                                        formatLastVisitDisplay(a.patientId, a.reports_received, a.visitNumber === 1)
                                                     )}
                                                 </a>
                                             </td>
@@ -3320,7 +3398,7 @@ export default function AppointmentTable() {
                                                                     Loading...
                                                                 </span>
                                                             ) : (
-                                                                formatLastVisitDisplay(appointment.patientId, appointment.reports_received)
+                                                                formatLastVisitDisplay(appointment.patientId, appointment.reports_received, appointment.visitNumber === 1)
                                                             )}
                                                         </a>
                                                     </span>

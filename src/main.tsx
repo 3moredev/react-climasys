@@ -22,7 +22,7 @@ import RegistrationPage from './pages/Registration'
 import LabPage from './pages/Lab'
 import PharmacyPage from './pages/Pharmacy'
 import APITest from './components/Test/APITest'
-import Appointment from './pages/Appointment'
+import AppointmentTable from './pages/Appointment'
 import ExampleTemplatePage from './pages/ExampleTemplatePage'
 import SessionTest from './pages/SessionTest'
 import QuickRegistration from './pages/QuickRegistration'
@@ -64,7 +64,7 @@ function App() {
             } />
             <Route path="/test-appointment" element={
               <MainLayout>
-                <Appointment />
+                <AppointmentTable />
               </MainLayout>
             } />
             <Route path="/" element={<Navigate to="/appointment" replace />} />
@@ -127,7 +127,7 @@ function App() {
             <Route path="/appointment" element={
               <AuthGuard>
                 <MainLayout>
-                  <Appointment />
+                  <AppointmentTable />
                 </MainLayout>
               </AuthGuard>
             } />
