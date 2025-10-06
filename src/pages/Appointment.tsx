@@ -242,16 +242,16 @@ export default function AppointmentTable() {
         return rows.map((row, index) => {
             // Use patient_id from the API response as the actual database patient ID (string, can be alphanumeric)
             const patientIdRaw = getField(row, ['patient_id','patientId','id','patientID'], '');
-            const patientName = toStringSafe(getField(row, ['patientName','patient_name','fullName','full_name','name'], ''));
-            const age = toNumberSafe(getField(row, ['age_given','age','patientAge','patient_age'], 0));
-            const gender = toStringSafe(getField(row, ['gender','genderName','gender_name','patientGender','patient_gender'], ''));
-            const mobile = toStringSafe(getField(row, ['mobileNumber','mobile_number','contact','phone','mobile'], ''));
-            const apptDate = toStringSafe(getField(row, ['appointmentDate','appointment_date','visitDate','visit_date'], new Date().toISOString().split('T')[0]));
-            const apptTime = toStringSafe(getField(row, ['visit_time','appointmentTime','appointment_time','visitTime'], ''));
-            const doctor = toStringSafe(getField(row, ['doctor_name','doctorName','provider','providerName'], doctorFirstName || 'Tongaonkar'));
+            const patientName = toStringSafe(getField(row, ['Name','patientName','patient_name','fullName','full_name','name'], ''));
+            const age = toNumberSafe(getField(row, ['AgeYearsIntRound','age_given','age','patientAge','patient_age'], 0));
+            const gender = toStringSafe(getField(row, ['gender_description','gender','genderName','gender_name','patientGender','patient_gender'], ''));
+            const mobile = toStringSafe(getField(row, ['Mobile','mobileNumber','mobile_number','contact','phone','mobile'], ''));
+            const apptDate = toStringSafe(getField(row, ['Visit_Date','appointmentDate','appointment_date','visitDate','visit_date'], new Date().toISOString().split('T')[0]));
+            const apptTime = toStringSafe(getField(row, ['Visit_Time','visit_time','appointmentTime','appointment_time','visitTime'], ''));
+            const doctor = toStringSafe(getField(row, ['Doctor_Name','doctor_name','doctorName','provider','providerName'], doctorFirstName || 'Tongaonkar'));
             const status = toStringSafe(getField(row, ['status_description','status','appointmentStatus','appointment_status'], 'WAITING')).toUpperCase();
             const lastOpd = toStringSafe(getField(row, ['lastOpdVisit','last_opd_visit','lastVisit','last_visit'], ''));
-            const onlineTime = toStringSafe(getField(row, ['onlineAppointmentTime','online_time','onlineTime'], ''));
+            const onlineTime = toStringSafe(getField(row, ['Online_Appointment_Time','onlineAppointmentTime','online_time','onlineTime'], ''));
             const reportsAsked = !!getField(row, ['reportsAsked','reports_asked','reportsReceived','reports_received'], false);
             
             // Fix time formatting - ensure proper HH:mm format
@@ -399,7 +399,29 @@ export default function AppointmentTable() {
     // Convert backend Appointment objects to AppointmentRow format
     const convertAppointmentsToRows = (items: Appointment[]): AppointmentRow[] => {
         return items.map((item, index) => {
-            const timeString = `${item.appointmentDate}T${String(item.appointmentTime || '00:00').padStart(5, '0')}:00`;
+            // Fix time handling - properly format the time string
+            let timeString: string;
+            let displayTime: string;
+            
+            if (item.appointmentTime) {
+                // Handle LocalTime object from backend (e.g., "14:30:00" or "14:30")
+                const timeStr = String(item.appointmentTime);
+                const timeParts = timeStr.split(':');
+                
+                if (timeParts.length >= 2) {
+                    const hours = timeParts[0].padStart(2, '0');
+                    const minutes = timeParts[1].padStart(2, '0');
+                    displayTime = `${hours}:${minutes}`;
+                    timeString = `${item.appointmentDate}T${hours}:${minutes}:00`;
+                } else {
+                    displayTime = '00:00';
+                    timeString = `${item.appointmentDate}T00:00:00`;
+                }
+            } else {
+                displayTime = '00:00';
+                timeString = `${item.appointmentDate}T00:00:00`;
+            }
+            
             const status = (item.status || '').toUpperCase();
             return {
                 appointmentId: item.appointmentId,
@@ -410,7 +432,7 @@ export default function AppointmentTable() {
                 age: typeof item.age === 'number' ? item.age : 0,
                 gender: '', // Gender not available in Appointment interface
                 contact: item.mobileNumber || '',
-                time: new Date(timeString).toString(),
+                time: displayTime, // Use the properly formatted time directly
                 provider: formatProviderLabel(item.doctorName || doctorFirstName || 'Tongaonkar'),
                 online: item.onlineAppointmentTime || '',
                 status: status,
