@@ -230,6 +230,24 @@ export const appointmentService = {
       console.error('Update Todays Appointment API Error:', error)
       throw error
     }
+  },
+
+  /**
+   * Get patient's previous visits with optional doctor/clinic/today filters
+   * Mirrors backend @GetMapping("/previous-visits/{patientId}")
+   */
+  async getPatientPreviousVisits(params: { patientId: string; doctorId?: string; clinicId?: string; todaysVisitDate?: string }): Promise<any> {
+    const { patientId, doctorId, clinicId, todaysVisitDate } = params
+    try {
+      // Backend route is typically under /visits; adjust if your controller uses a different prefix
+      const response = await api.get(`/visits/previous-visits/${encodeURIComponent(patientId)}`, {
+        params: { doctorId, clinicId, todaysVisitDate }
+      })
+      return response.data
+    } catch (error) {
+      console.error('Previous visits API Error:', error)
+      throw error
+    }
   }
 }
 

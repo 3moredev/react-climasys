@@ -67,6 +67,10 @@ export default function AppointmentTable() {
     const [filterSize, setFilterSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
     const [showVisitDetails, setShowVisitDetails] = useState<boolean>(false);
     const [selectedPatientForVisit, setSelectedPatientForVisit] = useState<AppointmentRow | null>(null);
+    const [formPatientData, setFormPatientData] = useState<any | null>(null);
+    const [visitDates, setVisitDates] = useState<string[]>([]);
+    const [currentVisitIndex, setCurrentVisitIndex] = useState<number>(0);
+    const [allVisits, setAllVisits] = useState<any[]>([]);
     
     // Session data state
     const [sessionData, setSessionData] = useState<SessionInfo | null>(null);
@@ -213,9 +217,13 @@ export default function AppointmentTable() {
     const formatProviderLabel = (name?: string): string => {
         const raw = String(name || '').trim();
         if (!raw) return '';
-        const lower = raw.toLowerCase();
-        if (lower.startsWith('dr.') || lower.startsWith('dr ')) return raw;
-        return `Dr. ${raw}`;
+        
+        // Clean up multiple spaces and normalize the name
+        const cleaned = raw.replace(/\s+/g, ' ').trim();
+        
+        const lower = cleaned.toLowerCase();
+        if (lower.startsWith('dr.') || lower.startsWith('dr ')) return cleaned;
+        return `Dr. ${cleaned}`;
     };
 
     // Map gender_id to gender name
@@ -248,7 +256,12 @@ export default function AppointmentTable() {
         return rows.map((row, index) => {
             // Use patient_id from the API response as the actual database patient ID (string, can be alphanumeric)
             const patientIdRaw = getField(row, ['patient_id','patientId','id','patientID'], '');
-            const patientName = toStringSafe(getField(row, ['Name','patientName','patient_name','fullName','full_name','name'], ''));
+            const patientNameRaw = toStringSafe(getField(row, ['Name','patientName','patient_name','fullName','full_name','name'], ''));
+            const firstNameRaw = toStringSafe(getField(row, ['First_Name','first_name','FirstName','firstName'], ''));
+            const middleNameRaw = toStringSafe(getField(row, ['Middle_Name','middle_name','MiddleName','middleName'], ''));
+            const lastNameRaw = toStringSafe(getField(row, ['Last_Name','last_name','LastName','lastName'], ''));
+            const composedName = `${firstNameRaw} ${middleNameRaw} ${lastNameRaw}`.replace(/\s+/g, ' ').trim();
+            const patientName = composedName || patientNameRaw;
             const age = toNumberSafe(getField(row, ['AgeYearsIntRound','age_given','age','patientAge','patient_age'], 0));
             const gender = toStringSafe(getField(row, ['gender_description','gender','genderName','gender_name','patientGender','patient_gender'], ''));
             const mobile = toStringSafe(getField(row, ['Mobile','mobileNumber','mobile_number','contact','phone','mobile'], ''));
@@ -341,7 +354,7 @@ export default function AppointmentTable() {
                 patient: patientName,
                 visitDate: toStringSafe(getField(row, ['appointmentDate','appointment_date','visitDate','visit_date'], '')),
                 age: age,
-                gender: 'Male',
+                gender: gender,
                 contact: mobile,
                 time: displayTime,
                 provider: doctorId,
@@ -434,11 +447,17 @@ export default function AppointmentTable() {
             }
             
             const status = (item.status || '').toUpperCase();
+            // Prefer First Middle Last if available in item fields
+            const first = String((item as any).firstName || (item as any).first_name || '').trim();
+            const middle = String((item as any).middleName || (item as any).middle_name || '').trim();
+            const last = String((item as any).lastName || (item as any).last_name || '').trim();
+            const nameComposed = `${first} ${middle} ${last}`.replace(/\s+/g, ' ').trim();
+
             return {
                 appointmentId: item.appointmentId,
                 sr: index + 1,
                 patientId: String(item.patientId || ''),
-                patient: item.patientName || '',
+                patient: nameComposed || item.patientName || '',
                 visitDate: item.appointmentDate || '',
                 age: typeof item.age === 'number' ? item.age : 0,
                 gender: '', // Gender not available in Appointment interface
@@ -486,8 +505,9 @@ export default function AppointmentTable() {
             const searchResults = patients.filter((p: any) => {
                 const patientId = String(p.id || '').toLowerCase();
                 const firstName = String(p.first_name || '').toLowerCase();
+                const middleName = String(p.middle_name || '').toLowerCase();
                 const lastName = String(p.last_name || '').toLowerCase();
-                const fullName = `${firstName} ${lastName}`.trim().toLowerCase();
+                const fullName = `${firstName} ${middleName} ${lastName}`.replace(/\s+/g, ' ').trim().toLowerCase();
                 const contact = String(p.mobile_1 || '').replace(/\D/g, ''); // Remove non-digits
                 const queryDigits = q.replace(/\D/g, ''); // Remove non-digits from query
                 
@@ -507,9 +527,11 @@ export default function AppointmentTable() {
                     // Single word name search
                     (queryWords.length === 1 && (
                         firstName.startsWith(q) ||
+                        middleName.startsWith(q) ||
                         lastName.startsWith(q) ||
                         fullName.includes(q) ||
                         firstName.includes(q) ||
+                        middleName.includes(q) ||
                         lastName.includes(q)
                     ))
                 );
@@ -520,23 +542,26 @@ export default function AppointmentTable() {
             const sortedResults = searchResults.sort((a: any, b: any) => {
                 const aId = String(a.id || '').toLowerCase();
                 const aFirstName = String(a.first_name || '').toLowerCase();
+                const aMiddleName = String(a.middle_name || '').toLowerCase();
                 const aLastName = String(a.last_name || '').toLowerCase();
-                const aFullName = `${aFirstName} ${aLastName}`.trim().toLowerCase();
+                const aFullName = `${aFirstName} ${aMiddleName} ${aLastName}`.replace(/\s+/g, ' ').trim().toLowerCase();
                 const aContact = String(a.mobile_1 || '').replace(/\D/g, '');
                 const queryDigits = q.replace(/\D/g, '');
                 
                 const bId = String(b.id || '').toLowerCase();
                 const bFirstName = String(b.first_name || '').toLowerCase();
+                const bMiddleName = String(b.middle_name || '').toLowerCase();
                 const bLastName = String(b.last_name || '').toLowerCase();
-                const bFullName = `${bFirstName} ${bLastName}`.trim().toLowerCase();
+                const bFullName = `${bFirstName} ${bMiddleName} ${bLastName}`.replace(/\s+/g, ' ').trim().toLowerCase();
                 const bContact = String(b.mobile_1 || '').replace(/\D/g, '');
                 
                 // Priority scoring system
                 const getScore = (patient: any) => {
                     const id = String(patient.id || '').toLowerCase();
                     const firstName = String(patient.first_name || '').toLowerCase();
+                    const middleName = String(patient.middle_name || '').toLowerCase();
                     const lastName = String(patient.last_name || '').toLowerCase();
-                    const fullName = `${firstName} ${lastName}`.trim().toLowerCase();
+                    const fullName = `${firstName} ${middleName} ${lastName}`.replace(/\s+/g, ' ').trim().toLowerCase();
                     const contact = String(patient.mobile_1 || '').replace(/\D/g, '');
                     const queryWords = q.split(/\s+/).filter(word => word.length > 0);
                     
@@ -562,6 +587,8 @@ export default function AppointmentTable() {
                             if (fullName.startsWith(q)) score += 500;
                             // Check if first word matches first name start
                             else if (firstName.startsWith(queryWords[0])) score += 450;
+                            // Check if middle word matches middle name start
+                            else if (middleName && middleName.startsWith(queryWords[1] || '')) score += 425;
                             // Check if last word matches last name start
                             else if (lastName.startsWith(queryWords[queryWords.length - 1])) score += 400;
                             // All words found but not at start
@@ -571,6 +598,8 @@ export default function AppointmentTable() {
                         // Single word name search scoring
                         // First name starts with query
                         if (firstName.startsWith(q)) score += 500;
+                        // Middle name starts with query
+                        if (middleName.startsWith(q)) score += 450;
                         // Last name starts with query
                         if (lastName.startsWith(q)) score += 400;
                         // Full name starts with query
@@ -578,6 +607,8 @@ export default function AppointmentTable() {
                         
                         // First name contains query
                         if (firstName.includes(q)) score += 50;
+                        // Middle name contains query
+                        if (middleName.includes(q)) score += 45;
                         // Last name contains query
                         if (lastName.includes(q)) score += 40;
                         // Full name contains query
@@ -769,12 +800,246 @@ export default function AppointmentTable() {
         }
     };
 
-    const handleLastVisitClick = (patientId: string, patientName: string) => {
-        setSelectedPatientForForm({
-            id: patientId,
-            name: patientName
-        });
-        setShowPatientFormDialog(true);
+    // Map backend visit object to PatientFormTest initialData
+    const mapPreviousVisitToInitialData = (visit: any, patientName: string, appointmentRow?: AppointmentRow) => {
+        const [firstName, ...rest] = String(patientName || '').trim().split(/\s+/);
+        const lastName = rest.join(' ');
+        const get = (obj: any, ...keys: string[]) => {
+            for (const k of keys) {
+                if (obj && obj[k] !== undefined && obj[k] !== null) return obj[k];
+            }
+            return '';
+        };
+        const bool = (v: any) => Boolean(v);
+        const toStr = (v: any) => (v === undefined || v === null ? '' : String(v));
+
+        const prescriptions = Array.isArray(visit?.prescriptions)
+            ? visit.prescriptions.map((p: any) => ({
+                medicine: toStr(get(p, 'medicine', 'drug_name', 'item', 'Medicine_Name')),
+                dosage: toStr(get(p, 'dosage', 'dose', 'Dosage')),
+                instructions: toStr(get(p, 'instructions', 'remark', 'Instructions'))
+            }))
+            : (toStr(get(visit, 'Medicine_Name'))
+                ? [{
+                    medicine: toStr(get(visit, 'Medicine_Name')),
+                    dosage: '',
+                    instructions: toStr(get(visit, 'Instructions'))
+                }]
+                : []);
+
+        return {
+            firstName: toStr(firstName),
+            lastName: toStr(lastName),
+            age: toStr(appointmentRow?.age || get(visit, 'age', 'age_years')),
+            gender: toStr(appointmentRow?.gender || get(visit, 'gender', 'sex', 'gender_description')).charAt(0).toUpperCase(),
+            contact: toStr(appointmentRow?.contact || get(visit, 'mobile', 'mobile_1', 'contact')),
+            email: toStr(get(visit, 'email')),
+            provider: (() => {
+                console.log('Provider mapping - appointmentRow?.provider:', appointmentRow?.provider);
+                console.log('Provider mapping - appointmentRow?.doctorId:', appointmentRow?.doctorId);
+                
+                // First try appointment row provider
+                if (appointmentRow?.provider) {
+                    console.log('Using appointment row provider:', appointmentRow.provider);
+                    return toStr(appointmentRow.provider);
+                }
+                
+                // Then try to get doctor name from appointment row doctorId
+                const appointmentDoctorName = getDoctorLabelById(appointmentRow?.doctorId);
+                console.log('Appointment doctor name result:', appointmentDoctorName);
+                if (appointmentDoctorName) {
+                    console.log('Using appointment doctor name:', appointmentDoctorName);
+                    return appointmentDoctorName;
+                }
+                
+                // Then try to get doctor name from visit doctorId
+                const visitDoctorId = get(visit, 'doctor_id', 'Doctor_ID', 'doctorId');
+                console.log('Visit doctor ID:', visitDoctorId);
+                const visitDoctorName = getDoctorLabelById(visitDoctorId);
+                console.log('Visit doctor name result:', visitDoctorName);
+                if (visitDoctorName) {
+                    console.log('Using visit doctor name:', visitDoctorName);
+                    return visitDoctorName;
+                }
+                
+                // Finally fallback to visit doctor name fields
+                const fallbackName = toStr(get(visit, 'doctor_name', 'DoctorName', 'provider'));
+                console.log('Using fallback name:', fallbackName);
+                return fallbackName;
+            })(),
+
+            // Vitals
+            height: toStr(get(visit, 'height_cm', 'height', 'Height_In_Cms')),
+            weight: toStr(get(visit, 'weight_kg', 'weight', 'Weight_IN_KGS')),
+            pulse: toStr(get(visit, 'pulse', 'Pulse')),
+            bp: toStr(get(visit, 'bp', 'blood_pressure', 'Blood_Pressure')),
+            temperature: toStr(get(visit, 'temperature_f', 'temperature', 'Temperature')),
+
+            // Flags
+            inPerson: bool(get(visit, 'in_person', 'inPerson')),
+            hypertension: bool(get(visit, 'hypertension', 'htn', 'Hypertension')),
+            diabetes: bool(get(visit, 'diabetes', 'dm', 'Diabetes')),
+            cholesterol: bool(get(visit, 'cholesterol', 'Cholestrol')),
+            ihd: bool(get(visit, 'ihd', 'Ihd')),
+            asthma: bool(get(visit, 'asthma', 'Asthama')),
+            th: bool(get(visit, 'th', 'Th')),
+            smoking: bool(get(visit, 'smoking', 'Smoking')),
+            tobacco: bool(get(visit, 'tobacco', 'Tobaco')),
+            alcohol: bool(get(visit, 'alcohol', 'Alchohol')),
+
+            // Narrative
+            allergy: toStr(get(visit, 'allergy', 'Allergy')),
+            medicalHistory: toStr(get(visit, 'medical_history', 'Medical_History')),
+            surgicalHistory: toStr(get(visit, 'surgical_history', 'Surgical_History')),
+            visitComments: toStr(get(visit, 'visit_comments', 'Visit_Comments')),
+            medicines: toStr(get(visit, 'medicines', 'Current_Medicines')),
+            detailedHistory: toStr(get(visit, 'detailed_history', 'Detailed_History', 'Additional_Comments')),
+            examinationFindings: toStr(get(visit, 'examination_findings', 'Important_Findings')),
+            examinationComments: toStr(get(visit, 'examination_comments', 'Examination_Comments')),
+            procedurePerformed: toStr(get(visit, 'procedure_performed', 'Procedure_Performed')),
+
+            // Current visit text
+            complaints: toStr(get(visit, 'complaints', 'Current_Complaints', 'Complaints')),
+            provisionalDiagnosis: toStr(get(visit, 'provisional_diagnosis', 'Diagnosis')),
+            plan: toStr(get(visit, 'plan', 'Plan')),
+            addendum: toStr(get(visit, 'addendum', 'Addendum')),
+
+            prescriptions,
+
+            // Billing
+            billed: toStr(get(visit, 'billed_amount', 'Billed_Amount')),
+            discount: toStr(get(visit, 'discount_amount', 'Discount', 'Original_Discount')),
+            dues: toStr(get(visit, 'dues_amount', 'Fees_To_Collect')),
+            collected: toStr(get(visit, 'collected_amount', 'Fees_Collected')),
+            receiptAmount: toStr(get(visit, 'receipt_amount', 'Receipt_Amount')),
+            receiptNo: toStr(get(visit, 'receipt_no', 'Receipt_No')),
+            receiptDate: toStr(get(visit, 'receipt_date', 'Receipt_Date')),
+            followUpType: toStr(get(visit, 'followup_type', 'Follow_Up_Type')),
+            followUp: toStr(get(visit, 'followup_label', 'Follow_Up')),
+            followUpDate: toStr(get(visit, 'followup_date', 'Follow_Up_Date')),
+            remark: toStr(get(visit, 'remark', 'Remark'))
+        };
+    };
+
+    const handleLastVisitClick = async (patientId: string, patientName: string, appointmentRow?: AppointmentRow) => {
+        try {
+            console.log('handleLastVisitClick - appointmentRow:', appointmentRow);
+            console.log('appointmentRow.doctorId:', appointmentRow?.doctorId);
+            console.log('appointmentRow.provider:', appointmentRow?.provider);
+            setSelectedPatientForForm({ id: patientId, name: patientName, appointmentRow });
+            const todaysVisitDate = new Date().toISOString().split('T')[0];
+            const resp: any = await appointmentService.getPatientPreviousVisits({
+                patientId,
+                doctorId: selectedDoctorId || doctorId || '',
+                clinicId: sessionData?.clinicId || '',
+                todaysVisitDate
+            });
+
+            // Try common shapes
+            const visits = resp?.visits || resp?.data?.visits || resp?.resultSet1 || [];
+            const success = resp?.success !== false; // default true if not provided
+            const latest = Array.isArray(visits) && visits.length ? visits[0] : null;
+
+            // Store all visits and extract/sort visit dates chronologically (oldest -> newest)
+            const parseVisitDate = (v: any): number => {
+                const s: string = v.visit_date || v.Visit_Date || v.appointmentDate || v.appointment_date || '';
+                if (!s) return 0;
+                const d = new Date(s);
+                const t = d.getTime();
+                return isNaN(t) ? 0 : t;
+            };
+
+            const sortedVisits = Array.isArray(visits)
+                ? [...visits].sort((a, b) => parseVisitDate(a) - parseVisitDate(b)) // ascending: oldest -> newest
+                : [];
+
+            setAllVisits(sortedVisits);
+            const dates = sortedVisits
+                .map((visit: any) => visit.visit_date || visit.Visit_Date || visit.appointmentDate || visit.appointment_date || '')
+                .filter((date: any) => date);
+            setVisitDates(dates);
+            // Start at newest visit (last index) so that back (prev) goes to older, next goes to newer
+            setCurrentVisitIndex(Math.max(0, sortedVisits.length - 1));
+
+            if (success && latest) {
+                const mapped = mapPreviousVisitToInitialData(latest, patientName, appointmentRow);
+                console.log('Mapped form data:', mapped);
+                console.log('Provider in mapped data:', mapped.provider);
+                setFormPatientData(mapped);
+            } else {
+                // If no previous visit data, create basic form data from appointment row
+                const basicData = appointmentRow ? {
+                    firstName: patientName.split(' ')[0] || '',
+                    lastName: patientName.split(' ').slice(1).join(' ') || '',
+                    age: String(appointmentRow.age || ''),
+                    gender: appointmentRow.gender || '',
+                    contact: appointmentRow.contact || '',
+                    email: '',
+                    provider: appointmentRow.provider || getDoctorLabelById(appointmentRow.doctorId) || '',
+                    height: '',
+                    weight: '',
+                    pulse: '',
+                    bp: '',
+                    temperature: '',
+                    hypertension: false,
+                    diabetes: false,
+                    cholesterol: false,
+                    ihd: false,
+                    asthma: false,
+                    th: false,
+                    smoking: false,
+                    tobacco: false,
+                    alcohol: false,
+                    inPerson: true,
+                    allergy: '',
+                    medicalHistory: '',
+                    surgicalHistory: '',
+                    visitComments: '',
+                    medicines: '',
+                    detailedHistory: '',
+                    examinationFindings: '',
+                    examinationComments: '',
+                    procedurePerformed: '',
+                    complaints: '',
+                    provisionalDiagnosis: '',
+                    plan: '',
+                    addendum: '',
+                    prescriptions: [],
+                    billed: '',
+                    discount: '',
+                    dues: '',
+                    collected: '',
+                    receiptAmount: '',
+                    receiptNo: '',
+                    receiptDate: '',
+                    followUpType: '',
+                    followUp: '',
+                    followUpDate: '',
+                    remark: ''
+                } : null;
+                console.log('Basic form data (no previous visit):', basicData);
+                console.log('Provider in basic data:', basicData?.provider);
+                setFormPatientData(basicData);
+            }
+        } catch (e) {
+            console.error('Error loading previous visit for patient:', patientId, e);
+            setFormPatientData(null);
+        } finally {
+            setShowPatientFormDialog(true);
+        }
+    };
+
+    // Handle visit date navigation
+    const handleVisitDateChange = (newIndex: number) => {
+        if (newIndex >= 0 && newIndex < allVisits.length) {
+            setCurrentVisitIndex(newIndex);
+            const selectedVisit = allVisits[newIndex];
+            const patientName = selectedPatientForForm?.name || '';
+            const appointmentRow = selectedPatientForForm?.appointmentRow;
+            
+            const mapped = mapPreviousVisitToInitialData(selectedVisit, patientName, appointmentRow);
+            setFormPatientData(mapped);
+        }
     };
 
     // Handle ESC key to close dialog
@@ -816,6 +1081,8 @@ export default function AppointmentTable() {
             const params = new URLSearchParams();
             if (doctorId) params.append('doctorId', doctorId);
             if (clinicId) params.append('clinicId', clinicId);
+            // Ensure backend filters for completed visits (statusId 3 = Completed)
+            params.append('statusId', '3');
             
             console.log(`🔍 Fetching previous visits for patient ${key} with doctorId: ${doctorId}, clinicId: ${clinicId}`);
             const response = await (patientService.getPreviousVisitDates as any)(key, params.toString());
@@ -838,11 +1105,35 @@ export default function AppointmentTable() {
                 });
             }
             
+            // Normalize visit data across possible field name variations from backend
+            const normalizedVisits = (response.visits || []).map((visit: any) => {
+                // Normalize common field names from various API shapes
+                const visitDate = visit.visit_date ?? visit.Visit_Date ?? visit.appointmentDate ?? visit.appointment_date;
+                const doctorId = visit.doctor_id ?? visit.Doctor_ID ?? visit.prevDoctor_ID ?? visit.doctorId;
+                const patientVisitNo = visit.patient_visit_no ?? visit.visit_number ?? visit.Patient_Visit_No ?? visit.Patient_Visit_No?.toString?.();
+                const statusId = visit.status_id ?? visit.Status_ID ?? visit.statusId;
+                // Normalize time if provided in combined strings like "28-Jun-2025 - 23:34:00"
+                let visitTime = visit.visit_time ?? visit.visitTime;
+                const visitDateTime = visit.Visit_DateTime ?? visit.visit_date_time ?? visit.Visit_Date_Shift ?? visit.DATE_TIME_NUMBER;
+                if (!visitTime && typeof visitDateTime === 'string') {
+                    const timeMatch = visitDateTime.match(/\b(\d{1,2}:\d{2}:\d{2})\b/);
+                    if (timeMatch) visitTime = timeMatch[1];
+                }
+                return {
+                    ...visit,
+                    visit_date: visitDate,
+                    doctor_id: doctorId,
+                    patient_visit_no: patientVisitNo,
+                    status_id: statusId,
+                    visit_time: visitTime
+                };
+            });
+
             // With the updated API, visits are already filtered to show only completed visits
-            // No need to sort again, but we can add some validation
-            const validVisits = (response.visits || []).filter((visit: PatientVisit) => {
-                // Ensure we have valid visit data
-                const isValid = visit.visit_date && visit.doctor_id && (visit as any).patient_visit_no;
+            // Add validation after normalization so we don't drop valid visits due to field mismatch
+            const validVisits = normalizedVisits.filter((visit: PatientVisit | any) => {
+                const hasVisitNo = (visit as any).patient_visit_no != null && (visit as any).patient_visit_no !== '';
+                const isValid = Boolean(visit.visit_date && visit.doctor_id && hasVisitNo);
                 if (!isValid) {
                     console.log(`⚠️ Invalid visit filtered out for patient ${key}:`, visit);
                 }
@@ -913,9 +1204,10 @@ export default function AppointmentTable() {
             }
         });
         
-        // Format date as DD-MM-YY
+        // Format date as DD-MMM-YY
         const visitDate = new Date(displayVisit.visit_date);
-        const formattedDate = `${String(visitDate.getDate()).padStart(2, '0')}-${String(visitDate.getMonth() + 1).padStart(2, '0')}-${String(visitDate.getFullYear()).slice(-2)}`;
+        const monthAbbr = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        const formattedDate = `${String(visitDate.getDate()).padStart(2, '0')}-${monthAbbr[visitDate.getMonth()]}-${String(visitDate.getFullYear()).slice(-2)}`;
         
         // Get provider name from doctor_id (prefer mapping to real doctor name)
         let providerName = getDoctorLabelById(displayVisit.doctor_id);
@@ -947,9 +1239,15 @@ export default function AppointmentTable() {
 
     // Map doctorId to display label (Dr. Name)
     const getDoctorLabelById = (id?: string) => {
-        if (!id) return '';
+        if (!id) {
+            console.log('getDoctorLabelById: No ID provided');
+            return '';
+        }
         const doc = allDoctors.find(d => d.id === id);
-        return doc ? formatProviderLabel(doc.name) : '';
+        const result = doc ? formatProviderLabel(doc.name) : '';
+        console.log(`getDoctorLabelById: ID=${id}, Found doctor:`, doc);
+        console.log(`getDoctorLabelById: Original name="${doc?.name}", Formatted result="${result}"`);
+        return result;
     };
 
     // Build provider options with selected doctor first
@@ -1007,10 +1305,10 @@ export default function AppointmentTable() {
         try {
             // Block booking if patient has any non-COMPLETED appointment today
             const hasNonCompletedAppointment = appointments.some(
-                (a) => a.patientId === String(patient.id) && String(a.status || '').toUpperCase() !== 'COMPLETED'
+                (a) => a.patientId === String(patient.id) && String(a.status || '').toUpperCase() !== 'COMPLETE'
             );
             if (hasNonCompletedAppointment) {
-                alert("This patient has an existing appointment that is not COMPLETED. Please complete it before booking a new one.");
+                alert("This patient has an existing appointment that is not COMPLETE. Please complete it before booking a new one.");
                 return;
             }
 
@@ -1398,7 +1696,7 @@ export default function AppointmentTable() {
         .pagination-controls {
             display: flex;
             align-items: center;
-            gap: 5px;
+            gap: 8px;
         }
         .page-btn {
             padding: 6px 12px;
@@ -1531,12 +1829,32 @@ export default function AppointmentTable() {
         @media (max-width: 1399.98px) {
             .d-flex.mb-3.align-items-center { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; gap: 8px; }
             .d-flex.mb-3.align-items-center .btn { white-space: nowrap; }
+            /* Adjust column widths for large desktops */
+            .appointments-table th.sr-col, .appointments-table td.sr-col { width: 5%; }
+            .appointments-table th.name-col, .appointments-table td.name-col { width: 18%; }
+            .appointments-table th.age-col, .appointments-table td.age-col { width: 4%; }
+            .appointments-table th.contact-col, .appointments-table td.contact-col { width: 10%; }
+            .appointments-table th.time-col, .appointments-table td.time-col { width: 6%; }
+            .appointments-table th.online-col, .appointments-table td.online-cell { width: 10%; }
+            .appointments-table th.status-col, .appointments-table td.status-col { width: 17%; }
+            .appointments-table th.last-col, .appointments-table td.last-col { width: 15%; }
+            .appointments-table th.action-col, .appointments-table td.action-col { width: 15%; }
         }
 
         /* <= 1199.98px (Desktops) */
         @media (max-width: 1199.98px) {
             .d-flex.mb-3.align-items-center { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; gap: 8px; }
             .d-flex.mb-3.align-items-center .btn { white-space: nowrap; }
+            /* Adjust column widths for desktops */
+            .appointments-table th.sr-col, .appointments-table td.sr-col { width: 6%; }
+            .appointments-table th.name-col, .appointments-table td.name-col { width: 20%; }
+            .appointments-table th.age-col, .appointments-table td.age-col { width: 5%; }
+            .appointments-table th.contact-col, .appointments-table td.contact-col { width: 12%; }
+            .appointments-table th.time-col, .appointments-table td.time-col { width: 7%; }
+            .appointments-table th.online-col, .appointments-table td.online-cell { width: 10%; }
+            .appointments-table th.status-col, .appointments-table td.status-col { width: 20%; }
+            .appointments-table th.last-col, .appointments-table td.last-col { width: 10%; }
+            .appointments-table th.action-col, .appointments-table td.action-col { width: 10%; }
         }
 
         /* <= 991.98px (Tablets) */
@@ -1547,18 +1865,50 @@ export default function AppointmentTable() {
             .d-flex.mb-3.align-items-center .form-select { width: 100% !important; height: 38px !important; }
             .d-flex.mb-3.align-items-center .btn { width: 100%; }
             .d-flex.mb-3.align-items-center .d-flex.align-items-center.ms-auto { margin-left: 0 !important; align-self: center; }
+            /* Adjust column widths for tablets */
+            .appointments-table th.sr-col, .appointments-table td.sr-col { width: 8%; }
+            .appointments-table th.name-col, .appointments-table td.name-col { width: 28%; }
+            .appointments-table th.age-col, .appointments-table td.age-col { width: 6%; }
+            .appointments-table th.contact-col, .appointments-table td.contact-col { width: 18%; }
+            .appointments-table th.time-col, .appointments-table td.time-col { width: 8%; }
+            .appointments-table th.online-col, .appointments-table td.online-cell { width: 12%; }
+            .appointments-table th.status-col, .appointments-table td.status-col { width: 20%; }
+            .appointments-table th.last-col, .appointments-table td.last-col { width: 0%; display: none; }
+            .appointments-table th.action-col, .appointments-table td.action-col { width: 0%; display: none; }
         }
 
         /* <= 767.98px (Landscape phones) */
         @media (max-width: 767.98px) {
             .d-flex.mb-3.align-items-center { gap: 10px; }
             .d-flex.mb-3.align-items-center .form-select { width: 30% !important; height: 30px !important; }
+            /* Narrow screens: reduce columns shown */
+            .appointments-table th.sr-col, .appointments-table td.sr-col { width: 10%; }
+            .appointments-table th.name-col, .appointments-table td.name-col { width: 45%; }
+            .appointments-table th.age-col, .appointments-table td.age-col { width: 10%; }
+            .appointments-table th.contact-col, .appointments-table td.contact-col { width: 35%; }
+            .appointments-table th.time-col, .appointments-table td.time-col, 
+            .appointments-table th.provider-col, .appointments-table td.provider-col,
+            .appointments-table th.online-col, .appointments-table td.online-cell,
+            .appointments-table th.status-col, .appointments-table td.status-col,
+            .appointments-table th.last-col, .appointments-table td.last-col,
+            .appointments-table th.action-col, .appointments-table td.action-col { display: none; }
         }
 
         /* <= 575.98px (Portrait phones) */
         @media (max-width: 575.98px) {
             .d-flex.mb-3.align-items-center { gap: 8px; }
             .d-flex.mb-3.align-items-center .form-select { width: 30% !important; height: 30px !important; }
+            /* Smallest screens: show only essential columns */
+            .appointments-table th.sr-col, .appointments-table td.sr-col { width: 15%; }
+            .appointments-table th.name-col, .appointments-table td.name-col { width: 85%; }
+            .appointments-table th.age-col, .appointments-table td.age-col,
+            .appointments-table th.contact-col, .appointments-table td.contact-col,
+            .appointments-table th.time-col, .appointments-table td.time-col,
+            .appointments-table th.provider-col, .appointments-table td.provider-col,
+            .appointments-table th.online-col, .appointments-table td.online-cell,
+            .appointments-table th.status-col, .appointments-table td.status-col,
+            .appointments-table th.last-col, .appointments-table td.last-col,
+            .appointments-table th.action-col, .appointments-table td.action-col { display: none; }
         }
 
         /*============ Responsive table ============*/
@@ -1665,7 +2015,7 @@ export default function AppointmentTable() {
                                                 >
                                                     <div className="fw-bold d-flex align-items-center">
                                                         <i className="fas fa-user me-2 text-primary"></i>
-                                                        {patient.first_name} {patient.last_name}
+                                                        {patient.first_name} {patient.middle_name ? `${patient.middle_name} ` : ''}{patient.last_name}
                                                     </div>
                                                     <div className="text-muted small mt-1 text-nowrap">
                                                         <i className="fas fa-id-card me-1"></i>
@@ -1719,7 +2069,7 @@ export default function AppointmentTable() {
                         Search
                     </button>
 
-                    {/* Status filter */}
+                    {/* Status filter
                     <select
                         className="form-select"
                         value={filterStatus}
@@ -1732,20 +2082,21 @@ export default function AppointmentTable() {
                         ]).map(s => (
                             <option key={s} value={s}>{s}</option>
                         ))}
-                    </select>
+                    </select> */}
 
                     {/* List/Card toggle */}
                     <div 
                         className="d-flex align-items-center ms-auto"
                         style={{
                             height: "38px",
-                            backgroundColor: "#607D8B",
+                            // backgroundColor: "rgb(30, 136, 229)",
                             borderColor: "#B7B7B7",
                             color: "#fff",
                             fontFamily: "'Roboto', sans-serif",
                             borderRadius: "6px",
-                            border: "1px solid #B7B7B7",
-                            overflow: "hidden"
+                            // border: "1px solid #B7B7B7",
+                            overflow: "hidden",
+                            gap: "8px"
                         }}
                     >
                         <button
@@ -1765,7 +2116,7 @@ export default function AppointmentTable() {
                             disabled={activeView === 'list'}
                             title="List View"
                         >
-                            <List />
+                            <List style={{ color: '#000000' }} />
                         </button>
                         <div style={{ width: '1px', height: '100%', backgroundColor: '#fff', opacity: 0.7 }} />
                         <button
@@ -1785,7 +2136,7 @@ export default function AppointmentTable() {
                             disabled={activeView === 'card'}
                             title="Card View"
                         >
-                            <CreditCard />
+                            <CreditCard style={{ color: '#000000' }} />
                         </button>
                     </div>
                 </div>
@@ -1809,6 +2160,7 @@ export default function AppointmentTable() {
                                         <tr>
                                             <th className="sr-col">Sr.</th>
                                             <th className="name-col">Patient Name</th>
+                                            <th className="gender-col text-start">Gender</th>
                                             <th className="age-col text-start">Age</th>
                                             <th className="contact-col text-start">Contact</th>
                                             <th className="time-col text-start">Time</th>
@@ -1825,6 +2177,7 @@ export default function AppointmentTable() {
                                             <tr key={i} style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 500 }}>
                                                 <td className="sr-col">{a.sr}</td>
                                                 <td className="name-col"><a href={`/patients/${a.patientId}`} style={{ textDecoration: "underline", color: "#1E88E5" }}>{a.patient}</a></td>
+                                                <td className="gender-col">{a.gender}</td>
                                                 <td className="age-col">{a.age}</td>
                                                 <td className="contact-col">{(a.contact || '').toString().slice(0, 12)}</td>
                                                 <td className="time-col">{extractTime(a.time)}</td>
@@ -1833,9 +2186,11 @@ export default function AppointmentTable() {
                                                         type="text"
                                                         className="form-control form-control-sm"
                                                         value={a.online}
-                                                        onChange={(e) => handleOnlineChange(originalIndex, e.target.value)}
+                                                        onChange={(e) => { /* disabled on doctor screen */ }}
                                                         placeholder="HH:mm"
-                                                        style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 500, height: "28px", padding: "2px 6px" }}
+                                                        disabled
+                                                        title="Online time is disabled on this screen"
+                                                        style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 500, height: "28px", padding: "2px 6px", cursor: 'not-allowed', backgroundColor: '#f5f5f5' }}
                                                     />
                                                 </td>
                                                 <td style={{ position: "relative" }} title={a.status}>
@@ -1843,70 +2198,25 @@ export default function AppointmentTable() {
                                                         <span className={`d-inline-block rounded-circle ${a.statusColor}`} style={{ width: "14px", height: "14px" }}></span>
                                                         <span style={{ fontSize: '0.9rem', color: '#263238' }}>{a.status}</span>
                                                         <div
-                                                            onClick={async (e) => {
-                                                                const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                                                                setMenuPosition({ top: rect.bottom + 6, left: rect.left - 66 });
-                                                                setOpenStatusIndex(openStatusIndex === originalIndex ? null : originalIndex);
-                                                            }}
-                                                            aria-label="Change Status"
-                                                            title="Change Status"
+                                                            aria-label="Change Status (Disabled)"
+                                                            title="Status changes are disabled on this screen"
                                                             style={{
                                                                 display: "inline-flex",
                                                                 alignItems: "center",
                                                                 justifyContent: "center",
                                                                 width: "28px",
                                                                 height: "28px",
-                                                                cursor: "pointer",
-                                                                color: "#607D8B",
+                                                                cursor: "not-allowed",
+                                                                color: "#B0BEC5",
                                                                 backgroundColor: "transparent",
                                                                 borderRadius: "4px",
+                                                                opacity: 0.6
                                                             }}
                                                         >
                                                             <MoreVert fontSize="small" />
                                                         </div>
                                                     </div>
 
-                                                    {openStatusIndex === originalIndex && menuPosition && (
-                                                        <div
-                                                            className="status-menu"
-                                                            style={{
-                                                                position: "fixed",
-                                                                top: menuPosition.top,
-                                                                left: menuPosition.left,
-                                                                background: "#ffffff",
-                                                                border: "1px solid #ccc",
-                                                                borderRadius: "6px",
-                                                                boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
-                                                                zIndex: 2000,
-                                                                minWidth: "180px",
-                                                                fontFamily: "'Roboto', sans-serif",
-                                                            }}
-                                                        >
-                                                            {(availableStatuses.length ? availableStatuses : ["WAITING","WITH DOCTOR","WITH DOCTOR (ON PHONE)","CHECK OUT","SAVE","COMPLETE"]).map((status) => (
-                                                                <div
-                                                                    key={status}
-                                                                    onClick={() => {
-                                                                        updateAppointmentField(originalIndex, 'status', status);
-                                                                        updateAppointmentField(originalIndex, 'statusColor', getStatusColor(status));
-                                                                        setOpenStatusIndex(null);
-                                                                        setMenuPosition(null);
-                                                                    }}
-                                                                    style={{
-                                                                        padding: "8px 12px",
-                                                                        cursor: "pointer",
-                                                                        fontSize: "14px",
-                                                                        color: "#212121",
-                                                                        backgroundColor: "#fff",
-                                                                        textAlign: "left",
-                                                                    }}
-                                                                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#f5f5f5")}
-                                                                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#fff")}
-                                                                >
-                                                                    {status}
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    )}
                                                 </td>
                                                 <td className="last-col">
                                                     <a
@@ -1915,9 +2225,10 @@ export default function AppointmentTable() {
                                                         style={{ textDecoration: "underline", color: "#1E88E5", cursor: "pointer" }}
                                                         onClick={(e) => {
                                                             e.preventDefault();
-                                                            handleLastVisitClick(a.patientId, a.patient);
+                                                            handleLastVisitClick(a.patientId, a.patient, a);
                                                         }}
                                                     >
+                                                        
                                                         {loadingVisits[a.patientId] ? (
                                                             <span className="text-muted">
                                                                 <i className="fas fa-spinner fa-spin me-1"></i>
@@ -1952,7 +2263,7 @@ export default function AppointmentTable() {
                                                                 opacity: 0.5
                                                             }}
                                                         >
-                                                            <AddIcon fontSize="small" />
+                                                        <img src="/images/avatar/test-tubes_3523917.png" alt="Lab Test" style={{ width: 16, height: 16 }} />
                                                         </div>
 
                                                         {/* Save Button - Disabled for Doctor */}
@@ -1995,35 +2306,24 @@ export default function AppointmentTable() {
                                                             <Delete fontSize="small" />
                                                         </div>
 
-                                                        {/* Checkout Button - Open Patient Visit Details Popup */}
+                                                        {/* Checkout Button - Disabled for Doctor */}
                                                         <div
-                                                            title="Checkout"
-                                                            onClick={() => {
-                                                                setSelectedPatientForVisit(a as any);
-                                                                setShowVisitDetails(true);
-                                                            }}
+                                                            title="Checkout (Disabled)"
                                                             style={{
                                                                 display: 'inline-flex',
                                                                 alignItems: 'center',
                                                                 justifyContent: 'center',
                                                                 width: '28px',
                                                                 height: '28px',
-                                                                cursor: 'pointer',
-                                                                color: '#607D8B',
-                                                                backgroundColor: 'transparent',
+                                                                cursor: 'not-allowed',
+                                                                color: '#9e9e9e',
+                                                                backgroundColor: '#f5f5f5',
                                                                 borderRadius: '4px',
-                                                                border: '1px solid #ddd'
-                                                            }}
-                                                            onMouseEnter={(e) => {
-                                                                e.currentTarget.style.backgroundColor = '#E3F2FD';
-                                                                e.currentTarget.style.borderColor = '#64B5F6';
-                                                            }}
-                                                            onMouseLeave={(e) => {
-                                                                e.currentTarget.style.backgroundColor = 'transparent';
-                                                                e.currentTarget.style.borderColor = '#ddd';
+                                                                border: '1px solid #ddd',
+                                                                opacity: 0.5
                                                             }}
                                                         >
-                                                            <Info fontSize="small" />
+                                                            <img src="/images/avatar/Visit_details.svg" alt="Checkout" style={{ width: 16, height: 16 }} />
                                                         </div>
 
                                                         {/* Treatment Button - Enabled for Doctor */}
@@ -2054,7 +2354,7 @@ export default function AppointmentTable() {
                                                                 e.currentTarget.style.borderColor = '#ddd';
                                                             }}
                                                         >
-                                                            <FastForward fontSize="small" />
+                                                            <img src="/images/avatar/Treatment.svg" alt="Treatment" style={{ width: 16, height: 16 }} />
                                                         </div>
                                                     </div>
                                                 </td>
@@ -2092,8 +2392,8 @@ export default function AppointmentTable() {
                                                         justifyContent: 'center',
                                                         width: '28px',
                                                         height: '28px',
-                                                        cursor: 'pointer',
-                                                        color: '#607D8B',
+                                                        cursor: 'not-allowed',
+                                                        color: '#B0BEC5',
                                                         backgroundColor: 'transparent',
                                                         borderRadius: '4px'
                                                     }}
@@ -2101,50 +2401,10 @@ export default function AppointmentTable() {
                                                     <MoreVert fontSize="small" />
                                                 </div>
                                             </div>
-                                            {openStatusIndex === originalIndex && menuPosition && (
-                                                <div
-                                                    className="status-menu"
-                                                    style={{
-                                                        position: 'fixed',
-                                                        top: menuPosition.top,
-                                                        left: menuPosition.left,
-                                                        background: '#ffffff',
-                                                        border: '1px solid #ccc',
-                                                        borderRadius: '6px',
-                                                        boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
-                                                        zIndex: 2000,
-                                                        minWidth: '180px',
-                                                        fontFamily: "'Roboto', sans-serif",
-                                                    }}
-                                                >
-                                                    {(availableStatuses.length ? availableStatuses : ["WAITING","WITH DOCTOR","WITH DOCTOR (ON PHONE)","CHECK OUT","SAVE","COMPLETE"]).map((status) => (
-                                                        <div
-                                                            key={status}
-                                                            onClick={() => {
-                                                                updateAppointmentField(originalIndex, 'status', status);
-                                                                updateAppointmentField(originalIndex, 'statusColor', getStatusColor(status));
-                                                                setOpenStatusIndex(null);
-                                                                setMenuPosition(null);
-                                                            }}
-                                                            style={{
-                                                                padding: '8px 12px',
-                                                                cursor: 'pointer',
-                                                                fontSize: '14px',
-                                                                color: '#212121',
-                                                                backgroundColor: '#fff',
-                                                                textAlign: 'left',
-                                                            }}
-                                                            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f5f5f5')}
-                                                            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#fff')}
-                                                        >
-                                                            {status}
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
-                                            <div className="card-details">
+                                            {/* Status menu disabled on this screen */}
+                                                <div className="card-details">
+                                                <div className="kv"><span className="k">Gender:</span><span className="v">{appointment.gender}</span></div>
                                                 <div className="kv"><span className="k">Age:</span><span className="v">{appointment.age}</span></div>
-                                                <div className="kv"><span className="k">Contact:</span><span className="v">{appointment.contact}</span></div>
                                                 <div className="kv">
                                                     <span className="k">Last Visit:</span>
                                                     <span className="v">
@@ -2154,7 +2414,7 @@ export default function AppointmentTable() {
                                                             style={{ textDecoration: 'underline', color: '#1E88E5', cursor: 'pointer' }}
                                                             onClick={(e) => {
                                                                 e.preventDefault();
-                                                                handleLastVisitClick(appointment.patientId, appointment.patient);
+                                                                handleLastVisitClick(appointment.patientId, appointment.patient, appointment);
                                                             }}
                                                         >
                                                             {loadingVisits[appointment.patientId] ? (
@@ -2168,6 +2428,7 @@ export default function AppointmentTable() {
                                                         </a>
                                                     </span>
                                                 </div>
+                                                <div className="kv"><span className="k">Contact:</span><span className="v">{appointment.contact}</span></div>
                                                 <div className="kv"><span className="k">Time:</span><span className="v">{extractTime(appointment.time)}</span></div>
                                             </div>
                                             <div className="d-flex align-items-center" style={{ gap: '8px' }}>
@@ -2182,7 +2443,7 @@ export default function AppointmentTable() {
                                                             color: '#9e9e9e'
                                                         }}
                                                     >
-                                                        <AddIcon fontSize="small" />
+                                                        <img src="/images/avatar/test-tubes_3523917.png" alt="Lab Test" style={{ width: 16, height: 16 }} />
                                                     </div>
                                                     <div
                                                         className="crm-btn"
@@ -2210,19 +2471,16 @@ export default function AppointmentTable() {
                                                     </div>
                                                     <div 
                                                         className="crm-btn" 
-                                                        title="Checkout"
-                                                        onClick={() => {
-                                                            setSelectedPatientForVisit(appointment as any);
-                                                            setShowVisitDetails(true);
-                                                        }}
+                                                        title="Checkout (Disabled)"
                                                         style={{ 
-                                                            cursor: 'pointer',
-                                                            backgroundColor: '#ECEFF1',
-                                                            color: '#607D8B',
-                                                            border: '1px solid #CFD8DC'
+                                                            cursor: 'not-allowed',
+                                                            backgroundColor: '#f5f5f5',
+                                                            color: '#9e9e9e',
+                                                            border: '1px solid #CFD8DC',
+                                                            opacity: 0.5
                                                         }}
                                                     >
-                                                        <Info fontSize="small" />
+                                                        <img src="/images/avatar/Visit_details.svg" alt="Checkout" style={{ width: 16, height: 16 }} />
                                                     </div>
                                                 </div>
                                                 <div className="kv">
@@ -2233,8 +2491,10 @@ export default function AppointmentTable() {
                                                             className="form-control form-control-sm"
                                                             placeholder="HH:mm"
                                                             value={appointment.online}
-                                                            onChange={(e) => handleOnlineChange(originalIndex, e.target.value)}
-                                                            style={{ width: '80px', height: '28px', padding: '2px 6px', display: 'inline-block' }}
+                                                            onChange={(e) => { /* disabled on doctor screen */ }}
+                                                            disabled
+                                                            title="Online time is disabled on this screen"
+                                                            style={{ width: '80px', height: '28px', padding: '2px 6px', display: 'inline-block', cursor: 'not-allowed', backgroundColor: '#f5f5f5' }}
                                                         />
                                                     </span>
                                                 </div>
@@ -2252,7 +2512,7 @@ export default function AppointmentTable() {
                                                         border: '1px solid #CFD8DC'
                                                     }}
                                                 >
-                                                    <FastForward fontSize="small" />
+                                                    <img src="/images/avatar/Treatment.svg" alt="Treatment" style={{ width: 16, height: 16 }} />
                                                 </div>
                                             </div>
                                         </div>
@@ -2398,15 +2658,15 @@ export default function AppointmentTable() {
         // .appointments-table .form-check-input { width: 16px; height: 16px; }
         /* Fixed column widths: 10% for Sr, Age, Online, Action; 20% for Patient Name, Contact, Provider, Status, Last Visit */
         .appointments-table th.sr-col, .appointments-table td.sr-col { width: 2%; }
-        .appointments-table th.name-col, .appointments-table td.name-col { width: 12%; }
+        .appointments-table th.name-col, .appointments-table td.name-col { width: 10%; }
         .appointments-table th.gender-col, .appointments-table td.gender-col { width: 6%; }
         .appointments-table th.age-col, .appointments-table td.age-col { width: 3%; }
         .appointments-table th.contact-col, .appointments-table td.contact-col { width: 8%; }
         .appointments-table th.time-col, .appointments-table td.time-col { width:3%; }
         .appointments-table th.provider-col, .appointments-table td.provider-col { width: 15%; }
-        .appointments-table th.online-col, .appointments-table td.online-cell { width: 5%; }
+        .appointments-table th.online-col, .appointments-table td.online-cell { width: 6%; }
         .appointments-table td.online-cell .form-control { width: 70px !important; min-width: 40px !important; }
-        .appointments-table th.status-col, .appointments-table td.status-col { width: 15%; }
+        .appointments-table th.status-col, .appointments-table td.status-col { width: 14%; }
         .appointments-table th.last-col, .appointments-table td.last-col { width: 15%; }
         .appointments-table th.action-col, .appointments-table td.action-col { width: 10%; }
         /* Borderless table */
@@ -2498,7 +2758,7 @@ export default function AppointmentTable() {
         .pagination-controls {
             display: flex;
             align-items: center;
-            gap: 5px;
+            gap: 8px;
         }
         .page-btn {
             padding: 6px 12px;
@@ -2752,7 +3012,7 @@ export default function AppointmentTable() {
                                         >
                                             <div className="fw-bold d-flex align-items-center">
                                                 <i className="fas fa-user me-2 text-primary"></i>
-                                                {patient.first_name} {patient.last_name}
+                                                {patient.first_name} {patient.middle_name ? `${patient.middle_name} ` : ''}{patient.last_name}
                                             </div>
                                             <div className="text-muted small mt-1 text-nowrap">
                                                 <i className="fas fa-id-card me-1"></i>
@@ -2858,13 +3118,14 @@ export default function AppointmentTable() {
                     className="d-flex align-items-center ms-auto"
                     style={{
                         height: "38px",
-                        backgroundColor: "#607D8B",
+                        // backgroundColor: "#607D8B",
                         borderColor: "#B7B7B7",
                         color: "#fff",
                         fontFamily: "'Roboto', sans-serif",
                         borderRadius: "6px",
-                        border: "1px solid #B7B7B7",
-                        overflow: "hidden"
+                        // border: "1px solid #B7B7B7",
+                        overflow: "hidden",
+                        gap: "8px"
                     }}
                 >
                     <button
@@ -2884,7 +3145,7 @@ export default function AppointmentTable() {
                         disabled={activeView === 'list'}
                         title="List View"
                     >
-                        <List />
+                            <List style={{ color: '#000000' }} />
                     </button>
                     <div style={{ width: '1px', height: '100%', backgroundColor: '#fff', opacity: 0.7 }} />
                     <button
@@ -2904,7 +3165,7 @@ export default function AppointmentTable() {
                         disabled={activeView === 'card'}
                         title="Card View"
                     >
-                        <CreditCard />
+                            <CreditCard style={{ color: '#000000' }} />
                     </button>
                 </div>
             </div>
@@ -2916,13 +3177,13 @@ export default function AppointmentTable() {
                 <div className="mb-3">
                     <h6 className="mb-2">Selected Patient:</h6>
                     <div className="d-flex flex-wrap gap-2">
-                        {selectedPatients.map((patient) => (
+                                {selectedPatients.map((patient) => (
                             <div
                                 key={patient.id}
                                 className="badge bg-primary d-flex align-items-center"
                                 style={{ fontSize: "0.9rem", padding: "8px 12px" }}
                             >
-                                {patient.first_name} {patient.last_name} (ID: {patient.id})
+                                        {patient.first_name} {patient.middle_name ? `${patient.middle_name} ` : ''}{patient.last_name} (ID: {patient.id})
                                 <button
                                     type="button"
                                     className="btn-close btn-close-white ms-2"
@@ -3098,7 +3359,7 @@ export default function AppointmentTable() {
                                                     style={{ textDecoration: "underline", color: "#1E88E5", cursor: "pointer" }}
                                                     onClick={(e) => {
                                                         e.preventDefault();
-                                                        handleLastVisitClick(a.patientId, a.patient);
+                                                        handleLastVisitClick(a.patientId, a.patient, a);
                                                     }}
                                                 >
                                                     {loadingVisits[a.patientId] ? (
@@ -3146,7 +3407,7 @@ export default function AppointmentTable() {
                                                             e.currentTarget.style.borderColor = '#ddd';
                                                         }}
                                                     >
-                                                        <AddIcon fontSize="small" />
+                                                        <img src="/images/avatar/test-tubes_3523917.png" alt="Lab Test" style={{ width: 16, height: 16 }} />
                                                     </div>
 
                                                     {/* Save Button */}
@@ -3252,7 +3513,7 @@ export default function AppointmentTable() {
 
                                                     {/* Checkout Button */}
                                                     <div
-                                                        title="Checkout"
+                                                        title="Visit Details"
                                                         onClick={() => {
                                                             setSelectedPatientForVisit(a as any);
                                                             setShowVisitDetails(true);
@@ -3278,7 +3539,7 @@ export default function AppointmentTable() {
                                                             e.currentTarget.style.borderColor = '#ddd';
                                                         }}
                                                     >
-                                                        <Info fontSize="small" />
+                                                        <img src="/images/avatar/Visit_details.svg" alt="Visit Details" style={{ width: 16, height: 16 }} />
                                                     </div>
 
                                                     {/* Collection Button */}
@@ -3400,8 +3661,7 @@ export default function AppointmentTable() {
                                         <div className="card-details">
                                             <div className="kv"><span className="k">Age:</span><span className="v">{appointment.age}</span></div>
                                             <div className="kv"><span className="k">Gender:</span><span className="v">{appointment.gender}</span></div>
-                                            <div className="kv"><span className="k">Contact:</span><span className="v">{appointment.contact}</span></div>
-                                                <div className="kv">
+                                            <div className="kv">
                                                     <span className="k">Last Visit:</span>
                                                     <span className="v">
                                                         <a 
@@ -3410,7 +3670,7 @@ export default function AppointmentTable() {
                                                             style={{ textDecoration: 'underline', color: '#1E88E5', cursor: 'pointer' }}
                                                             onClick={(e) => {
                                                                 e.preventDefault();
-                                                                handleLastVisitClick(appointment.patientId, appointment.patient);
+                                                                handleLastVisitClick(appointment.patientId, appointment.patient, appointment);
                                                             }}
                                                         >
                                                             {loadingVisits[appointment.patientId] ? (
@@ -3424,8 +3684,9 @@ export default function AppointmentTable() {
                                                         </a>
                                                     </span>
                                                 </div>
+                                            <div className="kv"><span className="k">Contact:</span><span className="v">{appointment.contact}</span></div>
                                             {/* <div className="kv"><span className="k">Last Visit:</span><span className="v"><a href={`/patients/${appointment.patientId}/visits`} title={`Dr.Tongaonkar`} style={{ textDecoration: 'underline', color: '#1E88E5' }}>{`${formatYearToTwoDigits(appointment.lastOpd)}`} -L</a></span></div> */}
-                                            <div className="kv"><span className="k">Dr. Tongaonkar</span></div>
+                                            {/* <div className="kv"><span className="k">Dr. Tongaonkar</span></div> */}
                                             <div className="kv"><span className="k">Time:</span><span className="v">{extractTime(appointment.time)}</span></div>
                                             <div className="kv"><span className="k">Provider:</span><span className="v">
                                                 <select
@@ -3499,7 +3760,18 @@ export default function AppointmentTable() {
                                                     onClick={async () => {
                                                         try {
                                                             const pid = appointment.patientId;
-                                                            const vdate = String(appointment.visitDate || new Date().toISOString().split('T')[0]);
+														const rawVdate = String(appointment.visitDate || new Date().toISOString().split('T')[0]);
+														// Normalize to YYYY-MM-DD (backend expects ISO date)
+														const vdate = (() => {
+															const ddmmyyyy = rawVdate.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+															if (ddmmyyyy) return `${ddmmyyyy[3]}-${ddmmyyyy[2]}-${ddmmyyyy[1]}`;
+															const yyyymmdd = rawVdate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+															if (yyyymmdd) return rawVdate;
+															// Fallback: try Date parsing and format to ISO date
+															const d = new Date(rawVdate);
+															if (!isNaN(d.getTime())) return d.toISOString().split('T')[0];
+															return rawVdate; // last resort, send as-is
+														})();
                                                             const did = appointment.doctorId || selectedDoctorId;
                                                             if (!pid || !vdate || !did) {
                                                                 alert('Missing identifiers to delete appointment');
@@ -3507,7 +3779,7 @@ export default function AppointmentTable() {
                                                             }
                                                             const confirmDelete = window.confirm('Delete this appointment?');
                                                             if (!confirmDelete) return;
-                                                            await appointmentService.deleteAppointment({ patientId: String(pid), visitDate: String(vdate), doctorId: String(did), userId: String(sessionData?.userId || 'system') });
+														await appointmentService.deleteAppointment({ patientId: String(pid), visitDate: String(vdate), doctorId: String(did), userId: String(sessionData?.userId || 'system') });
                                                             // Remove from UI
                                                             setAppointments(prev => prev.filter((_, i) => i !== originalIndex));
                                                         } catch (err) {
@@ -3520,7 +3792,7 @@ export default function AppointmentTable() {
                                                 </div>
                                                 <div 
                                                     className="crm-btn" 
-                                                    title="Checkout"
+                                                    title="Visit Details"
                                                     onClick={() => {
                                                         setSelectedPatientForVisit(appointment as any);
                                                         setShowVisitDetails(true);
@@ -3678,9 +3950,9 @@ export default function AppointmentTable() {
                         style={{
                             backgroundColor: 'white',
                             borderRadius: '8px',
-                            width: '95%',
-                            maxWidth: '1200px',
-                            maxHeight: '90vh',
+                            width: '1100vw',
+                            maxWidth: '1500px',
+                            maxHeight: '85vh',
                             overflow: 'auto',
                             position: 'relative'
                         }}
@@ -3689,40 +3961,14 @@ export default function AppointmentTable() {
                             e.stopPropagation();
                         }}
                     >
-                        {/* Close button */}
-                        <button
-                            onClick={() => setShowPatientFormDialog(false)}
-                            style={{
-                                position: 'absolute',
-                                top: '15px',
-                                right: '15px',
-                                background: 'none',
-                                border: 'none',
-                                fontSize: '24px',
-                                cursor: 'pointer',
-                                color: '#666',
-                                zIndex: 10000,
-                                width: '30px',
-                                height: '30px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                borderRadius: '50%',
-                                transition: 'background-color 0.2s ease'
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.backgroundColor = '#f5f5f5';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.backgroundColor = 'transparent';
-                            }}
-                            title="Close"
-                        >
-                            ×
-                        </button>
-                        
                         {/* Patient Form Content */}
-                        <PatientFormTest />
+                        <PatientFormTest 
+                            onClose={() => setShowPatientFormDialog(false)} 
+                            initialData={formPatientData || undefined}
+                            visitDates={visitDates}
+                            currentVisitIndex={currentVisitIndex}
+                            onVisitDateChange={handleVisitDateChange}
+                        />
                     </div>
                 </div>
             )}
