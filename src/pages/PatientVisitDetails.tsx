@@ -1472,8 +1472,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                         borderTopRightRadius: '8px',
                         fontFamily: "'Roboto', sans-serif",
                         color: '#212121',
-                        fontSize: '0.9rem',
-                        borderBottom: '1px solid #e0e0e0'
+                        fontSize: '0.9rem'
                     }}>
                         <div style={{
                             display: 'flex',
@@ -1546,38 +1545,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                             </div>
                             <div>
                                 <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', fontWeight: 700, color: '#333' }}>
-                                    Specialization
-                                </label>
-                                <input
-                                    type="text"
-                                    placeholder="Enter specialization"
-                                    style={{
-                                        width: '100%',
-                                        height: '32px',
-                                        padding: '4px 8px',
-                                        border: '2px solid #B7B7B7',
-                                        borderRadius: '6px',
-                                        fontSize: '0.9rem',
-                                        fontFamily: "'Roboto', sans-serif",
-                                        fontWeight: '500',
-                                        backgroundColor: 'white',
-                                        outline: 'none',
-                                        transition: 'border-color 0.2s'
-                                    }}
-                                    onFocus={(e) => {
-                                        e.target.style.borderColor = '#1E88E5';
-                                        e.target.style.boxShadow = 'none';
-                                    }}
-                                    onBlur={(e) => {
-                                        e.target.style.borderColor = '#B7B7B7';
-                                    }}
-                                />
-                            </div>
-                        </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
-                            <div>
-                                <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', fontWeight: 700, color: '#333' }}>
-                                    Contact Number
+                                    Doctor Number
                                 </label>
                                 <input
                                     type="text"
@@ -1604,13 +1572,44 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     }}
                                 />
                             </div>
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
                             <div>
                                 <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', fontWeight: 700, color: '#333' }}>
-                                    Email
+                                    Doctor Email
                                 </label>
                                 <input
                                     type="email"
-                                    placeholder="Enter email"
+                                    placeholder="Enter doctor email"
+                                    style={{
+                                        width: '100%',
+                                        height: '32px',
+                                        padding: '4px 8px',
+                                        border: '2px solid #B7B7B7',
+                                        borderRadius: '6px',
+                                        fontSize: '0.9rem',
+                                        fontFamily: "'Roboto', sans-serif",
+                                        fontWeight: '500',
+                                        backgroundColor: 'white',
+                                        outline: 'none',
+                                        transition: 'border-color 0.2s'
+                                    }}
+                                    onFocus={(e) => {
+                                        e.target.style.borderColor = '#1E88E5';
+                                        e.target.style.boxShadow = 'none';
+                                    }}
+                                    onBlur={(e) => {
+                                        e.target.style.borderColor = '#B7B7B7';
+                                    }}
+                                />
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', fontWeight: 700, color: '#333' }}>
+                                    Remark
+                                </label>
+                                <input
+                                    type="text"
+                                    placeholder="Enter remark"
                                     style={{
                                         width: '100%',
                                         height: '32px',
@@ -1636,11 +1635,11 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                         </div>
                         <div style={{ marginBottom: '15px' }}>
                             <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', fontWeight: 700, color: '#333' }}>
-                                Address
+                                Doctor Address
                             </label>
                             <textarea
-                                placeholder="Enter address"
-                                rows={3}
+                                placeholder="Enter doctor address"
+                                rows={2}
                                 style={{
                                     width: '100%',
                                     padding: '4px 8px',
