@@ -29,6 +29,7 @@ import {
   Logout,
   AccountCircle,
   KeyboardArrowDown,
+  KeyboardArrowRight,
 } from '@mui/icons-material'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '../../store/hooks'
@@ -47,33 +48,93 @@ const menuItems = [
   { text: 'OPD',  path: '/appointment' },
   { text: 'OPD Reports',  path: '/reports' },
   { text: 'OPD Master', path: '#' },
-  { text: 'Settings', path: '/settings' },
+  { text: 'IPD', path: '#' },
+  { text: 'IPD Report', path: '#' },
+  { text: 'IPD Master', path: '#' },
+  // { text: 'Settings', path: '/settings' },
 ]
 
-const subMenus: Record<string, Array<{ label: string; path: string }>> = {
+type SubMenuItem = { label: string; path?: string; children?: SubMenuItem[] };
+
+const subMenus: Record<string, Array<SubMenuItem>> = {
   'Dashboard': [
     { label: 'Dashboard', path: '/' },
   ],
   'OPD': [
     { label: "Today's Appointments", path: '/appointment' },
-    { label: 'OPD - Collect Patient Dues', path: '/billing?context=opd-dues' },
     { label: 'Patient - Quick Registration', path: '/registration/quick' },
     { label: 'Patient - Detailed Registration', path: '/registration?type=detailed' },
     { label: 'Patient - Print Registration Form', path: '/registration?print=1' },
+    { label: 'Direct Treatment Entry', path: '/billing?context=opd-dues' },
   ],
   'OPD Reports': [
-    { label: 'OPD – Daily Collection', path: '/reports?type=daily-collection' },
-    { label: 'OPD - Receipts', path: '/reports?type=receipts' },
-    { label: 'Dashboard & Reports', path: '/reports?type=dashboard' },
+    {
+      label: 'OPD – Collection', children: [
+        { label: 'OPD Collection Statement', path: '/settings?t=operation-keyword' },
+        { label: 'OPD-IIIC Register(Service-wise collection)', path: '/settings?t=sub-category' },
+      ],
+    },
+    { label: 'OPD - Daily Collection', path: '/reports?type=receipts' },
+    { label: 'OPD - Defaulters', path: '/reports?type=dashboard' },
+    { label: 'Dashboard & Reports',  children: [
+      { label: 'Area-Wise Patient Summary ', path: '/settings?t=operation-keyword' },
+      { label: 'Summary Of Lab Suggested', path: '/settings?t=sub-category' },
+      { label: 'Print Patient Details', path: '/settings?t=sub-category' },
+      { label: 'Patient Appointment History', path: '/settings?t=sub-category' },
+    ],},
+    { label: 'IIIC Summary (IPD & OPD)', path: '/reports?type=dashboard' },
   ],
   'OPD Master': [
-    { label: 'Treatment Master', path: '/settings?t=treatment' },
-    { label: 'Prescription Master', path: '/settings?t=prescription' },
-    { label: 'Billing', path: '/billing' },
+    { label: 'Treatment Master', children: [
+      { label: 'Manage Complaints ', path: '/settings?t=operation-keyword' },
+      { label: 'Manage Diagnosis', path: '/settings?t=sub-category' },
+      { label: 'Manage Procedure', path: '/settings?t=sub-category' },
+      { label: 'Manage Labs', path: '/settings?t=sub-category' },
+      { label: 'Manage Medicines', path: '/settings?t=sub-category' },
+    ], },
+    { label: 'Prescription Master', children: [
+      { label: 'Prescription Category ', path: '/settings?t=operation-keyword' },
+      { label: 'Prescription Sub-Category', path: '/settings?t=sub-category' },
+      { label: 'Prescription Details', path: '/settings?t=sub-category' },
+    ], },
+    { label: 'Billing', children: [
+      { label: 'Billing Details', path: '/settings?t=operation-keyword' },
+    ],},
   ],
-  'Settings': [
-    { label: 'Settings', path: '/settings' },
+  'IPD': [
+    { label: 'Manage Admission Card', path: '/settings?t=treatment' },
+    { label: 'Manage Advance Collection', path: '/settings?t=prescription' },
+    { label: 'Manage Discharge Card', path: '/billing' },
+    { label: 'Manage Hospital Bill', path: '/billing' },
   ],
+  'IPD Report': [
+    { label: 'IPD Collection Statement', path: '/settings?t=treatment' },
+    { label: 'List Of Cashless Hospital Bills', path: '/settings?t=prescription' },
+    { label: 'Discharge / Admission Card List', path: '/billing' },
+    { label: 'Follow-up Patients After Discharge', path: '/billing' },
+    { label: 'IPD IIIC Register', path: '/billing' },
+  ],
+  'IPD Master': [
+    {
+      label: 'Manage Master Data',
+      children: [
+        { label: 'Manage Keyword (Operation) Master', path: '/settings?t=operation-keyword' },
+        { label: 'Manage Sub-Category', path: '/settings?t=sub-category' },
+        { label: 'Manage Hospital Charges Master', path: '/settings?t=charges' },
+        { label: 'Manage Insurance Company', path: '/settings?t=insurance' },
+      ],
+    },
+    {
+      label: 'Attach Master Data',
+      children: [
+        { label: 'Attach Treatment', path: '/settings?t=attach-treatment' },
+        { label: 'Attach Prescription', path: '/settings?t=attach-prescription' },
+      ],
+    },
+  ],
+  // 'Settings': [
+  //   { label: 'Settings', path: '/settings' },
+  // ],
 }
 
 export default function MainLayout({ children }: MainLayoutProps) {
@@ -89,6 +150,8 @@ export default function MainLayout({ children }: MainLayoutProps) {
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null)
   const [masterEl, setMasterEl] = React.useState<null | HTMLElement>(null)
   const [tabMenu, setTabMenu] = React.useState<{ index: number; anchor: HTMLElement } | null>(null)
+  const [subMenuL2, setSubMenuL2] = React.useState<{ anchor: HTMLElement | null; items: SubMenuItem[] } | null>(null)
+  const [subMenuL3, setSubMenuL3] = React.useState<{ anchor: HTMLElement | null; items: SubMenuItem[] } | null>(null)
   const [now, setNow] = React.useState<Date>(new Date())
   const [isLoggingOut, setIsLoggingOut] = React.useState(false)
   const [showSessionWarning, setShowSessionWarning] = React.useState(false)
@@ -114,6 +177,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
   }
 
   const closeTabMenu = () => setTabMenu(null)
+  const closeSubMenus = () => { setSubMenuL2(null); setSubMenuL3(null) }
 
   const handleLogout = async () => {
     try {
@@ -265,7 +329,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
                 anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
                 transformOrigin={{ vertical: 'top', horizontal: 'center' }}
                 open={Boolean(tabMenu)}
-                onClose={closeTabMenu}
+                onClose={() => { closeSubMenus(); closeTabMenu(); }}
                 PaperProps={{
                   sx: {
                     '& .MuiMenuItem-root': {
@@ -275,11 +339,77 @@ export default function MainLayout({ children }: MainLayoutProps) {
                   },
                 }}
               >
-                {(tabMenu ? subMenus[menuItems[tabMenu.index].text] || [] : []).map((item) => (
+                {(tabMenu ? subMenus[menuItems[tabMenu.index].text] || [] : []).map((item) => {
+                  const hasChildren = Boolean((item as any).children && (item as any).children!.length)
+                  return (
+                    <MenuItem
+                      key={item.label}
+                      onMouseEnter={(e) => {
+                        if (hasChildren) {
+                          setSubMenuL2({ anchor: e.currentTarget as HTMLElement, items: (item as any).children! })
+                          setSubMenuL3(null)
+                        } else {
+                          setSubMenuL2(null)
+                          setSubMenuL3(null)
+                        }
+                      }}
+                      onClick={() => { if (item.path) { handleNavigation(item.path); closeSubMenus(); closeTabMenu(); } }}
+                      sx={{ pl: 1, pr: 2, minWidth: 240, display: 'flex', justifyContent: 'space-between', gap: 1 }}
+                    >
+                      {item.label}
+                      {hasChildren ? <KeyboardArrowRight fontSize="small" /> : null}
+                    </MenuItem>
+                  )
+                })}
+              </Menu>
+
+              {/* Level 2 submenu */}
+              <Menu
+                anchorEl={subMenuL2?.anchor ?? null}
+                open={Boolean(subMenuL2)}
+                onClose={() => setSubMenuL2(null)}
+                keepMounted
+                anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+                transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+                MenuListProps={{ onMouseLeave: () => setSubMenuL2(null) }}
+              >
+                {subMenuL2?.items.map((item) => {
+                  const hasChildren = Boolean((item as any).children && (item as any).children!.length)
+                  return (
+                    <MenuItem
+                      key={item.label}
+                      onMouseEnter={(e) => {
+                        if (hasChildren) {
+                          setSubMenuL3({ anchor: e.currentTarget as HTMLElement, items: (item as any).children! })
+                        } else {
+                          setSubMenuL3(null)
+                        }
+                      }}
+                      onClick={() => { if (item.path) { handleNavigation(item.path); closeSubMenus(); closeTabMenu(); } }}
+                      sx={{ minWidth: 260, display: 'flex', justifyContent: 'space-between', gap: 1 }}
+                    >
+                      {item.label}
+                      {hasChildren ? <KeyboardArrowRight fontSize="small" /> : null}
+                    </MenuItem>
+                  )
+                })}
+              </Menu>
+
+              {/* Level 3 submenu */}
+              <Menu
+                anchorEl={subMenuL3?.anchor ?? null}
+                open={Boolean(subMenuL3)}
+                onClose={() => setSubMenuL3(null)}
+                keepMounted
+                anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+                transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+                MenuListProps={{ onMouseLeave: () => setSubMenuL3(null) }}
+              >
+                {subMenuL3?.items.map((item) => (
                   <MenuItem
                     key={item.label}
-                    onClick={() => { handleNavigation(item.path); closeTabMenu() }}
-                    sx={{ pl: 1, pr: 2 }}
+                    onClick={() => { if (item.path) { handleNavigation(item.path); closeSubMenus(); closeTabMenu(); } }}
+                    sx={{ minWidth: 280 }}
                   >
                     {item.label}
                   </MenuItem>

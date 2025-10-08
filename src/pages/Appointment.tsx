@@ -375,7 +375,7 @@ export default function AppointmentTable() {
     // Normalize status for display
     const normalizeStatusLabel = (status: string): string => {
         const s = String(status || '').trim().toUpperCase();
-        if (s === 'ON CALL') return 'WITH DOCTOR (ON PHONE)';
+        if (s === 'ON CALL') return 'CONSULT ON CALL';
         if (s === 'COMPLETED') return 'COMPLETE';
         if (s === 'SAVED') return 'SAVE';
         return s;
@@ -387,7 +387,7 @@ export default function AppointmentTable() {
         switch (normalized) {
             case 'WAITING': return 'bg-primary';
             case 'WITH DOCTOR': return 'bg-success';
-            case 'WITH DOCTOR (ON PHONE)': return 'bg-info';
+            case 'CONSULT ON CALL': return 'bg-info';
             case 'CHECK OUT': return 'bg-warning';
             case 'COMPLETE': return 'bg-dark';
             case 'SAVE': return 'bg-danger';
@@ -395,19 +395,25 @@ export default function AppointmentTable() {
         }
     };
 
-    // Map UI status label to backend statusId
     const mapStatusLabelToId = (status: string): number => {
         const s = normalizeStatusLabel(status);
         switch (s) {
-            case 'WAITING': return 1;
-            case 'WITH DOCTOR': return 2;
-            case 'COMPLETE': return 5;
-            case 'CHECK OUT': return 4;
-            case 'WITH DOCTOR (ON PHONE)': return 3;
-            case 'SAVE': return 9;
-            default: return 1;
+          case 'WAITING': return 1;
+          case 'WITH DOCTOR': return 2;
+          case 'CONSULT ON CALL': return 3;
+          case 'WAITING FOR MEDICINE': return 4;
+          case 'COMPLETE': return 5;
+          case 'SUBMITTED': return 6;
+          case 'WAITING FOR SERVICE': return 7;
+          case 'SERVICE COMPLETED': return 8;
+          case 'SAVE': return 9;
+          case 'BOOKED': return 10;
+          case 'FUTURE': return 11;
+          case 'SENT FOR SERVICE': return 12;
+          default: return -1; // 👈 better to return -1 (invalid) instead of always 1
         }
-    };
+      };
+      
 
     // Get latest (max) visit number for a patient from loaded visits
     const getLatestVisitNumber = (patientId: string | number): number => {
@@ -1223,10 +1229,8 @@ export default function AppointmentTable() {
         // Build the display string: date - provider
         let displayText = `${formattedDate} - ${providerName}`;
         
-        // Add "L" if reports were received
-        if (reportsReceived) {
-            displayText += ' - L';
-        }
+        // Always append "- L" as requested
+        displayText += ' - L';
         
         return displayText;
     };
@@ -1419,7 +1423,7 @@ export default function AppointmentTable() {
         // For doctor screen, only show patients with "WITH DOCTOR" or "WITH DOCTOR (ON PHONE)" status
         if (isDoctor) {
             const normalizedStatus = normalizeStatusLabel(a.status);
-            const doctorStatusOk = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'WITH DOCTOR (ON PHONE)';
+            const doctorStatusOk = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL';
             return nameOk && contactOk && statusOk && doctorStatusOk;
         }
         
@@ -1555,7 +1559,7 @@ export default function AppointmentTable() {
         const counts: Record<string, number> = {
             'WAITING': 0,
             'WITH DOCTOR': 0,
-            'WITH DOCTOR (ON PHONE)': 0,
+            'CONSULT ON CALL': 0,
             'CHECK OUT': 0,
             'COMPLETE': 0,
             'SAVE': 0
@@ -1565,7 +1569,7 @@ export default function AppointmentTable() {
         const appointmentsToCount = isDoctor 
             ? appointments.filter(appt => {
                 const normalizedStatus = normalizeStatusLabel(appt.status);
-                return normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'WITH DOCTOR (ON PHONE)';
+                return normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL';
             })
             : appointments;
             
@@ -1596,16 +1600,17 @@ export default function AppointmentTable() {
         // .appointments-table .form-control-sm { padding: 2px 6px !important; height: 28px; }
         // .appointments-table .form-check-input { width: 16px; height: 16px; }
         /* Fixed column widths: 10% for Sr, Age, Online, Action; 20% for Patient Name, Contact, Provider, Status, Last Visit */
-        .appointments-table th.sr-col, .appointments-table td.sr-col { width: 5%; }
-        .appointments-table th.name-col, .appointments-table td.name-col { width: 10%;}
-        .appointments-table th.age-col, .appointments-table td.age-col { width: 2%; }
-        .appointments-table th.contact-col, .appointments-table td.contact-col { width: 5%; }
-        .appointments-table th.time-col, .appointments-table td.time-col { width: 3%; }
+        .appointments-table th.sr-col, .appointments-table td.sr-col { width: 2%; }
+        .appointments-table th.name-col, .appointments-table td.name-col { width: 10%; }
+        .appointments-table th.gender-col, .appointments-table td.gender-col { width: 6%; }
+        .appointments-table th.age-col, .appointments-table td.age-col { width: 3%; }
+        .appointments-table th.contact-col, .appointments-table td.contact-col { width: 8%; }
+        .appointments-table th.time-col, .appointments-table td.time-col { width:3%; }
         .appointments-table th.provider-col, .appointments-table td.provider-col { width: 15%; }
-        .appointments-table th.online-col, .appointments-table td.online-cell { width: 9%; }
+        .appointments-table th.online-col, .appointments-table td.online-cell { width: 6%; }
         .appointments-table td.online-cell .form-control { width: 70px !important; min-width: 40px !important; }
-        .appointments-table th.status-col, .appointments-table td.status-col { width: 20%; }
-        .appointments-table th.last-col, .appointments-table td.last-col { width: 30%; }
+        .appointments-table th.status-col, .appointments-table td.status-col { width: 14%; }
+        .appointments-table th.last-col, .appointments-table td.last-col { width: 15%; }
         .appointments-table th.action-col, .appointments-table td.action-col { width: 10%; }
         /* Borderless table */
         .appointments-table, .appointments-table th, .appointments-table td { border: 0 !important; }
@@ -1656,12 +1661,12 @@ export default function AppointmentTable() {
         }
         .price-text { font-weight: 700; color: #2E7D32; font-family: 'Roboto', sans-serif; }
         .subtitle { color: #6b7280; margin-bottom: 8px; font-size: 0.85rem; font-family: 'Roboto', sans-serif; }
-        .card-details { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; margin-bottom: 10px; }
+        .card-details { display: grid; grid-template-columns: 3fr 1fr; gap: 6px 12px; margin-bottom: 10px; }
         .kv { display: flex; gap: 6px; align-items: center; min-width: 0; }
         .kv .k { color: #607D8B; font-size: 0.76rem; }
         .kv .v { color: #111827; font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .crm-actions { display: grid; grid-template-columns: repeat(4, 32px); gap: 8px; }
-        .crm-btn { width: 36px; height: 36px; border-radius: 6px; background: #ECEFF1; display: inline-flex; align-items: center; justify-content: center; color: #607D8B; border: 1px solid #CFD8DC; cursor: pointer; }
+        .crm-btn { width: 36px; height: 36px; border-radius: 6px; background: #ECEFF1; display: inline-flex; align-items: center; justify-content: center; color:black; border: 1px solid #CFD8DC; cursor: pointer; }
         .crm-btn:hover { background: #E3F2FD; color:black; border-color: #90CAF9; }
         .status-indicator {
             width: 12px;
@@ -1955,7 +1960,7 @@ export default function AppointmentTable() {
                         |
                         <span className="mx-1"><span className="rounded-circle d-inline-block bg-success" style={{ width: 10, height: 10 }}></span> {statusCounts['WITH DOCTOR'] || 0} </span>
                         |
-                        <span className="mx-1"><span className="rounded-circle d-inline-block bg-info" style={{ width: 10, height: 10 }}></span> {statusCounts['WITH DOCTOR (ON PHONE)'] || 0} </span>
+                        <span className="mx-1"><span className="rounded-circle d-inline-block bg-info" style={{ width: 10, height: 10 }}></span> {statusCounts['CONSULT ON CALL'] || 0} </span>
                         |
                         <span className="mx-1"><span className="rounded-circle d-inline-block bg-warning" style={{ width: 10, height: 10 }}></span> {statusCounts['CHECK OUT'] || 0} </span>
                         |
@@ -1976,6 +1981,13 @@ export default function AppointmentTable() {
                             value={searchTerm}
                             onChange={(e) => handleSearchChange(e.target.value)}
                             ref={searchInputRef}
+                            autoFocus={isDoctor}
+                            onBlur={() => {
+                                // Keep search ready for continuous typing in doctor screen
+                                if (isDoctor) {
+                                    setTimeout(() => searchInputRef.current?.focus(), 0);
+                                }
+                            }}
                             style={{ borderWidth: "2px", height: "38px", fontFamily: "'Roboto', sans-serif", fontWeight: 500, minWidth: "300px", width: "400px" }}
                         />
                         
@@ -1990,6 +2002,10 @@ export default function AppointmentTable() {
                                     maxHeight: "300px", 
                                     overflowY: "auto",
                                     fontFamily: "'Roboto', sans-serif"
+                                }}
+                                onMouseDown={(e) => {
+                                    // Keep input focused when clicking items in the dropdown
+                                    e.preventDefault();
                                 }}
                             >
                                 {loading ? (
@@ -2053,7 +2069,7 @@ export default function AppointmentTable() {
                         className="btn"
                         onClick={handleSearchButtonClick}
                         style={{ 
-                            backgroundColor: "#28a745",
+                            backgroundColor: "rgb(0, 123, 255)",
                             color: "white",
                             borderColor: "#28a745",
                             height: "38px",
@@ -2089,12 +2105,10 @@ export default function AppointmentTable() {
                         className="d-flex align-items-center ms-auto"
                         style={{
                             height: "38px",
-                            // backgroundColor: "rgb(30, 136, 229)",
-                            borderColor: "#B7B7B7",
-                            color: "#fff",
+                            backgroundColor: "#f8f9fa",
+                            // border: "1px solid #dee2e6",
                             fontFamily: "'Roboto', sans-serif",
                             borderRadius: "6px",
-                            // border: "1px solid #B7B7B7",
                             overflow: "hidden",
                             gap: "8px"
                         }}
@@ -2103,40 +2117,38 @@ export default function AppointmentTable() {
                             className="btn d-flex align-items-center justify-content-center"
                             style={{
                                 height: "100%",
-                                backgroundColor: activeView === 'list' ? "#4CAF50" : "transparent",
+                                backgroundColor: activeView === 'list' ? "#007bff" : "#6c757d",
                                 border: "none",
-                                color: "#fff",
+                                color: "#ffffff",
                                 fontFamily: "'Roboto', sans-serif",
-                                opacity: activeView === 'list' ? 0.7 : 1,
-                                cursor: activeView === 'list' ? 'not-allowed' : 'pointer',
+                                cursor: "pointer",
                                 padding: "0 12px",
-                                minWidth: "40px"
+                                minWidth: "40px",
+                                transition: "all 0.2s ease"
                             }}
                             onClick={handleListClick}
-                            disabled={activeView === 'list'}
                             title="List View"
                         >
-                            <List style={{ color: '#000000' }} />
+                            <List style={{ color: '#ffffff' }} />
                         </button>
-                        <div style={{ width: '1px', height: '100%', backgroundColor: '#fff', opacity: 0.7 }} />
+                        {/* <div style={{ width: '1px', height: '100%', backgroundColor: '#dee2e6' }} /> */}
                         <button
                             className="btn d-flex align-items-center justify-content-center"
                             style={{
                                 height: "100%",
-                                backgroundColor: activeView === 'card' ? "#4CAF50" : "transparent",
+                                backgroundColor: activeView === 'card' ? "#007bff" : "#6c757d",
                                 border: "none",
-                                color: "#fff",
+                                color: "#ffffff",
                                 fontFamily: "'Roboto', sans-serif",
-                                opacity: activeView === 'card' ? 0.7 : 1,
-                                cursor: activeView === 'card' ? 'not-allowed' : 'pointer',
+                                cursor: "pointer",
                                 padding: "0 12px",
-                                minWidth: "40px"
+                                minWidth: "40px",
+                                transition: "all 0.2s ease"
                             }}
                             onClick={handleCardClick}
-                            disabled={activeView === 'card'}
                             title="Card View"
                         >
-                            <CreditCard style={{ color: '#000000' }} />
+                            <CreditCard style={{ color: '#ffffff' }} />
                         </button>
                     </div>
                 </div>
@@ -2148,7 +2160,7 @@ export default function AppointmentTable() {
                             <i className="fas fa-calendar-check" style={{ fontSize: "3rem", color: "#6c757d" }}></i>
                         </div>
                         <h5 className="text-muted">No Patients Currently With You</h5>
-                        <p className="text-muted">No patients have "WITH DOCTOR" or "WITH DOCTOR (ON PHONE)" status at the moment.</p>
+                        <p className="text-muted">No patients have "WITH DOCTOR" or "CONSULT ON CALL" status at the moment.</p>
                     </div>
                 ) : (
                     <>
@@ -2403,7 +2415,7 @@ export default function AppointmentTable() {
                                             </div>
                                             {/* Status menu disabled on this screen */}
                                                 <div className="card-details">
-                                                <div className="kv"><span className="k">Gender:</span><span className="v">{appointment.gender}</span></div>
+                                                <div className="kv"><span className="k">Contact:</span><span className="v">{appointment.contact}</span></div>                                                
                                                 <div className="kv"><span className="k">Age:</span><span className="v">{appointment.age}</span></div>
                                                 <div className="kv">
                                                     <span className="k">Last Visit:</span>
@@ -2428,7 +2440,7 @@ export default function AppointmentTable() {
                                                         </a>
                                                     </span>
                                                 </div>
-                                                <div className="kv"><span className="k">Contact:</span><span className="v">{appointment.contact}</span></div>
+                                                <div className="kv"><span className="k">Gender:</span><span className="v">{appointment.gender}</span></div>
                                                 <div className="kv"><span className="k">Time:</span><span className="v">{extractTime(appointment.time)}</span></div>
                                             </div>
                                             <div className="d-flex align-items-center" style={{ gap: '8px' }}>
@@ -2437,13 +2449,13 @@ export default function AppointmentTable() {
                                                         className="crm-btn" 
                                                         title="Lab Details (Disabled)"
                                                         style={{ 
-                                                            opacity: 0.5, 
+                                                            opacity: 0.7, 
                                                             cursor: 'not-allowed',
                                                             backgroundColor: '#f5f5f5',
-                                                            color: '#9e9e9e'
+                                                            color: '#000000'
                                                         }}
                                                     >
-                                                        <img src="/images/avatar/test-tubes_3523917.png" alt="Lab Test" style={{ width: 16, height: 16 }} />
+                                                        <img src="/images/avatar/test-tubes_3523917.png" alt="Lab Test" style={{ width: 16, height: 16, filter: 'brightness(0)' }} />
                                                     </div>
                                                     <div
                                                         className="crm-btn"
@@ -2455,7 +2467,7 @@ export default function AppointmentTable() {
                                                             color: '#9e9e9e'
                                                         }}
                                                     >
-                                                        <Save fontSize="small" />
+                                                        <Save fontSize="small" sx={{ color: '#000000' }} />
                                                     </div>
                                                     <div 
                                                         className="crm-btn" 
@@ -2467,7 +2479,7 @@ export default function AppointmentTable() {
                                                             color: '#9e9e9e'
                                                         }}
                                                     >
-                                                        <Delete fontSize="small" />
+                                                        <Delete fontSize="small" sx={{ color: '#000000' }} />
                                                     </div>
                                                     <div 
                                                         className="crm-btn" 
@@ -2480,7 +2492,7 @@ export default function AppointmentTable() {
                                                             opacity: 0.5
                                                         }}
                                                     >
-                                                        <img src="/images/avatar/Visit_details.svg" alt="Checkout" style={{ width: 16, height: 16 }} />
+                                                        <img src="/images/avatar/Visit_details.svg" alt="Checkout" style={{ width: 16, height: 16, filter: 'brightness(0)' }} />
                                                     </div>
                                                 </div>
                                                 <div className="kv">
@@ -2512,7 +2524,7 @@ export default function AppointmentTable() {
                                                         border: '1px solid #CFD8DC'
                                                     }}
                                                 >
-                                                    <img src="/images/avatar/Treatment.svg" alt="Treatment" style={{ width: 16, height: 16 }} />
+                                                        <img src="/images/avatar/Treatment.svg" alt="Treatment" style={{ width: 16, height: 16, filter: 'brightness(0)' }} />
                                                 </div>
                                             </div>
                                         </div>
@@ -2589,6 +2601,65 @@ export default function AppointmentTable() {
                             </div>
                         )}
                     </>
+                )}
+
+                {/* Patient Visit Details Popup (Doctor screen) */}
+                {showVisitDetails && selectedPatientForVisit && (
+                    <PatientVisitDetails 
+                        open={true}
+                        onClose={() => {
+                            setShowVisitDetails(false);
+                            setSelectedPatientForVisit(null);
+                        }}
+                        patientData={selectedPatientForVisit as any}
+                    />
+                )}
+
+                {/* Patient Form Dialog (Doctor screen) */}
+                {showPatientFormDialog && (
+                    <div 
+                        style={{
+                            position: 'fixed',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                            zIndex: 9999,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: '20px'
+                        }}
+                        onClick={(e) => {
+                            if (e.target === e.currentTarget) {
+                                setShowPatientFormDialog(false);
+                            }
+                        }}
+                    >
+                        <div 
+                            style={{
+                                backgroundColor: 'white',
+                                borderRadius: '8px',
+                                width: '1100vw',
+                                maxWidth: '1500px',
+                                maxHeight: '85vh',
+                                overflow: 'auto',
+                                position: 'relative'
+                            }}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                            }}
+                        >
+                            <PatientFormTest 
+                                onClose={() => setShowPatientFormDialog(false)} 
+                                initialData={formPatientData || undefined}
+                                visitDates={visitDates}
+                                currentVisitIndex={currentVisitIndex}
+                                onVisitDateChange={handleVisitDateChange}
+                            />
+                        </div>
+                    </div>
                 )}
 
                 {/* Snackbar for search results */}
@@ -2718,12 +2789,12 @@ export default function AppointmentTable() {
         }
         .price-text { font-weight: 700; color: #2E7D32; font-family: 'Roboto', sans-serif; }
         .subtitle { color: #6b7280; margin-bottom: 8px; font-size: 0.85rem; font-family: 'Roboto', sans-serif; }
-        .card-details { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; margin-bottom: 10px; }
+        .card-details { display: grid; grid-template-columns: 3fr 1fr; gap: 6px 12px; margin-bottom: 10px; }
         .kv { display: flex; gap: 6px; align-items: center; min-width: 0; }
         .kv .k { color: #607D8B; font-size: 0.76rem; }
         .kv .v { color: #111827; font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .crm-actions { display: grid; grid-template-columns: repeat(4, 32px); gap: 8px; }
-        .crm-btn { width: 36px; height: 36px; border-radius: 6px; background: #ECEFF1; display: inline-flex; align-items: center; justify-content: center; color: #607D8B; border: 1px solid #CFD8DC; cursor: pointer; }
+        .crm-btn { width: 36px; height: 36px; border-radius: 6px; background: #ECEFF1; display: inline-flex; align-items: center; justify-content: center; color: black; border: 1px solid #CFD8DC; cursor: pointer; }
         .crm-btn:hover { background: #E3F2FD; color:black; border-color: #90CAF9; }
         .status-indicator {
             width: 12px;
@@ -2951,7 +3022,7 @@ export default function AppointmentTable() {
                     |
                     <span className="mx-1"><span className="rounded-circle d-inline-block bg-success" style={{ width: 10, height: 10 }}></span> {statusCounts['WITH DOCTOR'] || 0} </span>
                     |
-                    <span className="mx-1"><span className="rounded-circle d-inline-block bg-info" style={{ width: 10, height: 10 }}></span> {statusCounts['WITH DOCTOR (ON PHONE)'] || 0} </span>
+                    <span className="mx-1"><span className="rounded-circle d-inline-block bg-info" style={{ width: 10, height: 10 }}></span> {statusCounts['CONSULT ON CALL'] || 0} </span>
                     |
                     <span className="mx-1"><span className="rounded-circle d-inline-block bg-warning" style={{ width: 10, height: 10 }}></span> {statusCounts['CHECK OUT'] || 0} </span>
                     |
@@ -3105,11 +3176,22 @@ export default function AppointmentTable() {
                     style={{ height: '38px', width: '160px', color: filterStatus ? '#212121' : '#6c757d', padding: '6px 12px', lineHeight: '1.5', fontSize: '1rem' }}
                 >
                     <option value="">Select Status</option>
-                    {(availableStatuses.length ? availableStatuses : [
-                        'WAITING','WITH DOCTOR','WITH DOCTOR (ON PHONE)','CHECK OUT','SAVE','COMPLETE'
-                    ]).map(s => (
-                        <option key={s} value={s}>{s}</option>
-                    ))}
+                    {(() => {
+                        const availableStatuses1 = availableStatuses.filter(status => {
+                            const statusId = mapStatusLabelToId(status);
+                            return statusId === 1 || statusId === 2 || statusId === 3;
+                        });
+                        const filteredStatuses = availableStatuses1;
+                        console.log('📋 Status Filter Dropdown Options:', {
+                            availableStatuses1,
+                            availableStatuses,
+                            filteredStatuses,
+                            statusIds: filteredStatuses.map(s => ({ status: s, id: mapStatusLabelToId(s) }))
+                        });
+                        return filteredStatuses.map(s => (
+                            <option key={s} value={s}>{s}</option>
+                        ));
+                    })()}
                     
                 </select>
 
@@ -3118,12 +3200,10 @@ export default function AppointmentTable() {
                     className="d-flex align-items-center ms-auto"
                     style={{
                         height: "38px",
-                        // backgroundColor: "#607D8B",
-                        borderColor: "#B7B7B7",
-                        color: "#fff",
+                        backgroundColor: "#f8f9fa",
+                        // border: "1px solid #dee2e6",
                         fontFamily: "'Roboto', sans-serif",
                         borderRadius: "6px",
-                        // border: "1px solid #B7B7B7",
                         overflow: "hidden",
                         gap: "8px"
                     }}
@@ -3132,40 +3212,38 @@ export default function AppointmentTable() {
                         className="btn d-flex align-items-center justify-content-center"
                         style={{
                             height: "100%",
-                            backgroundColor: activeView === 'list' ? "#4CAF50" : "transparent",
+                            backgroundColor: activeView === 'list' ? "#007bff" : "#6c757d",
                             border: "none",
-                            color: "#fff",
+                            color: "#ffffff",
                             fontFamily: "'Roboto', sans-serif",
-                            opacity: activeView === 'list' ? 0.7 : 1,
-                            cursor: activeView === 'list' ? 'not-allowed' : 'pointer',
+                            cursor: "pointer",
                             padding: "0 12px",
-                            minWidth: "40px"
+                            minWidth: "40px",
+                            transition: "all 0.2s ease"
                         }}
                         onClick={handleListClick}
-                        disabled={activeView === 'list'}
                         title="List View"
                     >
-                            <List style={{ color: '#000000' }} />
+                        <List style={{ color: '#ffffff' }} />
                     </button>
-                    <div style={{ width: '1px', height: '100%', backgroundColor: '#fff', opacity: 0.7 }} />
+                    {/* <div style={{ width: '1px', height: '100%', backgroundColor: '#dee2e6' }} /> */}
                     <button
                         className="btn d-flex align-items-center justify-content-center"
                         style={{
                             height: "100%",
-                            backgroundColor: activeView === 'card' ? "#4CAF50" : "transparent",
+                            backgroundColor: activeView === 'card' ? "#007bff" : "#6c757d",
                             border: "none",
-                            color: "#fff",
+                            color: "#ffffff",
                             fontFamily: "'Roboto', sans-serif",
-                            opacity: activeView === 'card' ? 0.7 : 1,
-                            cursor: activeView === 'card' ? 'not-allowed' : 'pointer',
+                            cursor: "pointer",
                             padding: "0 12px",
-                            minWidth: "40px"
+                            minWidth: "40px",
+                            transition: "all 0.2s ease"
                         }}
                         onClick={handleCardClick}
-                        disabled={activeView === 'card'}
                         title="Card View"
                     >
-                            <CreditCard style={{ color: '#000000' }} />
+                        <CreditCard style={{ color: '#ffffff' }} />
                     </button>
                 </div>
             </div>
@@ -3284,7 +3362,17 @@ export default function AppointmentTable() {
                                                                     };
                                                                     const labels = Array.from(new Set((resp.statusOptions || []).map(pickLabel).filter(Boolean))) as string[];
                                                                     const ensured = labels.includes('WAITING') ? labels : ['WAITING', ...labels];
-                                                                    setAvailableStatuses(ensured);
+                                                                    // Filter to only show status IDs 1, 2, 3 for reception login
+                                                                    const filteredStatuses = ensured.filter(status => {
+                                                                        const statusId = mapStatusLabelToId(status);
+                                                                        return statusId === 1 || statusId === 2 || statusId === 3;
+                                                                    });
+                                                                    console.log('🔍 Available Statuses (API Loaded):', {
+                                                                        original: ensured,
+                                                                        filtered: filteredStatuses,
+                                                                        statusIds: filteredStatuses.map(s => ({ status: s, id: mapStatusLabelToId(s) }))
+                                                                    });
+                                                                    setAvailableStatuses(filteredStatuses);
                                                                 }
                                                             } catch (err) {
                                                                 console.error('Failed loading clinic status options', err);
@@ -3325,7 +3413,17 @@ export default function AppointmentTable() {
                                                             fontFamily: "'Roboto', sans-serif",
                                                         }}
                                                     >
-                                                        {(availableStatuses.length ? availableStatuses : ["WAITING","WITH DOCTOR","WITH DOCTOR (ON PHONE)","CHECK OUT","SAVE","COMPLETE"]).map((status) => (
+                                                        {(() => {
+                                                            const filteredStatuses = availableStatuses.length ? availableStatuses.filter(status => {
+                                                                const statusId = mapStatusLabelToId(status);
+                                                                return statusId === 1 || statusId === 2 || statusId === 3;
+                                                            }) : ["WAITING","WITH DOCTOR","CONSULT ON CALL"];
+                                                            console.log('🔄 List View Status Change Options:', {
+                                                                availableStatuses,
+                                                                filteredStatuses,
+                                                                statusIds: filteredStatuses.map(s => ({ status: s, id: mapStatusLabelToId(s) }))
+                                                            });
+                                                            return filteredStatuses.map((status) => (
                                                             <div
                                                                 key={status}
                                                                 onClick={() => {
@@ -3347,7 +3445,8 @@ export default function AppointmentTable() {
                                                             >
                                                                 {status}
                                                             </div>
-                                                        ))}
+                                                            ));
+                                                        })()}
                                                     </div>
                                                 )}
                                             </td>
@@ -3393,7 +3492,7 @@ export default function AppointmentTable() {
                                                             width: '28px',
                                                             height: '28px',
                                                             cursor: 'pointer',
-                                                            color: '#607D8B',
+                                                            color: '#000000',
                                                             backgroundColor: 'transparent',
                                                             borderRadius: '4px',
                                                             border: '1px solid #ddd'
@@ -3416,7 +3515,8 @@ export default function AppointmentTable() {
                                                         onClick={async () => {
                                                             try {
                                                                 const pid = a.patientId;
-                                                                const vno = getLatestVisitNumber(a.patientId);
+                                                                // Use the visit number from the selected appointment row
+                                                                const vno = Number(a.visitNumber) || getLatestVisitNumber(a.patientId);
                                                                 const shift = 1;
                                                                 const clinic = sessionData?.clinicId || '';
                                                                 const onlineTime = (a.online || '').trim() || undefined;
@@ -3463,7 +3563,7 @@ export default function AppointmentTable() {
                                                             e.currentTarget.style.borderColor = '#ddd';
                                                         }}
                                                     >
-                                                        <Save fontSize="small" />
+                                                        <Save fontSize="small" sx={{ color: '#000000' }} />
                                                     </div>
 
                                                     {/* Delete Button */}
@@ -3508,7 +3608,7 @@ export default function AppointmentTable() {
                                                             e.currentTarget.style.borderColor = '#ddd';
                                                         }}
                                                     >
-                                                        <Delete fontSize="small" />
+                                                        <Delete fontSize="small" sx={{ color: '#000000' }} />
                                                     </div>
 
                                                     {/* Checkout Button */}
@@ -3539,7 +3639,7 @@ export default function AppointmentTable() {
                                                             e.currentTarget.style.borderColor = '#ddd';
                                                         }}
                                                     >
-                                                        <img src="/images/avatar/Visit_details.svg" alt="Visit Details" style={{ width: 16, height: 16 }} />
+                                                        <img src="/images/avatar/Visit_details.svg" alt="Visit Details" style={{ width: 16, height: 16, filter: 'brightness(0)' }} />
                                                     </div>
 
                                                     {/* Collection Button */}
@@ -3570,7 +3670,7 @@ export default function AppointmentTable() {
                                                             e.currentTarget.style.borderColor = '#ddd';
                                                         }}
                                                     >
-                                                        <FastForward fontSize="small" />
+                                                        <img src="/images/avatar/tax.png" alt="Collection" style={{ width: 16, height: 16, filter: 'brightness(0)' }} />
                                                     </div>
                                                 </div>
                                             </td>
@@ -3609,7 +3709,7 @@ export default function AppointmentTable() {
                                                     width: '28px',
                                                     height: '28px',
                                                     cursor: 'pointer',
-                                                    color: '#607D8B',
+                                                    color: '#000000',
                                                     backgroundColor: 'transparent',
                                                     borderRadius: '4px'
                                                 }}
@@ -3633,34 +3733,49 @@ export default function AppointmentTable() {
                                                     fontFamily: "'Roboto', sans-serif",
                                                 }}
                                             >
-                                                {(availableStatuses.length ? availableStatuses : ["WAITING","WITH DOCTOR","WITH DOCTOR (ON PHONE)","CHECK OUT","SAVE","COMPLETE"]).map((status) => (
-                                                    <div
-                                                        key={status}
-                                                        onClick={() => {
-                                                            updateAppointmentField(originalIndex, 'status', status);
-                                                            updateAppointmentField(originalIndex, 'statusColor', getStatusColor(status));
-                                                            setOpenStatusIndex(null);
-                                                            setMenuPosition(null);
-                                                        }}
-                                                        style={{
-                                                            padding: '8px 12px',
-                                                            cursor: 'pointer',
-                                                            fontSize: '14px',
-                                                            color: '#212121',
-                                                            backgroundColor: '#fff',
-                                                            textAlign: 'left',
-                                                        }}
-                                                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f5f5f5')}
-                                                        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#fff')}
-                                                    >
-                                                        {status}
-                                                    </div>
-                                                ))}
+                                                {(() => {
+                                                    const filteredStatuses = availableStatuses.length ? availableStatuses.filter(status => {
+                                                        const statusId = mapStatusLabelToId(status);
+                                                        return statusId === 1 || statusId === 2 || statusId === 3;
+                                                    }) : ["WAITING","WITH DOCTOR","CONSULT ON CALL"];
+                                                    console.log('🃏 Card View Status Change Options:', {
+                                                        availableStatuses,
+                                                        filteredStatuses,
+                                                        statusIds: filteredStatuses.map(s => ({ status: s, id: mapStatusLabelToId(s) }))
+                                                    });
+                                                    return (
+                                                        <>
+                                                            {filteredStatuses.map((status) => (
+                                                                <div
+                                                                    key={status}
+                                                                    onClick={() => {
+                                                                        updateAppointmentField(originalIndex, 'status', status);
+                                                                        updateAppointmentField(originalIndex, 'statusColor', getStatusColor(status));
+                                                                        setOpenStatusIndex(null);
+                                                                        setMenuPosition(null);
+                                                                    }}
+                                                                    style={{
+                                                                        padding: '8px 12px',
+                                                                        cursor: 'pointer',
+                                                                        fontSize: '14px',
+                                                                        color: '#212121',
+                                                                        backgroundColor: '#fff',
+                                                                        textAlign: 'left',
+                                                                    }}
+                                                                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f5f5f5')}
+                                                                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#fff')}
+                                                                >
+                                                                    {status}
+                                                                </div>
+                                                            ))}
+                                                        </>
+                                                    );
+                                                })()}
                                             </div>
                                         )}
-                                        <div className="card-details">
-                                            <div className="kv"><span className="k">Age:</span><span className="v">{appointment.age}</span></div>
-                                            <div className="kv"><span className="k">Gender:</span><span className="v">{appointment.gender}</span></div>
+                                        <div className="card-details">                                            
+                                            <div className="kv"><span className="k">Contact:</span><span className="v">{appointment.contact}</span></div>
+                                            <div className="kv"><span className="k">Age:</span><span className="v">{appointment.age}</span></div>                                            
                                             <div className="kv">
                                                     <span className="k">Last Visit:</span>
                                                     <span className="v">
@@ -3684,22 +3799,20 @@ export default function AppointmentTable() {
                                                         </a>
                                                     </span>
                                                 </div>
-                                            <div className="kv"><span className="k">Contact:</span><span className="v">{appointment.contact}</span></div>
-                                            {/* <div className="kv"><span className="k">Last Visit:</span><span className="v"><a href={`/patients/${appointment.patientId}/visits`} title={`Dr.Tongaonkar`} style={{ textDecoration: 'underline', color: '#1E88E5' }}>{`${formatYearToTwoDigits(appointment.lastOpd)}`} -L</a></span></div> */}
-                                            {/* <div className="kv"><span className="k">Dr. Tongaonkar</span></div> */}
-                                            <div className="kv"><span className="k">Time:</span><span className="v">{extractTime(appointment.time)}</span></div>
+                                            <div className="kv"><span className="k">Gender:</span><span className="v">{appointment.gender}</span></div>
                                             <div className="kv"><span className="k">Provider:</span><span className="v">
                                                 <select
                                                     className="form-select"
                                                     value={appointment.provider || getDoctorLabelById(selectedDoctorId) || ''}
                                                     onChange={(e) => handleProviderChange(originalIndex, e.target.value)}
-                                                    style={{ width: '151px', height: '28px', padding: '2px', fontSize: 11 }}
+                                                    style={{ width: '161px', height: '28px', padding: '2px', fontSize: 11 }}
                                                 >
                                                     {getProviderOptionsWithSelectedFirst().map(opt => (
                                                         <option key={opt.id} value={opt.label}>{opt.label}</option>
                                                     ))}
                                                 </select>
                                             </span></div>
+                                            <div className="kv"><span className="k">Time:</span><span className="v">{extractTime(appointment.time)}</span></div>
                                         </div>
                                         {/* <div className="crm-actions">
                                             <div className="crm-btn" title="Chat"><ChatBubbleOutline fontSize="small" /></div>
@@ -3708,7 +3821,7 @@ export default function AppointmentTable() {
                                             <div className="crm-btn" title="Transfer"><SwapHoriz fontSize="small" /></div>
                                         </div> */}
                                         <div className="d-flex align-items-center" style={{ gap: '8px' }}>
-                                            <div className="crm-actions" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, max-content)', alignItems: 'center', gap: '8px' }}>
+                                                <div className="crm-actions" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, max-content)', alignItems: 'center', gap: '8px' }}>
                                                 <div
                                                     className="crm-btn"
                                                     title="Lab Details"
@@ -3717,15 +3830,16 @@ export default function AppointmentTable() {
                                                         console.log('Lab Details clicked for patient:', appointment.patientId);
                                                     }}
                                                 >
-                                                    <AddIcon fontSize="small" />
+                                                    <img src="/images/avatar/test-tubes_3523917.png" alt="Lab Test" style={{ width: 16, height: 16 }} />
                                                 </div>
-                                                <div
+                                                    <div
                                                     className="crm-btn"
                                                     title="Save"
                                                     onClick={async () => {
                                                         try {
                                                             const pid = appointment.patientId;
-                                                            const vno = getLatestVisitNumber(appointment.patientId);
+                                                            // Use the visit number from the selected appointment card
+                                                            const vno = Number(appointment.visitNumber) || getLatestVisitNumber(appointment.patientId);
                                                             const shift = 1; // using default shift
                                                             const clinic = sessionData?.clinicId || '';
                                                             const onlineTime = (appointment.online || '').trim() || undefined;
@@ -3799,7 +3913,7 @@ export default function AppointmentTable() {
                                                     }}
                                                     style={{ cursor: 'pointer' }}
                                                 >
-                                                    <Info fontSize="small" />
+                                                    <img src="/images/avatar/Visit_details.svg" alt="Visit Details" style={{ width: 16, height: 16 }} />
                                                 </div>
                                                 <div className="kv">
                                                     <span className="k">Online:</span>
@@ -3815,7 +3929,7 @@ export default function AppointmentTable() {
                                                     </span>
                                                 </div>
                                             </div>
-                                            <div className="crm-btn ms-auto" title="Collection"><FastForward fontSize="small" /></div>
+                                                <div className="crm-btn ms-auto" title="Collection"><img src="/images/avatar/tax.png" alt="Collection" style={{ width: 16, height: 16, filter: 'brightness(0)' }} /></div>
                                         </div>
                                     </div>
                                     </div>
