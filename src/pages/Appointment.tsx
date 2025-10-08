@@ -2023,7 +2023,7 @@ export default function AppointmentTable() {
                                                                 e.currentTarget.style.borderColor = '#ddd';
                                                             }}
                                                         >
-                                                            <ShoppingCart fontSize="small" />
+                                                            <Info fontSize="small" />
                                                         </div>
 
                                                         {/* Treatment Button - Enabled for Doctor */}
@@ -2222,7 +2222,7 @@ export default function AppointmentTable() {
                                                             border: '1px solid #CFD8DC'
                                                         }}
                                                     >
-                                                        <ShoppingCart fontSize="small" />
+                                                        <Info fontSize="small" />
                                                     </div>
                                                 </div>
                                                 <div className="kv">
@@ -3278,7 +3278,7 @@ export default function AppointmentTable() {
                                                             e.currentTarget.style.borderColor = '#ddd';
                                                         }}
                                                     >
-                                                        <ShoppingCart fontSize="small" />
+                                                        <Info fontSize="small" />
                                                     </div>
 
                                                     {/* Collection Button */}
@@ -3527,7 +3527,7 @@ export default function AppointmentTable() {
                                                     }}
                                                     style={{ cursor: 'pointer' }}
                                                 >
-                                                    <ShoppingCart fontSize="small" />
+                                                    <Info fontSize="small" />
                                                 </div>
                                                 <div className="kv">
                                                     <span className="k">Online:</span>

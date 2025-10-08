@@ -36,6 +36,82 @@ export interface VisitDetails {
   notes?: string;
 }
 
+// Comprehensive visit data request interface
+export interface ComprehensiveVisitDataRequest {
+  patientId: string;
+  doctorId: string;
+  clinicId: string;
+  shiftId: string;
+  visitDate: string;
+  patientVisitNo: string;
+  referBy: string;
+  referralName: string;
+  referralContact: string;
+  referralEmail: string;
+  referralAddress: string;
+  pulse: number;
+  heightInCms: number;
+  weightInKgs: number;
+  bloodPressure: string;
+  sugar: string;
+  tft: string;
+  pastSurgicalHistory: string;
+  previousVisitPlan: string;
+  chiefComplaint: string;
+  visitComments: string;
+  currentMedicines: string;
+  hypertension: boolean;
+  diabetes: boolean;
+  cholestrol: boolean;
+  ihd: boolean;
+  th: boolean;
+  asthama: boolean;
+  smoking: boolean;
+  tobaco: boolean;
+  alchohol: boolean;
+  habitDetails: string;
+  allergyDetails: string;
+  observation: string;
+  inPerson: boolean;
+  symptomComment: string;
+  reason: string;
+  impression: string;
+  attendedBy: string;
+  paymentById: number;
+  paymentRemark: string;
+  attendedById: number;
+  followUp: string;
+  followUpFlag: boolean;
+  currentComplaint: string;
+  visitCommentsField: string;
+  tpr: string;
+  importantFindings: string;
+  additionalComments: string;
+  systemic: string;
+  odeama: string;
+  pallor: string;
+  gc: string;
+  fmp: string;
+  prmc: string;
+  pamc: string;
+  lmp: string;
+  obstetricHistory: string;
+  surgicalHistory: string;
+  menstrualAddComments: string;
+  followUpComment: string;
+  followUpDate: string;
+  pregnant: boolean;
+  edd: string;
+  followUpType: string;
+  feesToCollect: number;
+  feesPaid: number;
+  discount: number;
+  originalDiscount: number;
+  statusId: number;
+  userId: string;
+  isSubmitPatientVisitDetails: boolean;
+}
+
 export const visitService = {
   /**
    * Get patient's visit history (last visits)
@@ -62,6 +138,34 @@ export const visitService = {
       }
       
       throw new Error(error.response?.data?.error || 'Failed to fetch visit history');
+    }
+  },
+
+  /**
+   * Get last visit details for a patient
+   * @param patientId - Patient ID or folder number
+   * @returns Promise<any>
+   */
+  async getLastVisitDetails(patientId: string): Promise<any> {
+    try {
+      console.log(`Fetching last visit details for patient: ${patientId}`);
+      const response = await api.get(`/visits/last-visit/${patientId}`);
+      console.log('Last visit details response:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error('Get last visit details API Error:', error);
+      
+      if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
+        throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
+      }
+      
+      if (error.response?.status === 404) {
+        throw new Error('Last visit details not found.');
+      } else if (error.response?.status === 500) {
+        throw new Error('Server error occurred while fetching last visit details.');
+      }
+      
+      throw new Error(error.response?.data?.error || 'Failed to fetch last visit details');
     }
   },
 
@@ -121,6 +225,34 @@ export const visitService = {
       }
       
       throw new Error(error.response?.data?.error || 'Failed to fetch visit details');
+    }
+  },
+
+  /**
+   * Save comprehensive visit data
+   * @param visitData - Comprehensive visit data
+   * @returns Promise<any>
+   */
+  async saveComprehensiveVisitData(visitData: ComprehensiveVisitDataRequest): Promise<any> {
+    try {
+      console.log('Saving comprehensive visit data:', visitData);
+      const response = await api.post('/visits/comprehensive-save-jpa', visitData);
+      console.log('Comprehensive visit save response:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error('Save comprehensive visit API Error:', error);
+      
+      if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
+        throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
+      }
+      
+      if (error.response?.status === 400) {
+        throw new Error(error.response?.data?.error || 'Validation failed. Please check your input data.');
+      } else if (error.response?.status === 500) {
+        throw new Error('Server error occurred while saving visit data.');
+      }
+      
+      throw new Error(error.response?.data?.error || 'Failed to save visit data');
     }
   }
 };
