@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Close, Add } from '@mui/icons-material';
 import { Snackbar } from '@mui/material';
 import { visitService, ComprehensiveVisitDataRequest } from '../services/visitService';
+import AddReferralPopup, { ReferralData } from '../components/AddReferralPopup';
 
 interface AppointmentRow {
     reports_received: any;
@@ -67,8 +68,11 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
     // New states for referral name search and popup
     const [referralNameSearch, setReferralNameSearch] = useState('');
     const [showReferralPopup, setShowReferralPopup] = useState(false);
-    const [referralNameOptions, setReferralNameOptions] = useState<{ id: string; name: string }[]>([]);
+    const [referralNameOptions, setReferralNameOptions] = useState<{ id: string; name: string; fullData?: any }[]>([]);
     const [isSearchingReferral, setIsSearchingReferral] = useState(false);
+    const [selectedDoctor, setSelectedDoctor] = useState<any>(null);
+
+    // (Reverted) complaints multi-select state removed
 
     // Load referral options from API
     React.useEffect(() => {
@@ -87,6 +91,29 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
             cancelled = true;
         };
     }, []);
+
+    // Load referral doctors when referral type is "Doctor"
+    React.useEffect(() => {
+        let cancelled = false;
+        async function loadReferralDoctors() {
+            if (isDoctorReferral()) {
+                try {
+                    const { getReferralDoctors } = await import('../services/referralService');
+                    const doctors = await getReferralDoctors(1); // languageId = 1
+                    
+                    console.log('=== LOADING REFERRAL DOCTORS ON MOUNT ===');
+                    console.log('All referral doctors:', doctors);
+                    console.log('=== END LOADING REFERRAL DOCTORS ON MOUNT ===');
+                } catch (e) {
+                    console.error('Failed to load referral doctors', e);
+                }
+            }
+        }
+        loadReferralDoctors();
+        return () => {
+            cancelled = true;
+        };
+    }, [formData.referralBy]);
 
     // Load last visit details when dialog opens and patient data is available
     React.useEffect(() => {
@@ -206,6 +233,10 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
             if (field === 'referralBy') {
                 setReferralNameSearch('');
                 setReferralNameOptions([]);
+                // Clear selected doctor if not a doctor referral
+                if (value !== 'D') {
+                    setSelectedDoctor(null);
+                }
             }
             
             return newData;
@@ -227,15 +258,34 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
         
         setIsSearchingReferral(true);
         try {
-            // Mock search - replace with actual API call
-            const mockResults = [
-                { id: '1', name: `Dr. ${searchTerm} Smith` },
-                { id: '2', name: `Dr. ${searchTerm} Johnson` },
-                { id: '3', name: `Dr. ${searchTerm} Williams` }
-            ].filter(option => 
-                option.name.toLowerCase().includes(searchTerm.toLowerCase())
+            // Call the actual referral doctors API
+            const { getReferralDoctors } = await import('../services/referralService');
+            const doctors = await getReferralDoctors(1); // languageId = 1
+            
+            console.log('=== REFERRAL DOCTORS SEARCH DEBUG ===');
+            console.log('Search term:', searchTerm);
+            console.log('All doctors from API:', doctors);
+            
+            // Filter doctors by name containing the search term
+            const filteredDoctors = doctors.filter(doctor => 
+                doctor.doctorName.toLowerCase().includes(searchTerm.toLowerCase())
             );
-            setReferralNameOptions(mockResults);
+            
+            console.log('Filtered doctors:', filteredDoctors);
+            
+            // Store the full doctor data for later use
+            setReferralNameOptions(filteredDoctors.map(doctor => ({
+                id: doctor.rdId.toString(),
+                name: doctor.doctorName,
+                fullData: doctor // Store the complete doctor object
+            })));
+            
+            console.log('Mapped results for dropdown:', filteredDoctors.map(doctor => ({
+                id: doctor.rdId.toString(),
+                name: doctor.doctorName,
+                fullData: doctor
+            })));
+            console.log('=== END REFERRAL DOCTORS SEARCH DEBUG ===');
         } catch (error) {
             console.error('Error searching referral names:', error);
             setReferralNameOptions([]);
@@ -436,6 +486,9 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
         setError(null);
         setSuccess(null);
         setSnackbarOpen(false);
+        setSelectedDoctor(null);
+        setReferralNameSearch('');
+        setReferralNameOptions([]);
         setSnackbarMessage('');
     };
 
@@ -706,9 +759,30 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                     <div
                                                         key={option.id}
                                                         onClick={() => {
-                                                            setFormData(prev => ({ ...prev, referralName: option.name }));
+                                                            // Store the selected doctor data
+                                                            setSelectedDoctor((option as any).fullData);
+                                                            
+                                                            // Update form data with doctor information
+                                                            setFormData(prev => ({ 
+                                                                ...prev, 
+                                                                referralName: option.name,
+                                                                referralContact: (option as any).fullData?.doctorMob || '',
+                                                                referralEmail: (option as any).fullData?.doctorMail || '',
+                                                                referralAddress: (option as any).fullData?.doctorAddress || ''
+                                                            }));
+                                                            
                                                             setReferralNameSearch(option.name);
                                                             setReferralNameOptions([]);
+                                                            
+                                                            console.log('=== DOCTOR SELECTED ===');
+                                                            console.log('Selected doctor data:', (option as any).fullData);
+                                                            console.log('Updated form data:', {
+                                                                referralName: option.name,
+                                                                referralContact: (option as any).fullData?.doctorMob || '',
+                                                                referralEmail: (option as any).fullData?.doctorMail || '',
+                                                                referralAddress: (option as any).fullData?.doctorAddress || ''
+                                                            });
+                                                            console.log('=== END DOCTOR SELECTED ===');
                                                         }}
                                                         style={{
                                                             padding: '8px 12px',
@@ -768,6 +842,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     placeholder="Contact"
                                     value={formData.referralContact}
                                     onChange={(e) => handleInputChange('referralContact', e.target.value)}
+                                    disabled={selectedDoctor !== null}
                                     style={{
                                         width: '100%',
                                         height: '32px',
@@ -777,13 +852,16 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                         fontSize: '0.9rem',
                                         fontFamily: "'Roboto', sans-serif",
                                         fontWeight: '500',
-                                        backgroundColor: 'white',
+                                        backgroundColor: selectedDoctor !== null ? '#f5f5f5' : 'white',
                                         outline: 'none',
-                                        transition: 'border-color 0.2s'
+                                        transition: 'border-color 0.2s',
+                                        cursor: selectedDoctor !== null ? 'not-allowed' : 'text'
                                     }}
                                     onFocus={(e) => {
-                                        e.target.style.borderColor = '#1E88E5';
-                                        e.target.style.boxShadow = 'none';
+                                        if (selectedDoctor === null) {
+                                            e.target.style.borderColor = '#1E88E5';
+                                            e.target.style.boxShadow = 'none';
+                                        }
                                     }}
                                     onBlur={(e) => {
                                         e.target.style.borderColor = '#B7B7B7';
@@ -799,6 +877,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     placeholder="Email"
                                     value={formData.referralEmail}
                                     onChange={(e) => handleInputChange('referralEmail', e.target.value)}
+                                    disabled={selectedDoctor !== null}
                                     style={{
                                         width: '100%',
                                         height: '32px',
@@ -808,13 +887,16 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                         fontSize: '0.9rem',
                                         fontFamily: "'Roboto', sans-serif",
                                         fontWeight: '500',
-                                        backgroundColor: 'white',
+                                        backgroundColor: selectedDoctor !== null ? '#f5f5f5' : 'white',
                                         outline: 'none',
-                                        transition: 'border-color 0.2s'
+                                        transition: 'border-color 0.2s',
+                                        cursor: selectedDoctor !== null ? 'not-allowed' : 'text'
                                     }}
                                     onFocus={(e) => {
-                                        e.target.style.borderColor = '#1E88E5';
-                                        e.target.style.boxShadow = 'none';
+                                        if (selectedDoctor === null) {
+                                            e.target.style.borderColor = '#1E88E5';
+                                            e.target.style.boxShadow = 'none';
+                                        }
                                     }}
                                     onBlur={(e) => {
                                         e.target.style.borderColor = '#B7B7B7';
@@ -830,6 +912,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     placeholder="Address"
                                     value={formData.referralAddress}
                                     onChange={(e) => handleInputChange('referralAddress', e.target.value)}
+                                    disabled={selectedDoctor !== null}
                                     style={{
                                         width: '100%',
                                         height: '32px',
@@ -839,13 +922,16 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                         fontSize: '0.9rem',
                                         fontFamily: "'Roboto', sans-serif",
                                         fontWeight: '500',
-                                        backgroundColor: 'white',
+                                        backgroundColor: selectedDoctor !== null ? '#f5f5f5' : 'white',
                                         outline: 'none',
-                                        transition: 'border-color 0.2s'
+                                        transition: 'border-color 0.2s',
+                                        cursor: selectedDoctor !== null ? 'not-allowed' : 'text'
                                     }}
                                     onFocus={(e) => {
-                                        e.target.style.borderColor = '#1E88E5';
-                                        e.target.style.boxShadow = 'none';
+                                        if (selectedDoctor === null) {
+                                            e.target.style.borderColor = '#1E88E5';
+                                            e.target.style.boxShadow = 'none';
+                                        }
                                     }}
                                     onBlur={(e) => {
                                         e.target.style.borderColor = '#B7B7B7';
@@ -1434,298 +1520,16 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
         />
 
         {/* Add New Referral Popup */}
-        {showReferralPopup && (
-            <div
-                style={{
-                    position: 'fixed',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    zIndex: 10001,
-                }}
-                onClick={() => setShowReferralPopup(false)}
-            >
-                <div
-                    style={{
-                        backgroundColor: 'white',
-                        borderRadius: '8px',
-                        maxWidth: '500px',
-                        width: '90%',
-                        maxHeight: '80vh',
-                        overflow: 'auto',
-                        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
-                        display: 'flex',
-                        flexDirection: 'column',
-                    }}
-                    onClick={(e) => e.stopPropagation()}
-                >
-                    {/* Popup Header */}
-                    <div style={{
-                        background: 'white',
-                        padding: '15px 20px',
-                        borderTopLeftRadius: '8px',
-                        borderTopRightRadius: '8px',
-                        fontFamily: "'Roboto', sans-serif",
-                        color: '#212121',
-                        fontSize: '0.9rem'
-                    }}>
-                        <div style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center'
-                        }}>
-                            <h3 style={{ margin: 0, color: '#000000', fontSize: '18px', fontWeight: 'bold' }}>
-                                Add New Referral
-                            </h3>
-                            <button
-                                onClick={() => setShowReferralPopup(false)}
-                                style={{
-                                    background: 'none',
-                                    border: 'none',
-                                    cursor: 'pointer',
-                                    padding: '5px',
-                                    borderRadius: '8px',
-                                    color: '#fff',
-                                    backgroundColor: '#1976d2',
-                                    width: '32px',
-                                    height: '32px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    transition: 'background-color 0.2s'
-                                }}
-                                onMouseEnter={(e) => {
-                                    e.currentTarget.style.backgroundColor = '#1565c0';
-                                }}
-                                onMouseLeave={(e) => {
-                                    e.currentTarget.style.backgroundColor = '#1976d2';
-                                }}
-                            >
-                                <Close fontSize="small" />
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Popup Content */}
-                    <div style={{ padding: '20px', flex: 1 }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
-                            <div>
-                                <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', fontWeight: 700, color: '#333' }}>
-                                    Doctor Name *
-                                </label>
-                                <input
-                                    type="text"
-                                    placeholder="Enter doctor name"
-                                    style={{
-                                        width: '100%',
-                                        height: '32px',
-                                        padding: '4px 8px',
-                                        border: '2px solid #B7B7B7',
-                                        borderRadius: '6px',
-                                        fontSize: '0.9rem',
-                                        fontFamily: "'Roboto', sans-serif",
-                                        fontWeight: '500',
-                                        backgroundColor: 'white',
-                                        outline: 'none',
-                                        transition: 'border-color 0.2s'
-                                    }}
-                                    onFocus={(e) => {
-                                        e.target.style.borderColor = '#1E88E5';
-                                        e.target.style.boxShadow = 'none';
-                                    }}
-                                    onBlur={(e) => {
-                                        e.target.style.borderColor = '#B7B7B7';
-                                    }}
-                                />
-                            </div>
-                            <div>
-                                <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', fontWeight: 700, color: '#333' }}>
-                                    Doctor Number
-                                </label>
-                                <input
-                                    type="text"
-                                    placeholder="Enter contact number"
-                                    style={{
-                                        width: '100%',
-                                        height: '32px',
-                                        padding: '4px 8px',
-                                        border: '2px solid #B7B7B7',
-                                        borderRadius: '6px',
-                                        fontSize: '0.9rem',
-                                        fontFamily: "'Roboto', sans-serif",
-                                        fontWeight: '500',
-                                        backgroundColor: 'white',
-                                        outline: 'none',
-                                        transition: 'border-color 0.2s'
-                                    }}
-                                    onFocus={(e) => {
-                                        e.target.style.borderColor = '#1E88E5';
-                                        e.target.style.boxShadow = 'none';
-                                    }}
-                                    onBlur={(e) => {
-                                        e.target.style.borderColor = '#B7B7B7';
-                                    }}
-                                />
-                            </div>
-                        </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
-                            <div>
-                                <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', fontWeight: 700, color: '#333' }}>
-                                    Doctor Email
-                                </label>
-                                <input
-                                    type="email"
-                                    placeholder="Enter doctor email"
-                                    style={{
-                                        width: '100%',
-                                        height: '32px',
-                                        padding: '4px 8px',
-                                        border: '2px solid #B7B7B7',
-                                        borderRadius: '6px',
-                                        fontSize: '0.9rem',
-                                        fontFamily: "'Roboto', sans-serif",
-                                        fontWeight: '500',
-                                        backgroundColor: 'white',
-                                        outline: 'none',
-                                        transition: 'border-color 0.2s'
-                                    }}
-                                    onFocus={(e) => {
-                                        e.target.style.borderColor = '#1E88E5';
-                                        e.target.style.boxShadow = 'none';
-                                    }}
-                                    onBlur={(e) => {
-                                        e.target.style.borderColor = '#B7B7B7';
-                                    }}
-                                />
-                            </div>
-                            <div>
-                                <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', fontWeight: 700, color: '#333' }}>
-                                    Remark
-                                </label>
-                                <input
-                                    type="text"
-                                    placeholder="Enter remark"
-                                    style={{
-                                        width: '100%',
-                                        height: '32px',
-                                        padding: '4px 8px',
-                                        border: '2px solid #B7B7B7',
-                                        borderRadius: '6px',
-                                        fontSize: '0.9rem',
-                                        fontFamily: "'Roboto', sans-serif",
-                                        fontWeight: '500',
-                                        backgroundColor: 'white',
-                                        outline: 'none',
-                                        transition: 'border-color 0.2s'
-                                    }}
-                                    onFocus={(e) => {
-                                        e.target.style.borderColor = '#1E88E5';
-                                        e.target.style.boxShadow = 'none';
-                                    }}
-                                    onBlur={(e) => {
-                                        e.target.style.borderColor = '#B7B7B7';
-                                    }}
-                                />
-                            </div>
-                        </div>
-                        <div style={{ marginBottom: '15px' }}>
-                            <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', fontWeight: 700, color: '#333' }}>
-                                Doctor Address
-                            </label>
-                            <textarea
-                                placeholder="Enter doctor address"
-                                rows={2}
-                                style={{
-                                    width: '100%',
-                                    padding: '4px 8px',
-                                    border: '2px solid #B7B7B7',
-                                    borderRadius: '6px',
-                                    fontSize: '0.9rem',
-                                    fontFamily: "'Roboto', sans-serif",
-                                    fontWeight: '500',
-                                    backgroundColor: 'white',
-                                    outline: 'none',
-                                    resize: 'vertical',
-                                    transition: 'border-color 0.2s'
-                                }}
-                                onFocus={(e) => {
-                                    e.target.style.borderColor = '#1E88E5';
-                                    e.target.style.boxShadow = 'none';
-                                }}
-                                onBlur={(e) => {
-                                    e.target.style.borderColor = '#B7B7B7';
-                                }}
-                            />
-                        </div>
-                    </div>
-
-                    {/* Popup Footer */}
-                    <div style={{
-                        background: 'transparent',
-                        padding: '0 20px 14px',
-                        borderBottomLeftRadius: '8px',
-                        borderBottomRightRadius: '8px',
-                        display: 'flex',
-                        justifyContent: 'flex-end',
-                        gap: '8px'
-                    }}>
-                        <button
-                            onClick={() => setShowReferralPopup(false)}
-                            style={{
-                                padding: '8px 16px',
-                                backgroundColor: '#9e9e9e',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '4px',
-                                cursor: 'pointer',
-                                fontSize: '14px',
-                                fontWeight: '500',
-                                transition: 'background-color 0.2s'
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.backgroundColor = '#757575';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.backgroundColor = '#9e9e9e';
-                            }}
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            onClick={() => {
-                                // Handle save new referral logic here
-                                setShowReferralPopup(false);
-                                // You can add API call to save the new referral
-                            }}
-                            style={{
-                                padding: '8px 16px',
-                                backgroundColor: '#1976d2',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '4px',
-                                cursor: 'pointer',
-                                fontSize: '14px',
-                                fontWeight: '500',
-                                transition: 'background-color 0.2s'
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.backgroundColor = '#1565c0';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.backgroundColor = '#1976d2';
-                            }}
-                        >
-                            Save
-                        </button>
-                    </div>
-                </div>
-            </div>
-        )}
+        <AddReferralPopup
+            open={showReferralPopup}
+            onClose={() => setShowReferralPopup(false)}
+            onSave={(referralData: ReferralData) => {
+                // Handle save new referral logic here
+                console.log('New referral data:', referralData);
+                // You can add API call to save the new referral
+                // Example: await referralService.createReferral(referralData);
+            }}
+        />
         </>
     );
 };

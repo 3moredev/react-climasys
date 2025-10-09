@@ -26,9 +26,10 @@ import { DateField } from '@mui/x-date-pickers/DateField'
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import dayjs from 'dayjs'
-import { Close, Save, Person, Search, CalendarToday } from '@mui/icons-material'
+import { Close, Save, Person, Search, CalendarToday, Add } from '@mui/icons-material'
 import { patientService, QuickRegistrationRequest } from '../services/patientService'
 import { appointmentService, AppointmentRequest } from '../services/appointmentService'
+import AddReferralPopup, { ReferralData } from '../components/AddReferralPopup'
 
 interface AddPatientPageProps {
   open: boolean
@@ -84,6 +85,13 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
   // Store doctorId and clinicId from props
   const [currentDoctorId, setCurrentDoctorId] = useState<string>('')
   const [currentClinicId, setCurrentClinicId] = useState<string>('')
+  
+  // Doctor referral search states
+  const [referralNameSearch, setReferralNameSearch] = useState('')
+  const [showReferralPopup, setShowReferralPopup] = useState(false)
+  const [referralNameOptions, setReferralNameOptions] = useState<{ id: string; name: string; fullData?: any }[]>([])
+  const [isSearchingReferral, setIsSearchingReferral] = useState(false)
+  const [selectedDoctor, setSelectedDoctor] = useState<any>(null)
 
   // Update doctorId and clinicId when props change
   useEffect(() => {
@@ -288,12 +296,74 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
           }
         }
       }
+      
+      // Reset referral name search when referral type changes
+      if (field === 'referredBy') {
+        setReferralNameSearch('')
+        setReferralNameOptions([])
+        // Clear selected doctor if not a doctor referral
+        if (value !== 'D') {
+          setSelectedDoctor(null)
+        }
+      }
+      
       return next
     })
     // Clear error when user starts typing
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }))
     }
+  }
+
+  // Search referral names when typing
+  const handleReferralNameSearch = async (searchTerm: string) => {
+    setReferralNameSearch(searchTerm)
+    if (searchTerm.length < 2) {
+      setReferralNameOptions([])
+      return
+    }
+    
+    setIsSearchingReferral(true)
+    try {
+      // Call the actual referral doctors API
+      const { getReferralDoctors } = await import('../services/referralService')
+      const doctors = await getReferralDoctors(1) // languageId = 1
+      
+      console.log('=== REFERRAL DOCTORS SEARCH DEBUG ===')
+      console.log('Search term:', searchTerm)
+      console.log('All doctors from API:', doctors)
+      
+      // Filter doctors by name containing the search term
+      const filteredDoctors = doctors.filter(doctor => 
+        doctor.doctorName.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+      
+      console.log('Filtered doctors:', filteredDoctors)
+      
+      // Store the full doctor data for later use
+      setReferralNameOptions(filteredDoctors.map(doctor => ({
+        id: doctor.rdId.toString(),
+        name: doctor.doctorName,
+        fullData: doctor // Store the complete doctor object
+      })))
+      
+      console.log('Mapped results for dropdown:', filteredDoctors.map(doctor => ({
+        id: doctor.rdId.toString(),
+        name: doctor.doctorName,
+        fullData: doctor
+      })))
+      console.log('=== END REFERRAL DOCTORS SEARCH DEBUG ===')
+    } catch (error) {
+      console.error('Error searching referral names:', error)
+      setReferralNameOptions([])
+    } finally {
+      setIsSearchingReferral(false)
+    }
+  }
+
+  // Check if current referral by is a doctor (specifically referId "D")
+  const isDoctorReferral = () => {
+    return formData.referredBy === 'D'
   }
 
   const validateForm = () => {
@@ -500,6 +570,11 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
             referralAddress: '',
             addToTodaysAppointment: true
           })
+          // Clear doctor referral states
+          setReferralNameSearch('')
+          setReferralNameOptions([])
+          setSelectedDoctor(null)
+          setShowReferralPopup(false)
           console.log('Form reset completed')
           
           console.log('=== CLOSING DIALOG ===')
@@ -1067,13 +1142,104 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                   <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
                     Referral Name
                   </Typography>
-                  <TextField
-                    fullWidth
-                    placeholder="Referral Name"
-                    value={formData.referralName}
-                    onChange={(e) => handleInputChange('referralName', e.target.value)}
-                    disabled={loading}
-                  />
+                  {isDoctorReferral() ? (
+                    <Box sx={{ position: 'relative' }}>
+                      <TextField
+                        fullWidth
+                        placeholder="Search Doctor Name"
+                        value={referralNameSearch}
+                        onChange={(e) => handleReferralNameSearch(e.target.value)}
+                        disabled={loading}
+                        InputProps={{
+                          endAdornment: (
+                            <InputAdornment position="end">
+                              <IconButton
+                                size="small"
+                                onClick={() => setShowReferralPopup(true)}
+                                sx={{
+                                  backgroundColor: '#1976d2',
+                                  color: 'white',
+                                  '&:hover': { backgroundColor: '#1565c0' },
+                                  width: 24,
+                                  height: 24,
+                                  borderRadius: '3px'
+                                }}
+                              >
+                                <Add fontSize="small" />
+                              </IconButton>
+                            </InputAdornment>
+                          )
+                        }}
+                      />
+                      
+                      {/* Search Results Dropdown */}
+                      {referralNameOptions.length > 0 && (
+                        <Box sx={{
+                          position: 'absolute',
+                          top: '100%',
+                          left: 0,
+                          right: 0,
+                          backgroundColor: 'white',
+                          border: '1px solid #B7B7B7',
+                          borderRadius: '6px',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                          zIndex: 1000,
+                          maxHeight: '200px',
+                          overflowY: 'auto'
+                        }}>
+                          {referralNameOptions.map((option) => (
+                            <Box
+                              key={option.id}
+                              onClick={() => {
+                                // Store the selected doctor data
+                                setSelectedDoctor((option as any).fullData)
+                                
+                                // Update form data with doctor information
+                                setFormData(prev => ({ 
+                                  ...prev, 
+                                  referralName: option.name,
+                                  referralContact: (option as any).fullData?.doctorMob || '',
+                                  referralEmail: (option as any).fullData?.doctorMail || '',
+                                  referralAddress: (option as any).fullData?.doctorAddress || ''
+                                }))
+                                
+                                setReferralNameSearch(option.name)
+                                setReferralNameOptions([])
+                                
+                                console.log('=== DOCTOR SELECTED ===')
+                                console.log('Selected doctor data:', (option as any).fullData)
+                                console.log('Updated form data:', {
+                                  referralName: option.name,
+                                  referralContact: (option as any).fullData?.doctorMob || '',
+                                  referralEmail: (option as any).fullData?.doctorMail || '',
+                                  referralAddress: (option as any).fullData?.doctorAddress || ''
+                                })
+                                console.log('=== END DOCTOR SELECTED ===')
+                              }}
+                              sx={{
+                                padding: '8px 12px',
+                                cursor: 'pointer',
+                                fontSize: '0.9rem',
+                                borderBottom: '1px solid #f0f0f0',
+                                transition: 'background-color 0.2s',
+                                '&:hover': { backgroundColor: '#f5f5f5' }
+                              }}
+                            >
+                              {option.name}
+                            </Box>
+                          ))}
+                        </Box>
+                      )}
+                    </Box>
+                  ) : (
+                    <TextField
+                      fullWidth
+                      placeholder="Referral Name"
+                      value={formData.referralName}
+                      onChange={(e) => handleInputChange('referralName', e.target.value)}
+                      disabled={loading}
+                    />
+                  )}
                 </Box>
               </Grid>
             </Grid>
@@ -1092,7 +1258,13 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     placeholder="Referral Number(10 Digits)"
                     value={formData.referralContact}
                     onChange={(e) => handleInputChange('referralContact', e.target.value)}
-                    disabled={loading}
+                    disabled={loading || selectedDoctor !== null}
+                    sx={{
+                      '& .MuiInputBase-input': {
+                        backgroundColor: selectedDoctor !== null ? '#f5f5f5' : 'white',
+                        cursor: selectedDoctor !== null ? 'not-allowed' : 'text'
+                      }
+                    }}
                   />
                 </Box>
               </Grid>
@@ -1106,7 +1278,13 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     placeholder="Referral Email"
                     value={formData.referralEmail}
                     onChange={(e) => handleInputChange('referralEmail', e.target.value)}
-                    disabled={loading}
+                    disabled={loading || selectedDoctor !== null}
+                    sx={{
+                      '& .MuiInputBase-input': {
+                        backgroundColor: selectedDoctor !== null ? '#f5f5f5' : 'white',
+                        cursor: selectedDoctor !== null ? 'not-allowed' : 'text'
+                      }
+                    }}
                   />
                 </Box>
               </Grid>
@@ -1120,7 +1298,13 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     placeholder="Referral Address"
                     value={formData.referralAddress}
                     onChange={(e) => handleInputChange('referralAddress', e.target.value)}
-                    disabled={loading}
+                    disabled={loading || selectedDoctor !== null}
+                    sx={{
+                      '& .MuiInputBase-input': {
+                        backgroundColor: selectedDoctor !== null ? '#f5f5f5' : 'white',
+                        cursor: selectedDoctor !== null ? 'not-allowed' : 'text'
+                      }
+                    }}
                   />
                 </Box>
               </Grid>
@@ -1180,6 +1364,11 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                 addToTodaysAppointment: true
               })
               setErrors({})
+              // Clear doctor referral states
+              setReferralNameSearch('')
+              setReferralNameOptions([])
+              setSelectedDoctor(null)
+              setShowReferralPopup(false)
             }}
             variant="contained"
             disabled={loading}
@@ -1218,6 +1407,18 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
           color: 'white',
           fontWeight: 'bold'
         }
+      }}
+    />
+
+    {/* Add New Referral Popup */}
+    <AddReferralPopup
+      open={showReferralPopup}
+      onClose={() => setShowReferralPopup(false)}
+      onSave={(referralData: ReferralData) => {
+        // Handle save new referral logic here
+        console.log('New referral data:', referralData)
+        // You can add API call to save the new referral
+        // Example: await referralService.createReferral(referralData);
       }}
     />
   </>)

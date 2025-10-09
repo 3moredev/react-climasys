@@ -29,4 +29,27 @@ export async function getReferByTranslations(languageId: number = 1): Promise<Re
   return mappedData
 }
 
+export interface ReferralDoctor {
+  rdId: number
+  doctorName: string
+  doctorMob: string
+  doctorEmail?: string
+  doctorAddress?: string
+  languageId: number
+}
+
+export async function getReferralDoctors(languageId: number = 1): Promise<ReferralDoctor[]> {
+  const response = await api.get('/referrals', {
+    params: { languageId }
+  })
+  const data = Array.isArray(response?.data) ? response.data : []
+  
+  console.log('=== REFERRAL DOCTORS API DEBUG ===')
+  console.log('Raw API response:', response?.data)
+  console.log('Data array:', data)
+  console.log('=== END REFERRAL DOCTORS API DEBUG ===')
+  
+  return data
+}
+
 
