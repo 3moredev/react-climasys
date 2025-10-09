@@ -3572,15 +3572,26 @@ export default function AppointmentTable() {
                                                         onClick={async () => {
                                                             try {
                                                                 const pid = a.patientId;
-                                                                const vdate = String(a.visitDate || new Date().toISOString().split('T')[0]);
+                                                                const rawVtime = String(a.time || '00:00');
+                                                                // Use today's date with the visit time for deletion
+                                                                const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+                                                                console.log('=== APPOINTMENT DELETION DEBUG (2nd function) ===');
+                                                                console.log('Appointment object:', a);
+                                                                console.log('Raw visit time:', rawVtime);
+                                                                console.log('Using today\'s date:', today);
+                                                                
+                                                                // Combine today's date with visit time for precise deletion
+                                                                const vdatetime = `${today} ${rawVtime}`;
+                                                                console.log('Final visit datetime being sent (today + time):', vdatetime);
+                                                                console.log('=== END DEBUG ===');
                                                                 const did = a.doctorId || selectedDoctorId;
-                                                                if (!pid || !vdate || !did) {
+                                                                if (!pid || !vdatetime || !did) {
                                                                     alert('Missing identifiers to delete appointment');
                                                                     return;
                                                                 }
                                                                 const confirmDelete = window.confirm('Delete this appointment?');
                                                                 if (!confirmDelete) return;
-                                                                await appointmentService.deleteAppointment({ patientId: String(pid), visitDate: String(vdate), doctorId: String(did), userId: String(sessionData?.userId || 'system') });
+                                                                await appointmentService.deleteAppointment({ patientId: String(pid), visitDate: String(vdatetime), doctorId: String(did), userId: String(sessionData?.userId || 'system') });
                                                                 setAppointments(prev => prev.filter((_, i) => i !== originalIndex));
                                                             } catch (err) {
                                                                 console.error('Delete appointment failed:', err);
@@ -3874,26 +3885,26 @@ export default function AppointmentTable() {
                                                     onClick={async () => {
                                                         try {
                                                             const pid = appointment.patientId;
-														const rawVdate = String(appointment.visitDate || new Date().toISOString().split('T')[0]);
-														// Normalize to YYYY-MM-DD (backend expects ISO date)
-														const vdate = (() => {
-															const ddmmyyyy = rawVdate.match(/^(\d{2})-(\d{2})-(\d{4})$/);
-															if (ddmmyyyy) return `${ddmmyyyy[3]}-${ddmmyyyy[2]}-${ddmmyyyy[1]}`;
-															const yyyymmdd = rawVdate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-															if (yyyymmdd) return rawVdate;
-															// Fallback: try Date parsing and format to ISO date
-															const d = new Date(rawVdate);
-															if (!isNaN(d.getTime())) return d.toISOString().split('T')[0];
-															return rawVdate; // last resort, send as-is
-														})();
+														const rawVtime = String(appointment.time || '00:00');
+														// Use today's date with the visit time for deletion
+														const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+														console.log('=== APPOINTMENT DELETION DEBUG ===');
+														console.log('Appointment object:', appointment);
+														console.log('Raw visit time:', rawVtime);
+														console.log('Using today\'s date:', today);
+														
+														// Combine today's date with visit time for precise deletion
+														const vdatetime = `${today} ${rawVtime}`;
+														console.log('Final visit datetime being sent (today + time):', vdatetime);
+														console.log('=== END DEBUG ===');
                                                             const did = appointment.doctorId || selectedDoctorId;
-                                                            if (!pid || !vdate || !did) {
+                                                            if (!pid || !vdatetime || !did) {
                                                                 alert('Missing identifiers to delete appointment');
                                                                 return;
                                                             }
                                                             const confirmDelete = window.confirm('Delete this appointment?');
                                                             if (!confirmDelete) return;
-														await appointmentService.deleteAppointment({ patientId: String(pid), visitDate: String(vdate), doctorId: String(did), userId: String(sessionData?.userId || 'system') });
+														await appointmentService.deleteAppointment({ patientId: String(pid), visitDate: String(vdatetime), doctorId: String(did), userId: String(sessionData?.userId || 'system') });
                                                             // Remove from UI
                                                             setAppointments(prev => prev.filter((_, i) => i !== originalIndex));
                                                         } catch (err) {
