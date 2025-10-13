@@ -30,6 +30,8 @@ type AppointmentRow = {
     labs: string;
     doctorId?: string;
     visitNumber?: number;
+    shiftId?: number;
+    clinicId?: string;
     actions: boolean;
     gender_description?: string;
 };
@@ -274,6 +276,8 @@ export default function AppointmentTable() {
             const onlineTime = toStringSafe(getField(row, ['Online_Appointment_Time','onlineAppointmentTime','online_time','onlineTime'], ''));
             const reportsAsked = !!getField(row, ['reportsAsked','reports_asked','reportsReceived','reports_received'], false);
             const visitNumber = toNumberSafe(getField(row, ['patient_visit_no','Patient_Visit_No','visitNumber','visit_number'], 1));
+            const shiftId = toNumberSafe(getField(row, ['shift_id','Shift_ID','shiftId'], 1));
+            const clinicIdFromRow = toStringSafe(getField(row, ['clinic_id','Clinic_ID','clinicId'], ''));
             const genderDescription = toStringSafe(getField(row, ['gender_description','genderDescription','gender','sex'], ''));
             
             // Fix time formatting - ensure proper HH:mm format
@@ -366,6 +370,8 @@ export default function AppointmentTable() {
                 reports_received: reportsAsked,
                 doctorId: toStringSafe(getField(row, ['doctor_id','doctorId'], '')),
                 visitNumber: visitNumber,
+                shiftId: shiftId,
+                clinicId: clinicIdFromRow,
                 actions: true,
                 gender_description: genderDescription
             };
@@ -3517,16 +3523,30 @@ export default function AppointmentTable() {
                                                                 const pid = a.patientId;
                                                                 // Use the visit number from the selected appointment row
                                                                 const vno = Number(a.visitNumber) || getLatestVisitNumber(a.patientId);
-                                                                const shift = 1;
-                                                                const clinic = sessionData?.clinicId || '';
+                                                                const shift = a.shiftId || 1;
+                                                                const clinic = a.clinicId || sessionData?.clinicId || '';
                                                                 const onlineTime = (a.online || '').trim() || undefined;
                                                                 const doctor = selectedDoctorId || a.doctorId || '';
                                                                 const statusId = mapStatusLabelToId(a.status);
+                                                                
+                                                                // Debug logging
+                                                                console.log('=== UPDATE ONLINE TIME DEBUG ===');
+                                                                console.log('Patient ID:', pid);
+                                                                console.log('Visit Number from row:', a.visitNumber);
+                                                                console.log('Visit Number being sent:', vno);
+                                                                console.log('Shift ID:', shift);
+                                                                console.log('Clinic ID:', clinic);
+                                                                console.log('Online Time:', onlineTime);
+                                                                console.log('Doctor ID:', doctor);
+                                                                console.log('Status ID:', statusId);
+                                                                console.log('================================');
+                                                                
                                                                 if (!pid || !clinic || !doctor) {
                                                                     alert('Missing identifiers to update appointment');
                                                                     return;
                                                                 }
-                                                                await appointmentService.updateTodaysAppointment({
+                                                                
+                                                                const response = await appointmentService.updateTodaysAppointment({
                                                                     patientId: String(pid),
                                                                     patientVisitNo: Number(vno),
                                                                     shiftId: Number(shift),
@@ -3536,10 +3556,17 @@ export default function AppointmentTable() {
                                                                     statusId: Number(statusId),
                                                                     userId: String(sessionData?.userId || 'system')
                                                                 });
-                                                                alert('Appointment updated');
+                                                                
+                                                                console.log('Update response:', response);
+                                                                
+                                                                if (response.success) {
+                                                                    alert('Appointment updated successfully');
+                                                                } else {
+                                                                    alert('Update failed: ' + (response.message || 'Unknown error'));
+                                                                }
                                                             } catch (err) {
                                                                 console.error('Update appointment failed:', err);
-                                                                alert('Failed to update appointment');
+                                                                alert('Failed to update appointment: ' + (err as any).message);
                                                             }
                                                         }}
                                                         style={{
@@ -3851,16 +3878,30 @@ export default function AppointmentTable() {
                                                             const pid = appointment.patientId;
                                                             // Use the visit number from the selected appointment card
                                                             const vno = Number(appointment.visitNumber) || getLatestVisitNumber(appointment.patientId);
-                                                            const shift = 1; // using default shift
-                                                            const clinic = sessionData?.clinicId || '';
+                                                            const shift = appointment.shiftId || 1;
+                                                            const clinic = appointment.clinicId || sessionData?.clinicId || '';
                                                             const onlineTime = (appointment.online || '').trim() || undefined;
                                                             const doctor = selectedDoctorId || appointment.doctorId || '';
                                                             const statusId: number = mapStatusLabelToId(appointment.status);
+                                                            
+                                                            // Debug logging
+                                                            console.log('=== UPDATE ONLINE TIME DEBUG (Card View) ===');
+                                                            console.log('Patient ID:', pid);
+                                                            console.log('Visit Number from card:', appointment.visitNumber);
+                                                            console.log('Visit Number being sent:', vno);
+                                                            console.log('Shift ID:', shift);
+                                                            console.log('Clinic ID:', clinic);
+                                                            console.log('Online Time:', onlineTime);
+                                                            console.log('Doctor ID:', doctor);
+                                                            console.log('Status ID:', statusId);
+                                                            console.log('================================');
+                                                            
                                                             if (!pid || !clinic || !doctor) {
                                                                 alert('Missing identifiers to update appointment');
                                                                 return;
                                                             }
-                                                            await appointmentService.updateTodaysAppointment({
+                                                            
+                                                            const response = await appointmentService.updateTodaysAppointment({
                                                                 patientId: String(pid),
                                                                 patientVisitNo: Number(vno),
                                                                 shiftId: Number(shift),
@@ -3870,7 +3911,14 @@ export default function AppointmentTable() {
                                                                 statusId: Number(statusId),
                                                                 userId: String(sessionData?.userId || 'system')
                                                             });
-                                                            alert('Appointment updated');
+                                                            
+                                                            console.log('Update response:', response);
+                                                            
+                                                            if (response.success) {
+                                                                alert('Appointment updated successfully');
+                                                            } else {
+                                                                alert('Update failed: ' + (response.message || 'Unknown error'));
+                                                            }
                                                         } catch (err) {
                                                             console.error('Update appointment failed:', err);
                                                             alert('Failed to update appointment');
