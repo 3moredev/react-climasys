@@ -1285,3 +1285,14 @@
     border: 1px solid #ddd;
   }
 }
+
+/* Duration/Comment Input Field Override */
+.duration-comment-input {
+  border: none !important;
+  border-width: 0 !important;
+  border-style: none !important;
+  border-color: transparent !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Close, Add } from '@mui/icons-material';
+import { Close, Add, Delete } from '@mui/icons-material';
 import { Snackbar } from '@mui/material';
 import { visitService, ComprehensiveVisitDataRequest } from '../services/visitService';
+import { complaintService, ComplaintOption } from '../services/complaintService';
 import AddReferralPopup, { ReferralData } from '../components/AddReferralPopup';
 
 interface AppointmentRow {
@@ -74,6 +75,86 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
 
     // (Reverted) complaints multi-select state removed
 
+    // Complaints multi-select state
+    const [selectedComplaints, setSelectedComplaints] = useState<string[]>([]);
+    const [complaintSearch, setComplaintSearch] = useState('');
+    const [isComplaintsOpen, setIsComplaintsOpen] = useState(false);
+    const complaintsRef = React.useRef<HTMLDivElement | null>(null);
+    const [complaintsOptions, setComplaintsOptions] = useState<ComplaintOption[]>([]);
+    const [complaintsLoading, setComplaintsLoading] = useState(false);
+    const [complaintsError, setComplaintsError] = useState<string | null>(null);
+    
+    const filteredComplaints = React.useMemo(() => {
+        const term = complaintSearch.trim().toLowerCase();
+        
+        if (!term) {
+            // No search term - show all options with selected ones first
+            const selectedOptions = complaintsOptions.filter(opt => selectedComplaints.includes(opt.value));
+            const unselectedOptions = complaintsOptions.filter(opt => !selectedComplaints.includes(opt.value));
+            return [...selectedOptions, ...unselectedOptions];
+        } else {
+            // Search term provided - show selected items first, then search results
+            const selectedOptions = complaintsOptions.filter(opt => 
+                selectedComplaints.includes(opt.value) && opt.label.toLowerCase().includes(term)
+            );
+            const unselectedSearchResults = complaintsOptions.filter(opt => 
+                !selectedComplaints.includes(opt.value) && opt.label.toLowerCase().includes(term)
+            );
+            return [...selectedOptions, ...unselectedSearchResults];
+        }
+    }, [complaintsOptions, complaintSearch, selectedComplaints]);
+
+    // Complaints table rows
+    type ComplaintRow = { id: string; value: string; label: string; comment: string };
+    const [complaintsRows, setComplaintsRows] = useState<ComplaintRow[]>([]);
+
+    const handleAddComplaints = () => {
+        if (selectedComplaints.length === 0) return;
+        setComplaintsRows(prev => {
+            const existingValues = new Set(prev.map(r => r.value));
+            const newRows: ComplaintRow[] = [];
+            selectedComplaints.forEach(val => {
+                if (!existingValues.has(val)) {
+                    const opt = complaintsOptions.find(o => o.value === val);
+                    if (opt) {
+                        newRows.push({ id: `${val}`, value: val, label: opt.label, comment: '' });
+                    }
+                }
+            });
+            const next = [...prev, ...newRows];
+            return next;
+        });
+        // Keep dropdown selections as-is; close menu
+        setIsComplaintsOpen(false);
+    };
+
+    const handleComplaintCommentChange = (rowValue: string, text: string) => {
+        setComplaintsRows(prev => prev.map(r => r.value === rowValue ? { ...r, comment: text } : r));
+    };
+
+    const handleRemoveComplaint = (rowValue: string) => {
+        setComplaintsRows(prev => prev.filter(r => r.value !== rowValue));
+        // Also uncheck from selector
+        setSelectedComplaints(prev => prev.filter(v => v !== rowValue));
+    };
+
+    // Keep joined complaints in formData for API compatibility
+    React.useEffect(() => {
+        setFormData(prev => ({ ...prev, selectedComplaint: selectedComplaints.join(',') }));
+    }, [selectedComplaints]);
+
+    // Close complaints dropdown on outside click
+    React.useEffect(() => {
+        if (!isComplaintsOpen) return;
+        function handleClickOutside(e: MouseEvent) {
+            if (complaintsRef.current && !complaintsRef.current.contains(e.target as Node)) {
+                setIsComplaintsOpen(false);
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [isComplaintsOpen]);
+
     // Load referral options from API
     React.useEffect(() => {
         let cancelled = false;
@@ -91,6 +172,43 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
             cancelled = true;
         };
     }, []);
+
+    // Load complaints from API when dialog opens
+    React.useEffect(() => {
+        let cancelled = false;
+        async function loadComplaints() {
+            if (!open || !patientData?.provider) return;
+            
+            setComplaintsLoading(true);
+            setComplaintsError(null);
+            
+            try {
+                // Extract doctor ID from provider field or use a default
+                const doctorId = patientData.provider || '1'; // fallback to doctor ID 1
+                console.log('Loading complaints for doctor:', doctorId);
+                
+                const complaints = await complaintService.getAllComplaintsForDoctor(doctorId);
+                if (!cancelled) {
+                    setComplaintsOptions(complaints);
+                    console.log('Loaded complaints:', complaints);
+                }
+            } catch (e) {
+                console.error('Failed to load complaints:', e);
+                if (!cancelled) {
+                    setComplaintsError(e instanceof Error ? e.message : 'Failed to load complaints');
+                }
+            } finally {
+                if (!cancelled) {
+                    setComplaintsLoading(false);
+                }
+            }
+        }
+        
+        loadComplaints();
+        return () => {
+            cancelled = true;
+        };
+    }, [open, patientData?.provider]);
 
     // Load referral doctors when referral type is "Doctor"
     React.useEffect(() => {
@@ -244,8 +362,19 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
     };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const files = Array.from(e.target.files || []);
-        setFormData(prev => ({ ...prev, attachments: files.slice(0, 3) }));
+        const newFiles = Array.from(e.target.files || []);
+        setFormData(prev => {
+            const existingFiles = prev.attachments || [];
+            const combinedFiles = [...existingFiles, ...newFiles];
+            return { ...prev, attachments: combinedFiles.slice(0, 3) };
+        });
+    };
+
+    const removeFile = (indexToRemove: number) => {
+        setFormData(prev => ({
+            ...prev,
+            attachments: prev.attachments.filter((_, index) => index !== indexToRemove)
+        }));
     };
 
     // Search referral names when typing
@@ -367,7 +496,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                 attendedById: 0,
                 followUp: visitType.followUpType,
                 followUpFlag: visitType.followUp,
-                currentComplaint: formData.selectedComplaint,
+                currentComplaint: selectedComplaints.join(','),
                 visitCommentsField: formData.visitComments,
                 
                 // Clinical fields
@@ -490,6 +619,11 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
         setReferralNameSearch('');
         setReferralNameOptions([]);
         setSnackbarMessage('');
+        setSelectedComplaints([]);
+        setComplaintSearch('');
+        setIsComplaintsOpen(false);
+        setComplaintsRows([]);
+        
     };
 
     return (
@@ -1239,6 +1373,271 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                             </div>
                         </div>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginTop: '10px' }}>
+                            <div style={{ position: 'relative' }}>
+                                <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', fontWeight: 700, color: '#333' }}>
+                                    Select Complaints
+                                </label>
+                                <div style={{ display: 'flex', gap: '10px', alignItems: 'end' }}>
+                                    <div ref={complaintsRef} style={{ position: 'relative', flex: 1 }}>
+                                        <div
+                                        onClick={() => setIsComplaintsOpen(prev => !prev)}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                            height: '32px',
+                                            padding: '4px 8px',
+                                            border: '2px solid #B7B7B7',
+                                            borderRadius: '6px',
+                                            fontSize: '12px',
+                                            fontFamily: "'Roboto', sans-serif",
+                                            fontWeight: 500,
+                                            backgroundColor: 'white',
+                                            cursor: 'pointer',
+                                            userSelect: 'none'
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            (e.currentTarget as HTMLDivElement).style.borderColor = '#1E88E5';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            (e.currentTarget as HTMLDivElement).style.borderColor = '#B7B7B7';
+                                        }}
+                                        >
+                                            <span style={{ color: selectedComplaints.length ? '#000' : '#9e9e9e' }}>
+                                            {selectedComplaints.length === 0 && 'Select Complaints'}
+                                            {selectedComplaints.length === 1 && '1 selected'}
+                                            {selectedComplaints.length > 1 && `${selectedComplaints.length} selected`}
+                                        </span>
+                                        <span style={{ marginLeft: '8px', color: '#666' }}>▾</span>
+                                        </div>
+
+                                        {isComplaintsOpen && (
+                                            <div style={{
+                                            position: 'absolute',
+                                            top: '100%',
+                                            left: 0,
+                                            right: 0,
+                                            backgroundColor: 'white',
+                                            border: '1px solid #B7B7B7',
+                                            borderRadius: '6px',
+                                            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                                            zIndex: 1000,
+                                            marginTop: '4px'
+                                        }}>
+                                                {/* Search Field inside dropdown */}
+                                                <div style={{ padding: '6px' }}>
+                                                <input
+                                                    type="text"
+                                                    value={complaintSearch}
+                                                    onChange={(e) => setComplaintSearch(e.target.value)}
+                                                    placeholder="Search complaints"
+                                                    style={{
+                                                        width: '100%',
+                                                        height: '28px',
+                                                        padding: '4px 8px',
+                                                        border: '1px solid #B7B7B7',
+                                                        borderRadius: '4px',
+                                                        fontSize: '12px',
+                                                        outline: 'none'
+                                                    }}
+                                                    onFocus={(e) => {
+                                                        (e.target as HTMLInputElement).style.borderColor = '#1E88E5';
+                                                    }}
+                                                    onBlur={(e) => {
+                                                        (e.target as HTMLInputElement).style.borderColor = '#B7B7B7';
+                                                    }}
+                                                    />
+                                                </div>
+
+                                                <div style={{ maxHeight: '200px', overflowY: 'auto', padding: '4px 6px', display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', columnGap: '8px', rowGap: '6px' }}>
+                                                {complaintsLoading && (
+                                                    <div style={{ padding: '6px', fontSize: '12px', color: '#777', gridColumn: '1 / -1', textAlign: 'center' }}>
+                                                        Loading complaints...
+                                                    </div>
+                                                )}
+                                                {complaintsError && (
+                                                    <div style={{ padding: '6px', fontSize: '12px', color: '#d32f2f', gridColumn: '1 / -1', textAlign: 'center' }}>
+                                                        {complaintsError}
+                                                        <button 
+                                                            onClick={() => {
+                                                                setComplaintsError(null);
+                                                                // Trigger reload by updating a dependency
+                                                                const doctorId = patientData?.provider || '1';
+                                                                complaintService.getAllComplaintsForDoctor(doctorId)
+                                                                    .then(setComplaintsOptions)
+                                                                    .catch(e => setComplaintsError(e.message));
+                                                            }}
+                                                            style={{ 
+                                                                marginLeft: '8px', 
+                                                                padding: '2px 6px', 
+                                                                fontSize: '10px', 
+                                                                backgroundColor: '#1976d2', 
+                                                                color: 'white', 
+                                                                border: 'none', 
+                                                                borderRadius: '3px', 
+                                                                cursor: 'pointer' 
+                                                            }}
+                                                        >
+                                                            Retry
+                                                        </button>
+                                                    </div>
+                                                )}
+                                                {!complaintsLoading && !complaintsError && filteredComplaints.length === 0 && (
+                                                    <div style={{ padding: '6px', fontSize: '12px', color: '#777', gridColumn: '1 / -1' }}>No complaints found</div>
+                                                )}
+                                                {!complaintsLoading && !complaintsError && filteredComplaints.map((opt, index) => {
+                                                    const checked = selectedComplaints.includes(opt.value);
+                                                    const isFirstUnselected = !checked && index > 0 && selectedComplaints.includes(filteredComplaints[index - 1].value);
+                                                    
+                                                    return (
+                                                        <React.Fragment key={opt.value}>
+                                                            {isFirstUnselected && (
+                                                                <div style={{ 
+                                                                    gridColumn: '1 / -1', 
+                                                                    height: '1px', 
+                                                                    backgroundColor: '#e0e0e0', 
+                                                                    margin: '4px 0' 
+                                                                }} />
+                                                            )}
+                                                            <label 
+                                                                style={{ 
+                                                                    display: 'flex', 
+                                                                    alignItems: 'center', 
+                                                                    gap: '4px', 
+                                                                    padding: '4px 2px', 
+                                                                    cursor: 'pointer', 
+                                                                    fontSize: '12px', 
+                                                                    border: 'none',
+                                                                    backgroundColor: checked ? '#e3f2fd' : 'transparent',
+                                                                    borderRadius: '3px',
+                                                                    fontWeight: checked ? '600' : '400'
+                                                                }}
+                                                            >
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={checked}
+                                                                onChange={(e) => {
+                                                                    setSelectedComplaints(prev => {
+                                                                        if (e.target.checked) {
+                                                                            if (prev.includes(opt.value)) return prev;
+                                                                            return [...prev, opt.value];
+                                                                        } else {
+                                                                            return prev.filter(v => v !== opt.value);
+                                                                        }
+                                                                    });
+                                                                }}
+                                                                style={{ margin: 0 }}
+                                                            />
+                                                            <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{opt.label}</span>
+                                                        </label>
+                                                        </React.Fragment>
+                                                    );
+                                                })}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <button
+                                        style={{
+                                            padding: '0 10px',
+                                            backgroundColor: '#1976d2',
+                                            color: 'white',
+                                            border: 'none',
+                                            borderRadius: '6px',
+                                            cursor: 'pointer',
+                                            fontSize: '12px',
+                                            fontWeight: '500',
+                                            height: '32px',
+                                            transition: 'background-color 0.2s'
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            e.currentTarget.style.backgroundColor = '#1565c0';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.currentTarget.style.backgroundColor = '#1976d2';
+                                        }}
+                                        onClick={handleAddComplaints}
+                                    >
+                                        Add
+                                    </button>
+                                </div>
+
+                                {/* Complaints table overlay (absolute) */}
+                                {complaintsRows.length > 0 && (
+                                    <div
+                                        style={{
+                                            position: 'absolute',
+                                            top: '80px', // add extra gap below the select/add row
+                                            left: 0,
+                                            right: 0,
+                                            backgroundColor: 'white',
+                                            border: '1px solid #B7B7B7',
+                                            borderRadius: '6px',
+                                            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                                            zIndex: 900, // keep below complaints dropdown (which uses 1000)
+                                        }}
+                                    >
+                                        <div style={{ width: '100%', overflow: 'hidden' }}>
+                                            {/* Header */}
+                                            <div style={{ display: 'grid', gridTemplateColumns: '60px 1.5fr 1.5fr 80px', background: '#1565c0', color: 'white', fontWeight: 600, fontSize: '12px' }}>
+                                                <div style={{ padding: '8px 10px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Sr.</div>
+                                                <div style={{ padding: '8px 10px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Complaint Description</div>
+                                                <div style={{ padding: '8px 10px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Duration / Comment</div>
+                                                <div style={{ padding: '8px 10px' }}>Action</div>
+                                            </div>
+                                            {/* Rows */}
+                                            {complaintsRows.map((row, idx) => (
+                                                <div key={row.value} style={{ display: 'grid', gridTemplateColumns: '60px 1.5fr 1.5fr 80px', background: idx % 2 === 0 ? '#f7fbff' : 'white', fontSize: '12px', alignItems: 'center' }}>
+                                                    <div style={{ padding: '8px 10px', borderTop: '1px solid #e0e0e0', borderRight: '1px solid #e0e0e0' }}>{idx + 1}</div>
+                                                    <div style={{ padding: '8px 10px', borderTop: '1px solid #e0e0e0', borderRight: '1px solid #e0e0e0' }}>{row.label}</div>
+                                                    <div style={{ padding: '0', borderTop: '1px solid #e0e0e0', borderRight: '1px solid #e0e0e0' }}>
+                                                        <input
+                                                            type="text"
+                                                            value={row.comment}
+                                                            placeholder="Enter duration/comment"
+                                                            onChange={(e) => handleComplaintCommentChange(row.value, e.target.value)}
+                                                            className="duration-comment-input"
+                                                            style={{
+                                                                width: '100%',
+                                                                height: '100%',
+                                                                padding: '8px 10px',
+                                                                border: 'none !important',
+                                                                borderWidth: '0 !important',
+                                                                borderStyle: 'none !important',
+                                                                borderColor: 'transparent !important',
+                                                                borderRadius: '0 !important',
+                                                                outline: 'none',
+                                                                background: 'transparent',
+                                                                boxShadow: 'none !important'
+                                                            }}
+                                                        />
+                                                    </div>
+                                                    <div style={{ padding: '8px 10px', borderTop: '1px solid #e0e0e0' }}>
+                                                        <div
+                                                            onClick={() => handleRemoveComplaint(row.value)}
+                                                            title="Remove"
+                                                            style={{
+                                                                display: 'inline-flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                width: '24px',
+                                                                height: '24px',
+                                                                cursor: 'pointer',
+                                                                color: '#000000',
+                                                                backgroundColor: 'transparent'
+                                                            }}
+                                                            onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.color = '#EF5350'; }}
+                                                            onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.color = '#000000'; }}
+                                                        >
+                                                            <Delete fontSize="small" />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                             <div>
                                 <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', fontWeight: 700, color: '#333' }}>
                                     Visit Comments
@@ -1299,140 +1698,124 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     }}
                                 />
                             </div>
-                            <div>
-                                <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', fontWeight: 700, color: '#333' }}>
-                                    Select Complaints
-                                </label>
-                                <div style={{ display: 'flex', gap: '10px', alignItems: 'end' }}>
-                                    <select
-                                        value={formData.selectedComplaint}
-                                        onChange={(e) => handleInputChange('selectedComplaint', e.target.value)}
-                                        style={{
-                                            flex: 1,
-                                            height: '32px',
-                                            padding: '4px 8px',
-                                            border: '2px solid #B7B7B7',
-                                            borderRadius: '6px',
-                                            fontSize: '12px',
-                                            fontFamily: "'Roboto', sans-serif",
-                                            fontWeight: '500',
-                                            backgroundColor: 'white',
-                                            outline: 'none',
-                                            transition: 'border-color 0.2s'
-                                        }}
-                                        onFocus={(e) => {
-                                            e.target.style.borderColor = '#1E88E5';
-                                            e.target.style.boxShadow = 'none';
-                                        }}
-                                        onBlur={(e) => {
-                                            e.target.style.borderColor = '#B7B7B7';
-                                        }}
-                                    >
-                                        <option value="">Select Complaint</option>
-                                        <option value="fever">Fever</option>
-                                        <option value="cough">Cough</option>
-                                        <option value="headache">Headache</option>
-                                        <option value="chest-pain">Chest Pain</option>
-                                    </select>
-                                    <button
-                                        style={{
-                                            padding: '0 10px',
-                                            backgroundColor: '#1976d2',
-                                            color: 'white',
-                                            border: 'none',
-                                            borderRadius: '6px',
-                                            cursor: 'pointer',
-                                            fontSize: '12px',
-                                            fontWeight: '500',
-                                            height: '32px',
-                                            transition: 'background-color 0.2s'
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            e.currentTarget.style.backgroundColor = '#1565c0';
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            e.currentTarget.style.backgroundColor = '#1976d2';
-                                        }}
-                                    >
-                                        Add
-                                    </button>
-                                </div>
-                            </div>
                         </div>
                     </div>
                     
-                    {/* Attachments */}
-                    <style>{`
-                        .attachmentInput{ border: none !important; }
-                        .referral-add-icon {
-                            padding: 8px 15px !important;
-                            outline: none !important;
-                            box-shadow: none !important;
-                            border: none !important;
-                            margin: 0 !important;
-                            transform: translateY(-50%) !important;
-                            position: absolute !important;
-                            top: 50% !important;
-                            right: 4px !important;
-                            left: auto !important;
-                            bottom: auto !important;
-                        }
-                        .referral-add-icon:focus,
-                        .referral-add-icon:active,
-                        .referral-add-icon:hover {
-                            outline: none !important;
-                            box-shadow: none !important;
-                            border: none !important;
-                            margin: 0 !important;
-                            transform: translateY(-50%) !important;
-                            position: absolute !important;
-                            top: 50% !important;
-                            right: 4px !important;
-                            left: auto !important;
-                            bottom: auto !important;
-                        }
-                    `}</style>
-                    <div style={{ marginBottom: '10px' }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
-                            <div>
-                                <label style={{ display: 'block', marginBottom: '5px', fontSize: '12px', fontWeight: 'bold', color: '#333' }}>
-                                    Attachments (Max 3):
-                                </label>
-                                <input
-                                    type="file"
-                                    multiple
-                                    onChange={handleFileChange}
-                                    className="attachmentInput"
-                                    style={{
-                                        width: '100%',
-                                        height: '32px',
-                                        padding: '4px 8px',
-                                        borderRadius: '6px',
-                                        fontSize: '12px',
-                                        fontFamily: "'Roboto', sans-serif",
-                                        fontWeight: '500',
-                                        backgroundColor: 'white',
-                                        outline: 'none',
-                                        transition: 'border-color 0.2s'
-                                    }}
-                                    onFocus={(e) => {
-                                        e.target.style.borderColor = '#1E88E5';
-                                        e.target.style.boxShadow = 'none';
-                                    }}
-                                    onBlur={(e) => {
-                                        e.target.style.borderColor = '#B7B7B7';
-                                    }}
-                                />
-                                <div style={{ marginTop: '5px', fontSize: '12px', color: '#666' }}>
-                                    {formData.attachments.length > 0 
-                                        ? `${formData.attachments.length} file(s) selected`
-                                        : 'No file chosen'
-                                    }
-                                </div>
+                    {/* Attachments Row */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginTop: '10px' }}>
+                        <div>
+                            {/* Empty first column */}
+                        </div>
+                        <div>
+                            <label style={{ display: 'block', marginBottom: '5px', fontSize: '12px', fontWeight: 'bold', color: '#333' }}>
+                                Attachments (Max 3 , Size 150Mb):
+                            </label>
+                            <input
+                                type="file"
+                                multiple
+                                onChange={handleFileChange}
+                                className="attachmentInput"
+                                style={{
+                                    width: '100%',
+                                    height: '32px',
+                                    padding: '4px 8px',
+                                    borderRadius: '6px',
+                                    fontSize: '12px',
+                                    fontFamily: "'Roboto', sans-serif",
+                                    fontWeight: '500',
+                                    backgroundColor: 'white',
+                                    outline: 'none',
+                                    transition: 'border-color 0.2s'
+                                }}
+                                onFocus={(e) => {
+                                    e.target.style.borderColor = '#1E88E5';
+                                    e.target.style.boxShadow = 'none';
+                                }}
+                                onBlur={(e) => {
+                                    e.target.style.borderColor = '#B7B7B7';
+                                }}
+                            />
+                            <div style={{ marginTop: '5px', fontSize: '12px', color: '#666' }}>
+                                {formData.attachments.length > 0 ? (
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', alignItems: 'center' }}>
+                                        {formData.attachments.map((file, index) => (
+                                            <span key={index} style={{ 
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                padding: '4px 8px',
+                                                backgroundColor: 'white',
+                                                borderRadius: '6px',
+                                                border: '1px solid #B7B7B7',
+                                                fontSize: '12px',
+                                                fontFamily: "'Roboto', sans-serif",
+                                                fontWeight: '500'
+                                            }}>
+                                                <span style={{ marginRight: '5px', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                    {file.name}
+                                                </span>
+                                                <span
+                                                    onClick={() => removeFile(index)}
+                                                    style={{
+                                                        color: 'black',
+                                                        cursor: 'pointer',
+                                                        fontSize: '14px',
+                                                        padding: '0',
+                                                        marginLeft: '5px',
+                                                        fontWeight: 'bold'
+                                                    }}
+                                                    title="Remove file"
+                                                >
+                                                    ×
+                                                </span>
+                                            </span>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    'No file chosen'
+                                )}
                             </div>
                         </div>
+                        <div>
+                            {/* Empty third column */}
+                        </div>
                     </div>
+                    
                 </div>
+                
+                {/* Attachments */}
+                <style>{`
+                    .attachmentInput{ border: none !important; }
+                    .referral-add-icon {
+                        padding: 8px 15px !important;
+                        outline: none !important;
+                        box-shadow: none !important;
+                        border: none !important;
+                        margin: 0 !important;
+                        transform: translateY(-50%) !important;
+                        position: absolute !important;
+                        top: 50% !important;
+                        right: 4px !important;
+                        left: auto !important;
+                        bottom: auto !important;
+                    }
+                    .referral-add-icon:focus,
+                    .referral-add-icon:active,
+                    .referral-add-icon:hover {
+                        outline: none !important;
+                        box-shadow: none !important;
+                        border: none !important;
+                        margin: 0 !important;
+                        transform: translateY(-50%) !important;
+                        position: absolute !important;
+                        top: 50% !important;
+                        right: 4px !important;
+                        left: auto !important;
+                        bottom: auto !important;
+                    }
+                    input[type="checkbox"] {
+                        width: auto !important;
+                    }
+                `}</style>
                 
                 {/* Footer */}
                 <div style={{
