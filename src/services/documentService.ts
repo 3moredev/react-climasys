@@ -71,6 +71,59 @@ export class DocumentService {
   }
 
   /**
+   * Upload multiple documents using the backend upload-multiple endpoint
+   * @param files Array of files to upload
+   * @param patientId Patient ID
+   * @param doctorId Doctor ID
+   * @param clinicId Clinic ID
+   * @param patientVisitNo Patient visit number
+   * @param createdByName Name of the user creating the documents
+   * @param visitDate Optional visit date
+   * @returns Promise<any> - Response from the backend
+   */
+  static async uploadMultipleDocumentsToBackend(
+    files: File[],
+    patientId: string,
+    doctorId: string,
+    clinicId: string,
+    patientVisitNo: number,
+    createdByName: string,
+    visitDate?: string
+  ): Promise<any> {
+    try {
+      const formData = new FormData();
+      
+      // Add files to FormData
+      files.forEach(file => {
+        formData.append('files', file);
+      });
+      
+      // Add other required parameters
+      formData.append('patientId', patientId);
+      formData.append('doctorId', doctorId);
+      formData.append('clinicId', clinicId);
+      formData.append('createdByName', createdByName);
+      formData.append('patientVisitNo', patientVisitNo.toString());
+      
+      // Add visit date if provided
+      if (visitDate) {
+        formData.append('visitDate', visitDate);
+      }
+
+      const response = await api.post('/patient-documents/treatment/upload-multiple', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      
+      return response.data;
+    } catch (error: any) {
+      console.error('Error uploading multiple documents:', error);
+      throw new Error(error.response?.data?.error || 'Failed to upload documents');
+    }
+  }
+
+  /**
    * Get documents for a specific patient visit
    * @param patientId Patient ID
    * @param visitNo Visit number

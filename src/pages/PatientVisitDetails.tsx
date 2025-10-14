@@ -163,29 +163,53 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
             console.log('Clinic ID:', clinicId);
             console.log('Visit No:', patientVisitNo);
 
-            const uploadPromises = files.map(async (file) => {
-                const request: DocumentUploadRequest = {
-                    patientId,
-                    doctorId,
-                    clinicId,
-                    documentName: file.name,
-                    createdByName: 'recep', // You may want to get this from auth context
-                    patientVisitNo,
-                    visitDate: new Date().toISOString().slice(0, 19).replace('T', ' ')
-                };
+            // Use the new backend API method for multiple file upload
+            const result = await DocumentService.uploadMultipleDocumentsToBackend(
+                files,
+                patientId,
+                doctorId,
+                clinicId,
+                patientVisitNo,
+                'recep', // You may want to get this from auth context
+                new Date().toISOString().slice(0, 19).replace('T', ' ')
+            );
 
-                console.log('Uploading document:', file.name, 'with request:', request);
-                return await DocumentService.uploadDocument(request);
-            });
-
-            const results = await Promise.all(uploadPromises);
-            console.log('Document upload results:', results);
+            console.log('Document upload result:', result);
             
-            setDocumentUploadResults(results);
-            return results;
+            // Handle the response based on the backend API structure
+            if (result.success) {
+                // If successful, create a success result for each file
+                const successResults = files.map((file, index) => ({
+                    success: true,
+                    documentName: file.name,
+                    documentId: result.documentIds?.[index] || null,
+                    message: 'Uploaded successfully'
+                }));
+                
+                setDocumentUploadResults(successResults);
+                return successResults;
+            } else {
+                // If failed, create error results for each file
+                const errorResults = files.map(file => ({
+                    success: false,
+                    documentName: file.name,
+                    error: result.error || 'Upload failed'
+                }));
+                
+                setDocumentUploadResults(errorResults);
+                return errorResults;
+            }
         } catch (error) {
             console.error('Error uploading documents:', error);
-            throw error;
+            // Create error results for each file
+            const errorResults = files.map(file => ({
+                success: false,
+                documentName: file.name,
+                error: error instanceof Error ? error.message : 'Upload failed'
+            }));
+            
+            setDocumentUploadResults(errorResults);
+            return errorResults;
         } finally {
             setIsUploadingDocuments(false);
         }
@@ -623,6 +647,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
     };
 
 
+
     // Search referral names when typing
     const handleReferralNameSearch = async (searchTerm: string) => {
         setReferralNameSearch(searchTerm);
@@ -696,11 +721,13 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                 patientVisitNo: '1', // Using visit number 1 as requested
                 
                 // Referral information
-                referBy: formData.referralBy,
-                referralName: formData.referralName,
-                referralContact: formData.referralContact,
-                referralEmail: formData.referralEmail,
-                referralAddress: formData.referralAddress,
+                referBy: (formData.referralBy === 'Self')
+                    ? (referByOptions.find(o => o.name.toLowerCase() === 'self')?.id || 'Self')
+                    : formData.referralBy,
+                referralName: formData.referralBy === 'Self' ? 'Self' : formData.referralName,
+                referralContact: formData.referralBy === 'Self' ? '' : formData.referralContact,
+                referralEmail: formData.referralBy === 'Self' ? '' : formData.referralEmail,
+                referralAddress: formData.referralBy === 'Self' ? '' : formData.referralAddress,
                 
                 // Vital signs
                 pulse: parseFloat(formData.pulse) || 0,
@@ -1148,7 +1175,6 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                 <select
                                     value={formData.referralBy}
                                     onChange={(e) => handleInputChange('referralBy', e.target.value)}
-                                    disabled={selectedDoctor !== null}
                                     style={{
                                         width: '100%',
                                         height: '32px',
