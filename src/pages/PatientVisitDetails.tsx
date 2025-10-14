@@ -29,9 +29,10 @@ interface PatientVisitDetailsProps {
     open: boolean;
     onClose: () => void;
     patientData: AppointmentRow | null;
+    onVisitDetailsSubmitted?: (isSubmitFlag: boolean) => void;
 }
 
-const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose, patientData }) => {
+const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose, patientData, onVisitDetailsSubmitted }) => {
     const [formData, setFormData] = useState({
         referralBy: 'Self',
         referralName: '',
@@ -828,6 +829,11 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                 console.log('Setting snackbar open to true');
                 setSnackbarOpen(true);
                 console.log('Snackbar state set - open:', true);
+                
+                // Notify parent component that visit details were submitted
+                if (onVisitDetailsSubmitted) {
+                    onVisitDetailsSubmitted(true);
+                }
                 
                 setError(null);
                 setSuccess(null);
