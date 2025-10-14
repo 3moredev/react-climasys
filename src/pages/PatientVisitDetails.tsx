@@ -3,6 +3,7 @@ import { Close, Add, Delete } from '@mui/icons-material';
 import { Snackbar } from '@mui/material';
 import { visitService, ComprehensiveVisitDataRequest } from '../services/visitService';
 import { complaintService, ComplaintOption } from '../services/complaintService';
+import { DocumentService, DocumentUploadRequest } from '../services/documentService';
 import AddReferralPopup, { ReferralData } from '../components/AddReferralPopup';
 
 interface AppointmentRow {
@@ -61,10 +62,12 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
 
     const [referByOptions, setReferByOptions] = useState<{ id: string; name: string }[]>([]);
     const [isLoading, setIsLoading] = useState(false);
+    const [isLoadingAppointmentDetails, setIsLoadingAppointmentDetails] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
     const [snackbarOpen, setSnackbarOpen] = useState(false);
     const [snackbarMessage, setSnackbarMessage] = useState('');
+    
     
     // New states for referral name search and popup
     const [referralNameSearch, setReferralNameSearch] = useState('');
@@ -108,6 +111,12 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
     type ComplaintRow = { id: string; value: string; label: string; comment: string };
     const [complaintsRows, setComplaintsRows] = useState<ComplaintRow[]>([]);
 
+    // Document upload states
+    const [isUploadingDocuments, setIsUploadingDocuments] = useState(false);
+    const [documentUploadResults, setDocumentUploadResults] = useState<any[]>([]);
+    const [existingDocuments, setExistingDocuments] = useState<any[]>([]);
+    const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
+
     const handleAddComplaints = () => {
         if (selectedComplaints.length === 0) return;
         setComplaintsRows(prev => {
@@ -136,6 +145,77 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
         setComplaintsRows(prev => prev.filter(r => r.value !== rowValue));
         // Also uncheck from selector
         setSelectedComplaints(prev => prev.filter(v => v !== rowValue));
+    };
+
+    // Handle document uploads
+    const handleDocumentUpload = async (files: File[], patientId: string, doctorId: string, clinicId: string, patientVisitNo: number) => {
+        if (files.length === 0) return [];
+
+        setIsUploadingDocuments(true);
+        setDocumentUploadResults([]);
+
+        try {
+            console.log('=== UPLOADING DOCUMENTS ===');
+            console.log('Files to upload:', files.map(f => f.name));
+            console.log('Patient ID:', patientId);
+            console.log('Doctor ID:', doctorId);
+            console.log('Clinic ID:', clinicId);
+            console.log('Visit No:', patientVisitNo);
+
+            const uploadPromises = files.map(async (file) => {
+                const request: DocumentUploadRequest = {
+                    patientId,
+                    doctorId,
+                    clinicId,
+                    documentName: file.name,
+                    createdByName: 'recep', // You may want to get this from auth context
+                    patientVisitNo,
+                    visitDate: new Date().toISOString().slice(0, 19).replace('T', ' ')
+                };
+
+                console.log('Uploading document:', file.name, 'with request:', request);
+                return await DocumentService.uploadDocument(request);
+            });
+
+            const results = await Promise.all(uploadPromises);
+            console.log('Document upload results:', results);
+            
+            setDocumentUploadResults(results);
+            return results;
+        } catch (error) {
+            console.error('Error uploading documents:', error);
+            throw error;
+        } finally {
+            setIsUploadingDocuments(false);
+        }
+    };
+
+    // Load existing documents for the patient visit
+    const loadExistingDocuments = async (patientId: string, visitNo: number) => {
+        if (!patientId || !visitNo) return;
+
+        setIsLoadingDocuments(true);
+        try {
+            console.log('=== LOADING EXISTING DOCUMENTS ===');
+            console.log('Patient ID:', patientId);
+            console.log('Visit No:', visitNo);
+
+            const result = await DocumentService.getDocumentsByVisit(patientId, visitNo);
+            console.log('Existing documents result:', result);
+
+            if (result.success && result.documents) {
+                setExistingDocuments(result.documents);
+                console.log('Loaded existing documents:', result.documents);
+            } else {
+                console.log('No existing documents found or error:', result.error);
+                setExistingDocuments([]);
+            }
+        } catch (error) {
+            console.error('Error loading existing documents:', error);
+            setExistingDocuments([]);
+        } finally {
+            setIsLoadingDocuments(false);
+        }
     };
 
     // Keep joined complaints in formData for API compatibility
@@ -233,44 +313,69 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
         };
     }, [formData.referralBy]);
 
-    // Load last visit details when dialog opens and patient data is available
+    // Load appointment details when dialog opens and patient data is available
     React.useEffect(() => {
         let cancelled = false;
-        async function loadLastVisitIfAny() {
+        async function loadAppointmentDetails() {
             try {
                 if (!open || !patientData?.patientId) return;
-                const pid = String(patientData.patientId);
-                const result: any = await visitService.getLastVisitDetails(pid);
+                
+                setIsLoadingAppointmentDetails(true);
+                console.log('=== LOADING APPOINTMENT DETAILS ===');
+                console.log('Patient data:', patientData);
+                
+                const appointmentParams = {
+                    patientId: String(patientData.patientId),
+                    doctorId: 'DR-00010', // You may need to get this from context or props
+                    shiftId: 1,
+                    clinicId: 'CL-00001', // You may need to get this from context or props
+                    patientVisitNo: 1,
+                    languageId: 1
+                };
+                
+                console.log('Appointment params:', appointmentParams);
+                
+                const result: any = await visitService.getAppointmentDetails(appointmentParams);
                 if (cancelled) return;
 
-                if (!result) return;
-                const payload = result.data || result.lastVisit || result.visit || result.payload || result;
-                if (!payload) return;
-
-                // Attempt to normalize keys from payload
+                console.log('=== APPOINTMENT DETAILS RESPONSE ===');
+                console.log('Full response:', result);
+                
+                if (!result || !result.found || !result.mainData || result.mainData.length === 0) {
+                    console.log('No appointment details found, falling back to last visit details');
+                    return;
+                }
+                
+                // Use the first item from mainData array as requested
+                const appointmentData = result.mainData[0];
+                console.log('Using appointment data (first item):', appointmentData);
+                
+                // Map appointment data to form fields
                 const normalized = {
-                    referByRaw: payload.referBy ?? payload.referralBy ?? '',
-                    referralName: payload.referralName ?? '',
-                    referralContact: payload.referralContact ?? '',
-                    referralEmail: payload.referralEmail ?? '',
-                    referralAddress: payload.referralAddress ?? '',
-                    pulse: payload.pulse ?? payload.pulsePerMin ?? '',
-                    height: payload.heightInCms ?? payload.height ?? '',
-                    weight: payload.weightInKgs ?? payload.weight ?? '',
-                    bp: payload.bloodPressure ?? payload.bp ?? '',
-                    sugar: payload.sugar ?? '',
-                    tft: payload.tft ?? '',
-                    pastSurgicalHistory: payload.pastSurgicalHistory ?? payload.surgicalHistory ?? '',
-                    previousVisitPlan: payload.previousVisitPlan ?? payload.plan ?? '',
-                    chiefComplaint: payload.chiefComplaint ?? payload.currentComplaint ?? '',
-                    visitComments: payload.visitComments ?? payload.visitCommentsField ?? '',
-                    currentMedicines: payload.currentMedicines ?? '',
-                    inPerson: payload.inPerson ?? undefined,
-                    followUpFlag: payload.followUpFlag ?? payload.followUp ?? undefined,
-                    followUpType: payload.followUpType ?? payload.followUp ?? undefined
+                    referByRaw: appointmentData.referBy ?? '',
+                    referralName: appointmentData.referralName ?? '',
+                    referralContact: appointmentData.referralContact ?? '',
+                    referralEmail: appointmentData.referralEmail ?? '',
+                    referralAddress: appointmentData.referralAddress ?? '',
+                    pulse: appointmentData.pulse ?? '',
+                    height: appointmentData.heightInCms ?? '',
+                    weight: appointmentData.weightInKgs ?? '',
+                    bp: appointmentData.bloodPressure ?? '',
+                    sugar: appointmentData.sugar ?? '',
+                    tft: appointmentData.tft ?? '',
+                    pastSurgicalHistory: appointmentData.surgicalHistory ?? '',
+                    previousVisitPlan: appointmentData.plan ?? '',
+                    chiefComplaint: appointmentData.currentComplaint ?? '',
+                    visitComments: appointmentData.visitComments ?? '',
+                    currentMedicines: appointmentData.currentMedicines ?? '',
+                    inPerson: appointmentData.inPerson ?? undefined,
+                    followUpFlag: appointmentData.followUpFlag ?? undefined,
+                    followUpType: appointmentData.followUp ?? undefined
                 } as any;
 
-                // Patch form fields only if currently empty
+                console.log('Normalized appointment data:', normalized);
+
+                // Patch form fields with appointment data
                 setFormData(prev => {
                     const patched = { ...prev } as any;
                     const maybeSet = (key: keyof typeof patched, value: any) => {
@@ -279,7 +384,8 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                             patched[key] = String(value);
                         }
                     };
-                    // Set referralBy based on payload and available options, default to 'Self'
+                    
+                    // Set referralBy based on appointment data and available options
                     if (normalized.referByRaw) {
                         const referIdStr = String(normalized.referByRaw);
                         const matchExists = referByOptions.some(o => String(o.id) === referIdStr);
@@ -287,10 +393,10 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                     } else if (!patched.referralBy) {
                         patched.referralBy = 'Self';
                     }
+                    
                     maybeSet('referralName', normalized.referralName);
-                    maybeSet('referralContact', normalized.referralContact);
-                    maybeSet('referralEmail', normalized.referralEmail);
-                    maybeSet('referralAddress', normalized.referralAddress);
+                    // Don't patch referralContact, referralEmail, referralAddress from API
+                    // These fields should only be populated when a doctor is selected
                     maybeSet('pulse', normalized.pulse);
                     maybeSet('height', normalized.height);
                     maybeSet('weight', normalized.weight);
@@ -309,6 +415,8 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                     if (!isNaN(heightNum) && heightNum > 0 && !isNaN(weightNum) && weightNum > 0) {
                         patched.bmi = (weightNum / ((heightNum / 100) * (heightNum / 100))).toFixed(1);
                     }
+                    
+                    console.log('Updated form data with appointment details:', patched);
                     return patched;
                 });
 
@@ -318,15 +426,147 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                     if (typeof normalized.inPerson === 'boolean') next.inPerson = normalized.inPerson;
                     if (typeof normalized.followUpFlag === 'boolean') next.followUp = normalized.followUpFlag;
                     if (normalized.followUpType && typeof normalized.followUpType === 'string') next.followUpType = normalized.followUpType;
+                    console.log('Updated visit type:', next);
                     return next;
                 });
+                
+                console.log('=== APPOINTMENT DETAILS LOADED SUCCESSFULLY ===');
+                
+                // Load existing documents for this patient visit
+                if (patientData?.patientId) {
+                    await loadExistingDocuments(String(patientData.patientId), 1); // Using visit number 1
+                }
+                
             } catch (e) {
-                console.error('Failed to load last visit details', e);
+                console.error('Failed to load appointment details:', e);
+                // Fall back to loading last visit details if appointment details fail
+                console.log('Falling back to last visit details...');
+                try {
+                    if (!cancelled && patientData?.patientId) {
+                        const pid = String(patientData.patientId);
+                        const result: any = await visitService.getLastVisitDetails(pid);
+                        if (cancelled) return;
+
+                        if (!result) return;
+                        const payload = result.data || result.lastVisit || result.visit || result.payload || result;
+                        if (!payload) return;
+
+                        // Attempt to normalize keys from payload
+                        const normalized = {
+                            referByRaw: payload.referBy ?? payload.referralBy ?? '',
+                            referralName: payload.referralName ?? '',
+                            referralContact: payload.referralContact ?? '',
+                            referralEmail: payload.referralEmail ?? '',
+                            referralAddress: payload.referralAddress ?? '',
+                            pulse: payload.pulse ?? payload.pulsePerMin ?? '',
+                            height: payload.heightInCms ?? payload.height ?? '',
+                            weight: payload.weightInKgs ?? payload.weight ?? '',
+                            bp: payload.bloodPressure ?? payload.bp ?? '',
+                            sugar: payload.sugar ?? '',
+                            tft: payload.tft ?? '',
+                            pastSurgicalHistory: payload.pastSurgicalHistory ?? payload.surgicalHistory ?? '',
+                            previousVisitPlan: payload.previousVisitPlan ?? payload.plan ?? '',
+                            chiefComplaint: payload.chiefComplaint ?? payload.currentComplaint ?? '',
+                            visitComments: payload.visitComments ?? payload.visitCommentsField ?? '',
+                            currentMedicines: payload.currentMedicines ?? '',
+                            inPerson: payload.inPerson ?? undefined,
+                            followUpFlag: payload.followUpFlag ?? payload.followUp ?? undefined,
+                            followUpType: payload.followUpType ?? payload.followUp ?? undefined
+                        } as any;
+
+                        // Patch form fields only if currently empty
+                        setFormData(prev => {
+                            const patched = { ...prev } as any;
+                            const maybeSet = (key: keyof typeof patched, value: any) => {
+                                if (value === undefined || value === null || value === '') return;
+                                if (patched[key] === '' || patched[key] === undefined || patched[key] === null) {
+                                    patched[key] = String(value);
+                                }
+                            };
+                            // Set referralBy based on payload and available options, default to 'Self'
+                            if (normalized.referByRaw) {
+                                const referIdStr = String(normalized.referByRaw);
+                                const matchExists = referByOptions.some(o => String(o.id) === referIdStr);
+                                patched.referralBy = matchExists ? referIdStr : 'Self';
+                            } else if (!patched.referralBy) {
+                                patched.referralBy = 'Self';
+                            }
+                            maybeSet('referralName', normalized.referralName);
+                            // Don't patch referralContact, referralEmail, referralAddress from API
+                            // These fields should only be populated when a doctor is selected
+                            maybeSet('pulse', normalized.pulse);
+                            maybeSet('height', normalized.height);
+                            maybeSet('weight', normalized.weight);
+                            maybeSet('bp', normalized.bp);
+                            maybeSet('sugar', normalized.sugar);
+                            maybeSet('tft', normalized.tft);
+                            maybeSet('pastSurgicalHistory', normalized.pastSurgicalHistory);
+                            maybeSet('previousVisitPlan', normalized.previousVisitPlan);
+                            maybeSet('chiefComplaint', normalized.chiefComplaint);
+                            maybeSet('visitComments', normalized.visitComments);
+                            maybeSet('currentMedicines', normalized.currentMedicines);
+
+                            // Derive BMI if height/weight became available
+                            const heightNum = parseFloat(patched.height);
+                            const weightNum = parseFloat(patched.weight);
+                            if (!isNaN(heightNum) && heightNum > 0 && !isNaN(weightNum) && weightNum > 0) {
+                                patched.bmi = (weightNum / ((heightNum / 100) * (heightNum / 100))).toFixed(1);
+                            }
+                            return patched;
+                        });
+
+                        // Patch visit type if provided
+                        setVisitType(prev => {
+                            const next = { ...prev };
+                            if (typeof normalized.inPerson === 'boolean') next.inPerson = normalized.inPerson;
+                            if (typeof normalized.followUpFlag === 'boolean') next.followUp = normalized.followUpFlag;
+                            if (normalized.followUpType && typeof normalized.followUpType === 'string') next.followUpType = normalized.followUpType;
+                            return next;
+                        });
+                    }
+                } catch (fallbackError) {
+                    console.error('Failed to load last visit details as fallback:', fallbackError);
+                }
+            } finally {
+                if (!cancelled) {
+                    setIsLoadingAppointmentDetails(false);
+                }
             }
         }
-        loadLastVisitIfAny();
+        loadAppointmentDetails();
         return () => { cancelled = true; };
     }, [open, patientData?.patientId, referByOptions]);
+
+    // Auto-match referralName from last visit with referral doctors and patch fields
+    React.useEffect(() => {
+        let cancelled = false;
+        async function tryAutofillDoctorFromReferralName() {
+            if (!open) return;
+            const name = (formData.referralName || '').trim();
+            if (!name) return;
+            try {
+                const { getReferralDoctors } = await import('../services/referralService');
+                const doctors = await getReferralDoctors(1);
+                const match = doctors.find(d => (d.doctorName || '').trim().toLowerCase() === name.toLowerCase());
+                if (!cancelled && match) {
+                    setSelectedDoctor(match as any);
+                    setFormData(prev => ({
+                        ...prev,
+                        referralBy: 'D',
+                        referralName: match.doctorName || prev.referralName,
+                        referralContact: match.doctorMob || '',
+                        referralEmail: (match as any).doctorMail || match.doctorEmail || '',
+                        referralAddress: (match as any).doctorAddress || match.doctorAddress || ''
+                    }));
+                    setReferralNameSearch(match.doctorName || name);
+                }
+            } catch (e) {
+                console.error('Failed to auto-match referralName to doctor', e);
+            }
+        }
+        tryAutofillDoctorFromReferralName();
+        return () => { cancelled = true; };
+    }, [open, formData.referralName]);
 
     if (!open || !patientData) return null;
 
@@ -354,6 +594,10 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                 // Clear selected doctor if not a doctor referral
                 if (value !== 'D') {
                     setSelectedDoctor(null);
+                    // Clear referral contact fields when not a doctor referral
+                    newData.referralContact = '';
+                    newData.referralEmail = '';
+                    newData.referralAddress = '';
                 }
             }
             
@@ -376,6 +620,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
             attachments: prev.attachments.filter((_, index) => index !== indexToRemove)
         }));
     };
+
 
     // Search referral names when typing
     const handleReferralNameSearch = async (searchTerm: string) => {
@@ -447,7 +692,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                 clinicId: 'CL-00001', // You may need to get this from context or props
                 shiftId: '1', // You may need to get this from context or props
                 visitDate: new Date().toISOString().slice(0, 19).replace('T', ' '), // Current date/time
-                patientVisitNo: '1', // You may need to generate this or get from props
+                patientVisitNo: '1', // Using visit number 1 as requested
                 
                 // Referral information
                 referBy: formData.referralBy,
@@ -547,15 +792,42 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
             
             if (result.success) {
                 console.log('=== VISIT DETAILS SAVED SUCCESSFULLY ===');
-                console.log('Visit details saved successfully!');
                 
-                // Show success snackbar immediately
+                // Upload documents if any are attached
+                if (formData.attachments && formData.attachments.length > 0) {
+                    try {
+                        console.log('=== UPLOADING ATTACHED DOCUMENTS ===');
+                        const documentResults = await handleDocumentUpload(
+                            formData.attachments,
+                            patientData?.patientId?.toString() || '',
+                            'DR-00010', // You may need to get this from context or props
+                            'CL-00001', // You may need to get this from context or props
+                            1 // patientVisitNo
+                        );
+                        
+                        console.log('Document upload results:', documentResults);
+                        
+                        // Check if all documents uploaded successfully
+                        const failedUploads = documentResults.filter(result => !result.success);
+                        if (failedUploads.length > 0) {
+                            console.warn('Some documents failed to upload:', failedUploads);
+                            setSnackbarMessage(`Visit details saved successfully! ${failedUploads.length} document(s) failed to upload.`);
+                        } else {
+                            setSnackbarMessage('Visit details and documents saved successfully!');
+                        }
+                    } catch (documentError) {
+                        console.error('Error uploading documents:', documentError);
+                        setSnackbarMessage('Visit details saved successfully, but documents failed to upload.');
+                    }
+                } else {
+                    setSnackbarMessage('Visit details saved successfully!');
+                }
+                
+                // Show success snackbar
                 console.log('=== SETTING SNACKBAR STATE ===');
-                console.log('Setting snackbar message:', 'Visit details saved successfully!');
                 console.log('Setting snackbar open to true');
-                setSnackbarMessage('Visit details saved successfully!');
                 setSnackbarOpen(true);
-                console.log('Snackbar state set - message:', 'Visit details saved successfully!', 'open:', true);
+                console.log('Snackbar state set - open:', true);
                 
                 setError(null);
                 setSuccess(null);
@@ -623,11 +895,23 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
         setComplaintSearch('');
         setIsComplaintsOpen(false);
         setComplaintsRows([]);
+        setIsUploadingDocuments(false);
+        setDocumentUploadResults([]);
+        setExistingDocuments([]);
+        setIsLoadingDocuments(false);
         
     };
 
     return (
         <>
+        <style>
+            {`
+                @keyframes spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+            `}
+        </style>
         {open && (
         <div
             style={{
@@ -771,6 +1055,83 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                             {success}
                         </div>
                     )}
+                    {/* Loading Appointment Details */}
+                    {isLoadingAppointmentDetails && (
+                        <div style={{
+                            backgroundColor: '#e3f2fd',
+                            color: '#1976d2',
+                            padding: '10px 15px',
+                            borderRadius: '4px',
+                            marginBottom: '15px',
+                            border: '1px solid #bbdefb',
+                            fontSize: '14px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '10px'
+                        }}>
+                            <div style={{
+                                width: '16px',
+                                height: '16px',
+                                border: '2px solid #1976d2',
+                                borderTop: '2px solid transparent',
+                                borderRadius: '50%',
+                                animation: 'spin 1s linear infinite'
+                            }}></div>
+                            Loading appointment details...
+                        </div>
+                    )}
+                    
+                    {/* Document Upload Loading */}
+                    {isUploadingDocuments && (
+                        <div style={{
+                            backgroundColor: '#fff3e0',
+                            color: '#f57c00',
+                            padding: '10px 15px',
+                            borderRadius: '4px',
+                            marginBottom: '15px',
+                            border: '1px solid #ffcc02',
+                            fontSize: '14px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '10px'
+                        }}>
+                            <div style={{
+                                width: '16px',
+                                height: '16px',
+                                border: '2px solid #f57c00',
+                                borderTop: '2px solid transparent',
+                                borderRadius: '50%',
+                                animation: 'spin 1s linear infinite'
+                            }}></div>
+                            Uploading documents... ({formData.attachments.length} file(s))
+                        </div>
+                    )}
+                    
+                    {/* Document Upload Results */}
+                    {documentUploadResults.length > 0 && (
+                        <div style={{
+                            backgroundColor: '#f3e5f5',
+                            color: '#7b1fa2',
+                            padding: '10px 15px',
+                            borderRadius: '4px',
+                            marginBottom: '15px',
+                            border: '1px solid #ce93d8',
+                            fontSize: '14px'
+                        }}>
+                            <div style={{ fontWeight: 'bold', marginBottom: '5px' }}>Document Upload Results:</div>
+                            {documentUploadResults.map((result, index) => (
+                                <div key={index} style={{ 
+                                    fontSize: '12px', 
+                                    marginBottom: '2px',
+                                    color: result.success ? '#2e7d32' : '#d32f2f'
+                                }}>
+                                    {result.success ? '✓' : '✗'} {result.documentName || `Document ${index + 1}`}: 
+                                    {result.success ? ' Uploaded successfully' : ` Failed - ${result.error || 'Unknown error'}`}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                    
                     {/* Referral Information */}
                     <div style={{ marginBottom: '10px' }}>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr 1fr', gap: '10px' }}>
@@ -781,6 +1142,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                 <select
                                     value={formData.referralBy}
                                     onChange={(e) => handleInputChange('referralBy', e.target.value)}
+                                    disabled={selectedDoctor !== null}
                                     style={{
                                         width: '100%',
                                         height: '32px',
@@ -1710,69 +2072,129 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                             <label style={{ display: 'block', marginBottom: '5px', fontSize: '12px', fontWeight: 'bold', color: '#333' }}>
                                 Attachments (Max 3 , Size 150Mb):
                             </label>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                                <button
+                                    type="button"
+                                    onClick={() => document.getElementById('fileInput')?.click()}
+                                    style={{
+                                        padding: '8px 16px',
+                                        backgroundColor: '#1976d2',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '6px',
+                                        cursor: 'pointer',
+                                        fontSize: '12px',
+                                        fontWeight: '500',
+                                        transition: 'background-color 0.2s'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.backgroundColor = '#1565c0';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.backgroundColor = '#1976d2';
+                                    }}
+                                >
+                                    Choose Files
+                                </button>
+                                <span style={{ fontSize: '12px', color: '#666' }}>
+                                    Files uploaded: {formData.attachments.length + existingDocuments.length}
+                                </span>
+                            </div>
                             <input
+                                id="fileInput"
                                 type="file"
                                 multiple
                                 onChange={handleFileChange}
-                                className="attachmentInput"
-                                style={{
-                                    width: '100%',
-                                    height: '32px',
-                                    padding: '4px 8px',
-                                    borderRadius: '6px',
-                                    fontSize: '12px',
-                                    fontFamily: "'Roboto', sans-serif",
-                                    fontWeight: '500',
-                                    backgroundColor: 'white',
-                                    outline: 'none',
-                                    transition: 'border-color 0.2s'
-                                }}
-                                onFocus={(e) => {
-                                    e.target.style.borderColor = '#1E88E5';
-                                    e.target.style.boxShadow = 'none';
-                                }}
-                                onBlur={(e) => {
-                                    e.target.style.borderColor = '#B7B7B7';
-                                }}
+                                style={{ display: 'none' }}
                             />
                             <div style={{ marginTop: '5px', fontSize: '12px', color: '#666' }}>
-                                {formData.attachments.length > 0 ? (
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', alignItems: 'center' }}>
-                                        {formData.attachments.map((file, index) => (
-                                            <span key={index} style={{ 
-                                                display: 'inline-flex',
-                                                alignItems: 'center',
-                                                padding: '4px 8px',
-                                                backgroundColor: 'white',
-                                                borderRadius: '6px',
-                                                border: '1px solid #B7B7B7',
-                                                fontSize: '12px',
-                                                fontFamily: "'Roboto', sans-serif",
-                                                fontWeight: '500'
-                                            }}>
-                                                <span style={{ marginRight: '5px', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                    {file.name}
-                                                </span>
-                                                <span
-                                                    onClick={() => removeFile(index)}
-                                                    style={{
-                                                        color: 'black',
-                                                        cursor: 'pointer',
-                                                        fontSize: '14px',
-                                                        padding: '0',
-                                                        marginLeft: '5px',
-                                                        fontWeight: 'bold'
-                                                    }}
-                                                    title="Remove file"
-                                                >
-                                                    ×
-                                                </span>
-                                            </span>
-                                        ))}
+                                {/* Show loading indicator for existing documents */}
+                                {isLoadingDocuments && (
+                                    <div style={{ 
+                                        display: 'flex', 
+                                        alignItems: 'center', 
+                                        gap: '5px', 
+                                        color: '#2e7d32',
+                                        marginBottom: '5px'
+                                    }}>
+                                        <div style={{
+                                            width: '12px',
+                                            height: '12px',
+                                            border: '2px solid #2e7d32',
+                                            borderTop: '2px solid transparent',
+                                            borderRadius: '50%',
+                                            animation: 'spin 1s linear infinite'
+                                        }}></div>
+                                        Loading existing documents...
                                     </div>
-                                ) : (
-                                    'No file chosen'
                                 )}
+                                
+                                {/* Show existing documents */}
+                                {existingDocuments.length > 0 && (
+                                    <div style={{ marginBottom: '5px' }}>
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', alignItems: 'center' }}>
+                                            {existingDocuments.map((doc, index) => (
+                                                <span key={`existing-${index}`} style={{ 
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    padding: '4px 8px',
+                                                    backgroundColor: '#e8f5e8',
+                                                    borderRadius: '6px',
+                                                    border: '1px solid #c8e6c9',
+                                                    fontSize: '12px',
+                                                    fontFamily: "'Roboto', sans-serif",
+                                                    fontWeight: '500',
+                                                    color: '#2e7d32'
+                                                }}>
+                                                    <span style={{ marginRight: '5px' }}>📄</span>
+                                                    <span style={{ maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                        {doc.documentName || `Document ${index + 1}`}
+                                                    </span>
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                                
+                                {/* Show uploaded files */}
+                                {formData.attachments.length > 0 && (
+                                    <div>
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', alignItems: 'center' }}>
+                                            {formData.attachments.map((file, index) => (
+                                                <span key={index} style={{ 
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    padding: '4px 8px',
+                                                    backgroundColor: 'white',
+                                                    borderRadius: '6px',
+                                                    border: '1px solid #B7B7B7',
+                                                    fontSize: '12px',
+                                                    fontFamily: "'Roboto', sans-serif",
+                                                    fontWeight: '500'
+                                                }}>
+                                                    <span style={{ marginRight: '5px', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                        {file.name}
+                                                    </span>
+                                                    <span
+                                                        onClick={() => removeFile(index)}
+                                                        style={{
+                                                            color: 'black',
+                                                            cursor: 'pointer',
+                                                            fontSize: '14px',
+                                                            padding: '0',
+                                                            marginLeft: '5px',
+                                                            fontWeight: 'bold'
+                                                        }}
+                                                        title="Remove file"
+                                                    >
+                                                        ×
+                                                    </span>
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                                
                             </div>
                         </div>
                         <div>
@@ -1814,6 +2236,10 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                     }
                     input[type="checkbox"] {
                         width: auto !important;
+                    }
+                    @keyframes spin {
+                        0% { transform: rotate(0deg); }
+                        100% { transform: rotate(360deg); }
                     }
                 `}</style>
                 

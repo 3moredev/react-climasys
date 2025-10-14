@@ -229,6 +229,41 @@ export const visitService = {
   },
 
   /**
+   * Get appointment details for a patient
+   * @param params - Parameters including patientId, doctorId, shiftId, clinicId, patientVisitNo, languageId
+   * @returns Promise<any>
+   */
+  async getAppointmentDetails(params: {
+    patientId: string;
+    doctorId: string;
+    shiftId: number;
+    clinicId: string;
+    patientVisitNo: number;
+    languageId?: number;
+  }): Promise<any> {
+    try {
+      console.log('Fetching appointment details with params:', params);
+      const response = await api.get('/visits/appointment-details', { params });
+      console.log('Appointment details response:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error('Get appointment details API Error:', error);
+      
+      if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
+        throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
+      }
+      
+      if (error.response?.status === 404) {
+        throw new Error('Appointment details not found.');
+      } else if (error.response?.status === 500) {
+        throw new Error('Server error occurred while fetching appointment details.');
+      }
+      
+      throw new Error(error.response?.data?.error || 'Failed to fetch appointment details');
+    }
+  },
+
+  /**
    * Save comprehensive visit data
    * @param visitData - Comprehensive visit data
    * @returns Promise<any>
