@@ -45,7 +45,7 @@ type PatientFormData = {
     smoking: boolean;
     tobacco: boolean;
     alcohol: boolean;
-    inPerson: boolean;
+    inPerson: true;
 
     // Medical Details
     allergy: string;
@@ -120,7 +120,7 @@ const defaultFormData: PatientFormData = {
     smoking: false,
     tobacco: false,
     alcohol: false,
-    inPerson: false,
+    inPerson:true,
     
     // Medical Details
     allergy: '',
@@ -268,6 +268,12 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
         return `${dd} - ${mmm} - ${yy}`;
     };
 
+    // Utility function to truncate text with ellipsis when it exceeds 100 characters
+    const truncateText = (text: string, maxLength: number = 35): string => {
+        if (!text || text.length <= maxLength) return text;
+        return text.substring(0, maxLength) + '...';
+    };
+
     const formatVisitDate = (dateString: string): string => {
         if (!dateString) return '';
         try {
@@ -336,128 +342,6 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
         }));
     };
 
-    // Auto-resize any textarea marked with data-autosize="true"
-    useEffect(() => {
-        const resizeAll = () => {
-            const areas = document.querySelectorAll<HTMLTextAreaElement>('textarea[data-autosize="true"]');
-            areas.forEach((ta) => {
-                // Reset height to auto to get the natural height
-                ta.style.height = 'auto';
-                
-                // Calculate the new height based on content
-                const newHeight = ta.scrollHeight;
-                
-                // Set constraints
-                const minHeight = 40; // Minimum height for single line
-                const maxHeight = 200; // Maximum height before scrolling
-                
-                // Apply height constraints
-                let finalHeight = newHeight;
-                if (finalHeight < minHeight) {
-                    finalHeight = minHeight;
-                } else if (finalHeight > maxHeight) {
-                    finalHeight = maxHeight;
-                }
-                
-                // Set the final height
-                ta.style.height = `${finalHeight}px`;
-                
-                // Handle overflow for very long content
-                if (newHeight > maxHeight) {
-                    ta.style.overflowY = 'auto';
-                } else {
-                    ta.style.overflowY = 'hidden';
-                }
-            });
-        };
-        // resize after mount and on window resize
-        resizeAll();
-        window.addEventListener('resize', resizeAll);
-        return () => window.removeEventListener('resize', resizeAll);
-    }, []);
-
-    // Resize all textareas when form data changes (e.g., when loading new visit data)
-    useEffect(() => {
-        // Use a small delay to ensure DOM is updated
-        const timer = setTimeout(() => {
-            resizeAllTextareas();
-        }, 10);
-        
-        return () => clearTimeout(timer);
-    }, [formData]);
-
-    // Improved auto-resize function that handles both expansion and contraction
-    const handleAutoResize = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-        const textarea = e.target;
-        
-        // Store the current scroll position
-        const scrollTop = textarea.scrollTop;
-        
-        // Reset height to auto to get the natural height
-        textarea.style.height = 'auto';
-        
-        // Calculate the new height based on content
-        const newHeight = textarea.scrollHeight;
-        
-        // Set constraints
-        const minHeight = 40; // Minimum height for single line
-        const maxHeight = 200; // Maximum height before scrolling
-        
-        // Apply height constraints
-        let finalHeight = newHeight;
-        if (finalHeight < minHeight) {
-            finalHeight = minHeight;
-        } else if (finalHeight > maxHeight) {
-            finalHeight = maxHeight;
-        }
-        
-        // Set the final height
-        textarea.style.height = `${finalHeight}px`;
-        
-        // Handle overflow for very long content
-        if (newHeight > maxHeight) {
-            textarea.style.overflowY = 'auto';
-        } else {
-            textarea.style.overflowY = 'hidden';
-        }
-        
-        // Restore scroll position if needed
-        textarea.scrollTop = scrollTop;
-    };
-
-    // Function to resize all textareas when form data changes
-    const resizeAllTextareas = () => {
-        const areas = document.querySelectorAll<HTMLTextAreaElement>('textarea[data-autosize="true"]');
-        areas.forEach((ta) => {
-            // Reset height to auto to get the natural height
-            ta.style.height = 'auto';
-            
-            // Calculate the new height based on content
-            const newHeight = ta.scrollHeight;
-            
-            // Set constraints
-            const minHeight = 40; // Minimum height for single line
-            const maxHeight = 200; // Maximum height before scrolling
-            
-            // Apply height constraints
-            let finalHeight = newHeight;
-            if (finalHeight < minHeight) {
-                finalHeight = minHeight;
-            } else if (finalHeight > maxHeight) {
-                finalHeight = maxHeight;
-            }
-            
-            // Set the final height
-            ta.style.height = `${finalHeight}px`;
-            
-            // Handle overflow for very long content
-            if (newHeight > maxHeight) {
-                ta.style.overflowY = 'auto';
-            } else {
-                ta.style.overflowY = 'hidden';
-            }
-        });
-    };
 
     // Format date to dd-MMM-yy (e.g., 05-Jul-25)
     const formatToDdMmmYy = (dateInput: any): string => {
@@ -713,10 +597,10 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                         marginBottom: '12px'
                     }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <label style={{ color: '#212121', fontSize: '0.9rem', fontWeight: '500', fontFamily: "'Roboto', sans-serif" }}>Referred By:</label>
+                            <label style={{ color: '#212121', fontSize: '0.9rem', fontWeight: 'bold', fontFamily: "'Roboto', sans-serif" }}>Referred By:</label>
                             <input
                                 type="text"
-                                value={formData.referredBy}
+                                value={isReadOnly ? truncateText(formData.referredBy) : formData.referredBy}
                                 onChange={(e) => handleInputChange('referredBy', e.target.value)}
                                 disabled={isReadOnly}
                                 style={{
@@ -726,12 +610,15 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                     borderRadius: '4px',
                                     fontSize: '0.9rem',
                                     fontFamily: "'Roboto', sans-serif",
-                                    backgroundColor: '#fff'
+                                    backgroundColor: '#fff',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden'
                                 }}
                             />
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <label style={{ color: '#212121', fontSize: '0.9rem', fontWeight: '500', fontFamily: "'Roboto', sans-serif" }}>In Person:</label>
+                            <label style={{ color: '#212121', fontSize: '0.9rem', fontWeight: 'bold', fontFamily: "'Roboto', sans-serif" }}>In Person:</label>
                             <input
                                 type="checkbox"
                                 checked={formData.inPerson}
@@ -741,133 +628,6 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                     width: '16px',
                                     height: '16px',
                                     accentColor: '#1E88E5'
-                                }}
-                            />
-                        </div>
-                        {/* Inline groups: will wrap to 2 lines if needed */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <label style={{ color: '#212121', fontSize: '0.9rem', fontWeight: '500', fontFamily: "'Roboto', sans-serif" }}>Height (Cm):</label>
-                            <input
-                                type="text"
-                                value={formData.height}
-                                onChange={(e) => handleInputChange('height', e.target.value)}
-                                disabled={isReadOnly}
-                                style={{
-                                    width: '70px',
-                                    padding: '4px 6px',
-                                    border: '1px solid #ddd',
-                                    borderRadius: '4px',
-                                    fontSize: '0.9rem',
-                                    fontFamily: "'Roboto', sans-serif",
-                                    backgroundColor: '#fff'
-                                }}
-                            />
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <label style={{ color: '#212121', fontSize: '0.9rem', fontWeight: '500', fontFamily: "'Roboto', sans-serif" }}>Weight (Kg):</label>
-                            <input
-                                type="text"
-                                value={formData.weight}
-                                onChange={(e) => handleInputChange('weight', e.target.value)}
-                                disabled={isReadOnly}
-                                style={{
-                                    width: '60px',
-                                    padding: '4px 6px',
-                                    border: '1px solid #ddd',
-                                    borderRadius: '4px',
-                                    fontSize: '0.9rem',
-                                    fontFamily: "'Roboto', sans-serif",
-                                    backgroundColor: '#fff'
-                                }}
-                            />
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <label style={{ color: '#212121', fontSize: '0.9rem', fontWeight: '500', fontFamily: "'Roboto', sans-serif" }}>Pulse (/min):</label>
-                            <input
-                                type="text"
-                                value={formData.pulse}
-                                onChange={(e) => handleInputChange('pulse', e.target.value)}
-                                disabled={isReadOnly}
-                                style={{
-                                    width: '60px',
-                                    padding: '4px 6px',
-                                    border: '1px solid #ddd',
-                                    borderRadius: '4px',
-                                    fontSize: '0.9rem',
-                                    fontFamily: "'Roboto', sans-serif",
-                                    backgroundColor: '#fff'
-                                }}
-                            />
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <label style={{ color: '#212121', fontSize: '0.9rem', fontWeight: '500', fontFamily: "'Roboto', sans-serif" }}>BP:</label>
-                            <input
-                                type="text"
-                                value={formData.bp}
-                                onChange={(e) => handleInputChange('bp', e.target.value)}
-                                disabled={isReadOnly}
-                                style={{
-                                    width: '70px',
-                                    padding: '4px 6px',
-                                    border: '1px solid #ddd',
-                                    borderRadius: '4px',
-                                    fontSize: '0.9rem',
-                                    fontFamily: "'Roboto', sans-serif",
-                                    backgroundColor: '#fff'
-                                }}
-                            />
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <label style={{ color: '#212121', fontSize: '0.9rem', fontWeight: '500', fontFamily: "'Roboto', sans-serif" }}>Sugar:</label>
-                            <input
-                                type="text"
-                                value={formData.sugar}
-                                onChange={(e) => handleInputChange('sugar', e.target.value)}
-                                disabled={isReadOnly}
-                                style={{
-                                    width: '60px',
-                                    padding: '4px 6px',
-                                    border: '1px solid #ddd',
-                                    borderRadius: '4px',
-                                    fontSize: '0.9rem',
-                                    fontFamily: "'Roboto', sans-serif",
-                                    backgroundColor: '#fff'
-                                }}
-                            />
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <label style={{ color: '#212121', fontSize: '0.9rem', fontWeight: '500', fontFamily: "'Roboto', sans-serif" }}>TFT:</label>
-                            <input
-                                type="text"
-                                value={formData.tft}
-                                onChange={(e) => handleInputChange('tft', e.target.value)}
-                                disabled={isReadOnly}
-                                style={{
-                                    width: '60px',
-                                    padding: '4px 6px',
-                                    border: '1px solid #ddd',
-                                    borderRadius: '4px',
-                                    fontSize: '0.9rem',
-                                    fontFamily: "'Roboto', sans-serif",
-                                    backgroundColor: '#fff'
-                                }}
-                            />
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <label style={{ color: '#212121', fontSize: '0.9rem', fontWeight: '500', fontFamily: "'Roboto', sans-serif" }}>Pallor/HB:</label>
-                            <input
-                                type="text"
-                                value={formData.pallorHb}
-                                onChange={(e) => handleInputChange('pallorHb', e.target.value)}
-                                disabled={isReadOnly}
-                                style={{
-                                    width: '90px',
-                                    padding: '4px 6px',
-                                    border: '1px solid #ddd',
-                                    borderRadius: '4px',
-                                    fontSize: '0.9rem',
-                                    fontFamily: "'Roboto', sans-serif",
-                                    backgroundColor: '#fff'
                                 }}
                             />
                         </div>
@@ -910,6 +670,162 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                             </div>
                         </div> */}
                     </div>
+                    {/* Inline groups: will wrap to 2 lines if needed */}
+                    <div style={{
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        alignItems: 'center',
+                        gap: '8px',
+                        marginBottom: '12px'
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <label style={{ color: '#212121', fontSize: '0.9rem', fontWeight: 'bold', fontFamily: "'Roboto', sans-serif" }}>Height (Cm):</label>
+                            <input
+                                type="text"
+                                value={formData.height}
+                                onChange={(e) => handleInputChange('height', e.target.value)}
+                                disabled={isReadOnly}
+                                style={{
+                                    width: '70px',
+                                    padding: '4px 6px',
+                                    border: '1px solid #ddd',
+                                    borderRadius: '4px',
+                                    fontSize: '0.9rem',
+                                    fontFamily: "'Roboto', sans-serif",
+                                    backgroundColor: '#fff',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden'
+                                }}
+                            />
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <label style={{ color: '#212121', fontSize: '0.9rem', fontWeight: 'bold', fontFamily: "'Roboto', sans-serif" }}>Weight (Kg):</label>
+                            <input
+                                type="text"
+                                value={formData.weight}
+                                onChange={(e) => handleInputChange('weight', e.target.value)}
+                                disabled={isReadOnly}
+                                style={{
+                                    width: '60px',
+                                    padding: '4px 6px',
+                                    border: '1px solid #ddd',
+                                    borderRadius: '4px',
+                                    fontSize: '0.9rem',
+                                    fontFamily: "'Roboto', sans-serif",
+                                    backgroundColor: '#fff',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden'
+                                }}
+                            />
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <label style={{ color: '#212121', fontSize: '0.9rem', fontWeight: 'bold', fontFamily: "'Roboto', sans-serif" }}>Pulse (/min):</label>
+                            <input
+                                type="text"
+                                value={formData.pulse}
+                                onChange={(e) => handleInputChange('pulse', e.target.value)}
+                                disabled={isReadOnly}
+                                style={{
+                                    width: '60px',
+                                    padding: '4px 6px',
+                                    border: '1px solid #ddd',
+                                    borderRadius: '4px',
+                                    fontSize: '0.9rem',
+                                    fontFamily: "'Roboto', sans-serif",
+                                    backgroundColor: '#fff',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden'
+                                }}
+                            />
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <label style={{ color: '#212121', fontSize: '0.9rem', fontWeight: 'bold', fontFamily: "'Roboto', sans-serif" }}>BP:</label>
+                            <input
+                                type="text"
+                                value={formData.bp}
+                                onChange={(e) => handleInputChange('bp', e.target.value)}
+                                disabled={isReadOnly}
+                                style={{
+                                    width: '70px',
+                                    padding: '4px 6px',
+                                    border: '1px solid #ddd',
+                                    borderRadius: '4px',
+                                    fontSize: '0.9rem',
+                                    fontFamily: "'Roboto', sans-serif",
+                                    backgroundColor: '#fff',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden'
+                                }}
+                            />
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <label style={{ color: '#212121', fontSize: '0.9rem', fontWeight: 'bold', fontFamily: "'Roboto', sans-serif" }}>Sugar:</label>
+                            <input
+                                type="text"
+                                value={formData.sugar}
+                                onChange={(e) => handleInputChange('sugar', e.target.value)}
+                                disabled={isReadOnly}
+                                style={{
+                                    width: '60px',
+                                    padding: '4px 6px',
+                                    border: '1px solid #ddd',
+                                    borderRadius: '4px',
+                                    fontSize: '0.9rem',
+                                    fontFamily: "'Roboto', sans-serif",
+                                    backgroundColor: '#fff',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden'
+                                }}
+                            />
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <label style={{ color: '#212121', fontSize: '0.9rem', fontWeight: 'bold', fontFamily: "'Roboto', sans-serif" }}>TFT:</label>
+                            <input
+                                type="text"
+                                value={formData.tft}
+                                onChange={(e) => handleInputChange('tft', e.target.value)}
+                                disabled={isReadOnly}
+                                style={{
+                                    width: '60px',
+                                    padding: '4px 6px',
+                                    border: '1px solid #ddd',
+                                    borderRadius: '4px',
+                                    fontSize: '0.9rem',
+                                    fontFamily: "'Roboto', sans-serif",
+                                    backgroundColor: '#fff',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden'
+                                }}
+                            />
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <label style={{ color: '#212121', fontSize: '0.9rem', fontWeight: 'bold', fontFamily: "'Roboto', sans-serif" }}>Pallor/HB:</label>
+                            <input
+                                type="text"
+                                value={formData.pallorHb}
+                                onChange={(e) => handleInputChange('pallorHb', e.target.value)}
+                                disabled={isReadOnly}
+                                style={{
+                                    width: '90px',
+                                    padding: '4px 6px',
+                                    border: '1px solid #ddd',
+                                    borderRadius: '4px',
+                                    fontSize: '0.9rem',
+                                    fontFamily: "'Roboto', sans-serif",
+                                    backgroundColor: '#fff',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden'
+                                }}
+                            />
+                        </div>
+                    </div>
 
                     {/* Conditions (5 per row) */}
                     <div style={{ 
@@ -919,15 +835,15 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                         marginBottom: '20px'
                     }}>
                         {[
-                            { key: 'hypertension', label: 'Hypertension:' },
-                            { key: 'diabetes', label: 'Diabetes:' },
-                            { key: 'cholesterol', label: 'Cholesterol:' },
-                            { key: 'ihd', label: 'IHD:' },
-                            { key: 'asthma', label: 'Asthma:' },
-                            { key: 'th', label: 'TH:' },
-                            { key: 'smoking', label: 'Smoking:' },
-                            { key: 'tobacco', label: 'Tobacco:' },
-                            { key: 'alcohol', label: 'Alcohol:' }
+                            { key: 'hypertension', label: ':Hypertension' },
+                            { key: 'diabetes', label: ':Diabetes' },
+                            { key: 'cholesterol', label: ':Cholesterol' },
+                            { key: 'ihd', label: ':IHD' },
+                            { key: 'asthma', label: ':Asthma' },
+                            { key: 'th', label: ':TH' },
+                            { key: 'smoking', label: ':Smoking' },
+                            { key: 'tobacco', label: ':Tobacco' },
+                            { key: 'alcohol', label: ':Alcohol' }
                         ].map(({ key, label }) => (
                             <div key={key} style={{ 
                                 display: 'flex', 
@@ -948,7 +864,7 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                 <label style={{ 
                                     color: '#212121', 
                                     fontSize: '0.9rem', 
-                                    fontWeight: '500',
+                                    fontWeight: 'bold',
                                     fontFamily: "'Roboto', sans-serif",
                                     margin: 0
                                 }}>
@@ -961,20 +877,20 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                     {/* Narrative fields (5 per row, auto-height) */}
                     <div style={{ 
                         display: 'grid', 
-                        gridTemplateColumns: 'repeat(5, 1fr)', 
+                        gridTemplateColumns: 'repeat(4, 1fr)', 
                         gap: '15px', 
                         marginBottom: '20px'
                     }}>
                         {[
                             { key: 'allergy', label: 'Allergy:' },
-                            { key: 'medicalHistory', label: 'Medical History:' },
+                            // { key: 'medicalHistory', label: 'Medical History:' },
                             { key: 'surgicalHistory', label: 'Surgical History:' },
                             { key: 'visitComments', label: 'Visit Comments:' },
                             { key: 'medicines', label: 'Exisiting Medicines:' },
-                            { key: 'detailedHistory', label: 'Detailed History/Additional Comments:' }
-                            // { key: 'examinationFindings', label: 'Important/Examination Findings:' },
-                            // { key: 'complaints', label: 'Complaints:' },
-                            // { key: 'provisionalDiagnosis', label: 'Provisional Diagnosis:' },
+                            { key: 'detailedHistory', label: 'Detailed History/Additional Comments:' },
+                            { key: 'examinationFindings', label: 'Important/Examination Findings:' },
+                            { key: 'complaints', label: 'Complaints:' },
+                            { key: 'provisionalDiagnosis', label: 'Provisional Diagnosis:' },
                             // { key: 'examinationComments', label: 'Examination Comments/Detailed History:' },
                             // { key: 'procedurePerformed', label: 'Procedure Performed/Notes:' }
                         ].map(({ key, label }) => (
@@ -983,41 +899,43 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                     display: 'block', 
                                     color: '#212121', 
                                     fontSize: '0.9rem', 
-                                    fontWeight: '500',
+                                    fontWeight: 'bold',
                                     marginBottom: '5px',
                                     fontFamily: "'Roboto', sans-serif"
                                 }}>
                                     {label}
                                 </label>
-                                <textarea
-                                    value={key === 'labSuggested' ? getLabSuggestedValue() : (formData[key as keyof typeof formData] as string)}
-                                    onChange={(e) => { handleInputChange(key, e.target.value); handleAutoResize(e); }}
-                                    placeholder={formData[key as keyof typeof formData] ? '' : '-'}
-                                    data-autosize="true"
-                                    rows={1}
-                                    disabled={isReadOnly}
-                                    style={{
-                                        width: '100%',
-                                        minHeight: '40px',
-                                        maxHeight: '200px',
-                                        padding: '8px 12px',
-                                        border: '1px solid #ddd',
-                                        borderRadius: '4px',
-                                        fontSize: '0.9rem',
-                                        fontFamily: "'Roboto', sans-serif",
-                                        backgroundColor: '#fff',
-                                        overflow: 'hidden',
-                                        resize: 'none',
-                                        lineHeight: '1.4',
-                                        boxSizing: 'border-box'
-                                    }}
-                                />
+                                <div style={{ position: 'relative' }}>
+                                    <textarea
+                                        value={isReadOnly ? truncateText(key === 'labSuggested' ? getLabSuggestedValue() : (formData[key as keyof typeof formData] as string)) : (key === 'labSuggested' ? getLabSuggestedValue() : (formData[key as keyof typeof formData] as string))}
+                                        onChange={(e) => { handleInputChange(key, e.target.value); }}
+                                        placeholder={formData[key as keyof typeof formData] ? '' : '-'}
+                                        disabled={isReadOnly}
+                                        style={{
+                                            width: '100%',
+                                            height: '40px',
+                                            padding: '8px 12px',
+                                            border: '1px solid #ddd',
+                                            borderRadius: '4px',
+                                            fontSize: '0.9rem',
+                                            fontFamily: "'Roboto', sans-serif",
+                                            backgroundColor: '#fff',
+                                            overflow: 'hidden',
+                                            resize: 'none',
+                                            lineHeight: '1.4',
+                                            boxSizing: 'border-box',
+                                            textOverflow: 'ellipsis',
+                                            whiteSpace: 'nowrap'
+                                        }}
+                                        title={key === 'labSuggested' ? getLabSuggestedValue() : (formData[key as keyof typeof formData] as string)}
+                                    />
+                                </div>
                             </div>
                         ))}
                     </div>
                     <div style={{ 
                         display: 'grid', 
-                        gridTemplateColumns: 'repeat(5, 1fr)', 
+                        gridTemplateColumns: 'repeat(4, 1fr)', 
                         gap: '15px', 
                         marginBottom: '20px'
                     }}>
@@ -1028,46 +946,49 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                             // { key: 'visitComments', label: 'Visit Comments:' },
                             // { key: 'medicines', label: 'Exisiting Medicines:' },
                             // { key: 'detailedHistory', label: 'Detailed History/Additional Comments:' },
-                            { key: 'examinationFindings', label: 'Important/Examination Findings:' },
-                            { key: 'complaints', label: 'Complaints:' },
-                            { key: 'provisionalDiagnosis', label: 'Provisional Diagnosis:' },
+                            // { key: 'examinationFindings', label: 'Important/Examination Findings:' },
+                            // { key: 'complaints', label: 'Complaints:' },
+                            // { key: 'provisionalDiagnosis', label: 'Provisional Diagnosis:' },
                             { key: 'examinationComments', label: 'Examination Comments/Detailed History:' },
-                            { key: 'procedurePerformed', label: 'Procedure Performed/Notes:' }
+                            { key: 'procedurePerformed', label: 'Procedure Performed/Notes:' },
+                            { key: 'labSuggested', label: 'Lab Suggested:' }
                         ].map(({ key, label }) => (
                             <div key={key}>
                                 <label style={{ 
                                     display: 'block', 
                                     color: '#212121', 
                                     fontSize: '0.9rem', 
-                                    fontWeight: '500',
+                                    fontWeight: '700',
                                     marginBottom: '5px',
                                     fontFamily: "'Roboto', sans-serif"
                                 }}>
                                     {label}
                                 </label>
-                                <textarea
-                                    value={key === 'labSuggested' ? getLabSuggestedValue() : (formData[key as keyof typeof formData] as string)}
-                                    onChange={(e) => { handleInputChange(key, e.target.value); handleAutoResize(e); }}
-                                    placeholder={formData[key as keyof typeof formData] ? '' : '-'}
-                                    data-autosize="true"
-                                    rows={1}
-                                    disabled={isReadOnly}
-                                    style={{
-                                        width: '100%',
-                                        minHeight: '40px',
-                                        maxHeight: '200px',
-                                        padding: '8px 12px',
-                                        border: '1px solid #ddd',
-                                        borderRadius: '4px',
-                                        fontSize: '0.9rem',
-                                        fontFamily: "'Roboto', sans-serif",
-                                        backgroundColor: '#fff',
-                                        overflow: 'hidden',
-                                        resize: 'none',
-                                        lineHeight: '1.4',
-                                        boxSizing: 'border-box'
-                                    }}
-                                />
+                                <div style={{ position: 'relative' }}>
+                                    <textarea
+                                        value={isReadOnly ? truncateText(key === 'labSuggested' ? getLabSuggestedValue() : (formData[key as keyof typeof formData] as string)) : (key === 'labSuggested' ? getLabSuggestedValue() : (formData[key as keyof typeof formData] as string))}
+                                        onChange={(e) => { handleInputChange(key, e.target.value); }}
+                                        placeholder={formData[key as keyof typeof formData] ? '' : '-'}
+                                        disabled={isReadOnly}
+                                        style={{
+                                            width: '100%',
+                                            height: '40px',
+                                            padding: '8px 12px',
+                                            border: '1px solid #ddd',
+                                            borderRadius: '4px',
+                                            fontSize: '0.9rem',
+                                            fontFamily: "'Roboto', sans-serif",
+                                            backgroundColor: '#fff',
+                                            overflow: 'hidden',
+                                            resize: 'none',
+                                            lineHeight: '1.4',
+                                            boxSizing: 'border-box',
+                                            textOverflow: 'ellipsis',
+                                            whiteSpace: 'nowrap'
+                                        }}
+                                        title={key === 'labSuggested' ? getLabSuggestedValue() : (formData[key as keyof typeof formData] as string)}
+                                    />
+                                </div>
                             </div>
                         ))}
                     </div>
@@ -1076,12 +997,12 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                     <div style={{ marginBottom: '20px' }}>
                         <h3 style={{ 
                             color: '#212121', 
-                            fontSize: '1.2rem', 
+                            fontSize: '1rem', 
                             fontWeight: '600',
                             fontFamily: "'Roboto', sans-serif",
                             // borderBottom: '1px solid #e0e0e0',
-                            paddingBottom: '10px',
-                            marginBottom: '15px'
+                            // paddingBottom: '10px',
+                            marginBottom: '10px !important'
                         }}>
                             Prescriptions
                         </h3>
@@ -1135,11 +1056,11 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                     {/* Follow-up fields in requested order */}
                     <div style={{ 
                         display: 'grid', 
-                        gridTemplateColumns: 'repeat(5, 1fr)', 
+                        gridTemplateColumns: 'repeat(4, 1fr)', 
                         gap: '15px' 
                     }}>
                         {[
-                            { key: 'labSuggested', label: 'Lab Suggested:' },
+                            // { key: 'labSuggested', label: 'Lab Suggested:' },
                             { key: 'medicines', label: 'Medicines:' },
                             { key: 'dressing', label: 'Dressing:' },
                             { key: 'procedure', label: 'Procedure:' },
@@ -1150,35 +1071,37 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                     display: 'block', 
                                     color: '#212121', 
                                     fontSize: '0.9rem', 
-                                    fontWeight: '500',
+                                    fontWeight: 'bold',
                                     marginBottom: '5px',
                                     fontFamily: "'Roboto', sans-serif"
                                 }}>
                                     {label}
                                 </label>
-                                <textarea
-                                    value={key === 'labSuggested' ? getLabSuggestedValue() : (formData[key as keyof typeof formData] as string)}
-                                    onChange={(e) => { handleInputChange(key, e.target.value); handleAutoResize(e); }}
-                                    placeholder={formData[key as keyof typeof formData] ? '' : '-'}
-                                    data-autosize="true"
-                                    rows={1}
-                                    disabled={isReadOnly}
-                                    style={{
-                                        width: '100%',
-                                        minHeight: '40px',
-                                        maxHeight: '200px',
-                                        padding: '8px 12px',
-                                        border: '1px solid #ddd',
-                                        borderRadius: '4px',
-                                        fontSize: '0.9rem',
-                                        fontFamily: "'Roboto', sans-serif",
-                                        backgroundColor: '#fff',
-                                        overflow: 'hidden',
-                                        resize: 'none',
-                                        lineHeight: '1.4',
-                                        boxSizing: 'border-box'
-                                    }}
-                                />
+                                <div style={{ position: 'relative' }}>
+                                    <textarea
+                                        value={isReadOnly ? truncateText(key === 'labSuggested' ? getLabSuggestedValue() : (formData[key as keyof typeof formData] as string)) : (key === 'labSuggested' ? getLabSuggestedValue() : (formData[key as keyof typeof formData] as string))}
+                                        onChange={(e) => { handleInputChange(key, e.target.value); }}
+                                        placeholder={formData[key as keyof typeof formData] ? '' : '-'}
+                                        disabled={isReadOnly}
+                                        style={{
+                                            width: '100%',
+                                            height: '40px',
+                                            padding: '8px 12px',
+                                            border: '1px solid #ddd',
+                                            borderRadius: '4px',
+                                            fontSize: '0.9rem',
+                                            fontFamily: "'Roboto', sans-serif",
+                                            backgroundColor: '#fff',
+                                            overflow: 'hidden',
+                                            resize: 'none',
+                                            lineHeight: '1.4',
+                                            boxSizing: 'border-box',
+                                            textOverflow: 'ellipsis',
+                                            whiteSpace: 'nowrap'
+                                        }}
+                                        title={key === 'labSuggested' ? getLabSuggestedValue() : (formData[key as keyof typeof formData] as string)}
+                                    />
+                                </div>
                             </div>
                         ))}
                     </div>
@@ -1265,22 +1188,10 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                 </div> */}
 
                 {/* Billing Details (at the end of the 3-column grid) */}
-                <div style={{ marginBottom: '30px' }}>
-                    <h3 style={{ 
-                        color: '#212121', 
-                        fontSize: '1.2rem', 
-                        fontWeight: '600', 
-                        marginBottom: '20px',
-                        fontFamily: "'Roboto', sans-serif",
-                        // borderBottom: '1px solid #e0e0e0',
-                        paddingBottom: '10px'
-                    }}>
-                        Billing & Follow-up Details
-                    </h3>
-                    
+                <div style={{ marginBottom: '30px' }}> 
                     <div style={{ 
                         display: 'grid',
-                        gridTemplateColumns: 'repeat(5, 1fr)',
+                        gridTemplateColumns: 'repeat(4, 1fr)',
                         gap: '15px'
                     }}>
                         <div style={{ minWidth: 0 }}>
@@ -1289,7 +1200,7 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                 alignItems: 'center',
                                 color: '#212121', 
                                 fontSize: '0.9rem', 
-                                fontWeight: '600',
+                                fontWeight: 'bold',
                                 marginBottom: '5px',
                                 fontFamily: "'Roboto', sans-serif"
                             }}>
@@ -1309,10 +1220,10 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                         alignItems: 'center',
                                         justifyContent: 'center',
                                         width: '55px',
-                                        color: 'rgb(20, 20, 19)',
-                                        fontSize: '0.5rem',
-                                        fontStyle: 'italic',
-                                        fontWeight: 'lighter'
+                                        color: "#1E88E5",
+                                        fontSize: '0.9rem',
+                                        // fontStyle: '',
+                                        fontWeight: '100'
                                     }}>
                                         Breakup
                                     </span>
@@ -1361,7 +1272,10 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                     borderRadius: '4px',
                                     fontSize: '0.9rem',
                                     fontFamily: "'Roboto', sans-serif",
-                                    backgroundColor: '#fff'
+                                    backgroundColor: '#fff',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden'
                                 }}
                             />
                         </div>
@@ -1371,7 +1285,7 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                 display: 'block', 
                                 color: '#212121', 
                                 fontSize: '0.9rem', 
-                                fontWeight: '600',
+                                fontWeight: 'bold',
                                 marginBottom: '5px',
                                 fontFamily: "'Roboto', sans-serif"
                             }}>
@@ -1389,7 +1303,10 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                     borderRadius: '4px',
                                     fontSize: '0.9rem',
                                     fontFamily: "'Roboto', sans-serif",
-                                    backgroundColor: '#fff'
+                                    backgroundColor: '#fff',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden'
                                 }}
                             />
                         </div>
@@ -1399,7 +1316,7 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                 display: 'block', 
                                 color: '#212121', 
                                 fontSize: '0.9rem', 
-                                fontWeight: '600',
+                                fontWeight: 'bold',
                                 marginBottom: '5px',
                                 fontFamily: "'Roboto', sans-serif"
                             }}>
@@ -1417,7 +1334,10 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                     borderRadius: '4px',
                                     fontSize: '0.9rem',
                                     fontFamily: "'Roboto', sans-serif",
-                                    backgroundColor: '#fff'
+                                    backgroundColor: '#fff',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden'
                                 }}
                             />
                         </div>
@@ -1427,7 +1347,7 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                 display: 'block', 
                                 color: '#212121', 
                                 fontSize: '0.9rem', 
-                                fontWeight: '600',
+                                fontWeight: 'bold',
                                 marginBottom: '5px',
                                 fontFamily: "'Roboto', sans-serif"
                             }}>
@@ -1445,7 +1365,10 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                     borderRadius: '4px',
                                     fontSize: '0.9rem',
                                     fontFamily: "'Roboto', sans-serif",
-                                    backgroundColor: '#fff'
+                                    backgroundColor: '#fff',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden'
                                 }}
                             />
                         </div>
@@ -1455,7 +1378,7 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                 display: 'block', 
                                 color: '#212121', 
                                 fontSize: '0.9rem', 
-                                fontWeight: '600',
+                                fontWeight: 'bold',
                                 marginBottom: '5px',
                                 fontFamily: "'Roboto', sans-serif"
                             }}>
@@ -1473,7 +1396,10 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                     borderRadius: '4px',
                                     fontSize: '0.9rem',
                                     fontFamily: "'Roboto', sans-serif",
-                                    backgroundColor: '#fff'
+                                    backgroundColor: '#fff',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden'
                                 }}
                             />
                         </div>
@@ -1483,7 +1409,7 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                 display: 'block', 
                                 color: '#212121', 
                                 fontSize: '0.9rem', 
-                                fontWeight: '600',
+                                fontWeight: 'bold',
                                 marginBottom: '5px',
                                 fontFamily: "'Roboto', sans-serif"
                             }}>
@@ -1501,7 +1427,10 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                     borderRadius: '4px',
                                     fontSize: '0.9rem',
                                     fontFamily: "'Roboto', sans-serif",
-                                    backgroundColor: '#fff'
+                                    backgroundColor: '#fff',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden'
                                 }}
                             />
                         </div>
@@ -1511,7 +1440,7 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                 display: 'block', 
                                 color: '#212121', 
                                 fontSize: '0.9rem', 
-                                fontWeight: '600',
+                                fontWeight: 'bold',
                                 marginBottom: '5px',
                                 fontFamily: "'Roboto', sans-serif"
                             }}>
@@ -1529,7 +1458,10 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                     borderRadius: '4px',
                                     fontSize: '0.9rem',
                                     fontFamily: "'Roboto', sans-serif",
-                                    backgroundColor: '#fff'
+                                    backgroundColor: '#fff',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden'
                                 }}
                             />
                         </div>
@@ -1539,7 +1471,7 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                 display: 'block', 
                                 color: '#212121', 
                                 fontSize: '0.9rem', 
-                                fontWeight: '600',
+                                fontWeight: 'bold',
                                 marginBottom: '5px',
                                 fontFamily: "'Roboto', sans-serif"
                             }}>
@@ -1570,7 +1502,10 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                     borderRadius: '4px',
                                     fontSize: '0.9rem',
                                     fontFamily: "'Roboto', sans-serif",
-                                    backgroundColor: '#fff'
+                                    backgroundColor: '#fff',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden'
                                 }}
                             />
                         </div>
@@ -1579,7 +1514,7 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                 display: 'block', 
                                 color: '#212121', 
                                 fontSize: '0.9rem', 
-                                fontWeight: '600',
+                                fontWeight: 'bold',
                                 marginBottom: '5px',
                                 fontFamily: "'Roboto', sans-serif"
                             }}>
@@ -1597,7 +1532,10 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                     borderRadius: '4px',
                                     fontSize: '0.9rem',
                                     fontFamily: "'Roboto', sans-serif",
-                                    backgroundColor: '#fff'
+                                    backgroundColor: '#fff',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden'
                                 }}
                             />
                         </div>
@@ -1607,7 +1545,7 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                 display: 'block', 
                                 color: '#212121', 
                                 fontSize: '0.9rem', 
-                                fontWeight: '600',
+                                fontWeight: 'bold',
                                 marginBottom: '5px',
                                 fontFamily: "'Roboto', sans-serif"
                             }}>
@@ -1615,7 +1553,7 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                             </label>
                             <input
                                 type="text"
-                                value={formData.followUp}
+                                value={isReadOnly ? truncateText(formData.followUp) : formData.followUp}
                                 onChange={(e) => handleInputChange('followUp', e.target.value)}
                                 disabled={isReadOnly}
                                 style={{
@@ -1625,7 +1563,10 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                     borderRadius: '4px',
                                     fontSize: '0.9rem',
                                     fontFamily: "'Roboto', sans-serif",
-                                    backgroundColor: '#fff'
+                                    backgroundColor: '#fff',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden'
                                 }}
                             />
                         </div>
@@ -1635,7 +1576,7 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                 display: 'block', 
                                 color: '#212121', 
                                 fontSize: '0.9rem', 
-                                fontWeight: '600',
+                                fontWeight: 'bold',
                                 marginBottom: '5px',
                                 fontFamily: "'Roboto', sans-serif"
                             }}>
@@ -1654,7 +1595,10 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                     borderRadius: '4px',
                                     fontSize: '0.9rem',
                                     fontFamily: "'Roboto', sans-serif",
-                                    backgroundColor: '#fff'
+                                    backgroundColor: '#fff',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden'
                                 }}
                             />
                         </div>
@@ -1664,7 +1608,7 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                 display: 'block', 
                                 color: '#212121', 
                                 fontSize: '0.9rem', 
-                                fontWeight: '600',
+                                fontWeight: 'bold',
                                 marginBottom: '5px',
                                 fontFamily: "'Roboto', sans-serif"
                             }}>
@@ -1672,7 +1616,7 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                             </label>
                             <input
                                 type="text"
-                                value={formData.remark}
+                                value={isReadOnly ? truncateText(formData.remark) : formData.remark}
                                 onChange={(e) => handleInputChange('remark', e.target.value)}
                                 placeholder="-"
                                 disabled={isReadOnly}
@@ -1683,7 +1627,10 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                     borderRadius: '4px',
                                     fontSize: '0.9rem',
                                     fontFamily: "'Roboto', sans-serif",
-                                    backgroundColor: '#fff'
+                                    backgroundColor: '#fff',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden'
                                 }}
                             />
                         </div>
@@ -1692,7 +1639,7 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                 display: 'block', 
                                 color: '#212121', 
                                 fontSize: '0.9rem', 
-                                fontWeight: '600',
+                                fontWeight: 'bold',
                                 marginBottom: '5px',
                                 fontFamily: "'Roboto', sans-serif"
                             }}>
@@ -1700,7 +1647,7 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                             </label>
                             <input
                                 type="text"
-                                value={formData.addendum}
+                                value={isReadOnly ? truncateText(formData.addendum) : formData.addendum}
                                 onChange={(e) => handleInputChange('addendum', e.target.value)}
                                 placeholder="-"
                                 disabled={isReadOnly}
@@ -1711,7 +1658,10 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                     borderRadius: '4px',
                                     fontSize: '0.9rem',
                                     fontFamily: "'Roboto', sans-serif",
-                                    backgroundColor: '#fff'
+                                    backgroundColor: '#fff',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden'
                                 }}
                             />
                         </div>
@@ -1721,7 +1671,7 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                 {/* Action Buttons */}
                 <div style={{ 
                     display: 'flex', 
-                    justifyContent: 'center', 
+                    justifyContent: 'flex-end', 
                     gap: '20px',
                     paddingTop: '20px',
                     borderTop: '1px solid #e0e0e0'

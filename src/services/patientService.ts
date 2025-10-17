@@ -41,6 +41,52 @@ export interface ErrorResponse {
   error: string;
 }
 
+// Response for lab tests by doctor
+export interface LabTestsByDoctorResponse {
+  success: boolean;
+  // The backend may return additional keys like data, tests, message, etc.
+  [key: string]: any;
+}
+
+// Lab tests with parameters response
+export interface LabTestsWithParametersResponse {
+  success: boolean;
+  // Expected shape: { success, labTests: [...], parameters: {...} } but keep flexible
+  [key: string]: any;
+}
+
+// Submit Lab Test Results - request/response contracts
+export interface LabTestResultRequest {
+  patientId: string;
+  patientVisitNo: number;
+  doctorId: string;
+  clinicId: string;
+  shiftId: number;
+  userId: string;
+  doctorName: string;
+  labName: string;
+  reportDate: string;
+  comment: string;
+  testReportData: Array<{
+    visitDate: string;
+    patientVisitNo: number;
+    shiftId: number;
+    clinicId: string;
+    doctorId: string;
+    patientId: string;
+    labTestDescription: string;
+    parameterName: string;
+    testParameterValue: string;
+  }>;
+}
+
+export interface LabTestResultResponse {
+  success: boolean;
+  message?: string;
+  // Flexible payload fields from backend
+  [key: string]: any;
+}
+
 // Quick registration request interface
 export interface QuickRegistrationRequest {
   doctorId: string;
@@ -398,6 +444,169 @@ export const patientService = {
       }
       
       throw new Error(error.response?.data?.message || 'Failed to fetch patient previous visits with details');
+    }
+  },
+
+  /**
+   * Get lab tests available for a given doctor
+   * @param doctorId - Doctor ID (e.g., DR-00001)
+   * @returns Promise<LabTestsByDoctorResponse>
+   */
+  async getLabTestsByDoctor(doctorId: string): Promise<LabTestsByDoctorResponse> {
+    try {
+      console.log(`Fetching lab tests for doctor: ${doctorId}`);
+      // Primary endpoint as specified
+      try {
+        const response = await api.get(`/lab/master/tests/doctor/${encodeURIComponent(doctorId)}`);
+        console.log('Get lab tests by doctor response (/lab/master/tests/doctor/{id}):', response.data);
+        return response.data as LabTestsByDoctorResponse;
+      } catch (primaryError: any) {
+        // Fallback 1: query-param based
+        if (primaryError?.response?.status !== 404) throw primaryError;
+        try {
+          const response = await api.get(`/lab/tests`, { params: { doctorId } });
+          console.log('Get lab tests by doctor response (/lab/tests):', response.data);
+          return response.data as LabTestsByDoctorResponse;
+        } catch (secondaryError: any) {
+          // Fallback 2: legacy path
+          if (secondaryError?.response?.status !== 404) throw secondaryError;
+          const response = await api.get(`/tests/doctor/${encodeURIComponent(doctorId)}`);
+          console.log('Get lab tests by doctor response (/tests/doctor/{id}):', response.data);
+          return response.data as LabTestsByDoctorResponse;
+        }
+      }
+    } catch (error: any) {
+      console.error('Get lab tests by doctor API Error:', error);
+      if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
+        throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
+      }
+      if (error.response?.status === 400) {
+        throw new Error('Invalid doctor ID or request.');
+      } else if (error.response?.status === 404) {
+        throw new Error('Doctor not found or no lab tests available.');
+      } else if (error.response?.status === 500) {
+        throw new Error('Server error occurred while fetching lab tests.');
+      }
+      if (error.response?.data?.error) {
+        throw new Error(error.response.data.error);
+      }
+      throw new Error(error.response?.data?.message || 'Failed to fetch lab tests for doctor');
+    }
+  }
+
+  ,
+
+  /**
+   * Get all lab tests WITH parameters for the given doctor
+   * Mirrors backend @GetMapping("/doctor/{doctorId}/all-with-parameters")
+   */
+  async getAllLabTestsWithParameters(doctorId: string): Promise<LabTestsWithParametersResponse> {
+    try {
+      console.log(`Fetching lab tests WITH parameters for doctor: ${doctorId}`);
+      // Try several common base paths to be resilient to routing differences
+      // 1) As provided
+      try {
+        const resp = await api.get(`/lab/master/parameters/doctor/${encodeURIComponent(doctorId)}/all-with-parameters`);
+        console.log('Lab tests with parameters ("/doctor/{id}/all-with-parameters"):', resp.data);
+        return resp.data as LabTestsWithParametersResponse;
+      } catch (e1: any) {
+        if (e1?.response?.status !== 404) throw e1;
+        // 2) Under /lab/tests prefix
+        try {
+          const resp = await api.get(`/lab/tests/doctor/${encodeURIComponent(doctorId)}/all-with-parameters`);
+          console.log('Lab tests with parameters ("/lab/tests/doctor/{id}/all-with-parameters"):', resp.data);
+          return resp.data as LabTestsWithParametersResponse;
+        } catch (e2: any) {
+          if (e2?.response?.status !== 404) throw e2;
+          // 3) Under /lab/master/tests prefix
+          try {
+            const resp = await api.get(`/lab/master/tests/doctor/${encodeURIComponent(doctorId)}/all-with-parameters`);
+            console.log('Lab tests with parameters ("/lab/master/tests/doctor/{id}/all-with-parameters"):', resp.data);
+            return resp.data as LabTestsWithParametersResponse;
+          } catch (e3: any) {
+            if (e3?.response?.status !== 404) throw e3;
+            // 4) Query-param variant
+            const resp = await api.get(`/lab/tests/with-parameters`, { params: { doctorId } });
+            console.log('Lab tests with parameters ("/lab/tests/with-parameters?doctorId="):', resp.data);
+            return resp.data as LabTestsWithParametersResponse;
+          }
+        }
+      }
+    } catch (error: any) {
+      console.error('Get lab tests WITH parameters API Error:', error);
+      if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
+        throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
+      }
+      if (error.response?.status === 400) {
+        throw new Error('Invalid doctor ID or request.');
+      } else if (error.response?.status === 404) {
+        throw new Error('Doctor not found or no lab tests available.');
+      } else if (error.response?.status === 500) {
+        throw new Error('Server error occurred while fetching lab tests with parameters.');
+      }
+      if (error.response?.data?.error) {
+        throw new Error(error.response.data.error);
+      }
+      throw new Error(error.response?.data?.message || 'Failed to fetch lab tests with parameters');
+    }
+  }
+  ,
+
+  /**
+   * Submit lab test results
+   * Mirrors backend @PostMapping("/submit") under the lab test results controller.
+   * This method tries multiple common base paths for resilience.
+   */
+  async submitLabTestResults(request: LabTestResultRequest): Promise<LabTestResultResponse> {
+    try {
+      console.log('Submitting lab test results:', request);
+      // Try several common base paths to accommodate different deployments
+      // 1) Dedicated results controller under /lab/master/results
+      try {
+        const resp = await api.post<LabTestResultResponse>(`/lab/results/submit`, request);
+        console.log('Submit lab test results (/lab/master/results/submit):', resp.data);
+        return resp.data;
+      } catch (e1: any) {
+        if (e1?.response?.status !== 404) throw e1; 
+        // 2) Under /lab/results
+        try {
+          const resp = await api.post<LabTestResultResponse>(`/lab/master/results/submit`, request);
+          console.log('Submit lab test results (/lab/results/submit):', resp.data);
+          return resp.data;
+        } catch (e2: any) {
+          if (e2?.response?.status !== 404) throw e2;
+          // 3) Under /lab/tests/results
+          try {
+            const resp = await api.post<LabTestResultResponse>(`/lab/tests/results/submit`, request);
+            console.log('Submit lab test results (/lab/tests/results/submit):', resp.data);
+            return resp.data;
+          } catch (e3: any) {
+            if (e3?.response?.status !== 404) throw e3;
+            // 4) Fallback root mapping if controller is mounted at "/submit"
+            const resp = await api.post<LabTestResultResponse>(`/submit`, request);
+            console.log('Submit lab test results (/submit):', resp.data);
+            return resp.data;
+          }
+        }
+      }
+    } catch (error: any) {
+      console.error('Submit lab test results API Error:', error);
+      if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
+        throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
+      }
+      if (error.response?.status === 400) {
+        // Propagate backend validation messages when available
+        const msg = error.response?.data?.message || error.response?.data?.error || 'Invalid request payload.';
+        throw new Error(msg);
+      } else if (error.response?.status === 404) {
+        throw new Error('Submit endpoint not found. Please confirm backend route.');
+      } else if (error.response?.status === 500) {
+        throw new Error('Server error occurred while submitting lab test results.');
+      }
+      if (error.response?.data?.error) {
+        throw new Error(error.response.data.error);
+      }
+      throw new Error(error.response?.data?.message || 'Failed to submit lab test results');
     }
   }
 };

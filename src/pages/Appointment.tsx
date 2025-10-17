@@ -1271,6 +1271,28 @@ export default function AppointmentTable() {
         }
     };
 
+    // Cache for last-visit suffix decision (whether to append "- L") per patient
+    const [lastVisitSuffix, setLastVisitSuffix] = useState<Record<string, boolean>>({});
+    const [loadingLastVisitSuffix, setLoadingLastVisitSuffix] = useState<Record<string, boolean>>({});
+
+    const fetchLastVisitSuffix = async (patientId: string | number) => {
+        const key = String(patientId);
+        setLoadingLastVisitSuffix(prev => ({ ...prev, [key]: true }));
+        try {
+            const data: any = await appointmentService.getLastVisitDetails(String(patientId));
+            console.log('Last visit details:', data);
+            const plrStr = String(data?.visit?.plr?? '');
+            // const plrStr = typeof plr === 'string' ? plr : plr != null ? String(plr) : '';
+            const shouldAppend = plrStr == 'PLR' || plrStr.includes('L');
+            setLastVisitSuffix(prev => ({ ...prev, [key]: shouldAppend }));
+        } catch (error) {
+            console.error(`❌ Failed to fetch last visit PLR for patient ${key}:`, error);
+            setLastVisitSuffix(prev => ({ ...prev, [key]: false }));
+        } finally {
+            setLoadingLastVisitSuffix(prev => ({ ...prev, [key]: false }));
+        }
+    };
+
     // Format last visit display according to requirements: date-provider-L format
     const formatLastVisitDisplay = (patientId: string | number, reportsReceived: boolean, isNewPatient: boolean = false): string => {
         const key = String(patientId);
@@ -1343,8 +1365,15 @@ export default function AppointmentTable() {
         // Build the display string: date - provider
         let displayText = `${formattedDate} - ${providerName}`;
 
-        // Always append "- L" as requested
-        displayText += ' - L';
+        // Decide whether to append "- L" based on PLR from last-visit API
+        const cached = lastVisitSuffix[key];
+        if (cached === undefined) {
+            if (!loadingLastVisitSuffix[key]) {
+                fetchLastVisitSuffix(patientId);
+            }
+        } else if (cached) {
+            displayText += ' - L';
+        }
 
         return displayText;
     };
@@ -2248,7 +2277,7 @@ export default function AppointmentTable() {
                             className="btn d-flex align-items-center justify-content-center"
                             style={{
                                 height: "100%",
-                                backgroundColor: activeView === 'list' ? "#007bff" : "#CFD8DC",
+                                backgroundColor: activeView === 'list' ? "#007bff" : "lightgreen",
                                 border: "none",
                                 color: "#ffffff",
                                 fontFamily: "'Roboto', sans-serif",
@@ -2267,7 +2296,7 @@ export default function AppointmentTable() {
                             className="btn d-flex align-items-center justify-content-center"
                             style={{
                                 height: "100%",
-                                backgroundColor: activeView === 'card' ? "#007bff" : "#CFD8DC",
+                                backgroundColor: activeView === 'card' ? "#007bff" : "lightgreen",
                                 border: "none",
                                 color: "#ffffff",
                                 fontFamily: "'Roboto', sans-serif",
@@ -3333,7 +3362,7 @@ export default function AppointmentTable() {
                         className="btn d-flex align-items-center justify-content-center"
                         style={{
                             height: "100%",
-                            backgroundColor: activeView === 'list' ? "#007bff" : "#CFD8DC",
+                            backgroundColor: activeView === 'list' ? "#007bff" : "lightgreen",
                             border: "none",
                             color: "#ffffff",
                             fontFamily: "'Roboto', sans-serif",
@@ -3352,7 +3381,7 @@ export default function AppointmentTable() {
                         className="btn d-flex align-items-center justify-content-center"
                         style={{
                             height: "100%",
-                            backgroundColor: activeView === 'card' ? "#007bff" : "#CFD8DC",
+                            backgroundColor: activeView === 'card' ? "#007bff" : "lightgreen",
                             border: "none",
                             color: "#ffffff",
                             fontFamily: "'Roboto', sans-serif",
@@ -3619,8 +3648,8 @@ export default function AppointmentTable() {
                                                                 border: '1px solid #ddd'
                                                             }}
                                                             onMouseEnter={(e) => {
-                                                                e.currentTarget.style.backgroundColor = '#F3E5F5';
-                                                                e.currentTarget.style.borderColor = '#9C27B0';
+                                                                e.currentTarget.style.backgroundColor = 'transparent';
+                                                                e.currentTarget.style.borderColor = 'black';
                                                             }}
                                                             onMouseLeave={(e) => {
                                                                 e.currentTarget.style.backgroundColor = 'transparent';
@@ -3698,7 +3727,7 @@ export default function AppointmentTable() {
                                                             }}
                                                             onMouseEnter={(e) => {
                                                                 e.currentTarget.style.backgroundColor = 'transparent';
-                                                                e.currentTarget.style.borderColor = '#90CAF9';
+                                                                e.currentTarget.style.borderColor = 'black';
                                                             }}
                                                             onMouseLeave={(e) => {
                                                                 e.currentTarget.style.backgroundColor = 'transparent';
@@ -3754,7 +3783,7 @@ export default function AppointmentTable() {
                                                             }}
                                                             onMouseEnter={(e) => {
                                                                 e.currentTarget.style.backgroundColor = 'transparent';
-                                                                e.currentTarget.style.borderColor = 'transparent';
+                                                                e.currentTarget.style.borderColor = 'black';
                                                             }}
                                                             onMouseLeave={(e) => {
                                                                 e.currentTarget.style.backgroundColor = 'transparent';
@@ -3766,8 +3795,9 @@ export default function AppointmentTable() {
 
                                                         {/* Checkout Button */}
                                                         <div
-                                                            title="Visit Details"
+                                                            title={a.status === 'WITH DOCTOR' ? 'Visit Details (Disabled - Patient with doctor)' : 'Visit Details'}
                                                             onClick={() => {
+                                                                if (a.status === 'WITH DOCTOR') return; // Disable click when status is WITH DOCTOR
                                                                 setSelectedPatientForVisit(a as any);
                                                                 setShowVisitDetails(true);
                                                             }}
@@ -3777,22 +3807,25 @@ export default function AppointmentTable() {
                                                                 justifyContent: 'center',
                                                                 width: '28px',
                                                                 height: '28px',
-                                                                cursor: 'pointer',
+                                                                cursor: a.status === 'WITH DOCTOR' ? 'not-allowed' : 'pointer',
                                                                 color: '#607D8B',
-                                                                backgroundColor: submittedVisitDetails.has(a.patientId) ? '#FFD700' : 'transparent',
+                                                                backgroundColor: a.status === 'WITH DOCTOR' ? 'rgb(96, 125, 139)' : (submittedVisitDetails.has(a.patientId) ? '#FFD700' : 'transparent'),
                                                                 borderRadius: '4px',
-                                                                border: '1px solid #ddd'
+                                                                border: '1px solid #ddd',
+                                                                opacity: a.status === 'WITH DOCTOR' ? 0.5 : 1
                                                             }}
                                                             onMouseEnter={(e) => {
-                                                                // e.currentTarget.style.backgroundColor = 'transparent';
-                                                                // e.currentTarget.style.borderColor = 'black';
+                                                                if (a.status === 'WITH DOCTOR') return; // Disable hover effects when disabled
+                                                                e.currentTarget.style.backgroundColor = 'transparent';
+                                                                e.currentTarget.style.borderColor = 'black';
                                                             }}
                                                             onMouseLeave={(e) => {
-                                                                // e.currentTarget.style.backgroundColor = 'transparent';
-                                                                // e.currentTarget.style.borderColor = '#ddd';
+                                                                if (a.status === 'WITH DOCTOR') return; // Disable hover effects when disabled
+                                                                e.currentTarget.style.backgroundColor = 'transparent';
+                                                                e.currentTarget.style.borderColor = '#ddd';
                                                             }}
                                                         >
-                                                            <img src="/images/avatar/Visit_details.svg" alt="Visit Details" style={{ width: 16, height: 16, filter: 'brightness(0)' }} />
+                                                            <img src="/images/avatar/Visit_details.svg" alt="Visit Details" style={{ width: 16, height: 16, filter: a.status === 'WITH DOCTOR' ? 'brightness(0.3)' : 'brightness(0)' }} />
                                                         </div>
 
                                                         {/* Collection Button */}
@@ -3819,7 +3852,7 @@ export default function AppointmentTable() {
                                                             onMouseEnter={(e) => {
                                                                 if (mapStatusLabelToId(a.status) === 1) return;
                                                                 e.currentTarget.style.backgroundColor = '#FFF3E0';
-                                                                e.currentTarget.style.borderColor = '#FF9800';
+                                                                e.currentTarget.style.borderColor = 'black';
                                                             }}
                                                             onMouseLeave={(e) => {
                                                                 if (mapStatusLabelToId(a.status) === 1) return;
@@ -4084,16 +4117,18 @@ export default function AppointmentTable() {
                                                     </div>
                                                     <div
                                                         className="crm-btn"
-                                                        title="Visit Details"
+                                                        title={appointment.status === 'WITH DOCTOR' ? 'Visit Details (Disabled - Patient with doctor)' : 'Visit Details'}
                                                         onClick={() => {
+                                                            if (appointment.status === 'WITH DOCTOR') return; // Disable click when status is WITH DOCTOR
                                                             setSelectedPatientForVisit(appointment as any);
                                                             setShowVisitDetails(true);
                                                         }}
                                                         style={{ 
-                                                            cursor: 'pointer',
-                                                            backgroundColor: submittedVisitDetails.has(appointment.patientId) ? '#FFD700' : 'transparent',
+                                                            cursor: appointment.status === 'WITH DOCTOR' ? 'not-allowed' : 'pointer',
+                                                            backgroundColor: appointment.status === 'WITH DOCTOR' ? 'rgb(96, 125, 139)' : (submittedVisitDetails.has(appointment.patientId) ? '#FFD700' : 'transparent'),
                                                             borderRadius: '4px',
-                                                            padding: '2px'
+                                                            padding: '2px',
+                                                            opacity: appointment.status === 'WITH DOCTOR' ? 0.5 : 1
                                                         }}
                                                     >
                                                         <img 
@@ -4101,7 +4136,8 @@ export default function AppointmentTable() {
                                                             alt="Visit Details" 
                                                             style={{ 
                                                                 width: 16, 
-                                                                height: 16
+                                                                height: 16,
+                                                                filter: appointment.status === 'WITH DOCTOR' ? 'brightness(0.3)' : 'none'
                                                             }} 
                                                         />
                                                     </div>
@@ -4315,6 +4351,8 @@ export default function AppointmentTable() {
                         setSelectedPatientForLab(null);
                     }}
                     patientData={selectedPatientForLab}
+                    appointment={selectedPatientForLab}
+                    sessionData={sessionData}
                 />
             )}
         </div>

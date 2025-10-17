@@ -248,6 +248,33 @@ export const appointmentService = {
       console.error('Previous visits API Error:', error)
       throw error
     }
+  },
+
+  /**
+   * Get last visit details for a patient
+   * Mirrors backend @GetMapping("/last-visit/{patientId}") under the /visits controller
+   */
+  async getLastVisitDetails(patientId: string): Promise<any> {
+    try {
+      const response = await api.get(`/visits/last-visit/${encodeURIComponent(patientId)}`)
+      return response.data
+    } catch (error) {
+      console.error('Last visit details API Error:', error)
+      throw error
+    }
+  },
+
+  /**
+   * Get last visit details and add a display label with optional '-L' suffix
+   * Suffix is added when PLR === 'PLR' or PLR string includes 'L'
+   */
+  async getLastVisitDetailsWithSuffix(patientId: string): Promise<any> {
+    const data = await this.getLastVisitDetails(patientId)
+    const plr = (data && data.PLR) as unknown
+    const plrStr = typeof plr === 'string' ? plr : plr != null ? String(plr) : ''
+    const shouldAppendL = plrStr === 'PLR' || plrStr.includes('L')
+    const lastVisitLabel = `Last visit${shouldAppendL ? '-L' : ''}`
+    return { ...data, lastVisitLabel }
   }
 }
 
