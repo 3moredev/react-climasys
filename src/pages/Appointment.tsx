@@ -2498,12 +2498,20 @@ export default function AppointmentTable() {
                                                                 <img src="/images/avatar/Visit_details.svg" alt="Checkout" style={{ width: 16, height: 16 }} />
                                                             </div>
 
-                                                            {/* Treatment Button - Enabled for Doctor */}
+                                                            {/* Treatment Button - Enabled only for WITH DOCTOR or CONSULT ON CALL */}
                                                             <div
-                                                                title="Treatment"
+                                                                title={(() => {
+                                                                    const normalizedStatus = normalizeStatusLabel(a.status);
+                                                                    const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL';
+                                                                    return isEnabled ? "Treatment" : "Treatment (Disabled - Patient not with doctor)";
+                                                                })()}
                                                                 onClick={() => {
-                                                                    // Navigate to treatment or open modal
-                                                                    console.log('Treatment clicked for patient:', a.patientId);
+                                                                    const normalizedStatus = normalizeStatusLabel(a.status);
+                                                                    const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL';
+                                                                    if (isEnabled) {
+                                                                        // Navigate to treatment or open modal
+                                                                        console.log('Treatment clicked for patient:', a.patientId);
+                                                                    }
                                                                 }}
                                                                 style={{
                                                                     display: 'inline-flex',
@@ -2511,22 +2519,59 @@ export default function AppointmentTable() {
                                                                     justifyContent: 'center',
                                                                     width: '28px',
                                                                     height: '28px',
-                                                                    cursor: 'pointer',
-                                                                    color: '#607D8B',
+                                                                    cursor: (() => {
+                                                                        const normalizedStatus = normalizeStatusLabel(a.status);
+                                                                        const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL';
+                                                                        return isEnabled ? 'pointer' : 'not-allowed';
+                                                                    })(),
+                                                                    color: (() => {
+                                                                        const normalizedStatus = normalizeStatusLabel(a.status);
+                                                                        const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL';
+                                                                        return isEnabled ? '#607D8B' : '#BDBDBD';
+                                                                    })(),
                                                                     backgroundColor: 'transparent',
                                                                     borderRadius: '4px',
-                                                                    border: '1px solid #ddd'
+                                                                    border: (() => {
+                                                                        const normalizedStatus = normalizeStatusLabel(a.status);
+                                                                        const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL';
+                                                                        return isEnabled ? '1px solid #ddd' : '1px solid #E0E0E0';
+                                                                    })(),
+                                                                    opacity: (() => {
+                                                                        const normalizedStatus = normalizeStatusLabel(a.status);
+                                                                        const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL';
+                                                                        return isEnabled ? 1 : 0.5;
+                                                                    })()
                                                                 }}
                                                                 onMouseEnter={(e) => {
-                                                                    e.currentTarget.style.backgroundColor = '#FFF3E0';
-                                                                    e.currentTarget.style.borderColor = '#FF9800';
+                                                                    const normalizedStatus = normalizeStatusLabel(a.status);
+                                                                    const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL';
+                                                                    if (isEnabled) {
+                                                                        e.currentTarget.style.backgroundColor = '#FFF3E0';
+                                                                        e.currentTarget.style.borderColor = '#FF9800';
+                                                                    }
                                                                 }}
                                                                 onMouseLeave={(e) => {
-                                                                    e.currentTarget.style.backgroundColor = 'transparent';
-                                                                    e.currentTarget.style.borderColor = '#ddd';
+                                                                    const normalizedStatus = normalizeStatusLabel(a.status);
+                                                                    const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL';
+                                                                    if (isEnabled) {
+                                                                        e.currentTarget.style.backgroundColor = 'transparent';
+                                                                        e.currentTarget.style.borderColor = '#ddd';
+                                                                    }
                                                                 }}
                                                             >
-                                                                <img src="/images/avatar/Treatment.svg" alt="Treatment" style={{ width: 16, height: 16 }} />
+                                                                <img 
+                                                                    src="/images/avatar/Treatment.svg" 
+                                                                    alt="Treatment" 
+                                                                    style={{ 
+                                                                        width: 16, 
+                                                                        height: 16,
+                                                                        filter: (() => {
+                                                                            const normalizedStatus = normalizeStatusLabel(a.status);
+                                                                            const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL';
+                                                                            return isEnabled ? 'none' : 'grayscale(100%)';
+                                                                        })()
+                                                                    }} 
+                                                                />
                                                             </div>
                                                         </div>
                                                     </td>
@@ -2672,19 +2717,60 @@ export default function AppointmentTable() {
                                                     </div>
                                                     <div
                                                         className="crm-btn ms-auto"
-                                                        title="Treatment"
+                                                        title={(() => {
+                                                            const normalizedStatus = normalizeStatusLabel(appointment.status);
+                                                            const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL';
+                                                            return isEnabled ? "Treatment" : "Treatment (Disabled - Patient not with doctor)";
+                                                        })()}
                                                         onClick={() => {
-                                                            // Treatment button functionality - can be implemented as needed
-                                                            console.log('Treatment clicked for patient:', appointment.patientId);
+                                                            const normalizedStatus = normalizeStatusLabel(appointment.status);
+                                                            const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL';
+                                                            if (isEnabled) {
+                                                                // Treatment button functionality - can be implemented as needed
+                                                                console.log('Treatment clicked for patient:', appointment.patientId);
+                                                            }
                                                         }}
                                                         style={{
-                                                            cursor: 'pointer',
-                                                            backgroundColor: '#ECEFF1',
-                                                            color: '#607D8B',
-                                                            border: '1px solid #CFD8DC'
+                                                            cursor: (() => {
+                                                                const normalizedStatus = normalizeStatusLabel(appointment.status);
+                                                                const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL';
+                                                                return isEnabled ? 'pointer' : 'not-allowed';
+                                                            })(),
+                                                            backgroundColor: (() => {
+                                                                const normalizedStatus = normalizeStatusLabel(appointment.status);
+                                                                const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL';
+                                                                return isEnabled ? '#ECEFF1' : '#F5F5F5';
+                                                            })(),
+                                                            color: (() => {
+                                                                const normalizedStatus = normalizeStatusLabel(appointment.status);
+                                                                const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL';
+                                                                return isEnabled ? '#607D8B' : '#BDBDBD';
+                                                            })(),
+                                                            border: (() => {
+                                                                const normalizedStatus = normalizeStatusLabel(appointment.status);
+                                                                const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL';
+                                                                return isEnabled ? '1px solid #CFD8DC' : '1px solid #E0E0E0';
+                                                            })(),
+                                                            opacity: (() => {
+                                                                const normalizedStatus = normalizeStatusLabel(appointment.status);
+                                                                const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL';
+                                                                return isEnabled ? 1 : 0.5;
+                                                            })()
                                                         }}
                                                     >
-                                                        <img src="/images/avatar/Treatment.svg" alt="Treatment" style={{ width: 16, height: 16, filter: 'brightness(0)' }} />
+                                                        <img 
+                                                            src="/images/avatar/Treatment.svg" 
+                                                            alt="Treatment" 
+                                                            style={{ 
+                                                                width: 16, 
+                                                                height: 16, 
+                                                                filter: (() => {
+                                                                    const normalizedStatus = normalizeStatusLabel(appointment.status);
+                                                                    const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL';
+                                                                    return isEnabled ? 'brightness(0)' : 'grayscale(100%) brightness(0.5)';
+                                                                })()
+                                                            }} 
+                                                        />
                                                     </div>
                                                 </div>
                                             </div>
