@@ -2114,7 +2114,7 @@ export default function AppointmentTable() {
 
                 {/* Header with Doctor-specific title */}
                 <div className="d-flex justify-content-between align-items-center mb-3">
-                    <h2>Appoinments</h2>
+                    <h2>Appointments</h2>
                     <div className="d-flex align-items-center" style={{ fontSize: '0.85rem', color: '#455A64', gap: '8px', whiteSpace: 'nowrap' }}>
                         <span className="me-1"><span className="rounded-circle d-inline-block bg-primary" style={{ width: 10, height: 10 }}></span> {statusCounts['WAITING'] || 0} </span>
                         |
