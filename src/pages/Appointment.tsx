@@ -1563,10 +1563,10 @@ export default function AppointmentTable() {
         const contactOk = filterContact ? (a.contact || '').toString().includes(filterContact) : true;
         const statusOk = filterStatus ? (a.status || '').toUpperCase() === filterStatus.toUpperCase() : true;
 
-        // For doctor screen, only show patients with "WITH DOCTOR" or "WITH DOCTOR (ON PHONE)" status
+        // For doctor screen, show patients with "WAITING", "WITH DOCTOR", or "CONSULT ON CALL" status
         if (isDoctor) {
             const normalizedStatus = normalizeStatusLabel(a.status);
-            const doctorStatusOk = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL';
+            const doctorStatusOk = normalizedStatus === 'WAITING' || normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL';
             return nameOk && contactOk && statusOk && doctorStatusOk;
         }
 
@@ -1725,11 +1725,11 @@ export default function AppointmentTable() {
             'SAVE': 0
         };
 
-        // For doctor screen, only count patients with "WITH DOCTOR" or "WITH DOCTOR (ON PHONE)" status
+        // For doctor screen, count patients with "WAITING", "WITH DOCTOR", or "CONSULT ON CALL" status
         const appointmentsToCount = isDoctor
             ? appointments.filter(appt => {
                 const normalizedStatus = normalizeStatusLabel(appt.status);
-                return normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL';
+                return normalizedStatus === 'WAITING' || normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL';
             })
             : appointments;
 
@@ -2320,7 +2320,7 @@ export default function AppointmentTable() {
                             <i className="fas fa-calendar-check" style={{ fontSize: "3rem", color: "#6c757d" }}></i>
                         </div>
                         <h5 className="text-muted">No Patients Currently With You</h5>
-                        <p className="text-muted">No patients have "WITH DOCTOR" or "CONSULT ON CALL" status at the moment.</p>
+                        <p className="text-muted">No patients are waiting or have "WITH DOCTOR" or "CONSULT ON CALL" status at the moment.</p>
                     </div>
                 ) : (
                     <>
