@@ -2511,6 +2511,17 @@ export default function AppointmentTable() {
                                                                     if (isEnabled) {
                                                                         // Navigate to treatment or open modal
                                                                         console.log('Treatment clicked for patient:', a.patientId);
+                                                                        console.log('Treatment clicked for patient:', a.patientId);
+                                                                    navigate('/treatment', {
+                                                                        state: {
+                                                                            patientId: a.patientId,
+                                                                            patientName: a.patient,
+                                                                            visitNumber: a.visitNumber,
+                                                                            doctorId: a.doctorId,
+                                                                            clinicId: clinicId,
+                                                                            appointmentId: a.appointmentId
+                                                                        }
+                                                                    });
                                                                     }
                                                                 }}
                                                                 style={{

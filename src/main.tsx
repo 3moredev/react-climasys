@@ -23,6 +23,7 @@ import LabPage from './pages/Lab'
 import PharmacyPage from './pages/Pharmacy'
 import APITest from './components/Test/APITest'
 import AppointmentTable from './pages/Appointment'
+import Treatment from './pages/Treatment'
 import ExampleTemplatePage from './pages/ExampleTemplatePage'
 import SessionTest from './pages/SessionTest'
 import QuickRegistration from './pages/QuickRegistration'
@@ -128,6 +129,13 @@ function App() {
               <AuthGuard>
                 <MainLayout>
                   <AppointmentTable />
+                </MainLayout>
+              </AuthGuard>
+            } />
+            <Route path="/treatment" element={
+              <AuthGuard>
+                <MainLayout>
+                  <Treatment />
                 </MainLayout>
               </AuthGuard>
             } />

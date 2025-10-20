@@ -117,6 +117,9 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
     const [documentUploadResults, setDocumentUploadResults] = useState<any[]>([]);
     const [existingDocuments, setExistingDocuments] = useState<any[]>([]);
     const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
+    const [deletingDocumentId, setDeletingDocumentId] = useState<number | null>(null);
+    // Hold complaints coming from API until options are loaded
+    const [initialComplaintsFromApi, setInitialComplaintsFromApi] = useState<string | null>(null);
 
     const handleAddComplaints = () => {
         if (selectedComplaints.length === 0) return;
@@ -243,6 +246,32 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
         }
     };
 
+    // Test function to debug document deletion
+    const testDocumentDeletion = async (documentId: number) => {
+        console.log('=== TESTING DOCUMENT DELETION ===');
+        console.log('Testing with document ID:', documentId);
+        
+        try {
+            // Test the API call directly
+            const response = await fetch(`http://localhost:8080/api/patient-documents/treatment/${documentId}/with-file?userId=recep`, {
+                method: 'DELETE',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+            
+            console.log('Test response status:', response.status);
+            const responseData = await response.json();
+            console.log('Test response data:', responseData);
+            
+            return responseData;
+        } catch (error) {
+            console.error('Test deletion error:', error);
+            throw error;
+        }
+    };
+
     // Keep joined complaints in formData for API compatibility
     React.useEffect(() => {
         setFormData(prev => ({ ...prev, selectedComplaint: selectedComplaints.join(',') }));
@@ -315,6 +344,43 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
         };
     }, [open, patientData?.provider]);
 
+    // When complaints options are loaded, hydrate selections from API-provided complaints
+    React.useEffect(() => {
+        if (!open) return;
+        if (!initialComplaintsFromApi) return;
+        if (!complaintsOptions || complaintsOptions.length === 0) return;
+
+        // If user already selected something or rows exist, do not override
+        if (selectedComplaints.length > 0 || complaintsRows.length > 0) return;
+
+        const raw = initialComplaintsFromApi.trim();
+        if (!raw) return;
+
+        // Support both '*' and ',' delimiters
+        const parts = raw.split(/\*|,/).map(s => s.trim()).filter(Boolean);
+        if (parts.length === 0) return;
+
+        const foundValues: string[] = [];
+        const foundRows: ComplaintRow[] = [];
+        const seen = new Set<string>();
+        parts.forEach(token => {
+            // Try to match by value first, then by label (case-insensitive)
+            const byValue = complaintsOptions.find(o => (o.value || '').toLowerCase() === token.toLowerCase());
+            const byLabel = byValue ? undefined : complaintsOptions.find(o => (o.label || '').toLowerCase() === token.toLowerCase());
+            const match = byValue || byLabel;
+            if (match && !seen.has(match.value)) {
+                seen.add(match.value);
+                foundValues.push(match.value);
+                foundRows.push({ id: `${match.value}`, value: match.value, label: match.label, comment: '' });
+            }
+        });
+
+        if (foundValues.length > 0) {
+            setSelectedComplaints(foundValues);
+            setComplaintsRows(foundRows);
+        }
+    }, [open, initialComplaintsFromApi, complaintsOptions]);
+
     // Load referral doctors when referral type is "Doctor"
     React.useEffect(() => {
         let cancelled = false;
@@ -375,6 +441,10 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                 const appointmentData = result.mainData[0];
                 console.log('Using appointment data (first item):', appointmentData);
                 
+                // Capture complaints string (supports both keys)
+                const complaintsFromApi: string = (appointmentData.currentComplaints || appointmentData.currentComplaint || '') as string;
+                setInitialComplaintsFromApi(complaintsFromApi);
+
                 // Map appointment data to form fields
                 const normalized = {
                     referByRaw: appointmentData.referBy ?? '',
@@ -475,6 +545,10 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                         if (!result) return;
                         const payload = result.data || result.lastVisit || result.visit || result.payload || result;
                         if (!payload) return;
+
+                        // Capture complaints string from fallback payload as well
+                        const complaintsFromApi: string = (payload.currentComplaints || payload.currentComplaint || '') as string;
+                        setInitialComplaintsFromApi(complaintsFromApi);
 
                         // Attempt to normalize keys from payload
                         const normalized = {
@@ -932,6 +1006,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
         setDocumentUploadResults([]);
         setExistingDocuments([]);
         setIsLoadingDocuments(false);
+        setDeletingDocumentId(null);
         
     };
 
@@ -2101,8 +2176,8 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                             {/* Empty first column */}
                         </div>
                         <div>
-                            <label style={{ display: 'block', marginBottom: '5px', fontSize: '12px', fontWeight: 'bold', color: '#333' }}>
-                                Attachments (Max 3 , Size 150Mb):
+                            <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', fontWeight: 700, color: '#333' }}>
+                                Attachments (Max 3 , Size 150Mb)
                             </label>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
                                 <button
@@ -2129,7 +2204,28 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     Choose Files
                                 </button>
                                 <span style={{ fontSize: '12px', color: '#666' }}>
-                                    Files uploaded: {formData.attachments.length + existingDocuments.length}
+                                    Files uploaded: {formData.attachments.length + existingDocuments.length} 
+                                    {(() => {
+                                        const newFilesSize = formData.attachments.reduce((sum, file) => sum + file.size, 0);
+                                        const existingFilesSize = existingDocuments.reduce((sum, doc) => sum + (doc.fileSize || 0), 0);
+                                        const totalSize = newFilesSize + existingFilesSize;
+                                        
+                                        if (totalSize > 0) {
+                                            const units = ['B', 'KB', 'MB', 'GB'];
+                                            let size = totalSize;
+                                            let unitIndex = 0;
+                                            while (size >= 1024 && unitIndex < units.length - 1) {
+                                                size /= 1024;
+                                                unitIndex++;
+                                            }
+                                            return (
+                                                <span style={{ marginLeft: '5px', fontWeight: '500' }}>
+                                                    (Total size: {`${size.toFixed(1)} ${units[unitIndex]}`})
+                                                </span>
+                                            );
+                                        }
+                                        return null;
+                                    })()}
                                 </span>
                             </div>
                             <input
@@ -2164,8 +2260,15 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                 {/* Show existing documents */}
                                 {existingDocuments.length > 0 && (
                                     <div style={{ marginBottom: '5px' }}>
+                                        {/* Debug Test Button - Can be removed if not needed */}
                                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', alignItems: 'center' }}>
-                                            {existingDocuments.map((doc, index) => (
+                                            {existingDocuments.map((doc, index) => {
+                                                // Debug logging can be removed if not needed
+                                                
+                                                // Try different possible field names for document ID
+                                                const docId = doc.documentId || doc.id || doc.document_id || doc.documentID;
+                                                
+                                                return (
                                                 <span key={`existing-${index}`} style={{ 
                                                     display: 'inline-flex',
                                                     alignItems: 'center',
@@ -2182,8 +2285,118 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                     <span style={{ maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                                         {doc.documentName || `Document ${index + 1}`}
                                                     </span>
+                                                    {doc.fileSize && (
+                                                        <span style={{ 
+                                                            marginRight: '5px', 
+                                                            fontSize: '11px', 
+                                                            color: '#2e7d32',
+                                                            fontWeight: '400'
+                                                        }}>
+                                                            ({(() => {
+                                                                const size = doc.fileSize;
+                                                                if (size === 0) return '0 B';
+                                                                const units = ['B', 'KB', 'MB', 'GB'];
+                                                                let fileSize = size;
+                                                                let unitIndex = 0;
+                                                                while (fileSize >= 1024 && unitIndex < units.length - 1) {
+                                                                    fileSize /= 1024;
+                                                                    unitIndex++;
+                                                                }
+                                                                return `${fileSize.toFixed(1)} ${units[unitIndex]}`;
+                                                            })()})
+                                                        </span>
+                                                    )}
+                                                    <span
+                                                        onClick={async () => {
+                                                            if (deletingDocumentId === docId) return; // Prevent multiple clicks
+                                                            
+                                                            try {
+                                                                // Call backend API to delete the document
+                                                                if (docId) {
+                                                                    setDeletingDocumentId(docId);
+                                                                    console.log('=== DELETING DOCUMENT FROM BACKEND ===');
+                                                                    console.log('Document ID:', docId);
+                                                                    console.log('Document name:', doc.documentName);
+                                                                    console.log('Full document object:', doc);
+                                                                    
+                                                                    // Try the DocumentService first
+                                                                    let result;
+                                                                    try {
+                                                                        result = await DocumentService.deleteDocumentWithPhysicalFile(
+                                                                            docId, 
+                                                                            'recep' // You may want to get this from auth context
+                                                                        );
+                                                                        console.log('Delete API response:', result);
+                                                                    } catch (serviceError) {
+                                                                        console.warn('DocumentService failed, trying direct API call:', serviceError);
+                                                                        // Fallback to direct API call
+                                                                        result = await testDocumentDeletion(docId);
+                                                                    }
+                                                                    
+                                                                    if (result.success) {
+                                                                        console.log('Document deleted successfully from backend');
+                                                                        // Remove document from existing documents list
+                                                                        setExistingDocuments(prev => prev.filter((_, i) => i !== index));
+                                                                        setSnackbarMessage(`Document "${doc.documentName}" deleted successfully!`);
+                                                                        setSnackbarOpen(true);
+                                                                    } else {
+                                                                        console.error('Failed to delete document from backend:', result.error);
+                                                                        setSnackbarMessage(`Failed to delete document: ${result.error || 'Unknown error'}`);
+                                                                        setSnackbarOpen(true);
+                                                                    }
+                                                                } else {
+                                                                    console.warn('No document ID found, removing from UI only');
+                                                                    console.log('Document object without ID:', doc);
+                                                                    // Remove document from existing documents list (fallback)
+                                                                    setExistingDocuments(prev => prev.filter((_, i) => i !== index));
+                                                                }
+                                                            } catch (error: any) {
+                                                                console.error('Error deleting document:', error);
+                                                                console.error('Error details:', {
+                                                                    message: error instanceof Error ? error.message : 'Unknown error',
+                                                                    stack: error instanceof Error ? error.stack : 'No stack trace',
+                                                                    response: error.response || 'No response object'
+                                                                });
+                                                                setSnackbarMessage(`Error deleting document: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                                                                setSnackbarOpen(true);
+                                                            } finally {
+                                                                setDeletingDocumentId(null);
+                                                            }
+                                                        }}
+                                                        style={{
+                                                            color: deletingDocumentId === docId ? '#9e9e9e' : '#d32f2f',
+                                                            cursor: deletingDocumentId === docId ? 'not-allowed' : 'pointer',
+                                                            fontSize: '14px',
+                                                            padding: '0',
+                                                            marginLeft: '5px',
+                                                            fontWeight: 'bold',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            width: '16px',
+                                                            height: '16px',
+                                                            borderRadius: '50%',
+                                                            backgroundColor: deletingDocumentId === docId ? 'rgba(158, 158, 158, 0.1)' : 'rgba(211, 47, 47, 0.1)',
+                                                            transition: 'background-color 0.2s',
+                                                            opacity: deletingDocumentId === docId ? 0.6 : 1
+                                                        }}
+                                                        onMouseEnter={(e) => {
+                                                            if (deletingDocumentId !== docId) {
+                                                                e.currentTarget.style.backgroundColor = 'rgba(211, 47, 47, 0.2)';
+                                                            }
+                                                        }}
+                                                        onMouseLeave={(e) => {
+                                                            if (deletingDocumentId !== docId) {
+                                                                e.currentTarget.style.backgroundColor = 'rgba(211, 47, 47, 0.1)';
+                                                            }
+                                                        }}
+                                                        title={deletingDocumentId === docId ? "Deleting..." : "Remove document"}
+                                                    >
+                                                        ×
+                                                    </span>
                                                 </span>
-                                            ))}
+                                                );
+                                            })}
                                         </div>
                                     </div>
                                 )}
@@ -2206,6 +2419,25 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                 }}>
                                                     <span style={{ marginRight: '5px', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                                         {file.name}
+                                                    </span>
+                                                    <span style={{ 
+                                                        marginRight: '5px', 
+                                                        fontSize: '11px', 
+                                                        color: '#666',
+                                                        fontWeight: '400'
+                                                    }}>
+                                                        ({(() => {
+                                                            const size = file.size;
+                                                            if (size === 0) return '0 B';
+                                                            const units = ['B', 'KB', 'MB', 'GB'];
+                                                            let fileSize = size;
+                                                            let unitIndex = 0;
+                                                            while (fileSize >= 1024 && unitIndex < units.length - 1) {
+                                                                fileSize /= 1024;
+                                                                unitIndex++;
+                                                            }
+                                                            return `${fileSize.toFixed(1)} ${units[unitIndex]}`;
+                                                        })()})
                                                     </span>
                                                     <span
                                                         onClick={() => removeFile(index)}

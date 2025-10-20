@@ -187,6 +187,36 @@ export class DocumentService {
   }
 
   /**
+   * Delete a document with physical file deletion
+   * @param documentId Document ID
+   * @param userId User ID performing the deletion
+   * @returns Promise<DocumentResponse>
+   */
+  static async deleteDocumentWithPhysicalFile(documentId: number, userId: string = 'system'): Promise<DocumentResponse> {
+    try {
+      console.log('=== DOCUMENT SERVICE DELETE CALL ===');
+      console.log('Document ID:', documentId);
+      console.log('User ID:', userId);
+      console.log('API URL:', `/patient-documents/treatment/${documentId}/with-file?userId=${userId}`);
+      
+      const response = await api.delete(`/patient-documents/treatment/${documentId}/with-file?userId=${userId}`);
+      
+      console.log('=== DELETE API RESPONSE ===');
+      console.log('Response status:', response.status);
+      console.log('Response data:', response.data);
+      
+      return response.data;
+    } catch (error: any) {
+      console.error('=== DELETE API ERROR ===');
+      console.error('Error deleting document with file:', error);
+      console.error('Error response:', error.response);
+      console.error('Error status:', error.response?.status);
+      console.error('Error data:', error.response?.data);
+      throw new Error(error.response?.data?.error || 'Failed to delete document with file');
+    }
+  }
+
+  /**
    * Upload multiple files for a patient visit
    * @param files Array of files to upload
    * @param patientId Patient ID
