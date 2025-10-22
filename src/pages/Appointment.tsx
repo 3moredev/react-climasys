@@ -1397,6 +1397,22 @@ export default function AppointmentTable() {
         return result;
     };
 
+    // Helper function to convert provider name back to doctor ID
+    const getDoctorIdFromProviderName = (providerName: string): string => {
+        if (!providerName || !allDoctors.length) {
+            return '';
+        }
+        
+        // Find doctor by matching the formatted label
+        const doctor = allDoctors.find(d => {
+            const formattedName = formatProviderLabel(d.name);
+            return formattedName === providerName;
+        });
+        
+        console.log(`getDoctorIdFromProviderName: Provider="${providerName}", Found doctor:`, doctor);
+        return doctor ? doctor.id : '';
+    };
+
     // Build provider options with selected doctor first
     const getProviderOptionsWithSelectedFirst = () => {
         if (!allDoctors.length) return [] as { id: string; label: string }[];
@@ -1657,7 +1673,13 @@ export default function AppointmentTable() {
     };
 
     const handleProviderChange = (index: number, value: string) => {
+        // Update visible provider label
         updateAppointmentField(index, 'provider', value);
+        // Also keep underlying doctorId in sync for filtering/refresh logic
+        const resolvedDoctorId = getDoctorIdFromProviderName(value);
+        if (resolvedDoctorId) {
+            updateAppointmentField(index, 'doctorId' as any, resolvedDoctorId);
+        }
     };
 
     // Handle visit details submission flag
@@ -2365,10 +2387,10 @@ export default function AppointmentTable() {
                                                             style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 500, height: "28px", padding: "2px 6px", cursor: 'not-allowed', backgroundColor: '#f5f5f5' }}
                                                         />
                                                     </td>
-                                                    <td style={{ position: "relative" }} title={a.status}>
+                                                    <td style={{ position: "relative" }} title={(a as any).statusPending || a.status}>
                                                         <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
-                                                            <span className={`d-inline-block rounded-circle ${a.statusColor}`} style={{ width: "14px", height: "14px" }}></span>
-                                                            <span style={{ fontSize: '0.9rem', color: '#263238' }}>{a.status}</span>
+                                                            <span className={`d-inline-block rounded-circle ${(a as any).statusColorPending || a.statusColor}`} style={{ width: "14px", height: "14px" }}></span>
+                                                            <span style={{ fontSize: '0.9rem', color: '#263238' }}>{(a as any).statusPending || a.status}</span>
                                                             <div
                                                                 aria-label="Change Status (Disabled)"
                                                                 title="Status changes are disabled on this screen"
@@ -2604,7 +2626,7 @@ export default function AppointmentTable() {
                                             <div className="appointment-card">
                                                 <div className="card-header">
                                                     <div className="d-flex align-items-center" style={{ gap: '8px' }}>
-                                                        <span className={`d-inline-block rounded-circle ${appointment.statusColor}`} style={{ width: '10px', height: '10px' }}></span>
+                                                        <span className={`d-inline-block rounded-circle ${(appointment as any).statusColorPending || appointment.statusColor}`} style={{ width: '10px', height: '10px' }}></span>
                                                         <a href={`/patients/${appointment.patientId}`} className="patient-name" style={{ textDecoration: 'underline', color: '#1E88E5' }}>{appointment.patient}</a>
                                                     </div>
                                                     <div
@@ -3584,10 +3606,10 @@ export default function AppointmentTable() {
                                                         style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 500, height: "28px", padding: "2px 6px" }}
                                                     />
                                                 </td>
-                                                <td style={{ position: "relative" }} title={a.status}>
+                                                <td style={{ position: "relative" }} title={(a as any).statusPending || a.status}>
                                                     <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
-                                                        <span className={`d-inline-block rounded-circle ${a.statusColor}`} style={{ width: "14px", height: "14px" }}></span>
-                                                        <span style={{ fontSize: '0.9rem', color: '#263238' }}>{a.status}</span>
+                                                        <span className={`d-inline-block rounded-circle ${(a as any).statusColorPending || a.statusColor}`} style={{ width: "14px", height: "14px" }}></span>
+                                                        <span style={{ fontSize: '0.9rem', color: '#263238' }}>{(a as any).statusPending || a.status}</span>
                                                         <div
                                                             onClick={async (e) => {
                                                                 const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
@@ -3674,8 +3696,9 @@ export default function AppointmentTable() {
                                                                     <div
                                                                         key={status}
                                                                         onClick={() => {
-                                                                            updateAppointmentField(originalIndex, 'status', status);
-                                                                            updateAppointmentField(originalIndex, 'statusColor', getStatusColor(status));
+                                                                            // Store pending status locally; do not change saved status until API success
+                                                                            updateAppointmentField(originalIndex, 'statusPending' as any, status);
+                                                                            updateAppointmentField(originalIndex, 'statusColorPending' as any, getStatusColor(status));
                                                                             setOpenStatusIndex(null);
                                                                             setMenuPosition(null);
                                                                         }}
@@ -3767,8 +3790,13 @@ export default function AppointmentTable() {
                                                                     const shift = a.shiftId || 1;
                                                                     const clinic = a.clinicId || sessionData?.clinicId || '';
                                                                     const onlineTime = (a.online || '').trim() || undefined;
-                                                                    const doctor = selectedDoctorId || a.doctorId || '';
-                                                                    const statusId = mapStatusLabelToId(a.status);
+                                                                    // Get the updated provider from the dropdown
+                                                                    const updatedProvider = a.provider || getDoctorLabelById(selectedDoctorId) || '';
+                                                                    // Convert provider name back to doctor ID for API
+                                                                    const doctor = getDoctorIdFromProviderName(updatedProvider) || selectedDoctorId || a.doctorId || '';
+                                                                    // Use pending status if available, otherwise fall back to saved status
+                                                                    const currentStatus = (a as any).statusPending || a.status;
+                                                                    const statusId = mapStatusLabelToId(currentStatus);
 
                                                                     // Debug logging
                                                                     console.log('=== UPDATE ONLINE TIME DEBUG ===');
@@ -3778,7 +3806,9 @@ export default function AppointmentTable() {
                                                                     console.log('Shift ID:', shift);
                                                                     console.log('Clinic ID:', clinic);
                                                                     console.log('Online Time:', onlineTime);
+                                                                    console.log('Updated Provider:', updatedProvider);
                                                                     console.log('Doctor ID:', doctor);
+                                                                    console.log('Current Status:', currentStatus);
                                                                     console.log('Status ID:', statusId);
                                                                     console.log('================================');
 
@@ -3800,8 +3830,30 @@ export default function AppointmentTable() {
 
                                                                     console.log('Update response:', response);
 
-                                                                    if (response.success) {
+                                                                        if (response.success) {
                                                                         alert('Appointment updated successfully');
+                                                                            // Commit pending status to saved fields
+                                                                            if ((appointments[originalIndex] as any).statusPending) {
+                                                                                const committed = (appointments[originalIndex] as any).statusPending;
+                                                                                updateAppointmentField(originalIndex, 'status', committed);
+                                                                                updateAppointmentField(originalIndex, 'statusColor', getStatusColor(committed));
+                                                                                updateAppointmentField(originalIndex, 'statusPending' as any, undefined);
+                                                                                updateAppointmentField(originalIndex, 'statusColorPending' as any, undefined);
+                                                                            }
+                                                                        // If the appointment was moved to another provider, remove it locally
+                                                                        const movedToDifferentDoctor = String(doctor) !== String(selectedDoctorId);
+                                                                        if (movedToDifferentDoctor) {
+                                                                            setAppointments(prev => prev.filter((_, i) => i !== originalIndex));
+                                                                        } else {
+                                                                            // Update row's doctorId to keep in sync
+                                                                            updateAppointmentField(originalIndex, 'doctorId' as any, String(doctor));
+                                                                        }
+                                                                        // Refresh current provider's appointments to reflect server truth
+                                                                        try {
+                                                                            await refreshAppointmentsForSelectedDoctor();
+                                                                        } catch (e) {
+                                                                            console.warn('Refresh after save failed:', e);
+                                                                        }
                                                                     } else {
                                                                         alert('Update failed: ' + (response.message || 'Unknown error'));
                                                                     }
@@ -4036,8 +4088,9 @@ export default function AppointmentTable() {
                                                                     <div
                                                                         key={status}
                                                                         onClick={() => {
-                                                                            updateAppointmentField(originalIndex, 'status', status);
-                                                                            updateAppointmentField(originalIndex, 'statusColor', getStatusColor(status));
+                                                                            // Stage pending status in card view as well
+                                                                            updateAppointmentField(originalIndex, 'statusPending' as any, status);
+                                                                            updateAppointmentField(originalIndex, 'statusColorPending' as any, getStatusColor(status));
                                                                             setOpenStatusIndex(null);
                                                                             setMenuPosition(null);
                                                                         }}
@@ -4130,12 +4183,20 @@ export default function AppointmentTable() {
                                                                 const shift = appointment.shiftId || 1;
                                                                 const clinic = appointment.clinicId || sessionData?.clinicId || '';
                                                                 const onlineTime = (appointment.online || '').trim() || undefined;
-                                                                const doctor = selectedDoctorId || appointment.doctorId || '';
-                                                                const statusId: number = mapStatusLabelToId(appointment.status);
+                                                                // Get the updated provider from the dropdown
+                                                                const updatedProvider = appointment.provider || getDoctorLabelById(selectedDoctorId) || '';
+                                                                // Convert provider name back to doctor ID for API
+                                                                const doctor = getDoctorIdFromProviderName(updatedProvider) || selectedDoctorId || appointment.doctorId || '';
+                                                                // Use pending status if available, otherwise fall back to saved status
+                                                                const currentStatus = (appointment as any).statusPending || appointment.status;
+                                                                const statusId: number = mapStatusLabelToId(currentStatus);
 
                                                                 // Debug logging
                                                                 console.log('=== UPDATE ONLINE TIME DEBUG (Card View) ===');
                                                                 console.log('Patient ID:', pid);
+                                                                console.log('Updated Provider:', updatedProvider);
+                                                                console.log('Doctor ID:', doctor);
+                                                                console.log('Current Status:', currentStatus);
                                                                 console.log('Visit Number from card:', appointment.visitNumber);
                                                                 console.log('Visit Number being sent:', vno);
                                                                 console.log('Shift ID:', shift);
@@ -4165,6 +4226,26 @@ export default function AppointmentTable() {
 
                                                                 if (response.success) {
                                                                     alert('Appointment updated successfully');
+                                                                    // Commit pending status to saved fields
+                                                                    if ((appointments[originalIndex] as any).statusPending) {
+                                                                        const committed = (appointments[originalIndex] as any).statusPending;
+                                                                        updateAppointmentField(originalIndex, 'status', committed);
+                                                                        updateAppointmentField(originalIndex, 'statusColor', getStatusColor(committed));
+                                                                        updateAppointmentField(originalIndex, 'statusPending' as any, undefined);
+                                                                        updateAppointmentField(originalIndex, 'statusColorPending' as any, undefined);
+                                                                    }
+                                                                    // If appointment moved to a different provider, drop from current view
+                                                                    const movedToDifferentDoctor = String(doctor) !== String(selectedDoctorId);
+                                                                    if (movedToDifferentDoctor) {
+                                                                        setAppointments(prev => prev.filter((_, i) => i !== originalIndex));
+                                                                    } else {
+                                                                        updateAppointmentField(originalIndex, 'doctorId' as any, String(doctor));
+                                                                    }
+                                                                    try {
+                                                                        await refreshAppointmentsForSelectedDoctor();
+                                                                    } catch (e) {
+                                                                        console.warn('Refresh after save failed (card view):', e);
+                                                                    }
                                                                 } else {
                                                                     alert('Update failed: ' + (response.message || 'Unknown error'));
                                                                 }
