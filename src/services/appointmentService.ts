@@ -49,13 +49,16 @@ export interface TodayAppointmentsResponse {
 
 export const appointmentService = {
   /**
-   * Get all future appointments for a doctor
+   * Get all future appointments for a doctor and clinic
    * @param doctorId - The doctor's ID
+   * @param clinicId - The clinic's ID
    * @returns Promise<Appointment[]> - List of future appointments
    */
-  async getFutureAppointments(doctorId: string): Promise<Appointment[]> {
+  async getFutureAppointments(doctorId: string, clinicId: string): Promise<Appointment[]> {
     try {
-      const response = await api.get(`/api/appointments/${doctorId}/future`)
+      const response = await api.get(`/api/appointments/${doctorId}/future`, {
+        params: { clinicId }
+      })
       console.log('Future appointments response:', response.data)
       return response.data || []
     } catch (error) {
@@ -68,12 +71,13 @@ export const appointmentService = {
    * Get appointments for a specific date
    * @param doctorId - The doctor's ID
    * @param appointmentDate - The date to get appointments for (YYYY-MM-DD)
+   * @param clinicId - The clinic's ID
    * @returns Promise<Appointment[]> - List of appointments for the date
    */
-  async getAppointmentsForDate(doctorId: string, appointmentDate: string): Promise<Appointment[]> {
+  async getAppointmentsForDate(doctorId: string, appointmentDate: string, clinicId: string): Promise<Appointment[]> {
     try {
       const response = await api.get(`/api/appointments/${doctorId}/future-for-date`, {
-        params: { appointmentDate }
+        params: { appointmentDate, clinicId }
       })
       console.log('Appointments for date response:', response.data)
       return response.data || []
@@ -84,13 +88,16 @@ export const appointmentService = {
   },
 
   /**
-   * Get holiday details for a doctor
+   * Get holiday details for a doctor and clinic
    * @param doctorId - The doctor's ID
+   * @param clinicId - The clinic's ID
    * @returns Promise<any[]> - List of holiday details
    */
-  async getHolidayDetails(doctorId: string): Promise<any[]> {
+  async getHolidayDetails(doctorId: string, clinicId: string): Promise<any[]> {
     try {
-      const response = await api.get(`/api/appointments/${doctorId}/holidays`)
+      const response = await api.get(`/api/appointments/${doctorId}/holidays`, {
+        params: { clinicId }
+      })
       return response.data || []
     } catch (error) {
       console.error('Holiday API Error:', error)
@@ -150,13 +157,14 @@ export const appointmentService = {
    * Search appointments by patient criteria
    * @param doctorId - The doctor's ID
    * @param searchTerm - Search term (patient ID, name, or contact)
+   * @param clinicId - The clinic's ID
    * @returns Promise<Appointment[]> - List of matching appointments
    */
-  async searchAppointments(doctorId: string, searchTerm: string): Promise<Appointment[]> {
+  async searchAppointments(doctorId: string, searchTerm: string, clinicId: string): Promise<Appointment[]> {
     try {
       // For now, get all future appointments and filter on frontend
       // In a real implementation, this would be a dedicated search endpoint
-      const allAppointments = await this.getFutureAppointments(doctorId)
+      const allAppointments = await this.getFutureAppointments(doctorId, clinicId)
       const searchLower = searchTerm.toLowerCase()
       
       return allAppointments.filter(appointment => 
@@ -173,11 +181,11 @@ export const appointmentService = {
    * Delete an appointment by patient, visit date, and doctor
    * Mirrors backend @DeleteMapping("/appointments") with query params
    */
-  async deleteAppointment(params: { patientId: string; visitDate: string; doctorId: string; userId?: string }): Promise<any> {
-    const { patientId, visitDate, doctorId, userId = 'system' } = params
+  async deleteAppointment(params: { patientId: string; visitDate: string; doctorId: string; clinicId: string; userId?: string }): Promise<any> {
+    const { patientId, visitDate, doctorId, clinicId, userId = 'system' } = params
     try {
       const response = await api.delete('/appointments', {
-        params: { patientId, visitDate, doctorId, userId }
+        params: { patientId, visitDate, doctorId, clinicId, userId }
       })
       console.log('Delete appointment response:', response.data)
       return response.data

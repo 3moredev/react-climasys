@@ -154,11 +154,12 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
     useEffect(() => {
         if (!open) return;
         const doctorId = patientData?.doctorId || (patientData?.provider ?? '').toString();
+        const clinicId = patientData?.clinicId || sessionData?.clinicId || 'DEFAULT_CLINIC';
         if (!doctorId) return;
         setLabTestsLoading(true);
         setLabTestsError(null);
         // Primary fetch: getAllLabTestsWithParameters provides tests and their parameters
-        patientService.getAllLabTestsWithParameters(doctorId)
+        patientService.getAllLabTestsWithParameters(doctorId, clinicId)
             .then((res1: any) => {
                 const mapped = extractLabTests(res1);
                 console.log('Parsed lab tests (with parameters) count:', mapped.length);
@@ -171,7 +172,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                 setLabTestsError(e?.message || 'Failed to load lab tests');
             })
             .finally(() => setLabTestsLoading(false));
-    }, [open, patientData?.doctorId, patientData?.provider]);
+    }, [open, patientData?.doctorId, patientData?.provider, patientData?.clinicId, sessionData?.clinicId]);
 
     // Filtered options by search
     const filteredLabTests = useMemo(() => {
@@ -278,13 +279,13 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                     }
                 });
             } else {
-                // If no parameters, add a single blank row for the test
+                // If no parameters, add a single row with a default parameter name
                 const alreadyHasAnyRowForTest = labTestResults.some(x => x.labTestName === test.label);
                 if (!alreadyHasAnyRowForTest) {
                     resultsToAdd.push({
                         id: `${test.value}-no-param-${timestamp}-${idxTest}`,
                         labTestName: test.label,
-                        parameterName: '',
+                        parameterName: 'Result', // Default parameter name for tests without specific parameters
                         value: ''
                     });
                 }
@@ -367,7 +368,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                     doctorId: String(doctorId || ''),
                     patientId: patientId,
                     labTestDescription: r.labTestName,
-                    parameterName: r.parameterName,
+                    parameterName: r.parameterName || 'Result', // Ensure parameter name is never empty
                     testParameterValue: r.value
                 }))
             };
@@ -784,7 +785,8 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                                     const doctorId = patientData?.doctorId || (patientData?.provider ?? '').toString();
                                                                     if (!doctorId) return;
                                                                     setLabTestsLoading(true);
-                                                                    patientService.getAllLabTestsWithParameters(doctorId)
+                                                                    const clinicId = patientData?.clinicId || sessionData?.clinicId || 'DEFAULT_CLINIC';
+                                                                    patientService.getAllLabTestsWithParameters(doctorId, clinicId)
                                                                         .then((res: any) => {
                                                                             const mapped = extractLabTests(res);
                                                                             console.log('Parsed lab tests count (retry):', mapped.length);

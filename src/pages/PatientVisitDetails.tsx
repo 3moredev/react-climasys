@@ -4,6 +4,7 @@ import { Snackbar } from '@mui/material';
 import { visitService, ComprehensiveVisitDataRequest } from '../services/visitService';
 import { complaintService, ComplaintOption } from '../services/complaintService';
 import { DocumentService, DocumentUploadRequest } from '../services/documentService';
+import { sessionService } from '../services/sessionService';
 import AddReferralPopup, { ReferralData } from '../components/AddReferralPopup';
 
 interface AppointmentRow {
@@ -412,15 +413,28 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                 if (!open || !patientData?.patientId) return;
                 
                 setIsLoadingAppointmentDetails(true);
+                setError(null); // Clear any previous errors
                 console.log('=== LOADING APPOINTMENT DETAILS ===');
                 console.log('Patient data:', patientData);
                 
+                // Use actual appointment data instead of hardcoded values
+                // Try to get session data as fallback
+                let sessionData = null;
+                try {
+                    const sessionResult = await sessionService.getSessionInfo();
+                    if (sessionResult.success) {
+                        sessionData = sessionResult.data;
+                    }
+                } catch (sessionError) {
+                    console.warn('Could not load session data:', sessionError);
+                }
+                
                 const appointmentParams = {
                     patientId: String(patientData.patientId),
-                    doctorId: 'DR-00010', // You may need to get this from context or props
-                    shiftId: 1,
-                    clinicId: 'CL-00001', // You may need to get this from context or props
-                    patientVisitNo: 1,
+                    doctorId: String(patientData.doctorId || sessionData?.doctorId || 'DR-00010'), // Use actual doctor ID from appointment or session
+                    shiftId: Number(patientData.shiftId || sessionData?.shiftId || 1), // Use actual shift ID from appointment or session
+                    clinicId: String(patientData.clinicId || sessionData?.clinicId || 'CL-00001'), // Use actual clinic ID from appointment or session
+                    patientVisitNo: Number(patientData.visitNumber || 1), // Use actual visit number from appointment
                     languageId: 1
                 };
                 
@@ -433,7 +447,8 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                 console.log('Full response:', result);
                 
                 if (!result || !result.found || !result.mainData || result.mainData.length === 0) {
-                    console.log('No appointment details found, falling back to last visit details');
+                    console.log('No appointment details found, using empty form');
+                    setIsLoadingAppointmentDetails(false);
                     return;
                 }
                 
@@ -773,26 +788,98 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
         return formData.referralBy === 'D';
     };
 
+    // Normalize a variety of input date formats to ISO yyyy-MM-dd for backend
+    const toYyyyMmDd = (input?: string): string => {
+        try {
+            if (!input) return new Date().toISOString().slice(0, 10);
+            // Try native parsing first
+            const direct = new Date(input);
+            if (!isNaN(direct.getTime())) return direct.toISOString().slice(0, 10);
+            // Match common patterns: dd-MM-yyyy, dd-MMM-yy, dd-MMM-yyyy
+            const m = input.match(/^(\d{1,2})-(\d{1,2}|[A-Za-z]{3})-(\d{2,4})$/);
+            if (m) {
+                const day = parseInt(m[1], 10);
+                const monToken = m[2];
+                let year = parseInt(m[3], 10);
+                if (year < 100) year = 2000 + year; // two-digit year → 20xx
+                const month = /^(\d{1,2})$/.test(monToken)
+                    ? Math.max(0, Math.min(11, parseInt(monToken, 10) - 1))
+                    : ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'].indexOf(monToken.toLowerCase());
+                if (month >= 0) {
+                    const dt = new Date(Date.UTC(year, month, day));
+                    return dt.toISOString().slice(0, 10);
+                }
+            }
+        } catch {}
+        return new Date().toISOString().slice(0, 10);
+    };
+
     const handleSubmit = async () => {
         try {
             console.log('=== VISIT DETAILS FORM SUBMISSION STARTED ===');
             console.log('Form data:', formData);
             console.log('Visit type:', visitType);
             console.log('Patient data:', patientData);
+            console.log('Original visitDate from patientData:', patientData?.visitDate);
+            console.log('Converted visitDate:', toYyyyMmDd(patientData?.visitDate) + ' ' + new Date().toTimeString().slice(0, 8));
             
             setIsLoading(true);
             setError(null);
             setSuccess(null);
+            
+            // Fetch session data for dynamic values
+            let sessionData = null;
+            try {
+                const sessionResult = await sessionService.getSessionInfo();
+                if (sessionResult.success) {
+                    sessionData = sessionResult.data;
+                    console.log('Session data loaded:', sessionData);
+                }
+            } catch (sessionError) {
+                console.warn('Could not load session data:', sessionError);
+            }
+            
+            // Validate required fields are present
+            const doctorId = patientData?.doctorId || sessionData?.doctorId;
+            const clinicId = patientData?.clinicId || sessionData?.clinicId;
+            const shiftId = patientData?.shiftId || sessionData?.shiftId;
+            const userId = sessionData?.userId;
+            
+            if (!doctorId) {
+                throw new Error('Doctor ID is required but not found in appointment data or session');
+            }
+            if (!clinicId) {
+                throw new Error('Clinic ID is required but not found in appointment data or session');
+            }
+            if (!shiftId) {
+                throw new Error('Shift ID is required but not found in appointment data or session');
+            }
+            if (!userId) {
+                throw new Error('User ID is required but not found in session data');
+            }
+            
+            // Validate patient visit number
+            const patientVisitNo = patientData?.visitNumber;
+            if (!patientVisitNo) {
+                throw new Error('Patient Visit Number is required but not found in appointment data');
+            }
+            
+            console.log('=== VALIDATION PASSED ===');
+            console.log('Doctor ID:', doctorId);
+            console.log('Clinic ID:', clinicId);
+            console.log('Shift ID:', shiftId);
+            console.log('User ID:', userId);
+            console.log('Patient Visit No:', patientVisitNo);
 
             // Map form data to API request format
             const visitData: ComprehensiveVisitDataRequest = {
-                // Required fields - you may need to adjust these based on your actual data
+                // Required fields - using validated values
                 patientId: patientData?.patientId?.toString() || '',
-                doctorId: 'DR-00010', // You may need to get this from context or props
-                clinicId: 'CL-00001', // You may need to get this from context or props
-                shiftId: '1', // You may need to get this from context or props
-                visitDate: new Date().toISOString().slice(0, 19).replace('T', ' '), // Current date/time
-                patientVisitNo: '1', // Using visit number 1 as requested
+                doctorId: String(doctorId), // Use validated doctor ID
+                clinicId: String(clinicId), // Use validated clinic ID
+                shiftId: String(shiftId), // Use validated shift ID
+                visitDate: toYyyyMmDd(patientData?.visitDate) + 'T' + new Date().toTimeString().slice(0, 8), // Convert date format and add time in ISO format
+                patientVisitNo: String(patientVisitNo), // Use validated visit number
                 
                 // Referral information
                 referBy: (formData.referralBy === 'Self')
@@ -864,9 +951,9 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                 surgicalHistory: formData.pastSurgicalHistory,
                 menstrualAddComments: '',
                 followUpComment: '',
-                followUpDate: new Date().toISOString(),
+                followUpDate: new Date().toISOString().slice(0, 19),
                 pregnant: false,
-                edd: new Date().toISOString(),
+                edd: new Date().toISOString().slice(0, 19),
                 followUpType: '',
                 
                 // Financial fields
@@ -875,15 +962,43 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                 discount: 0,
                 originalDiscount: 0,
                 
-                // Status and user
-                statusId: 1,
-                userId: 'recep', // You may need to get this from auth context
+                // Status and user - Use appropriate status for submitted visit details
+                statusId: 2, // WITH DOCTOR status for submitted visit details
+                userId: userId, // Use validated user ID
                 isSubmitPatientVisitDetails: true
             };
 
             console.log('=== SUBMITTING VISIT DATA TO API ===');
             console.log('Visit data object:', visitData);
             console.log('Visit data JSON:', JSON.stringify(visitData, null, 2));
+            console.log('=== VALIDATION PARAMETERS ===');
+            console.log('Patient ID:', visitData.patientId);
+            console.log('Doctor ID:', visitData.doctorId);
+            console.log('Clinic ID:', visitData.clinicId);
+            console.log('Shift ID:', visitData.shiftId);
+            console.log('Status ID:', visitData.statusId);
+            console.log('Visit Date:', visitData.visitDate);
+            console.log('Patient Visit No:', visitData.patientVisitNo);
+            console.log('User ID:', visitData.userId);
+            console.log('Discount:', visitData.discount);
+            
+            // Check for null/undefined values that might cause validation errors
+            const nullFields = [];
+            if (!visitData.patientId) nullFields.push('patientId');
+            if (!visitData.doctorId) nullFields.push('doctorId');
+            if (!visitData.clinicId) nullFields.push('clinicId');
+            if (!visitData.shiftId) nullFields.push('shiftId');
+            if (!visitData.patientVisitNo) nullFields.push('patientVisitNo');
+            if (!visitData.visitDate) nullFields.push('visitDate');
+            if (!visitData.statusId) nullFields.push('statusId');
+            if (visitData.discount === null || visitData.discount === undefined) nullFields.push('discount');
+            if (!visitData.userId) nullFields.push('userId');
+            
+            if (nullFields.length > 0) {
+                console.error('=== NULL/UNDEFINED FIELDS DETECTED ===');
+                console.error('Fields with null/undefined values:', nullFields);
+                throw new Error(`Required fields are missing: ${nullFields.join(', ')}`);
+            }
             
             const result = await visitService.saveComprehensiveVisitData(visitData);
             
@@ -902,9 +1017,9 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                         const documentResults = await handleDocumentUpload(
                             formData.attachments,
                             patientData?.patientId?.toString() || '',
-                            'DR-00010', // You may need to get this from context or props
-                            'CL-00001', // You may need to get this from context or props
-                            1 // patientVisitNo
+                            String(doctorId), // Use validated doctor ID
+                            String(clinicId), // Use validated clinic ID
+                            Number(patientVisitNo) // Use validated visit number
                         );
                         
                         console.log('Document upload results:', documentResults);

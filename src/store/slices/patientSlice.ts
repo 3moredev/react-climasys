@@ -35,7 +35,7 @@ const initialState: PatientState = {
 
 export const searchPatients = createAsyncThunk(
   'patients/search',
-  async (params: { query: string; status?: string; page?: number; size?: number }, { rejectWithValue }) => {
+  async (params: { query: string; status?: string; page?: number; size?: number; clinicId?: string }, { rejectWithValue }) => {
     try {
       const response = await axios.get('/api/patients/search', { params })
       return response.data

@@ -1475,6 +1475,22 @@ export default function AppointmentTable() {
                 return;
             }
 
+            // Get clinic ID from session
+            let clinicId = sessionData?.clinicId;
+            if (!clinicId) {
+                try {
+                    const sessionClinicId = await sessionService.getClinicId();
+                    clinicId = sessionClinicId || undefined;
+                } catch (error) {
+                    console.error('Failed to get clinic ID from session:', error);
+                }
+            }
+
+            if (!clinicId) {
+                alert("Unable to determine clinic ID. Please ensure you are properly logged in and try again.");
+                return;
+            }
+
             const now = new Date();
             const hh = String(now.getHours()).padStart(2, '0');
             const mm = String(now.getMinutes()).padStart(2, '0');
@@ -1483,7 +1499,7 @@ export default function AppointmentTable() {
             const appointmentData: AppointmentRequest = {
                 visitDate: new Date().toISOString().split('T')[0], // Today's date in YYYY-MM-DD format
                 shiftId: 1, // Default shift ID
-                clinicId: sessionData?.clinicId ?? '', // Default clinic ID
+                clinicId: clinicId, // Use clinic ID from session
                 doctorId: selectedDoctorId, // Use selected doctor from dropdown (this is the key change)
                 patientId: String(patient.id),
                 visitTime: currentVisitTime, // Real-time visit time (HH:mm)
@@ -3911,7 +3927,14 @@ export default function AppointmentTable() {
                                                                     }
                                                                     const confirmDelete = window.confirm('Delete this appointment?');
                                                                     if (!confirmDelete) return;
-                                                                    await appointmentService.deleteAppointment({ patientId: String(pid), visitDate: String(vdatetime), doctorId: String(did), userId: String(sessionData?.userId || 'system') });
+                                                                    
+                                                                    await appointmentService.deleteAppointment({ 
+                                                                        patientId: String(pid), 
+                                                                        visitDate: String(vdatetime), 
+                                                                        doctorId: String(did), 
+                                                                        clinicId: sessionData?.clinicId || '',
+                                                                        userId: String(sessionData?.userId || 'system') 
+                                                                    });
                                                                     setAppointments(prev => prev.filter((_, i) => i !== originalIndex));
                                                                 } catch (err) {
                                                                     console.error('Delete appointment failed:', err);
@@ -3965,12 +3988,18 @@ export default function AppointmentTable() {
                                                             }}
                                                             onMouseEnter={(e) => {
                                                                 if (a.status === 'WITH DOCTOR') return; // Disable hover effects when disabled
-                                                                e.currentTarget.style.backgroundColor = 'transparent';
-                                                                e.currentTarget.style.borderColor = 'black';
+                                                                // Preserve yellow color if visit has been submitted
+                                                                if (submittedVisitDetails.has(a.patientId)) {
+                                                                    e.currentTarget.style.backgroundColor = '#FFD700';
+                                                                    e.currentTarget.style.borderColor = '#FFA000'; // Slightly darker yellow border
+                                                                } else {
+                                                                    e.currentTarget.style.backgroundColor = 'transparent';
+                                                                    e.currentTarget.style.borderColor = 'black';
+                                                                }
                                                             }}
                                                             onMouseLeave={(e) => {
                                                                 if (a.status === 'WITH DOCTOR') return; // Disable hover effects when disabled
-                                                                e.currentTarget.style.backgroundColor = 'transparent';
+                                                                e.currentTarget.style.backgroundColor = a.status === 'WITH DOCTOR' ? 'rgb(96, 125, 139)' : (submittedVisitDetails.has(a.patientId) ? '#FFD700' : 'transparent');
                                                                 e.currentTarget.style.borderColor = '#ddd';
                                                             }}
                                                         >
@@ -4282,7 +4311,14 @@ export default function AppointmentTable() {
                                                                 }
                                                                 const confirmDelete = window.confirm('Delete this appointment?');
                                                                 if (!confirmDelete) return;
-                                                                await appointmentService.deleteAppointment({ patientId: String(pid), visitDate: String(vdatetime), doctorId: String(did), userId: String(sessionData?.userId || 'system') });
+                                                                
+                                                                await appointmentService.deleteAppointment({ 
+                                                                    patientId: String(pid), 
+                                                                    visitDate: String(vdatetime), 
+                                                                    doctorId: String(did), 
+                                                                    clinicId: sessionData?.clinicId || '',
+                                                                    userId: String(sessionData?.userId || 'system') 
+                                                                });
                                                                 // Remove from UI
                                                                 setAppointments(prev => prev.filter((_, i) => i !== originalIndex));
                                                             } catch (err) {
@@ -4433,26 +4469,21 @@ export default function AppointmentTable() {
                 open={showAddPatient}
                 onClose={() => setShowAddPatient(false)}
                 doctorId={selectedDoctorId || doctorId}
-                onSave={() => {
-                    (async () => {
-                        try {
-                            const today = new Date().toISOString().split('T')[0];
-                            const doctorId = 'DR-00010';
-                            const clinicId = 'CL-00001';
-                            const resp: TodayAppointmentsResponse = await appointmentService.getAppointmentsForDateSP({
-                                doctorId,
-                                clinicId,
-                                futureDate: today,
-                                languageId: 1
-                            });
-                            const rows = convertSPResultToRows(resp?.resultSet1 || []);
-                            setAppointments(rows);
-                        } catch (e) {
-                            console.error('Failed to refresh appointments after adding patient', e);
-                        } finally {
-                            setShowAddPatient(false);
-                        }
-                    })();
+                onSave={async (patientData) => {
+                    try {
+                        console.log('🔄 Refreshing appointments after patient addition:', patientData);
+                        
+                        // Use the existing refresh function that properly handles session data
+                        await refreshAppointmentsForSelectedDoctor();
+                        
+                        console.log('✅ Appointments refreshed successfully after patient addition');
+                    } catch (error) {
+                        console.error('❌ Failed to refresh appointments after adding patient:', error);
+                        // Show user-friendly error message
+                        alert('Patient added successfully, but failed to refresh the appointments list. Please refresh the page manually.');
+                    } finally {
+                        setShowAddPatient(false);
+                    }
                 }}
                 clinicId={clinicId}
             />

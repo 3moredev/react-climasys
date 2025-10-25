@@ -34,6 +34,7 @@ export interface PatientSearchParams {
   status?: string;
   page?: number;
   size?: number;
+  clinicId?: string;
 }
 
 // Error response interface
@@ -245,6 +246,11 @@ export const patientService = {
         size: (params.size || 20).toString()
       });
 
+      // Add clinicId if provided
+      if (params.clinicId) {
+        searchParams.append('clinicId', params.clinicId);
+      }
+
       const response = await api.get(`/patients/search?${searchParams.toString()}`);
       console.log('Search patients response:', response.data);
       
@@ -336,9 +342,9 @@ export const patientService = {
    * @param status - Registration status filter (default: 'all')
    * @returns Promise<PatientSearchResponse>
    */
-  async getAllPatients(page: number = 0, size: number = 20, status: string = 'all'): Promise<PatientSearchResponse> {
+  async getAllPatients(page: number = 0, size: number = 20, status: string = 'all', clinicId?: string): Promise<PatientSearchResponse> {
     try {
-      console.log(`Fetching all patients - page: ${page}, size: ${size}, status: ${status}`);
+      console.log(`Fetching all patients - page: ${page}, size: ${size}, status: ${status}, clinicId: ${clinicId}`);
       
       const searchParams = new URLSearchParams({
         query: '', // Empty query to get all patients
@@ -346,6 +352,11 @@ export const patientService = {
         page: page.toString(),
         size: size.toString()
       });
+
+      // Add clinicId if provided
+      if (clinicId) {
+        searchParams.append('clinicId', clinicId);
+      }
 
       const response = await api.get(`/patients/search?${searchParams.toString()}`);
       console.log('Get all patients response:', response.data);
@@ -448,30 +459,31 @@ export const patientService = {
   },
 
   /**
-   * Get lab tests available for a given doctor
+   * Get lab tests available for a given doctor and clinic
    * @param doctorId - Doctor ID (e.g., DR-00001)
+   * @param clinicId - Clinic ID (e.g., CLINIC001)
    * @returns Promise<LabTestsByDoctorResponse>
    */
-  async getLabTestsByDoctor(doctorId: string): Promise<LabTestsByDoctorResponse> {
+  async getLabTestsByDoctor(doctorId: string, clinicId: string): Promise<LabTestsByDoctorResponse> {
     try {
-      console.log(`Fetching lab tests for doctor: ${doctorId}`);
-      // Primary endpoint as specified
+      console.log(`Fetching lab tests for doctor: ${doctorId} and clinic: ${clinicId}`);
+      // Primary endpoint with clinic ID
       try {
-        const response = await api.get(`/lab/master/tests/doctor/${encodeURIComponent(doctorId)}`);
-        console.log('Get lab tests by doctor response (/lab/master/tests/doctor/{id}):', response.data);
+        const response = await api.get(`/lab/master/tests/doctor/${encodeURIComponent(doctorId)}/clinic/${encodeURIComponent(clinicId)}`);
+        console.log('Get lab tests by doctor and clinic response (/lab/master/tests/doctor/{id}/clinic/{id}):', response.data);
         return response.data as LabTestsByDoctorResponse;
       } catch (primaryError: any) {
         // Fallback 1: query-param based
         if (primaryError?.response?.status !== 404) throw primaryError;
         try {
-          const response = await api.get(`/lab/tests`, { params: { doctorId } });
-          console.log('Get lab tests by doctor response (/lab/tests):', response.data);
+          const response = await api.get(`/lab/tests`, { params: { doctorId, clinicId } });
+          console.log('Get lab tests by doctor and clinic response (/lab/tests):', response.data);
           return response.data as LabTestsByDoctorResponse;
         } catch (secondaryError: any) {
           // Fallback 2: legacy path
           if (secondaryError?.response?.status !== 404) throw secondaryError;
-          const response = await api.get(`/tests/doctor/${encodeURIComponent(doctorId)}`);
-          console.log('Get lab tests by doctor response (/tests/doctor/{id}):', response.data);
+          const response = await api.get(`/tests/doctor/${encodeURIComponent(doctorId)}/clinic/${encodeURIComponent(clinicId)}`);
+          console.log('Get lab tests by doctor and clinic response (/tests/doctor/{id}/clinic/{id}):', response.data);
           return response.data as LabTestsByDoctorResponse;
         }
       }
@@ -497,37 +509,37 @@ export const patientService = {
   ,
 
   /**
-   * Get all lab tests WITH parameters for the given doctor
-   * Mirrors backend @GetMapping("/doctor/{doctorId}/all-with-parameters")
+   * Get all lab tests WITH parameters for the given doctor and clinic
+   * Mirrors backend @GetMapping("/doctor/{doctorId}/clinic/{clinicId}/all-with-parameters")
    */
-  async getAllLabTestsWithParameters(doctorId: string): Promise<LabTestsWithParametersResponse> {
+  async getAllLabTestsWithParameters(doctorId: string, clinicId: string): Promise<LabTestsWithParametersResponse> {
     try {
-      console.log(`Fetching lab tests WITH parameters for doctor: ${doctorId}`);
+      console.log(`Fetching lab tests WITH parameters for doctor: ${doctorId} and clinic: ${clinicId}`);
       // Try several common base paths to be resilient to routing differences
       // 1) As provided
       try {
-        const resp = await api.get(`/lab/master/parameters/doctor/${encodeURIComponent(doctorId)}/all-with-parameters`);
-        console.log('Lab tests with parameters ("/doctor/{id}/all-with-parameters"):', resp.data);
+        const resp = await api.get(`/lab/master/parameters/doctor/${encodeURIComponent(doctorId)}/clinic/${encodeURIComponent(clinicId)}/all-with-parameters`);
+        console.log('Lab tests with parameters ("/doctor/{id}/clinic/{id}/all-with-parameters"):', resp.data);
         return resp.data as LabTestsWithParametersResponse;
       } catch (e1: any) {
         if (e1?.response?.status !== 404) throw e1;
         // 2) Under /lab/tests prefix
         try {
-          const resp = await api.get(`/lab/tests/doctor/${encodeURIComponent(doctorId)}/all-with-parameters`);
-          console.log('Lab tests with parameters ("/lab/tests/doctor/{id}/all-with-parameters"):', resp.data);
+          const resp = await api.get(`/lab/tests/doctor/${encodeURIComponent(doctorId)}/clinic/${encodeURIComponent(clinicId)}/all-with-parameters`);
+          console.log('Lab tests with parameters ("/lab/tests/doctor/{id}/clinic/{id}/all-with-parameters"):', resp.data);
           return resp.data as LabTestsWithParametersResponse;
         } catch (e2: any) {
           if (e2?.response?.status !== 404) throw e2;
           // 3) Under /lab/master/tests prefix
           try {
-            const resp = await api.get(`/lab/master/tests/doctor/${encodeURIComponent(doctorId)}/all-with-parameters`);
-            console.log('Lab tests with parameters ("/lab/master/tests/doctor/{id}/all-with-parameters"):', resp.data);
+            const resp = await api.get(`/lab/master/tests/doctor/${encodeURIComponent(doctorId)}/clinic/${encodeURIComponent(clinicId)}/all-with-parameters`);
+            console.log('Lab tests with parameters ("/lab/master/tests/doctor/{id}/clinic/{id}/all-with-parameters"):', resp.data);
             return resp.data as LabTestsWithParametersResponse;
           } catch (e3: any) {
             if (e3?.response?.status !== 404) throw e3;
             // 4) Query-param variant
-            const resp = await api.get(`/lab/tests/with-parameters`, { params: { doctorId } });
-            console.log('Lab tests with parameters ("/lab/tests/with-parameters?doctorId="):', resp.data);
+            const resp = await api.get(`/lab/tests/with-parameters`, { params: { doctorId, clinicId } });
+            console.log('Lab tests with parameters ("/lab/tests/with-parameters?doctorId=&clinicId="):', resp.data);
             return resp.data as LabTestsWithParametersResponse;
           }
         }
