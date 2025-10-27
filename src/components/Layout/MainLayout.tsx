@@ -38,6 +38,7 @@ import { useSession } from '../../store/hooks/useSession'
 import { authService } from '../../services/authService'
 import SessionTimeoutHandler from '../Session/SessionTimeoutHandler'
 import { getSessionConfig } from '../../config/sessionConfig'
+import { useActivityTracker } from '../../hooks/useActivityTracker'
 
 interface MainLayoutProps {
   children: React.ReactNode
@@ -146,6 +147,9 @@ export default function MainLayout({ children }: MainLayoutProps) {
   
   const { user } = useAppSelector((state) => state.auth)
   const { username, doctorName, clinicName, isLoading: sessionLoading, isValid: sessionValid, logout: sessionLogout, error: sessionError } = useSession()
+  
+  // Track user activity to maintain session persistence
+  useActivityTracker()
   
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null)
   const [masterEl, setMasterEl] = React.useState<null | HTMLElement>(null)

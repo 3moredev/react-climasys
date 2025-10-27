@@ -1,4 +1,5 @@
 import api from './api'
+import { sessionPersistence } from '../utils/sessionPersistence'
 
 export interface SessionInfo {
   userId: number
@@ -33,6 +34,12 @@ export const sessionService = {
   async getSessionInfo(): Promise<{ success: boolean; data: SessionInfo | null; error: string | null }> {
     try {
       const response = await api.get<SessionInfo>('/auth/session/info')
+      
+      // Save session ID for persistence
+      if (response.data?.sessionId) {
+        sessionPersistence.saveSessionId(response.data.sessionId)
+      }
+      
       return {
         success: true,
         data: response.data,
@@ -40,6 +47,8 @@ export const sessionService = {
       }
     } catch (error: any) {
       if (error.response?.status === 401) {
+        // Session expired, clear persistence data
+        sessionPersistence.clearAll()
         return {
           success: false,
           data: null,
@@ -128,9 +137,17 @@ export const sessionService = {
   async logout(): Promise<boolean> {
     try {
       const response = await api.post('/auth/session/logout')
+      
+      // Clear session persistence data on successful logout
+      if (response.status === 200) {
+        sessionPersistence.clearAll()
+      }
+      
       return response.status === 200
     } catch (error) {
       console.error('Logout error:', error)
+      // Even if logout fails, clear local persistence
+      sessionPersistence.clearAll()
       return false
     }
   },

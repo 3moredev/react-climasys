@@ -6,6 +6,7 @@ import { initializeAuth } from '../../store/slices/authSlice'
 import { Box, CircularProgress, Typography } from '@mui/material'
 import { sessionService } from '../../services/sessionService'
 import { startSessionMonitoring, resetSessionTimeoutWarning } from '../../services/api'
+import { sessionPersistence } from '../../utils/sessionPersistence'
 
 interface AuthGuardProps {
   children: React.ReactNode
@@ -57,26 +58,58 @@ export default function AuthGuard({ children }: AuthGuardProps) {
             financialYear: new Date().getFullYear()
           }
           localStorage.setItem('user', JSON.stringify(mockUser))
+          // Also save to session persistence
+          sessionPersistence.saveUser({
+            ...mockUser,
+            lastLoginTime: Date.now()
+          })
           dispatch(initializeAuth())
           setIsValidatingSession(false)
           return
         }
         
-        // First check if there's a user in localStorage
+        // Check session persistence first (more reliable for page refresh)
+        const persistedUser = sessionPersistence.loadUser()
+        const hasValidSession = sessionPersistence.isSessionValid(30) // 30 minutes max inactivity
+        
+        console.log('AuthGuard: Persisted user found:', !!persistedUser)
+        console.log('AuthGuard: Session valid:', hasValidSession)
+        
+        if (persistedUser && hasValidSession) {
+          // Update last activity timestamp
+          sessionPersistence.updateLastActivity()
+          console.log('AuthGuard: Valid persisted session found, initializing auth')
+          dispatch(initializeAuth())
+          setIsValidatingSession(false)
+          return
+        }
+        
+        // Fallback to legacy localStorage check
         const localUser = localStorage.getItem('user')
-        console.log('AuthGuard: Local user found:', !!localUser)
+        console.log('AuthGuard: Legacy local user found:', !!localUser)
         
-        if (!localUser) {
-          // No local user, definitely not authenticated
-          console.log('AuthGuard: No local user, not authenticated')
-          dispatch(initializeAuth())
-          setIsValidatingSession(false)
-          return
+        if (localUser) {
+          // Try to parse and validate the user data
+          try {
+            const userData = JSON.parse(localUser)
+            if (userData && userData.loginId) {
+              // Save to session persistence for future page refreshes
+              sessionPersistence.saveUser({
+                ...userData,
+                lastLoginTime: Date.now()
+              })
+              console.log('AuthGuard: Legacy user data migrated to session persistence')
+              dispatch(initializeAuth())
+              setIsValidatingSession(false)
+              return
+            }
+          } catch (parseError) {
+            console.error('AuthGuard: Failed to parse legacy user data:', parseError)
+          }
         }
-
-        // For now, if we have a local user, consider them authenticated
-        // This prevents the blank screen issue while session validation is being fixed
-        console.log('AuthGuard: Local user exists, initializing auth')
+        
+        // No valid user found
+        console.log('AuthGuard: No valid user found, not authenticated')
         dispatch(initializeAuth())
         setIsValidatingSession(false)
         
