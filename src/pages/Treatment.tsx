@@ -4,6 +4,13 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { sessionService, SessionInfo } from "../services/sessionService";
 import { Delete, Edit, Add, Info } from '@mui/icons-material';
 import { complaintService, ComplaintOption } from "../services/complaintService";
+import { appointmentService } from "../services/appointmentService";
+import PatientFormTest from "../components/Test/PatientFormTest";
+import AddComplaintPopup from "../components/AddComplaintPopup";
+import AddDiagnosisPopup from "../components/AddDiagnosisPopup";
+import AddMedicinePopup, { MedicineData } from "../components/AddMedicinePopup";
+import AddPrescriptionPopup, { PrescriptionData } from "../components/AddPrescriptionPopup";
+import AddTestLabPopup, { TestLabData } from "../components/AddTestLabPopup";
 
 // Specific styles for Duration/Comment input in table
 const durationCommentStyles = `
@@ -17,6 +24,12 @@ const durationCommentStyles = `
     border-radius: 0 !important;
   }
   .medicine-instruction-table-input:focus {
+    border-radius: 0 !important;
+  }
+  .medicine-table-input {
+    border-radius: 0 !important;
+  }
+  .medicine-table-input:focus {
     border-radius: 0 !important;
   }
   .prescription-table-input {
@@ -57,6 +70,7 @@ interface PreviousVisit {
     date: string;
     type: string;
     patientName: string;
+    doctorName: string;
     isActive?: boolean;
 }
 
@@ -76,6 +90,10 @@ interface DiagnosisRow {
 interface MedicineRow {
     id: string;
     medicine: string;
+    b: string;
+    l: string;
+    d: string;
+    days: string;
     instruction: string;
 }
 
@@ -147,18 +165,32 @@ export default function Treatment() {
         dressingBodyParts: ''
     });
 
-    // Previous visits data
-    const [previousVisits, setPreviousVisits] = useState<PreviousVisit[]>([
-        { id: '1', date: '14-May-19', type: 'P', patientName: 'Aniruddha Tongaonkar', isActive: true },
-        { id: '2', date: '02-May-19', type: 'P', patientName: 'Deepali Tongaonkar' },
-        { id: '3', date: '03-May-19', type: 'L', patientName: 'Rajesh Mane' },
-        { id: '4', date: '03-May-19', type: 'P', patientName: 'Kiran Patil' },
-        { id: '5', date: '03-May-19', type: 'P', patientName: 'Jyoti Shinde' },
-        { id: '6', date: '03-May-19', type: 'P', patientName: 'Vikrant Wagle' },
-        { id: '7', date: '03-May-19', type: 'P', patientName: 'Sachin Patankar' },
-        { id: '8', date: '03-May-19', type: 'P', patientName: 'Raj Surywanshi' },
-        { id: '9', date: '03-May-19', type: 'P', patientName: 'Ram Patil' }
-    ]);
+    // Previous visits data - now will be populated from API
+    const [previousVisits, setPreviousVisits] = useState<PreviousVisit[]>([]);
+    const [loadingPreviousVisits, setLoadingPreviousVisits] = useState(false);
+    const [showPatientFormDialog, setShowPatientFormDialog] = useState(false);
+    const [formPatientData, setFormPatientData] = useState<any>(null);
+    const [selectedPatientForForm, setSelectedPatientForForm] = useState<any>(null);
+    const [allVisits, setAllVisits] = useState<any[]>([]);
+    const [visitDates, setVisitDates] = useState<string[]>([]);
+    const [currentVisitIndex, setCurrentVisitIndex] = useState(0);
+    const [previousVisitsError, setPreviousVisitsError] = useState<string | null>(null);
+    const [allDoctors, setAllDoctors] = useState<any[]>([]);
+
+    // Complaint popup state
+    const [showComplaintPopup, setShowComplaintPopup] = useState(false);
+    
+    // Diagnosis popup state
+    const [showDiagnosisPopup, setShowDiagnosisPopup] = useState(false);
+    
+    // Medicine popup state
+    const [showMedicinePopup, setShowMedicinePopup] = useState(false);
+    
+    // Prescription popup state
+    const [showPrescriptionPopup, setShowPrescriptionPopup] = useState(false);
+    
+    // Test Lab popup state
+    const [showTestLabPopup, setShowTestLabPopup] = useState(false);
 
     // Complaints and diagnosis data
     const [complaintsRows, setComplaintsRows] = useState<ComplaintRow[]>([]);
@@ -326,11 +358,409 @@ export default function Treatment() {
         navigate('/appointment');
     };
 
+    // Fetch previous visits for the current patient
+    const fetchPreviousVisits = async () => {
+        if (!treatmentData?.patientId || !sessionData?.doctorId || !sessionData?.clinicId) {
+            console.log('Missing required data for fetching previous visits:', {
+                patientId: treatmentData?.patientId,
+                doctorId: sessionData?.doctorId,
+                clinicId: sessionData?.clinicId
+            });
+            return;
+        }
+
+        try {
+            setLoadingPreviousVisits(true);
+            setPreviousVisitsError(null);
+            const todaysVisitDate = new Date().toISOString().split('T')[0];
+            
+            const response = await appointmentService.getPatientPreviousVisits({
+                patientId: treatmentData.patientId,
+                doctorId: sessionData.doctorId,
+                clinicId: sessionData.clinicId,
+                todaysVisitDate
+            });
+
+            console.log('Previous visits response:', response);
+
+            // Try common shapes
+            const visits = response?.visits || response?.data?.visits || response?.resultSet1 || [];
+            const success = response?.success !== false;
+
+            if (success && Array.isArray(visits)) {
+                // Parse visit dates and sort chronologically (oldest -> newest)
+                const parseVisitDate = (v: any): number => {
+                    const s: string = v.visit_date || v.Visit_Date || v.appointmentDate || v.appointment_date || '';
+                    if (!s) return 0;
+                    const d = new Date(s);
+                    const t = d.getTime();
+                    return isNaN(t) ? 0 : t;
+                };
+
+                const sortedVisits = [...visits].sort((a, b) => parseVisitDate(a) - parseVisitDate(b));
+                setAllVisits(sortedVisits);
+
+                // Convert to PreviousVisit format for display
+                const formattedVisits: PreviousVisit[] = sortedVisits.map((visit: any, index: number) => {
+                    // Extract doctor name from visit data
+                    const getDoctorName = (visit: any): string => {
+                        // Try different possible doctor name fields
+                        const doctorName = visit.DoctorName || visit.doctor_name || visit.Doctor_Name || 
+                                         visit.doctorName || visit.provider || '';
+                        
+                        if (doctorName) {
+                            return doctorName;
+                        }
+                        
+                        // If no direct doctor name, try to get from doctor ID
+                        const doctorId = visit.doctor_id || visit.Doctor_ID || visit.doctorId;
+                        if (doctorId) {
+                            const doctor = allDoctors.find(d => d.id === doctorId);
+                            return doctor ? `${doctor.firstName} ${doctor.lastName}`.trim() : '';
+                        }
+                        
+                        return 'Unknown Doctor';
+                    };
+
+                    return {
+                        id: String(visit.id || index),
+                        date: visit.visit_date || visit.Visit_Date || visit.appointmentDate || visit.appointment_date || '',
+                        type: visit.visit_type === 1 ? 'P' : 'L', // Assuming 1 = Physical, 2 = Lab
+                        patientName: treatmentData?.patientName || '',
+                        doctorName: getDoctorName(visit),
+                        isActive: index === sortedVisits.length - 1 // Make the latest visit active
+                    };
+                });
+
+                setPreviousVisits(formattedVisits);
+                setCurrentVisitIndex(Math.max(0, sortedVisits.length - 1));
+            } else {
+                console.log('No previous visits found or invalid response format');
+                setPreviousVisits([]);
+            }
+        } catch (error: any) {
+            console.error('Error fetching previous visits:', error);
+            setPreviousVisitsError(error?.message || 'Failed to fetch previous visits');
+            setPreviousVisits([]);
+        } finally {
+            setLoadingPreviousVisits(false);
+        }
+    };
+
+    // Load previous visits when component mounts and treatment data is available
+    useEffect(() => {
+        if (treatmentData?.patientId && sessionData?.doctorId && sessionData?.clinicId) {
+            fetchPreviousVisits();
+        }
+    }, [treatmentData?.patientId, sessionData?.doctorId, sessionData?.clinicId]);
+
+    // Auto-calculate BMI when height or weight changes
+    useEffect(() => {
+        const calculatedBMI = calculateBMI(formData.height, formData.weight);
+        if (calculatedBMI !== formData.bmi) {
+            setFormData(prev => ({
+                ...prev,
+                bmi: calculatedBMI
+            }));
+        }
+    }, [formData.height, formData.weight]);
+
+    // Handle previous visit click - same as Appointment page's handleLastVisitClick
+    const handlePreviousVisitClick = async (visit: PreviousVisit) => {
+        try {
+            const visitIndex = previousVisits.findIndex(v => v.id === visit.id);
+            if (visitIndex === -1 || !allVisits[visitIndex]) return;
+
+            const selectedVisit = allVisits[visitIndex];
+            const patientName = treatmentData?.patientName || '';
+            
+            setSelectedPatientForForm({ 
+                id: treatmentData?.patientId, 
+                name: patientName, 
+                appointmentRow: null 
+            });
+
+            // Map the selected visit to form data (similar to Appointment page)
+            const mapped = mapPreviousVisitToInitialData(selectedVisit, patientName, null);
+            console.log('Mapped form data from previous visit:', mapped);
+            setFormPatientData(mapped);
+        } catch (e) {
+            console.error('Error loading previous visit:', e);
+            setFormPatientData(null);
+        } finally {
+            setShowPatientFormDialog(true);
+        }
+    };
+
+
+    // Helper function to format date for display
+    const formatVisitDate = (dateString: string): string => {
+        if (!dateString) return 'N/A';
+        try {
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) return dateString; // Return original if invalid
+            return date.toLocaleDateString('en-GB', {
+                day: '2-digit',
+                month: 'short',
+                year: '2-digit'
+            });
+        } catch (error) {
+            return dateString; // Return original if parsing fails
+        }
+    };
+
+    // Map previous visit data to form data (copied from Appointment page)
+    const mapPreviousVisitToInitialData = (visit: any, patientName: string, appointmentRow?: any) => {
+        console.log('=== MAPPING VISIT DATA ===');
+        console.log('Raw visit object:', visit);
+        console.log('Visit keys:', Object.keys(visit || {}));
+        console.log('Patient name:', patientName);
+        console.log('Appointment row:', appointmentRow);
+
+        const [firstName, ...rest] = String(patientName || '').trim().split(/\s+/);
+        const lastName = rest.join(' ');
+        const get = (obj: any, ...keys: string[]) => {
+            for (const k of keys) {
+                if (obj && obj[k] !== undefined && obj[k] !== null) return obj[k];
+            }
+            return '';
+        };
+        const bool = (v: any) => Boolean(v);
+        const toStr = (v: any) => (v === undefined || v === null ? '' : String(v));
+
+        // Build prescriptions from visit_prescription_overwrite if available; fallback to rawVisit.Prescriptions
+        const rxArray = ((): any[] => {
+            // First try the existing prescription fields
+            const arr = get(visit, 'visit_prescription_overwrite', 'Visit_Prescription_Overwrite', 'prescriptions');
+            console.log('Rx array (existing):', arr);
+
+            // If no prescriptions found, try rawVisit.Prescriptions
+            if (!arr || !Array.isArray(arr) || arr.length === 0) {
+                const rawPrescriptions = get(visit, 'Prescriptions');
+                console.log('Raw Prescriptions data:', rawPrescriptions);
+                if (Array.isArray(rawPrescriptions) && rawPrescriptions.length > 0) {
+                    console.log('Using rawVisit.Prescriptions data');
+                    return rawPrescriptions;
+                }
+            }
+
+            if (Array.isArray(arr)) return arr;
+            return [];
+        })();
+        const prescriptions = rxArray.length > 0
+            ? rxArray.map((p: any) => {
+                console.log('Mapping prescription item:', p);
+
+                // Try multiple field name variations for medicine
+                const med = toStr(get(p, 'medicineName', 'Medicine_Name', 'medicine', 'drug_name', 'item', 'Medicine', 'Drug', 'med_name', 'medication', 'MedName'));
+
+                // Try multiple field name variations for dosage
+                const m = toStr(get(p, 'Morning', 'morningDose', 'morning', 'M', 'morn', 'AM')) || '0';
+                const a = toStr(get(p, 'Afternoon', 'afternoonDose', 'afternoon', 'A', 'aft', 'PM')) || '0';
+                const n = toStr(get(p, 'Night', 'nightDose', 'night', 'N', 'eve', 'Evening')) || '0';
+
+                // Get number of days
+                const noOfdays = toStr(get(p, 'noOfDays'));
+
+                // If we have individual dosage components, combine them
+                let doseCombined = '';
+                if (m !== '0' || a !== '0' || n !== '0') {
+                    doseCombined = `${m}-${a}-${n}`;
+                    // Add number of days if available
+                    if (noOfdays) {
+                        doseCombined += ` (${noOfdays} Days)`;
+                    }
+                } else {
+                    // Try to get pre-formatted dosage
+                    doseCombined = toStr(get(p, 'Dosage', 'dosage', 'dose', 'Dose', 'dosage_formatted', 'frequency', 'Frequency'));
+                    // Add number of days if available and not already included
+                    if (noOfdays && !doseCombined.toLowerCase().includes('day')) {
+                        doseCombined += ` (${noOfdays} Days)`;
+                    }
+                }
+
+                // Try multiple field name variations for instructions
+                const instr = toStr(get(p, 'Instruction', 'Instructions', 'instruction', 'instructions', 'Instruction_Text', 'directions', 'how_to_take', 'Directions'));
+
+                const mappedPrescription = {
+                    medicine: med,
+                    dosage: doseCombined,
+                    instructions: instr
+                };
+
+                console.log('Mapped prescription:', mappedPrescription);
+                console.log('Number of days found:', noOfdays);
+                return mappedPrescription;
+            })
+            : (toStr(get(visit, 'Medicine_Name'))
+                ? [{
+                    medicine: toStr(get(visit, 'Medicine_Name')),
+                    dosage: (() => {
+                        const baseDosage = toStr(get(visit, 'Dosage', 'dosage', 'dose'));
+                        const fallbackDays = toStr(get(visit, 'noOfdays', 'NoOfDays', 'no_of_days', 'No_Of_Days', 'days', 'Days', 'duration', 'Duration'));
+                        if (fallbackDays && !baseDosage.toLowerCase().includes('day')) {
+                            return `${baseDosage} (${fallbackDays} Days)`;
+                        }
+                        return baseDosage;
+                    })(),
+                    instructions: toStr(get(visit, 'Instructions'))
+                }]
+                : []);
+
+        // Build combined plan including Instructions from previous visit if present
+        const planBase = toStr(get(visit, 'plan', 'Plan', 'Treatment_Plan'));
+        const planInstr = toStr(get(visit, 'Instructions', 'instructions'));
+        const planCombined = [planBase, planInstr].filter(s => s && s.trim().length > 0).join(' | ');
+
+        const mappedData = {
+            firstName: toStr(firstName),
+            lastName: toStr(lastName),
+            age: toStr(appointmentRow?.age || get(visit, 'age', 'age_years')),
+            gender: toStr(appointmentRow?.gender || get(visit, 'gender', 'sex', 'gender_description')).charAt(0).toUpperCase(),
+            contact: toStr(appointmentRow?.contact || get(visit, 'mobile', 'mobile_1', 'contact')),
+            email: toStr(get(visit, 'email')),
+            provider: (() => {
+                console.log('Provider mapping - appointmentRow?.provider:', appointmentRow?.provider);
+                console.log('Provider mapping - appointmentRow?.doctorId:', appointmentRow?.doctorId);
+
+                // First try rawVisit.DoctorName
+                const rawDoctorName = toStr(get(visit, 'DoctorName', 'doctor_name', 'Doctor_Name'));
+                console.log('Raw visit DoctorName:', rawDoctorName);
+                if (rawDoctorName) {
+                    console.log('Using rawVisit.DoctorName:', rawDoctorName);
+                    return rawDoctorName;
+                }
+
+                // Then try appointment row provider
+                if (appointmentRow?.provider) {
+                    console.log('Using appointment row provider:', appointmentRow.provider);
+                    return toStr(appointmentRow.provider);
+                }
+
+                // Then try to get doctor name from appointment row doctorId
+                const appointmentDoctorName = getDoctorLabelById(appointmentRow?.doctorId);
+                console.log('Appointment doctor name result:', appointmentDoctorName);
+                if (appointmentDoctorName) {
+                    console.log('Using appointment doctor name:', appointmentDoctorName);
+                    return appointmentDoctorName;
+                }
+
+                // Then try to get doctor name from visit doctorId
+                const visitDoctorId = get(visit, 'doctor_id', 'Doctor_ID', 'doctorId');
+                console.log('Visit doctor ID:', visitDoctorId);
+                const visitDoctorName = getDoctorLabelById(visitDoctorId);
+                console.log('Visit doctor name result:', visitDoctorName);
+                if (visitDoctorName) {
+                    console.log('Using visit doctor name:', visitDoctorName);
+                    return visitDoctorName;
+                }
+
+                // Finally fallback to other visit doctor name fields
+                const fallbackName = toStr(get(visit, 'provider', 'doctor', 'Doctor'));
+                console.log('Using fallback name:', fallbackName);
+                return fallbackName;
+            })(),
+
+            // Vitals
+            height: toStr(get(visit, 'height_cm', 'height', 'Height_In_Cms', 'Height')),
+            weight: toStr(get(visit, 'weight_kg', 'weight', 'Weight_IN_KGS', 'Weight')),
+            pulse: toStr(get(visit, 'pulse', 'Pulse', 'pulse_rate')),
+            bp: toStr(get(visit, 'bp', 'blood_pressure', 'Blood_Pressure', 'BP')),
+            temperature: toStr(get(visit, 'temperature_f', 'temperature', 'Temperature', 'temp')),
+            sugar: toStr(get(visit, 'sugar', 'Sugar', 'blood_sugar', 'glucose')),
+            tft: toStr(get(visit, 'tft', 'TFT', 'thyroid_function_test')),
+            pallorHb: toStr(get(visit, 'Pallor', 'pallorHb', 'pallor_hb', 'Pallor_HB', 'hemoglobin', 'hb')),
+            referredBy: toStr(get(visit, 'Refer_Doctor_Details', 'referredBy', 'referred_by', 'Referred_By', 'referred_to')),
+
+            // Flags
+            inPerson: bool(get(visit, 'in_person', 'inPerson')),
+            hypertension: bool(get(visit, 'hypertension', 'htn', 'Hypertension')),
+            diabetes: bool(get(visit, 'diabetes', 'dm', 'Diabetes')),
+            cholesterol: bool(get(visit, 'cholesterol', 'Cholestrol')),
+            ihd: bool(get(visit, 'ihd', 'Ihd')),
+            asthma: bool(get(visit, 'asthma', 'Asthama')),
+            th: bool(get(visit, 'th', 'Th')),
+            smoking: bool(get(visit, 'smoking', 'Smoking')),
+            tobacco: bool(get(visit, 'tobacco', 'Tobaco')),
+            alcohol: bool(get(visit, 'alcohol', 'Alchohol')),
+
+            // Narrative
+            allergy: toStr(get(visit, 'allergy', 'Allergy', 'allergies', 'Allergies')),
+            medicalHistory: toStr(get(visit, 'medical_history', 'Medical_History', 'medicalHistory', 'past_history', 'Past_History')),
+            surgicalHistory: toStr(get(visit, 'surgical_history', 'Surgical_History', 'surgicalHistory', 'surgery_history', 'Surgery_History')),
+            visitComments: toStr(get(visit, 'visit_comments', 'Visit_Comments', 'visitComments', 'comments', 'Comments')),
+            medicines: toStr(get(visit, 'medicines', 'Current_Medicines', 'current_medicines', 'currentMedicines', 'medications')),
+            detailedHistory: toStr(get(visit, 'detailed_history', 'Detailed_History', 'Additional_Comments', 'detailedHistory', 'additional_comments', 'history')),
+            examinationFindings: toStr(get(visit, 'examination_findings', 'Important_Findings', 'examinationFindings', 'findings', 'Findings', 'clinical_findings')),
+            examinationComments: toStr(get(visit, 'examination_comments', 'Examination_Comments', 'examinationComments', 'exam_comments', 'Exam_Comments')),
+            procedurePerformed: toStr(get(visit, 'procedure_performed', 'Procedure_Performed', 'procedurePerformed', 'procedures', 'Procedures')),
+
+            // Current visit text
+            complaints: toStr(get(visit, 'Complaints')),
+            provisionalDiagnosis: toStr(get(visit, 'Diagnosis')),
+            // Plan content includes PV Instructions when present
+            plan: planCombined,
+            addendum: toStr(get(visit, 'addendum', 'Addendum', 'notes', 'Notes', 'additional_notes')),
+
+            // New current visit fields
+            labSuggested: toStr(get(visit, 'labSuggested', 'lab_suggested', 'Lab_Suggested', 'lab_tests', 'Lab_Tests', 'investigations')),
+            dressing: toStr(get(visit, 'dressing', 'Dressing', 'dressing_required', 'Dressing_Required')),
+            procedure: toStr(get(visit, 'procedure', 'Procedure', 'procedures_done', 'Procedures_Done', 'treatment_procedure')),
+
+            prescriptions,
+
+            // Billing
+            billed: toStr(get(visit, 'billed_amount', 'Billed_Amount', 'billed', 'Billed', 'total_amount', 'Total_Amount')),
+            discount: toStr(get(visit, 'discount_amount', 'Discount', 'Original_Discount', 'discount', 'Discount_Amount')),
+            dues: toStr(get(visit, 'dues_amount', 'Fees_To_Collect', 'dues', 'Dues', 'pending_amount', 'Pending_Amount')),
+            collected: toStr(get(visit, 'collected_amount', 'Fees_Collected', 'collected', 'Collected', 'paid_amount', 'Paid_Amount')),
+            receiptAmount: toStr(get(visit, 'receipt_amount', 'Receipt_Amount', 'receiptAmount', 'receipt_total', 'Receipt_Total')),
+            receiptNo: toStr(get(visit, 'receipt_no', 'Receipt_No', 'receiptNo', 'receipt_number', 'Receipt_Number')),
+            receiptDate: toStr(get(visit, 'receipt_date', 'Receipt_Date', 'receiptDate', 'receipt_issue_date', 'Receipt_Issue_Date')),
+            followUpType: toStr(get(visit, 'followup_type', 'Follow_Up_Type', 'followUpType', 'follow_up_type', 'Follow_Up_Type')),
+            followUp: toStr(get(visit, 'followup_label', 'Follow_Up', 'followUp', 'follow_up', 'Follow_Up', 'next_visit')),
+            followUpDate: toStr(get(visit, 'followup_date', 'Follow_Up_Date', 'followUpDate', 'follow_up_date', 'Follow_Up_Date', 'next_visit_date')),
+            remark: toStr(get(visit, 'remark', 'Remark', 'remarks', 'Remarks', 'notes', 'Notes', 'comments', 'Comments')),
+            // Include the full raw visit payload for access to all fields
+            rawVisit: visit
+        };
+
+        console.log('=== MAPPED FORM DATA ===');
+        console.log('Final mapped data:', mappedData);
+        console.log('=== END MAPPED FORM DATA ===');
+
+        return mappedData;
+    };
+
+    // Helper function to get doctor label by ID (copied from Appointment page)
+    const getDoctorLabelById = (id?: string) => {
+        if (!id) return '';
+        const doctor = allDoctors.find(d => d.id === id);
+        return doctor ? `${doctor.firstName} ${doctor.lastName}`.trim() : '';
+    };
+
     const handleInputChange = (field: string, value: any) => {
         setFormData(prev => ({
             ...prev,
             [field]: value
         }));
+    };
+
+    // BMI calculation function
+    const calculateBMI = (height: string, weight: string): string => {
+        const heightNum = parseFloat(height);
+        const weightNum = parseFloat(weight);
+        
+        if (isNaN(heightNum) || isNaN(weightNum) || heightNum <= 0 || weightNum <= 0) {
+            return '';
+        }
+        
+        // BMI = weight (kg) / height (m)²
+        // Height is in cm, so convert to meters
+        const heightInMeters = heightNum / 100;
+        const bmi = weightNum / (heightInMeters * heightInMeters);
+        
+        return bmi.toFixed(1);
     };
 
     const handleMedicalHistoryChange = (field: string, checked: boolean) => {
@@ -373,6 +803,89 @@ export default function Treatment() {
         setIsComplaintsOpen(false);
     };
 
+    const handleAddCustomComplaint = () => {
+        setShowComplaintPopup(true);
+    };
+
+    const handleSaveComplaint = (complaintDescription: string) => {
+        // Add the new complaint to the complaints rows
+        const newComplaint: ComplaintRow = {
+            id: `custom_${Date.now()}`,
+            value: `custom_${Date.now()}`,
+            label: complaintDescription,
+            comment: ''
+        };
+        
+        setComplaintsRows(prev => [...prev, newComplaint]);
+        setShowComplaintPopup(false);
+    };
+
+    const handleAddCustomDiagnosis = () => {
+        setShowDiagnosisPopup(true);
+    };
+
+    const handleSaveDiagnosis = (diagnosisDescription: string) => {
+        // Add the new diagnosis to the diagnosis rows
+        const newDiagnosis: DiagnosisRow = {
+            id: `custom_${Date.now()}`,
+            diagnosis: diagnosisDescription,
+            comment: ''
+        };
+        
+        setDiagnosisRows(prev => [...prev, newDiagnosis]);
+        setShowDiagnosisPopup(false);
+    };
+
+    const handleAddCustomMedicine = () => {
+        setShowMedicinePopup(true);
+    };
+
+    const handleSaveMedicine = (medicineData: MedicineData) => {
+        // Add the new medicine to the medicine rows
+        const newMedicine: MedicineRow = {
+            id: `custom_${Date.now()}`,
+            medicine: `${medicineData.medicineName} (${medicineData.shortDescription})`,
+            b: medicineData.breakfast || '',
+            l: medicineData.lunch || '',
+            d: medicineData.dinner || '',
+            days: medicineData.days || '',
+            instruction: `${medicineData.instruction} - Priority: ${medicineData.priority}`
+        };
+        
+        setMedicineRows(prev => [...prev, newMedicine]);
+        setShowMedicinePopup(false);
+    };
+
+    const handleAddCustomPrescription = () => {
+        setShowPrescriptionPopup(true);
+    };
+
+    const handleSavePrescription = (prescriptionData: PrescriptionData) => {
+        // Add the new prescription to the prescription rows
+        const newPrescription: PrescriptionRow = {
+            id: `custom_${Date.now()}`,
+            prescription: `${prescriptionData.brandName} (${prescriptionData.genericName})`,
+            b: prescriptionData.breakfast,
+            l: prescriptionData.lunch,
+            d: prescriptionData.dinner,
+            days: prescriptionData.days,
+            instruction: `${prescriptionData.instruction} - Priority: ${prescriptionData.priority} - Category: ${prescriptionData.categoryName} - SubCategory: ${prescriptionData.subCategoryName} - Marketed By: ${prescriptionData.marketedBy}`
+        };
+        
+        setPrescriptionRows(prev => [...prev, newPrescription]);
+        setShowPrescriptionPopup(false);
+    };
+
+    const handleAddCustomTestLab = () => {
+        setShowTestLabPopup(true);
+    };
+
+    const handleSaveTestLab = (testLabData: TestLabData) => {
+        // Add the new test lab data
+        console.log('Test Lab Data:', testLabData);
+        setShowTestLabPopup(false);
+    };
+
     const handleComplaintCommentChange = (rowValue: string, text: string) => {
         setComplaintsRows(prev => prev.map(r => r.value === rowValue ? { ...r, comment: text } : r));
     };
@@ -410,6 +923,10 @@ export default function Treatment() {
             const newMedicine: MedicineRow = {
                 id: Date.now().toString(),
                 medicine: selectedMedicine,
+                b: '',
+                l: '',
+                d: '',
+                days: '',
                 instruction: ''
             };
             setMedicineRows(prev => [...prev, newMedicine]);
@@ -419,6 +936,12 @@ export default function Treatment() {
 
     const handleRemoveMedicine = (id: string) => {
         setMedicineRows(prev => prev.filter(row => row.id !== id));
+    };
+
+    const handleMedicineFieldChange = (id: string, field: string, value: string) => {
+        setMedicineRows(prev => prev.map(row => 
+            row.id === id ? { ...row, [field]: value } : row
+        ));
     };
 
     const handleMedicineInstructionChange = (id: string, instruction: string) => {
@@ -543,30 +1066,104 @@ export default function Treatment() {
                                 Previous Visits
                             </div>
                             <div style={{ padding: '0' }}>
-                                {previousVisits.map((visit, index) => (
-                                    <div 
-                                        key={visit.id}
-                                        style={{
-                                            padding: '10px 15px',
-                                            borderBottom: '1px solid #e0e0e0',
-                                            backgroundColor: visit.isActive ? '#e3f2fd' : 'white',
-                                            cursor: 'pointer',
-                                            fontSize: '13px'
-                                        }}
-                                        onClick={() => {
-                                            setPreviousVisits(prev => prev.map(v => ({ ...v, isActive: v.id === visit.id })));
-                                        }}
-                                    >
-                                        <div style={{ fontWeight: '500', color: '#333' }}>
-                                            <div style={{ fontSize: '12px', fontWeight: 'bold' }}>
-                                                {visit.date} | {visit.type}
-                                            </div>
-                                            <div style={{ fontSize: '11px', color: '#666', marginTop: '2px' }}>
-                                                {visit.patientName}
+                                {loadingPreviousVisits ? (
+                                    <div style={{ 
+                                        padding: '20px', 
+                                        textAlign: 'center', 
+                                        color: '#666',
+                                        fontSize: '12px'
+                                    }}>
+                                        Loading previous visits...
+                                    </div>
+                                ) : previousVisits.length > 0 ? (
+                                    previousVisits.map((visit, index) => (
+                                        <div 
+                                            key={visit.id}
+                                            style={{
+                                                padding: '10px 15px',
+                                                borderBottom: '1px solid #e0e0e0',
+                                                backgroundColor: index % 2 === 0 ? '#e3f2fd' : 'white',
+                                                cursor: 'pointer',
+                                                fontSize: '13px',
+                                                transition: 'background-color 0.2s ease'
+                                            }}
+                                            onClick={() => handlePreviousVisitClick(visit)}
+                                            onMouseEnter={(e) => {
+                                                e.currentTarget.style.backgroundColor = '#bbdefb';
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.currentTarget.style.backgroundColor = index % 2 === 0 ? '#e3f2fd' : 'white';
+                                            }}
+                                        >
+                                            <div style={{ fontWeight: '500', color: '#333' }}>
+                                                <div style={{ fontSize: '12px', fontWeight: 'bold' }}>
+                                                    <a 
+                                                        href="#"
+                                                        onClick={(e) => {
+                                                            e.preventDefault();
+                                                            handlePreviousVisitClick(visit);
+                                                        }}
+                                                        style={{ 
+                                                            textDecoration: 'underline', 
+                                                            color: '#1976d2',
+                                                            cursor: 'pointer',
+                                                            fontWeight: 'bold'
+                                                        }}
+                                                        onMouseEnter={(e) => {
+                                                            e.currentTarget.style.color = '#0d47a1';
+                                                        }}
+                                                        onMouseLeave={(e) => {
+                                                            e.currentTarget.style.color = '#1976d2';
+                                                        }}
+                                                    >
+                                                        {formatVisitDate(visit.date)}
+                                                    </a> | {visit.type}
+                                                </div>
+                                                <div style={{ fontSize: '11px', color: '#666', marginTop: '2px' }}>
+                                                    {visit.doctorName}
+                                                </div>
                                             </div>
                                         </div>
+                                    ))
+                                ) : previousVisitsError ? (
+                                    <div style={{ 
+                                        padding: '20px', 
+                                        textAlign: 'center', 
+                                        color: '#d32f2f',
+                                        fontSize: '12px',
+                                        backgroundColor: '#ffebee',
+                                        border: '1px solid #ffcdd2',
+                                        borderRadius: '4px',
+                                        margin: '8px'
+                                    }}>
+                                        <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>Error loading visits</div>
+                                        <div>{previousVisitsError}</div>
+                                        <button
+                                            onClick={fetchPreviousVisits}
+                                            style={{
+                                                marginTop: '8px',
+                                                padding: '4px 8px',
+                                                backgroundColor: '#1976d2',
+                                                color: 'white',
+                                                border: 'none',
+                                                borderRadius: '4px',
+                                                cursor: 'pointer',
+                                                fontSize: '11px'
+                                            }}
+                                        >
+                                            Retry
+                                        </button>
                                     </div>
-                                ))}
+                                ) : (
+                                    <div style={{ 
+                                        padding: '20px', 
+                                        textAlign: 'center', 
+                                        color: '#666',
+                                        fontSize: '12px'
+                                    }}>
+                                        No previous visits found
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -609,7 +1206,7 @@ export default function Treatment() {
                             </div>
                         </div>
 
-                        {/* Past Visit Section */}
+                        {/* Past Services Section */}
                         <div style={{ marginTop: '2px' }}>
                             <div style={{ 
                                 backgroundColor: '#1976d2', 
@@ -618,7 +1215,7 @@ export default function Treatment() {
                                 fontWeight: 'bold',
                                 fontSize: '14px'
                             }}>
-                                Past Visit
+                                Past Services
                             </div>
                             <div style={{ padding: '0' }}>
                                 <div style={{
@@ -657,7 +1254,7 @@ export default function Treatment() {
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <label style={{ fontWeight: 'bold', color: '#333', fontSize: '12px', whiteSpace: 'nowrap' }}>Referred By:</label>
+                                        <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px', whiteSpace: 'nowrap' }}>Referred By:</label>
                                         <span style={{
                                             fontSize: '12px',
                                             color: '#333',
@@ -731,12 +1328,16 @@ export default function Treatment() {
                                             type="text"
                                             value={formData[key as keyof typeof formData] as string}
                                             onChange={(e) => handleInputChange(key, e.target.value)}
+                                            disabled={key === 'pc'}
                                             style={{
                                                 width: '100%',
                                                 padding: '6px 10px',
                                                 border: '1px solid #ccc',
                                                 borderRadius: '4px',
-                                                fontSize: '13px'
+                                                fontSize: '13px',
+                                                backgroundColor: key === 'pc' ? '#f5f5f5' : 'white',
+                                                color: key === 'pc' ? '#666' : '#333',
+                                                cursor: key === 'pc' ? 'not-allowed' : 'text'
                                             }}
                                         />
                                     </div>
@@ -766,12 +1367,16 @@ export default function Treatment() {
                                                 type="text"
                                                 value={formData[key as keyof typeof formData] as string}
                                                 onChange={(e) => handleInputChange(key, e.target.value)}
+                                                disabled={key === 'bmi'}
                                                 style={{
                                                     flex: 1,
                                                     padding: '6px 10px',
                                                     border: '1px solid #ccc',
                                                     borderRadius: '4px',
-                                                    fontSize: '13px'
+                                                    fontSize: '13px',
+                                                    backgroundColor: key === 'bmi' ? '#f5f5f5' : 'white',
+                                                    color: key === 'bmi' ? '#666' : '#333',
+                                                    cursor: key === 'bmi' ? 'not-allowed' : 'text'
                                                 }}
                                             />
                                             {key === 'pallorHb' && (
@@ -862,7 +1467,7 @@ export default function Treatment() {
                             <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', alignItems: 'flex-start' }}>
                                 <div style={{ position: 'relative', flex: 1 }}>
                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px', width: '88%', gap: '8px' }}>
-                                        <label style={{ fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Complaints</label>
+                                        <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Complaints</label>
                                         <span style={{ fontSize: '12px', color: '#666', maxWidth: '60%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 1 }}>
                                             Complaints are copied from previous visit
                                         </span>
@@ -1073,6 +1678,7 @@ export default function Treatment() {
                                             onMouseLeave={(e) => {
                                                 e.currentTarget.style.backgroundColor = '#1976d2';
                                             }}
+                                            onClick={handleAddCustomComplaint}
                                         >
                                             <Add fontSize="small" />
                                         </button>
@@ -1263,19 +1869,16 @@ export default function Treatment() {
                                             width: '100%',
                                             height: '40px',
                                             padding: '6px 10px',
-                                            backgroundColor: '#007bff',
+                                            backgroundColor: '#1976d2',
                                             color: 'white',
-                                            border: '1px solid #ccc',
+                                            border: 'none',
                                             borderRadius: '4px',
                                             fontSize: '13px',
                                             fontWeight: 'bold',
                                             cursor: 'pointer',
                                             textTransform: 'uppercase'
                                         }}
-                                        onClick={() => {
-                                            // Add your button click handler here
-                                            console.log('Record test Result clicked');
-                                        }}
+                                        onClick={handleAddCustomTestLab}
                                     >
                                         RECORD TEST RESULT
                                     </button>
@@ -1286,7 +1889,7 @@ export default function Treatment() {
                         {/* Diagnosis Section */}
                         <div style={{ marginBottom: '15px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '5px', width: '88%', gap: '8px' }}>
-                                <label style={{ fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Diagnosis</label>
+                                <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Diagnosis</label>
                                 <span style={{ fontSize: '12px', color: '#666', maxWidth: '60%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 1 }}>
                                     Diagnosis are copied from previous visit
                                 </span>
@@ -1348,6 +1951,7 @@ export default function Treatment() {
                                     onMouseLeave={(e) => {
                                         e.currentTarget.style.backgroundColor = '#1976d2';
                                     }}
+                                    onClick={handleAddCustomDiagnosis}
                                 >
                                     <Add fontSize="small" />
                                 </button>
@@ -1406,7 +2010,7 @@ export default function Treatment() {
                         {/* Medicine Section */}
                         <div style={{ marginBottom: '15px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '5px', width: '88%', gap: '8px' }}>
-                                <label style={{ fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Medicine</label>
+                                <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Medicine</label>
                                 <span style={{ fontSize: '12px', color: '#666', maxWidth: '60%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 1 }}>
                                     Medicine saved successfully!!
                                 </span>
@@ -1468,6 +2072,7 @@ export default function Treatment() {
                                     onMouseLeave={(e) => {
                                         e.currentTarget.style.backgroundColor = '#1976d2';
                                     }}
+                                    onClick={handleAddCustomMedicine}
                                 >
                                     <Add fontSize="small" />
                                 </button>
@@ -1478,7 +2083,7 @@ export default function Treatment() {
                                 <div style={{ border: '1px solid #ccc', borderRadius: '4px', overflow: 'hidden' }}>
                                     <div style={{ 
                                         display: 'grid', 
-                                        gridTemplateColumns: '50px 1fr 1fr 60px' as const, 
+                                        gridTemplateColumns: '50px 1fr 50px 50px 50px 50px 1fr 80px' as const, 
                                         backgroundColor: '#1976d2', 
                                         color: 'white',
                                         fontWeight: 'bold',
@@ -1486,13 +2091,17 @@ export default function Treatment() {
                                     }}>
                                         <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Sr.</div>
                                         <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Medicine</div>
+                                        <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>B</div>
+                                        <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>L</div>
+                                        <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>D</div>
+                                        <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Days</div>
                                         <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Instruction</div>
                                         <div style={{ padding: '6px' }}>Action</div>
                                     </div>
                                     {medicineRows.map((row, index) => (
                                         <div key={row.id} style={{ 
                                             display: 'grid', 
-                                            gridTemplateColumns: '50px 1fr 1fr 60px' as const,
+                                            gridTemplateColumns: '50px 1fr 50px 50px 50px 50px 1fr 80px' as const,
                                             backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white',
                                             borderBottom: '1px solid #e0e0e0'
                                         }}>
@@ -1501,20 +2110,115 @@ export default function Treatment() {
                                             <div style={{ padding: '0', borderRight: '1px solid #e0e0e0' }}>
                                                 <input
                                                     type="text"
+                                                    value={row.b}
+                                                    onChange={(e) => handleMedicineFieldChange(row.id, 'b', e.target.value)}
+                                                    className="medicine-table-input"
+                                                    style={{
+                                                        width: '100%',
+                                                        height: '100%',
+                                                        padding: '8px 6px',
+                                                        border: 'none !important',
+                                                        borderWidth: '0 !important',
+                                                        borderStyle: 'none !important',
+                                                        borderColor: 'transparent !important',
+                                                        borderRadius: '0 !important',
+                                                        outline: 'none',
+                                                        background: 'transparent',
+                                                        boxShadow: 'none !important',
+                                                        fontSize: '11px',
+                                                        textAlign: 'center'
+                                                    }}
+                                                />
+                                            </div>
+                                            <div style={{ padding: '0', borderRight: '1px solid #e0e0e0' }}>
+                                                <input
+                                                    type="text"
+                                                    value={row.l}
+                                                    onChange={(e) => handleMedicineFieldChange(row.id, 'l', e.target.value)}
+                                                    className="medicine-table-input"
+                                                    style={{
+                                                        width: '100%',
+                                                        height: '100%',
+                                                        padding: '8px 6px',
+                                                        border: 'none !important',
+                                                        borderWidth: '0 !important',
+                                                        borderStyle: 'none !important',
+                                                        borderColor: 'transparent !important',
+                                                        borderRadius: '0 !important',
+                                                        outline: 'none',
+                                                        background: 'transparent',
+                                                        boxShadow: 'none !important',
+                                                        fontSize: '11px',
+                                                        textAlign: 'center'
+                                                    }}
+                                                />
+                                            </div>
+                                            <div style={{ padding: '0', borderRight: '1px solid #e0e0e0' }}>
+                                                <input
+                                                    type="text"
+                                                    value={row.d}
+                                                    onChange={(e) => handleMedicineFieldChange(row.id, 'd', e.target.value)}
+                                                    className="medicine-table-input"
+                                                    style={{
+                                                        width: '100%',
+                                                        height: '100%',
+                                                        padding: '8px 6px',
+                                                        border: 'none !important',
+                                                        borderWidth: '0 !important',
+                                                        borderStyle: 'none !important',
+                                                        borderColor: 'transparent !important',
+                                                        borderRadius: '0 !important',
+                                                        outline: 'none',
+                                                        background: 'transparent',
+                                                        boxShadow: 'none !important',
+                                                        fontSize: '11px',
+                                                        textAlign: 'center'
+                                                    }}
+                                                />
+                                            </div>
+                                            <div style={{ padding: '0', borderRight: '1px solid #e0e0e0' }}>
+                                                <input
+                                                    type="text"
+                                                    value={row.days}
+                                                    onChange={(e) => handleMedicineFieldChange(row.id, 'days', e.target.value)}
+                                                    className="medicine-table-input"
+                                                    style={{
+                                                        width: '100%',
+                                                        height: '100%',
+                                                        padding: '8px 6px',
+                                                        border: 'none !important',
+                                                        borderWidth: '0 !important',
+                                                        borderStyle: 'none !important',
+                                                        borderColor: 'transparent !important',
+                                                        borderRadius: '0 !important',
+                                                        outline: 'none',
+                                                        background: 'transparent',
+                                                        boxShadow: 'none !important',
+                                                        fontSize: '11px',
+                                                        textAlign: 'center'
+                                                    }}
+                                                />
+                                            </div>
+                                            <div style={{ padding: '0', borderRight: '1px solid #e0e0e0' }}>
+                                                <input
+                                                    type="text"
                                                     value={row.instruction}
                                                     onChange={(e) => handleMedicineInstructionChange(row.id, e.target.value)}
                                                     placeholder="Enter instruction"
-                                                    className="medicine-instruction-table-input"
+                                                    className="medicine-table-input"
                                                     style={{
                                                         width: '100%',
                                                         height: '100%',
                                                         padding: '8px 10px',
-                                                        border: 'none',
-                                                        outline: 'none',
-                                                        fontSize: '11px',
+                                                        border: 'none !important',
+                                                        borderWidth: '0 !important',
+                                                        borderStyle: 'none !important',
+                                                        borderColor: 'transparent !important',
                                                         borderRadius: '0 !important',
+                                                        outline: 'none',
                                                         background: 'transparent',
-                                                        boxShadow: 'none !important'
+                                                        boxShadow: 'none !important',
+                                                        fontSize: '11px'
                                                     }}
                                                 />
                                             </div>
@@ -1547,7 +2251,7 @@ export default function Treatment() {
                         {/* Prescription Section */}
                         <div style={{ marginBottom: '15px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '5px', width: '88%', gap: '8px' }}>
-                                <label style={{ fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Prescription</label>
+                                <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Prescription</label>
                                 <span style={{ fontSize: '12px', color: '#666', maxWidth: '60%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 1 }}>
                                     Prescription medicine saved successfully!!
                                 </span>
@@ -1605,6 +2309,7 @@ export default function Treatment() {
                                     onMouseLeave={(e) => {
                                         e.currentTarget.style.backgroundColor = '#1976d2';
                                     }}
+                                    onClick={handleAddCustomPrescription}
                                 >
                                     <Add fontSize="small" />
                                 </button>
@@ -1783,27 +2488,6 @@ export default function Treatment() {
                                             </div>
                                             <div style={{ padding: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
                                                 <div
-                                                    onClick={() => {
-                                                        // Handle edit functionality
-                                                        console.log('Edit prescription:', row.id);
-                                                    }}
-                                                    title="Edit"
-                                                    style={{
-                                                        display: 'inline-flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        width: '24px',
-                                                        height: '24px',
-                                                        cursor: 'pointer',
-                                                        color: '#000000',
-                                                        backgroundColor: 'transparent'
-                                                    }}
-                                                    onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.color = '#1976d2'; }}
-                                                    onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.color = '#000000'; }}
-                                                >
-                                                    <Edit fontSize="small" />
-                                                </div>
-                                                <div
                                                     onClick={() => handleRemovePrescription(row.id)}
                                                     title="Remove"
                                                     style={{
@@ -1830,8 +2514,8 @@ export default function Treatment() {
 
                         {/* Previous Visit Section */}
                         <div style={{ marginBottom: '15px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '5px', width: '88%' }}>
-                                <label style={{ fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Previous visit</label>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '5px', width: '100%' }}>
+                                <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Previous visit</label>
                                 <div
                                     onClick={() => setShowPreviousVisit(!showPreviousVisit)}
                                     style={{
@@ -1891,7 +2575,7 @@ export default function Treatment() {
                         {/* Investigation Section */}
                         <div style={{ marginBottom: '15px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '5px', width: '88%', gap: '8px' }}>
-                                <label style={{ fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Investigation</label>
+                                <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Investigation</label>
                                 <span style={{ fontSize: '12px', color: '#666', maxWidth: '60%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 1 }}>
                                     Investigation saved successfully!!
                                 </span>
@@ -2275,6 +2959,97 @@ export default function Treatment() {
                     </div>
                 </div>
             </div>
+
+            {/* Patient Form Dialog */}
+            {showPatientFormDialog && (
+                <div
+                    style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 9999
+                    }}
+                    onClick={(e) => {
+                        // Close dialog when clicking on the overlay (outside the form)
+                        if (e.target === e.currentTarget) {
+                            setShowPatientFormDialog(false);
+                        }
+                    }}
+                >
+                    <div
+                        style={{
+                            backgroundColor: 'white',
+                            borderRadius: '8px',
+                            width: '95%',
+                            maxWidth: '1200px',
+                            maxHeight: '95vh',
+                            overflow: 'auto',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            position: 'relative'
+                        }}
+                    >
+                        {/* Patient Form Content */}
+                        <PatientFormTest
+                            onClose={() => setShowPatientFormDialog(false)}
+                            initialData={formPatientData || undefined}
+                            visitDates={visitDates}
+                            currentVisitIndex={currentVisitIndex}
+                            onVisitDateChange={(newIndex: number) => {
+                                if (newIndex >= 0 && newIndex < allVisits.length) {
+                                    setCurrentVisitIndex(newIndex);
+                                    const selectedVisit = allVisits[newIndex];
+                                    const patientName = selectedPatientForForm?.name || '';
+                                    const mapped = mapPreviousVisitToInitialData(selectedVisit, patientName, null);
+                                    setFormPatientData(mapped);
+                                }
+                            }}
+                        />
+                    </div>
+                </div>
+            )}
+
+            {/* Add Complaint Popup */}
+            <AddComplaintPopup
+                open={showComplaintPopup}
+                onClose={() => setShowComplaintPopup(false)}
+                onSave={handleSaveComplaint}
+            />
+
+            {/* Add Diagnosis Popup */}
+            <AddDiagnosisPopup
+                open={showDiagnosisPopup}
+                onClose={() => setShowDiagnosisPopup(false)}
+                onSave={handleSaveDiagnosis}
+            />
+
+            {/* Add Medicine Popup */}
+            <AddMedicinePopup
+                open={showMedicinePopup}
+                onClose={() => setShowMedicinePopup(false)}
+                onSave={handleSaveMedicine}
+            />
+
+            {/* Add Prescription Popup */}
+            <AddPrescriptionPopup
+                open={showPrescriptionPopup}
+                onClose={() => setShowPrescriptionPopup(false)}
+                onSave={handleSavePrescription}
+            />
+
+            {/* Add Test Lab Popup */}
+            <AddTestLabPopup
+                open={showTestLabPopup}
+                onClose={() => setShowTestLabPopup(false)}
+                onSave={handleSaveTestLab}
+            />
+
         </div>
     );
 }
