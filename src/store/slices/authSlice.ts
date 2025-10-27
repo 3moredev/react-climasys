@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit'
 import { authService, LoginRequest, LoginResponse, UserDetails } from '../../services/authService'
+import { sessionPersistence, PersistedUser } from '../../utils/sessionPersistence'
 
 interface User {
   loginId: string
@@ -72,13 +73,49 @@ const authSlice = createSlice({
       state.isAuthenticated = true
     },
     initializeAuth: (state) => {
+      // First try to get user from session persistence
+      const persistedUser = sessionPersistence.loadUser()
+      if (persistedUser) {
+        // Check if session is still valid
+        if (sessionPersistence.isSessionValid(30)) { // 30 minutes max inactivity
+          state.user = {
+            loginId: persistedUser.loginId,
+            firstName: persistedUser.firstName,
+            roleName: persistedUser.roleName,
+            roleId: persistedUser.roleId,
+            doctorId: persistedUser.doctorId,
+            clinicId: persistedUser.clinicId,
+            doctorName: persistedUser.doctorName,
+            clinicName: persistedUser.clinicName,
+            languageId: persistedUser.languageId,
+            isActive: persistedUser.isActive,
+            financialYear: persistedUser.financialYear,
+          }
+          state.isAuthenticated = true
+          console.log('AuthSlice: User restored from persisted session')
+          return
+        } else {
+          console.log('AuthSlice: Persisted session expired, clearing data')
+          sessionPersistence.clearAll()
+        }
+      }
+
+      // Fallback to legacy authService method
       const user = authService.getCurrentUser()
       if (user) {
         state.user = user
         state.isAuthenticated = true
+        // Also save to session persistence for future page refreshes
+        sessionPersistence.saveUser({
+          ...user,
+          lastLoginTime: Date.now(),
+          sessionId: sessionPersistence.loadSessionId() || undefined
+        })
+        console.log('AuthSlice: User restored from legacy authService')
       } else {
         state.user = null
         state.isAuthenticated = false
+        console.log('AuthSlice: No user found, not authenticated')
       }
     },
   },
@@ -116,8 +153,26 @@ const authSlice = createSlice({
             state.isAuthenticated = true
             console.log('Login successful, isAuthenticated:', state.isAuthenticated)
             
-            // Store user data in localStorage
+            // Store user data in localStorage (legacy)
             authService.setCurrentUser(state.user)
+            
+            // Also save to session persistence for page refresh survival
+            sessionPersistence.saveUser({
+              ...state.user,
+              lastLoginTime: Date.now(),
+              sessionId: sessionPersistence.loadSessionId() || undefined
+            })
+            
+            // Save complete auth state
+            sessionPersistence.saveAuthState({
+              user: {
+                ...state.user,
+                lastLoginTime: Date.now(),
+                sessionId: sessionPersistence.loadSessionId() || undefined
+              },
+              isAuthenticated: true,
+              lastActivityTime: Date.now()
+            })
           }
         } else {
           // Login failed
@@ -145,6 +200,10 @@ const authSlice = createSlice({
         state.licenseKey = null
         state.isAuthenticated = false
         state.error = null
+        
+        // Clear session persistence data
+        sessionPersistence.clearAll()
+        console.log('AuthSlice: Logout completed, session persistence cleared')
       })
       .addCase(logout.rejected, (state) => {
         // Even if logout fails, clear the state
@@ -156,6 +215,10 @@ const authSlice = createSlice({
         state.licenseKey = null
         state.isAuthenticated = false
         state.error = null
+        
+        // Clear session persistence data
+        sessionPersistence.clearAll()
+        console.log('AuthSlice: Logout failed but state cleared, session persistence cleared')
       })
   },
 })
