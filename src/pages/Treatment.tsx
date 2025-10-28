@@ -4,6 +4,9 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { sessionService, SessionInfo } from "../services/sessionService";
 import { Delete, Edit, Add, Info } from '@mui/icons-material';
 import { complaintService, ComplaintOption } from "../services/complaintService";
+import { medicineService, MedicineOption } from "../services/medicineService";
+import { diagnosisService, DiagnosisOption } from "../services/diagnosisService";
+import { investigationService, InvestigationOption } from "../services/investigationService";
 import { appointmentService } from "../services/appointmentService";
 import PatientFormTest from "../components/Test/PatientFormTest";
 import AddComplaintPopup from "../components/AddComplaintPopup";
@@ -49,7 +52,55 @@ const durationCommentStyles = `
     font-family: inherit !important;
     margin: 0 !important;
   }
+  /* Override global input styles for checkboxes in medicines dropdown */
+  .medicines-dropdown input[type="checkbox"] {
+    width: auto !important;
+    padding: 0 !important;
+    border: none !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    font-size: inherit !important;
+    font-family: inherit !important;
+    margin: 0 !important;
+  }
+  /* Override global input styles for checkboxes in diagnoses dropdown */
+  .diagnoses-dropdown input[type="checkbox"] {
+    width: auto !important;
+    padding: 0 !important;
+    border: none !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    font-size: inherit !important;
+    font-family: inherit !important;
+    margin: 0 !important;
+  }
+  .medicines-dropdown input[type="checkbox"]:focus {
+    outline: none !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
   .complaints-dropdown input[type="checkbox"]:focus {
+    outline: none !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+  .diagnoses-dropdown input[type="checkbox"]:focus {
+    outline: none !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+  /* Investigation dropdown checkboxes */
+  .investigations-dropdown input[type="checkbox"] {
+    width: auto !important;
+    padding: 0 !important;
+    border: none !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    font-size: inherit !important;
+    font-family: inherit !important;
+    margin: 0 !important;
+  }
+  .investigations-dropdown input[type="checkbox"]:focus {
     outline: none !important;
     border: none !important;
     box-shadow: none !important;
@@ -63,6 +114,9 @@ interface TreatmentData {
     doctorId?: string;
     clinicId?: string;
     appointmentId?: string;
+    age?: number;
+    gender?: string;
+    contact?: string;
 }
 
 interface PreviousVisit {
@@ -83,6 +137,7 @@ interface ComplaintRow {
 
 interface DiagnosisRow {
     id: string;
+    value?: string;
     diagnosis: string;
     comment: string;
 }
@@ -90,6 +145,9 @@ interface DiagnosisRow {
 interface MedicineRow {
     id: string;
     medicine: string;
+    short_description: string;
+    morning: number;
+    afternoon: number;
     b: string;
     l: string;
     d: string;
@@ -224,9 +282,65 @@ export default function Treatment() {
         }
     }, [complaintsOptions, complaintSearch, selectedComplaints]);
     
-    const [diagnosisRows, setDiagnosisRows] = useState<DiagnosisRow[]>([
-        { id: '1', diagnosis: 'HT', comment: '' }
-    ]);
+    // Medicine multi-select state
+    const [selectedMedicines, setSelectedMedicines] = useState<string[]>([]);
+    const [medicineSearch, setMedicineSearch] = useState('');
+    const [isMedicinesOpen, setIsMedicinesOpen] = useState(false);
+    const medicinesRef = React.useRef<HTMLDivElement | null>(null);
+    const [medicinesOptions, setMedicinesOptions] = useState<MedicineOption[]>([]);
+    const [medicinesLoading, setMedicinesLoading] = useState(false);
+    const [medicinesError, setMedicinesError] = useState<string | null>(null);
+    
+    const filteredMedicines = React.useMemo(() => {
+        const term = medicineSearch.trim().toLowerCase();
+        
+        if (!term) {
+            // No search term - show all options with selected ones first
+            const selectedOptions = medicinesOptions.filter(opt => selectedMedicines.includes(opt.value));
+            const unselectedOptions = medicinesOptions.filter(opt => !selectedMedicines.includes(opt.value));
+            return [...selectedOptions, ...unselectedOptions];
+        } else {
+            // Search term provided - show selected items first, then search results
+            const selectedOptions = medicinesOptions.filter(opt => 
+                selectedMedicines.includes(opt.value) && opt.label.toLowerCase().includes(term)
+            );
+            const unselectedSearchResults = medicinesOptions.filter(opt => 
+                !selectedMedicines.includes(opt.value) && opt.label.toLowerCase().includes(term)
+            );
+            return [...selectedOptions, ...unselectedSearchResults];
+        }
+    }, [medicinesOptions, medicineSearch, selectedMedicines]);
+    
+    // Diagnosis multi-select state
+    const [selectedDiagnoses, setSelectedDiagnoses] = useState<string[]>([]);
+    const [diagnosisSearch, setDiagnosisSearch] = useState('');
+    const [isDiagnosesOpen, setIsDiagnosesOpen] = useState(false);
+    const diagnosesRef = React.useRef<HTMLDivElement | null>(null);
+    const [diagnosesOptions, setDiagnosesOptions] = useState<DiagnosisOption[]>([]);
+    const [diagnosesLoading, setDiagnosesLoading] = useState(false);
+    const [diagnosesError, setDiagnosesError] = useState<string | null>(null);
+    
+    const filteredDiagnoses = React.useMemo(() => {
+        const term = diagnosisSearch.trim().toLowerCase();
+        
+        if (!term) {
+            // No search term - show all options with selected ones first
+            const selectedOptions = diagnosesOptions.filter(opt => selectedDiagnoses.includes(opt.value));
+            const unselectedOptions = diagnosesOptions.filter(opt => !selectedDiagnoses.includes(opt.value));
+            return [...selectedOptions, ...unselectedOptions];
+        } else {
+            // Search term provided - show selected items first, then search results
+            const selectedOptions = diagnosesOptions.filter(opt => 
+                selectedDiagnoses.includes(opt.value) && opt.label.toLowerCase().includes(term)
+            );
+            const unselectedSearchResults = diagnosesOptions.filter(opt => 
+                !selectedDiagnoses.includes(opt.value) && opt.label.toLowerCase().includes(term)
+            );
+            return [...selectedOptions, ...unselectedSearchResults];
+        }
+    }, [diagnosesOptions, diagnosisSearch, selectedDiagnoses]);
+    
+    const [diagnosisRows, setDiagnosisRows] = useState<DiagnosisRow[]>([]);
     const [medicineRows, setMedicineRows] = useState<MedicineRow[]>([]);
     const [prescriptionRows, setPrescriptionRows] = useState<PrescriptionRow[]>([
         { id: '1', prescription: 'RABIPLS D (RABEPRAZOLE & DOMPERIDONE)', b: '1', l: '1', d: '1', days: '10', instruction: 'AFTER MEAL' },
@@ -236,24 +350,39 @@ export default function Treatment() {
     ]);
     const [selectedComplaint, setSelectedComplaint] = useState('');
     const [selectedDiagnosis, setSelectedDiagnosis] = useState('');
-    const [selectedMedicine, setSelectedMedicine] = useState('');
     const [prescriptionInput, setPrescriptionInput] = useState('');
     
-    // Investigation state
-    const [investigationRows, setInvestigationRows] = useState<InvestigationRow[]>([
-        { id: '1', investigation: 'BLOOD SUGAR (FASTING)' },
-        { id: '2', investigation: 'BLOOD SUGAR (PP)' },
-        { id: '3', investigation: 'HBA1C' }
-    ]);
-    const [investigationInput, setInvestigationInput] = useState('');
+    // Investigation multi-select state (mirrors Diagnosis)
+    const [selectedInvestigations, setSelectedInvestigations] = useState<string[]>([]);
+    const [investigationSearch, setInvestigationSearch] = useState('');
+    const [isInvestigationsOpen, setIsInvestigationsOpen] = useState(false);
+    const investigationsRef = React.useRef<HTMLDivElement | null>(null);
+    const [investigationsOptions, setInvestigationsOptions] = useState<InvestigationOption[]>([]);
+    const [investigationsLoading, setInvestigationsLoading] = useState(false);
+    const [investigationsError, setInvestigationsError] = useState<string | null>(null);
+
+    const filteredInvestigations = React.useMemo(() => {
+        const term = investigationSearch.trim().toLowerCase();
+        if (!term) {
+            const selectedOptions = investigationsOptions.filter(opt => selectedInvestigations.includes(opt.value));
+            const unselectedOptions = investigationsOptions.filter(opt => !selectedInvestigations.includes(opt.value));
+            return [...selectedOptions, ...unselectedOptions];
+        } else {
+            const selectedOptions = investigationsOptions.filter(opt => 
+                selectedInvestigations.includes(opt.value) && opt.label.toLowerCase().includes(term)
+            );
+            const unselectedSearchResults = investigationsOptions.filter(opt => 
+                !selectedInvestigations.includes(opt.value) && opt.label.toLowerCase().includes(term)
+            );
+            return [...selectedOptions, ...unselectedSearchResults];
+        }
+    }, [investigationsOptions, investigationSearch, selectedInvestigations]);
+
+    const [investigationRows, setInvestigationRows] = useState<InvestigationRow[]>([]);
     
     // Previous visit prescriptions state
     const [showPreviousVisit, setShowPreviousVisit] = useState(false);
-    const [previousVisitPrescriptions] = useState<PrescriptionRow[]>([
-        { id: 'pv1', prescription: 'AMLOKIND-AT (AMLODIPINE + ATENOLOL)', b: '1', l: '1', d: '1', days: '15', instruction: 'AFTER MEAL' },
-        { id: 'pv2', prescription: 'GLIMESTAR-MF (GLIMEPIRIDE + METFORMIN)', b: '1', l: '1', d: '1', days: '15', instruction: 'AFTER MEAL' },
-        { id: 'pv3', prescription: 'TELMA 40 (TELMISARTAN)', b: '1', l: '', d: '', days: '15', instruction: 'AFTER MEAL' }
-    ]);
+    const [previousVisitPrescriptions, setPreviousVisitPrescriptions] = useState<PrescriptionRow[]>([]);
     
     // Additional form data
     const [followUpData, setFollowUpData] = useState({
@@ -306,6 +435,40 @@ export default function Treatment() {
         }
     }, [location.state]);
 
+    // Close Investigation dropdown on outside click
+    React.useEffect(() => {
+        if (!isInvestigationsOpen) return;
+        function handleClickOutside(e: MouseEvent) {
+            if (investigationsRef.current && !investigationsRef.current.contains(e.target as Node)) {
+                setIsInvestigationsOpen(false);
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [isInvestigationsOpen]);
+
+    // Load Investigation options based on doctor/clinic
+    React.useEffect(() => {
+        let cancelled = false;
+        async function loadInvestigations() {
+            if (!treatmentData?.doctorId || !sessionData?.clinicId) return;
+            setInvestigationsLoading(true);
+            setInvestigationsError(null);
+            try {
+                const doctorId = treatmentData.doctorId;
+                const clinicId = sessionData.clinicId;
+                const options = await investigationService.getInvestigationsForDoctorAndClinic(doctorId, clinicId);
+                if (!cancelled) setInvestigationsOptions(options);
+            } catch (error: any) {
+                if (!cancelled) setInvestigationsError(error.message || 'Failed to load investigations');
+            } finally {
+                if (!cancelled) setInvestigationsLoading(false);
+            }
+        }
+        loadInvestigations();
+        return () => { cancelled = true; };
+    }, [treatmentData?.doctorId, sessionData?.clinicId]);
+
     // Close complaints dropdown on outside click
     React.useEffect(() => {
         if (!isComplaintsOpen) return;
@@ -354,6 +517,100 @@ export default function Treatment() {
         };
     }, [treatmentData?.doctorId]);
 
+    // Close medicines dropdown on outside click
+    React.useEffect(() => {
+        if (!isMedicinesOpen) return;
+        function handleClickOutside(e: MouseEvent) {
+            if (medicinesRef.current && !medicinesRef.current.contains(e.target as Node)) {
+                setIsMedicinesOpen(false);
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [isMedicinesOpen]);
+
+    // Load medicines from API when component mounts
+    React.useEffect(() => {
+        let cancelled = false;
+        async function loadMedicines() {
+            if (!treatmentData?.doctorId || !sessionData?.clinicId) return;
+            
+            setMedicinesLoading(true);
+            setMedicinesError(null);
+            
+            try {
+                const doctorId = treatmentData.doctorId;
+                const clinicId = sessionData.clinicId;
+                console.log('Loading medicines for doctor:', doctorId, 'and clinic:', clinicId);
+                
+                const medicines = await medicineService.getActiveMedicinesByDoctorAndClinic(doctorId, clinicId);
+                if (!cancelled) {
+                    setMedicinesOptions(medicines);
+                    console.log('Loaded medicines:', medicines);
+                }
+            } catch (error: any) {
+                console.error('Error loading medicines:', error);
+                if (!cancelled) {
+                    setMedicinesError(error.message);
+                }
+            } finally {
+                if (!cancelled) {
+                    setMedicinesLoading(false);
+                }
+            }
+        }
+        
+        loadMedicines();
+        return () => { cancelled = true; };
+    }, [treatmentData?.doctorId, sessionData?.clinicId]);
+
+    // Close diagnoses dropdown on outside click
+    React.useEffect(() => {
+        if (!isDiagnosesOpen) return;
+        function handleClickOutside(e: MouseEvent) {
+            if (diagnosesRef.current && !diagnosesRef.current.contains(e.target as Node)) {
+                setIsDiagnosesOpen(false);
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [isDiagnosesOpen]);
+
+    // Load diagnoses from API when component mounts
+    React.useEffect(() => {
+        let cancelled = false;
+        async function loadDiagnoses() {
+            if (!treatmentData?.doctorId || !sessionData?.clinicId) return;
+            
+            setDiagnosesLoading(true);
+            setDiagnosesError(null);
+            
+            try {
+                const doctorId = treatmentData.doctorId;
+                const clinicId = sessionData.clinicId;
+                console.log('Loading diagnoses for doctor:', doctorId, 'and clinic:', clinicId);
+                
+                const diagnoses = await diagnosisService.getAllDiagnosesForDoctorAndClinic(doctorId, clinicId);
+                if (!cancelled) {
+                    setDiagnosesOptions(diagnoses);
+                    console.log('Loaded diagnoses:', diagnoses);
+                }
+            } catch (error: any) {
+                console.error('Error loading diagnoses:', error);
+                if (!cancelled) {
+                    setDiagnosesError(error.message);
+                }
+            } finally {
+                if (!cancelled) {
+                    setDiagnosesLoading(false);
+                }
+            }
+        }
+        
+        loadDiagnoses();
+        return () => { cancelled = true; };
+    }, [treatmentData?.doctorId, sessionData?.clinicId]);
+
     const handleBackToAppointments = () => {
         navigate('/appointment');
     };
@@ -399,6 +656,12 @@ export default function Treatment() {
 
                 const sortedVisits = [...visits].sort((a, b) => parseVisitDate(a) - parseVisitDate(b));
                 setAllVisits(sortedVisits);
+                
+                // Extract visit dates for navigation (same as Appointment page)
+                const dates = sortedVisits
+                    .map((visit: any) => visit.visit_date || visit.Visit_Date || visit.appointmentDate || visit.appointment_date || '')
+                    .filter((date: any) => date);
+                setVisitDates(dates);
 
                 // Convert to PreviousVisit format for display
                 const formattedVisits: PreviousVisit[] = sortedVisits.map((visit: any, index: number) => {
@@ -434,14 +697,85 @@ export default function Treatment() {
 
                 setPreviousVisits(formattedVisits);
                 setCurrentVisitIndex(Math.max(0, sortedVisits.length - 1));
+
+                // Extract prescriptions from the latest visit
+                if (sortedVisits.length > 0) {
+                    const latestVisit = sortedVisits[sortedVisits.length - 1];
+                    console.log('Latest visit for prescription extraction:', latestVisit);
+                    
+                    // Extract prescriptions using the same logic as mapPreviousVisitToInitialData
+                    const rxArray = ((): any[] => {
+                        // First try the existing prescription fields
+                        const arr = latestVisit.visit_prescription_overwrite || latestVisit.Visit_Prescription_Overwrite || latestVisit.prescriptions;
+                        console.log('Rx array (existing):', arr);
+
+                        // If no prescriptions found, try rawVisit.Prescriptions
+                        if (!arr || !Array.isArray(arr) || arr.length === 0) {
+                            const rawPrescriptions = latestVisit.Prescriptions;
+                            console.log('Raw Prescriptions data:', rawPrescriptions);
+                            if (Array.isArray(rawPrescriptions) && rawPrescriptions.length > 0) {
+                                console.log('Using rawVisit.Prescriptions data');
+                                return rawPrescriptions;
+                            }
+                        }
+
+                        if (Array.isArray(arr)) return arr;
+                        return [];
+                    })();
+
+                    if (rxArray.length > 0) {
+                        // Convert prescriptions to PrescriptionRow format
+                        const prescriptionRows: PrescriptionRow[] = rxArray.map((p: any, index: number) => {
+                            // Try multiple field name variations for medicine
+                            const med = p.medicineName || p.Medicine_Name || p.medicine || p.drug_name || p.item || p.Medicine || p.Drug || p.med_name || p.medication || p.MedName || '';
+
+                            // Try multiple field name variations for dosage
+                            const m = p.Morning || p.morningDose || p.morning || p.M || p.morn || p.AM || '0';
+                            const a = p.Afternoon || p.afternoonDose || p.afternoon || p.A || p.aft || p.PM || '0';
+                            const n = p.Night || p.nightDose || p.night || p.N || p.eve || p.Evening || '0';
+
+                            // Get number of days
+                            const noOfdays = p.noOfDays || p.NoOfDays || p.no_of_days || p.No_Of_Days || p.days || p.Days || p.duration || p.Duration || '';
+
+                            // Try multiple field name variations for instructions
+                            const instr = p.Instruction || p.Instructions || p.instruction || p.instructions || p.Instruction_Text || p.directions || p.how_to_take || p.Directions || '';
+
+                            return {
+                                id: `pv_${index + 1}`,
+                                prescription: med,
+                                b: m !== '0' ? m : '',
+                                l: a !== '0' ? a : '',
+                                d: n !== '0' ? n : '',
+                                days: noOfdays,
+                                instruction: instr
+                            };
+                        });
+
+                        console.log('Extracted prescription rows:', prescriptionRows);
+                        setPreviousVisitPrescriptions(prescriptionRows);
+                    } else {
+                        console.log('No prescriptions found in latest visit');
+                        setPreviousVisitPrescriptions([]);
+                    }
+                } else {
+                    setPreviousVisitPrescriptions([]);
+                }
             } else {
                 console.log('No previous visits found or invalid response format');
                 setPreviousVisits([]);
+                setAllVisits([]);
+                setVisitDates([]);
+                setCurrentVisitIndex(0);
+                setPreviousVisitPrescriptions([]);
             }
         } catch (error: any) {
             console.error('Error fetching previous visits:', error);
             setPreviousVisitsError(error?.message || 'Failed to fetch previous visits');
             setPreviousVisits([]);
+            setAllVisits([]);
+            setVisitDates([]);
+            setCurrentVisitIndex(0);
+            setPreviousVisitPrescriptions([]);
         } finally {
             setLoadingPreviousVisits(false);
         }
@@ -481,7 +815,16 @@ export default function Treatment() {
             });
 
             // Map the selected visit to form data (similar to Appointment page)
-            const mapped = mapPreviousVisitToInitialData(selectedVisit, patientName, null);
+            const appointmentRow = {
+                patientId: treatmentData?.patientId,
+                patient: treatmentData?.patientName,
+                age: treatmentData?.age,
+                gender: treatmentData?.gender,
+                contact: treatmentData?.contact,
+                doctorId: treatmentData?.doctorId,
+                provider: getDoctorLabelById(treatmentData?.doctorId)
+            };
+            const mapped = mapPreviousVisitToInitialData(selectedVisit, patientName, appointmentRow);
             console.log('Mapped form data from previous visit:', mapped);
             setFormPatientData(mapped);
         } catch (e) {
@@ -845,6 +1188,9 @@ export default function Treatment() {
         const newMedicine: MedicineRow = {
             id: `custom_${Date.now()}`,
             medicine: `${medicineData.medicineName} (${medicineData.shortDescription})`,
+            short_description: medicineData.shortDescription,
+            morning: parseInt(medicineData.breakfast) || 0,
+            afternoon: parseInt(medicineData.lunch) || 0,
             b: medicineData.breakfast || '',
             l: medicineData.lunch || '',
             d: medicineData.dinner || '',
@@ -912,25 +1258,64 @@ export default function Treatment() {
         setDiagnosisRows(prev => prev.filter(row => row.id !== id));
     };
 
-    const handleDiagnosisCommentChange = (id: string, comment: string) => {
+    const handleAddDiagnoses = () => {
+        if (selectedDiagnoses.length === 0) return;
+        setDiagnosisRows(prev => {
+            const existingValues = new Set(prev.map(r => r.value));
+            const newRows: DiagnosisRow[] = [];
+            selectedDiagnoses.forEach(val => {
+                if (!existingValues.has(val)) {
+                    const diagnosisOption = diagnosesOptions.find(opt => opt.value === val);
+                    newRows.push({
+                        id: Date.now().toString() + Math.random(),
+                        value: val,
+                        diagnosis: diagnosisOption?.label || val,
+                        comment: ''
+                    });
+                }
+            });
+            return [...prev, ...newRows];
+        });
+        setSelectedDiagnoses([]);
+    };
+
+    const handleDiagnosisCommentChange = (rowValue: string, text: string) => {
+        setDiagnosisRows(prev => prev.map(r => r.value === rowValue ? { ...r, comment: text } : r));
+    };
+
+    const handleRemoveDiagnosisFromSelector = (rowValue: string) => {
+        setDiagnosisRows(prev => prev.filter(r => r.value !== rowValue));
+        // Also uncheck from selector
+        setSelectedDiagnoses(prev => prev.filter(v => v !== rowValue));
+    };
+
+    const handleDiagnosisCommentChangeById = (id: string, comment: string) => {
         setDiagnosisRows(prev => prev.map(row => 
             row.id === id ? { ...row, comment } : row
         ));
     };
 
     const handleAddMedicine = () => {
-        if (selectedMedicine.trim()) {
-            const newMedicine: MedicineRow = {
-                id: Date.now().toString(),
-                medicine: selectedMedicine,
-                b: '',
-                l: '',
-                d: '',
-                days: '',
-                instruction: ''
-            };
-            setMedicineRows(prev => [...prev, newMedicine]);
-            setSelectedMedicine('');
+        if (selectedMedicines.length > 0) {
+            selectedMedicines.forEach(medicineValue => {
+                const medicineOption = medicinesOptions.find(opt => opt.value === medicineValue);
+                if (medicineOption) {
+                    const newMedicine: MedicineRow = {
+                        id: Date.now().toString() + Math.random(),
+                        medicine: medicineOption.short_description,
+                        short_description: medicineOption.short_description,
+                        morning: medicineOption.morning,
+                        afternoon: medicineOption.afternoon,
+                        b: medicineOption.morning.toString(),
+                        l: medicineOption.afternoon.toString(),
+                        d: '',
+                        days: '',
+                        instruction: ''
+                    };
+                    setMedicineRows(prev => [...prev, newMedicine]);
+                }
+            });
+            setSelectedMedicines([]);
         }
     };
 
@@ -983,19 +1368,28 @@ export default function Treatment() {
     };
 
     // Investigation handlers
-    const handleAddInvestigation = () => {
-        if (investigationInput.trim()) {
-            const newInvestigation: InvestigationRow = {
-                id: Date.now().toString(),
-                investigation: investigationInput
-            };
-            setInvestigationRows(prev => [...prev, newInvestigation]);
-            setInvestigationInput('');
-        }
+    const handleAddInvestigations = () => {
+        if (selectedInvestigations.length === 0) return;
+        setInvestigationRows(prev => {
+            const existingValues = new Set(prev.map(r => r.investigation));
+            const newRows: InvestigationRow[] = [];
+            selectedInvestigations.forEach(val => {
+                if (!existingValues.has(val)) {
+                    newRows.push({ id: `inv_${Date.now()}_${val}`, investigation: val });
+                }
+            });
+            return [...prev, ...newRows];
+        });
+        setSelectedInvestigations([]);
     };
 
     const handleRemoveInvestigation = (id: string) => {
         setInvestigationRows(prev => prev.filter(row => row.id !== id));
+    };
+
+    const handleRemoveInvestigationFromSelector = (value: string) => {
+        setInvestigationRows(prev => prev.filter(r => r.investigation !== value));
+        setSelectedInvestigations(prev => prev.filter(v => v !== value));
     };
 
     const handleFollowUpChange = (field: string, value: string) => {
@@ -1250,7 +1644,7 @@ export default function Treatment() {
                                 alignItems: 'center'
                             }}>
                                 <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#2e7d32' }}>
-                                    {treatmentData?.patientName || 'Amit Kalamkar'} / Male / 48 Y
+                                    {treatmentData?.patientName || 'Amit Kalamkar'} / {treatmentData?.gender || 'Male'} / {treatmentData?.age || 48} Y / {treatmentData?.contact || 'N/A'}
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1384,20 +1778,28 @@ export default function Treatment() {
                                                     type="button"
                                                     style={{
                                                         position: 'absolute',
-                                                        left: 'calc(100% + 16px)',
+                                                        left: 'calc(100% + 13px)',
                                                         top: '50%',
-                                                        marginTop: '-14px',
+                                                        marginTop: '-16px',
                                                         backgroundColor: '#1976d2',
                                                         color: 'white',
                                                         border: 'none',
-                                                        height: '28px',
-                                                        padding: '0 8px',
-                                                        borderRadius: '4px',
+                                                        height: '32px',
+                                                        padding: '0 10px',
+                                                        borderRadius: '6px',
                                                         cursor: 'pointer',
-                                                        fontSize: '10px',
+                                                        fontSize: '12px',
+                                                        fontWeight: '500',
                                                         lineHeight: 1,
                                                         whiteSpace: 'nowrap',
                                                         outline: 'none',
+                                                        transition: 'background-color 0.2s'
+                                                    }}
+                                                    onMouseEnter={(e) => {
+                                                        e.currentTarget.style.backgroundColor = '#1565c0';
+                                                    }}
+                                                    onMouseLeave={(e) => {
+                                                        e.currentTarget.style.backgroundColor = '#1976d2';
                                                     }}
                                                     onClick={() => setShowVitalsTrend((prev) => !prev)}
                                                 >
@@ -1503,7 +1905,7 @@ export default function Treatment() {
                                                     {selectedComplaints.length === 1 && '1 selected'}
                                                     {selectedComplaints.length > 1 && `${selectedComplaints.length} selected`}
                                                 </span>
-                                                <span style={{ marginLeft: '8px', color: '#666' }}>▾</span>
+                                                <span style={{ marginLeft: '8px', color: '#666', fontSize: '16px', lineHeight: '1' }}>▾</span>
                                             </div>
 
                                             {isComplaintsOpen && (
@@ -1896,37 +2298,189 @@ export default function Treatment() {
                             </div>
                             
                             <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-                                <select
-                                    value={selectedDiagnosis}
-                                    onChange={(e) => setSelectedDiagnosis(e.target.value)}
-                                    style={{
-                                        flex: 1,
-                                        padding: '6px 10px',
-                                        border: '1px solid #ccc',
-                                        borderRadius: '4px',
-                                        fontSize: '13px'
-                                    }}
-                                >
-                                    <option value="">Select Provisional Diagnosis</option>
-                                    <option value="HT">HT</option>
-                                    <option value="DM">DM</option>
-                                    <option value="Common Cold">Common Cold</option>
-                                    <option value="Fever">Fever</option>
-                                </select>
+                                <div style={{ flex: 1, position: 'relative' }} ref={diagnosesRef}>
+                                    <div
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                            height: '32px',
+                                            padding: '4px 8px',
+                                            border: '2px solid #B7B7B7',
+                                            borderRadius: '6px',
+                                            fontSize: '12px',
+                                            fontFamily: "'Roboto', sans-serif",
+                                            fontWeight: 500,
+                                            backgroundColor: 'white',
+                                            cursor: 'pointer',
+                                            userSelect: 'none'
+                                        }}
+                                        onClick={() => setIsDiagnosesOpen(!isDiagnosesOpen)}
+                                        onMouseEnter={(e) => {
+                                            (e.currentTarget as HTMLDivElement).style.borderColor = '#1E88E5';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            (e.currentTarget as HTMLDivElement).style.borderColor = '#B7B7B7';
+                                        }}
+                                    >
+                                        <span style={{ color: selectedDiagnoses.length > 0 ? '#000' : '#9e9e9e' }}>
+                                            {selectedDiagnoses.length > 0 
+                                                ? `${selectedDiagnoses.length} diagnosis selected`
+                                                : 'Select Diagnosis'
+                                            }
+                                        </span>
+                                        <span style={{ marginLeft: '8px', color: '#666', fontSize: '16px', lineHeight: '1' }}>▾</span>
+                                    </div>
+
+                                    {isDiagnosesOpen && (
+                                        <div style={{
+                                            position: 'absolute',
+                                            top: '100%',
+                                            left: 0,
+                                            right: 0,
+                                            backgroundColor: 'white',
+                                            border: '1px solid #B7B7B7',
+                                            borderRadius: '6px',
+                                            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                                            zIndex: 1000,
+                                            marginTop: '4px',
+                                            maxHeight: '300px',
+                                            overflow: 'hidden'
+                                        }}>
+                                            <div style={{ padding: '6px' }}>
+                                                <input
+                                                    type="text"
+                                                    placeholder="Search diagnoses..."
+                                                    value={diagnosisSearch}
+                                                    onChange={(e) => setDiagnosisSearch(e.target.value)}
+                                                    style={{
+                                                        width: '100%',
+                                                        height: '28px',
+                                                        padding: '4px 8px',
+                                                        border: '1px solid #B7B7B7',
+                                                        borderRadius: '4px',
+                                                        fontSize: '12px',
+                                                        outline: 'none'
+                                                    }}
+                                                    onFocus={(e) => {
+                                                        (e.target as HTMLInputElement).style.borderColor = '#1E88E5';
+                                                    }}
+                                                    onBlur={(e) => {
+                                                        (e.target as HTMLInputElement).style.borderColor = '#B7B7B7';
+                                                    }}
+                                                />
+                                            </div>
+
+                                            <div className="diagnoses-dropdown" style={{ maxHeight: '200px', overflowY: 'auto', padding: '4px 6px', display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', columnGap: '8px', rowGap: '6px' }}>
+                                                {diagnosesLoading && (
+                                                    <div style={{ padding: '6px', fontSize: '12px', color: '#777', gridColumn: '1 / -1', textAlign: 'center' }}>
+                                                        Loading diagnoses...
+                                                    </div>
+                                                )}
+                                                {diagnosesError && (
+                                                    <div style={{ padding: '6px', fontSize: '12px', color: '#d32f2f', gridColumn: '1 / -1', textAlign: 'center' }}>
+                                                        {diagnosesError}
+                                                        <button
+                                                            onClick={() => {
+                                                                setDiagnosesError(null);
+                                                                // Trigger reload by updating a dependency
+                                                                const doctorId = treatmentData?.doctorId || '1';
+                                                                const clinicId = sessionData?.clinicId || '1';
+                                                                diagnosisService.getAllDiagnosesForDoctorAndClinic(doctorId, clinicId)
+                                                                    .then(setDiagnosesOptions)
+                                                                    .catch(e => setDiagnosesError(e.message));
+                                                            }}
+                                                            style={{
+                                                                marginLeft: '8px', 
+                                                                padding: '2px 6px', 
+                                                                fontSize: '10px', 
+                                                                backgroundColor: '#1976d2',
+                                                                color: 'white',
+                                                                border: 'none',
+                                                                borderRadius: '3px', 
+                                                                cursor: 'pointer' 
+                                                            }}
+                                                        >
+                                                            Retry
+                                                        </button>
+                                                    </div>
+                                                )}
+                                                {!diagnosesLoading && !diagnosesError && filteredDiagnoses.length === 0 && (
+                                                    <div style={{ padding: '6px', fontSize: '12px', color: '#777', gridColumn: '1 / -1' }}>No diagnoses found</div>
+                                                )}
+                                                {!diagnosesLoading && !diagnosesError && filteredDiagnoses.map((opt, index) => {
+                                                    const checked = selectedDiagnoses.includes(opt.value);
+                                                    const isFirstUnselected = !checked && index > 0 && selectedDiagnoses.includes(filteredDiagnoses[index - 1].value);
+                                                    
+                                                    return (
+                                                        <React.Fragment key={opt.value}>
+                                                            {isFirstUnselected && (
+                                                                <div style={{ 
+                                                                    gridColumn: '1 / -1', 
+                                                                    height: '1px', 
+                                                                    backgroundColor: '#e0e0e0', 
+                                                                    margin: '4px 0' 
+                                                                }} />
+                                                            )}
+                                                            <label 
+                                                                style={{ 
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    gap: '4px', 
+                                                                    padding: '4px 2px', 
+                                                                    cursor: 'pointer', 
+                                                                    fontSize: '12px', 
+                                                                    border: 'none',
+                                                                    backgroundColor: checked ? '#e3f2fd' : 'transparent',
+                                                                    borderRadius: '3px',
+                                                                    fontWeight: checked ? '600' : '400'
+                                                                }}
+                                                            >
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={checked}
+                                                                    onChange={(e) => {
+                                                                        setSelectedDiagnoses(prev => {
+                                                                            if (e.target.checked) {
+                                                                                if (prev.includes(opt.value)) return prev;
+                                                                                return [...prev, opt.value];
+                                                                            } else {
+                                                                                return prev.filter(v => v !== opt.value);
+                                                                            }
+                                                                        });
+                                                                    }}
+                                                                    style={{ margin: 0 }}
+                                                                />
+                                                                <span style={{ whiteSpace: 'nowrap' }}>{opt.label}</span>
+                                                            </label>
+                                                        </React.Fragment>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
                                 <button
-                                    type="button"
-                                    onClick={handleAddDiagnosis}
                                     style={{
+                                        padding: '0 10px',
                                         backgroundColor: '#1976d2',
                                         color: 'white',
                                         border: 'none',
-                                        padding: '6px 12px',
-                                        borderRadius: '4px',
+                                        borderRadius: '6px',
                                         cursor: 'pointer',
-                                        fontSize: '12px'
+                                        fontSize: '12px',
+                                        height: '32px',
+                                        transition: 'background-color 0.2s'
                                     }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.backgroundColor = '#1565c0';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.backgroundColor = '#1976d2';
+                                    }}
+                                    onClick={handleAddDiagnoses}
                                 >
-                                    ADD
+                                    Add
                                 </button>
                                 <button
                                     type="button"
@@ -1983,7 +2537,7 @@ export default function Treatment() {
                                             <div style={{ padding: '6px', borderRight: '1px solid #e0e0e0', fontSize: '12px' }}>{row.diagnosis}</div>
                                             <div style={{ padding: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                                 <div
-                                                    onClick={() => handleRemoveDiagnosis(row.id)}
+                                                    onClick={() => row.value ? handleRemoveDiagnosisFromSelector(row.value) : handleRemoveDiagnosis(row.id)}
                                                     title="Remove"
                                                     style={{
                                                         display: 'inline-flex',
@@ -2017,23 +2571,166 @@ export default function Treatment() {
                             </div>
                             
                             <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-                                <select
-                                    value={selectedMedicine}
-                                    onChange={(e) => setSelectedMedicine(e.target.value)}
-                                    style={{
-                                        flex: 1,
-                                        padding: '6px 10px',
-                                        border: '1px solid #ccc',
-                                        borderRadius: '4px',
-                                        fontSize: '13px'
-                                    }}
-                                >
-                                    <option value="">Select Medicines</option>
-                                    <option value="Paracetamol">Paracetamol</option>
-                                    <option value="Amoxicillin">Amoxicillin</option>
-                                    <option value="Ibuprofen">Ibuprofen</option>
-                                    <option value="Aspirin">Aspirin</option>
-                                </select>
+                                <div style={{ position: 'relative', flex: 1 }} ref={medicinesRef}>
+                                    <div
+                                        onClick={() => setIsMedicinesOpen(!isMedicinesOpen)}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                            height: '32px',
+                                            padding: '4px 8px',
+                                            border: '2px solid #B7B7B7',
+                                            borderRadius: '6px',
+                                            fontSize: '12px',
+                                            fontFamily: "'Roboto', sans-serif",
+                                            fontWeight: 500,
+                                            backgroundColor: 'white',
+                                            cursor: 'pointer',
+                                            userSelect: 'none'
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            (e.currentTarget as HTMLDivElement).style.borderColor = '#1E88E5';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            (e.currentTarget as HTMLDivElement).style.borderColor = '#B7B7B7';
+                                        }}
+                                    >
+                                        <span style={{ color: selectedMedicines.length ? '#000' : '#9e9e9e' }}>
+                                            {selectedMedicines.length === 0 && 'Select Medicines'}
+                                            {selectedMedicines.length === 1 && '1 selected'}
+                                            {selectedMedicines.length > 1 && `${selectedMedicines.length} selected`}
+                                        </span>
+                                        <span style={{ marginLeft: '8px', color: '#666', fontSize: '16px', lineHeight: '1' }}>▾</span>
+                                    </div>
+
+                                    {isMedicinesOpen && (
+                                        <div style={{
+                                            position: 'absolute',
+                                            top: '100%',
+                                            left: 0,
+                                            right: 0,
+                                            backgroundColor: 'white',
+                                            border: '1px solid #B7B7B7',
+                                            borderRadius: '6px',
+                                            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                                            zIndex: 1000,
+                                            marginTop: '4px'
+                                        }}>
+                                            {/* Search Field inside dropdown */}
+                                            <div style={{ padding: '6px' }}>
+                                                <input
+                                                    type="text"
+                                                    value={medicineSearch}
+                                                    onChange={(e) => setMedicineSearch(e.target.value)}
+                                                    placeholder="Search medicines"
+                                                    style={{
+                                                        width: '100%',
+                                                        height: '28px',
+                                                        padding: '4px 8px',
+                                                        border: '1px solid #B7B7B7',
+                                                        borderRadius: '4px',
+                                                        fontSize: '12px',
+                                                        outline: 'none'
+                                                    }}
+                                                    onFocus={(e) => {
+                                                        (e.target as HTMLInputElement).style.borderColor = '#1E88E5';
+                                                    }}
+                                                    onBlur={(e) => {
+                                                        (e.target as HTMLInputElement).style.borderColor = '#B7B7B7';
+                                                    }}
+                                                />
+                                            </div>
+
+                                            <div className="medicines-dropdown" style={{ maxHeight: '200px', overflowY: 'auto', padding: '4px 6px', display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', columnGap: '8px', rowGap: '6px' }}>
+                                                {medicinesLoading && (
+                                                    <div style={{ padding: '6px', fontSize: '12px', color: '#777', gridColumn: '1 / -1', textAlign: 'center' }}>
+                                                        Loading medicines...
+                                                    </div>
+                                                )}
+                                                {medicinesError && (
+                                                    <div style={{ padding: '6px', fontSize: '12px', color: '#d32f2f', gridColumn: '1 / -1', textAlign: 'center' }}>
+                                                        {medicinesError}
+                                                        <button
+                                                            onClick={() => {
+                                                                setMedicinesError(null);
+                                                                // Trigger reload by updating a dependency
+                                                                const doctorId = treatmentData?.doctorId || '1';
+                                                                const clinicId = sessionData?.clinicId || '1';
+                                                                medicineService.getActiveMedicinesByDoctorAndClinic(doctorId, clinicId)
+                                                                    .then(setMedicinesOptions)
+                                                                    .catch(e => setMedicinesError(e.message));
+                                                            }}
+                                                            style={{
+                                                                marginLeft: '8px', 
+                                                                padding: '2px 6px', 
+                                                                fontSize: '10px', 
+                                                                backgroundColor: '#1976d2',
+                                                                color: 'white',
+                                                                border: 'none',
+                                                                borderRadius: '3px', 
+                                                                cursor: 'pointer' 
+                                                            }}
+                                                        >
+                                                            Retry
+                                                        </button>
+                                                    </div>
+                                                )}
+                                                {!medicinesLoading && !medicinesError && filteredMedicines.length === 0 && (
+                                                    <div style={{ padding: '6px', fontSize: '12px', color: '#777', gridColumn: '1 / -1' }}>No medicines found</div>
+                                                )}
+                                                {!medicinesLoading && !medicinesError && filteredMedicines.map((opt, index) => {
+                                                    const checked = selectedMedicines.includes(opt.value);
+                                                    const isFirstUnselected = !checked && index > 0 && selectedMedicines.includes(filteredMedicines[index - 1].value);
+                                                    
+                                                    return (
+                                                        <React.Fragment key={opt.value}>
+                                                            {isFirstUnselected && (
+                                                                <div style={{ 
+                                                                    gridColumn: '1 / -1', 
+                                                                    height: '1px', 
+                                                                    backgroundColor: '#e0e0e0', 
+                                                                    margin: '4px 0' 
+                                                                }} />
+                                                            )}
+                                                            <label 
+                                                                style={{ 
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    gap: '4px', 
+                                                                    padding: '4px 2px', 
+                                                                    cursor: 'pointer', 
+                                                                    fontSize: '12px', 
+                                                                    border: 'none',
+                                                                    backgroundColor: checked ? '#e3f2fd' : 'transparent',
+                                                                    borderRadius: '3px',
+                                                                    fontWeight: checked ? '600' : '400'
+                                                                }}
+                                                            >
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={checked}
+                                                                    onChange={(e) => {
+                                                                        setSelectedMedicines(prev => {
+                                                                            if (e.target.checked) {
+                                                                                if (prev.includes(opt.value)) return prev;
+                                                                                return [...prev, opt.value];
+                                                                            } else {
+                                                                                return prev.filter(v => v !== opt.value);
+                                                                            }
+                                                                        });
+                                                                    }}
+                                                                    style={{ margin: 0 }}
+                                                                />
+                                                                <span style={{ whiteSpace: 'nowrap' }}>{opt.label}</span>
+                                                            </label>
+                                                        </React.Fragment>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
                                 <button
                                     type="button"
                                     onClick={handleAddMedicine}
@@ -2047,7 +2744,7 @@ export default function Treatment() {
                                         fontSize: '12px'
                                     }}
                                 >
-                                    ADD
+                                    Add
                                 </button>
                                 <button
                                     type="button"
@@ -2106,12 +2803,15 @@ export default function Treatment() {
                                             borderBottom: '1px solid #e0e0e0'
                                         }}>
                                             <div style={{ padding: '6px', borderRight: '1px solid #e0e0e0', fontSize: '12px' }}>{index + 1}</div>
-                                            <div style={{ padding: '6px', borderRight: '1px solid #e0e0e0', fontSize: '12px' }}>{row.medicine}</div>
+                                            <div style={{ padding: '6px', borderRight: '1px solid #e0e0e0', fontSize: '12px' }}>{row.short_description || row.medicine}</div>
                                             <div style={{ padding: '0', borderRight: '1px solid #e0e0e0' }}>
                                                 <input
                                                     type="text"
                                                     value={row.b}
-                                                    onChange={(e) => handleMedicineFieldChange(row.id, 'b', e.target.value)}
+                                                    inputMode="numeric"
+                                                    pattern="[0-9]*"
+                                                    onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
+                                                    onChange={(e) => handleMedicineFieldChange(row.id, 'b', e.target.value.replace(/\D/g, ''))}
                                                     className="medicine-table-input"
                                                     style={{
                                                         width: '100%',
@@ -2134,7 +2834,10 @@ export default function Treatment() {
                                                 <input
                                                     type="text"
                                                     value={row.l}
-                                                    onChange={(e) => handleMedicineFieldChange(row.id, 'l', e.target.value)}
+                                                    inputMode="numeric"
+                                                    pattern="[0-9]*"
+                                                    onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
+                                                    onChange={(e) => handleMedicineFieldChange(row.id, 'l', e.target.value.replace(/\D/g, ''))}
                                                     className="medicine-table-input"
                                                     style={{
                                                         width: '100%',
@@ -2157,7 +2860,10 @@ export default function Treatment() {
                                                 <input
                                                     type="text"
                                                     value={row.d}
-                                                    onChange={(e) => handleMedicineFieldChange(row.id, 'd', e.target.value)}
+                                                    inputMode="numeric"
+                                                    pattern="[0-9]*"
+                                                    onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
+                                                    onChange={(e) => handleMedicineFieldChange(row.id, 'd', e.target.value.replace(/\D/g, ''))}
                                                     className="medicine-table-input"
                                                     style={{
                                                         width: '100%',
@@ -2180,7 +2886,10 @@ export default function Treatment() {
                                                 <input
                                                     type="text"
                                                     value={row.days}
-                                                    onChange={(e) => handleMedicineFieldChange(row.id, 'days', e.target.value)}
+                                                    inputMode="numeric"
+                                                    pattern="[0-9]*"
+                                                    onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
+                                                    onChange={(e) => handleMedicineFieldChange(row.id, 'days', e.target.value.replace(/\D/g, ''))}
                                                     className="medicine-table-input"
                                                     style={{
                                                         width: '100%',
@@ -2284,7 +2993,7 @@ export default function Treatment() {
                                         fontSize: '12px'
                                     }}
                                 >
-                                    ADD Rx
+                                    Add Rx
                                 </button>
                                 <button
                                     type="button"
@@ -2375,7 +3084,10 @@ export default function Treatment() {
                                                 <input
                                                     type="text"
                                                     value={row.b}
-                                                    onChange={(e) => handlePrescriptionFieldChange(row.id, 'b', e.target.value)}
+                                                    inputMode="numeric"
+                                                    pattern="[0-9]*"
+                                                    onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.' ) { e.preventDefault(); } }}
+                                                    onChange={(e) => handlePrescriptionFieldChange(row.id, 'b', e.target.value.replace(/\D/g, ''))}
                                                     className="prescription-table-input"
                                                     style={{
                                                         width: '100%',
@@ -2398,7 +3110,10 @@ export default function Treatment() {
                                                 <input
                                                     type="text"
                                                     value={row.l}
-                                                    onChange={(e) => handlePrescriptionFieldChange(row.id, 'l', e.target.value)}
+                                                    inputMode="numeric"
+                                                    pattern="[0-9]*"
+                                                    onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.' ) { e.preventDefault(); } }}
+                                                    onChange={(e) => handlePrescriptionFieldChange(row.id, 'l', e.target.value.replace(/\D/g, ''))}
                                                     className="prescription-table-input"
                                                     style={{
                                                         width: '100%',
@@ -2421,7 +3136,10 @@ export default function Treatment() {
                                                 <input
                                                     type="text"
                                                     value={row.d}
-                                                    onChange={(e) => handlePrescriptionFieldChange(row.id, 'd', e.target.value)}
+                                                    inputMode="numeric"
+                                                    pattern="[0-9]*"
+                                                    onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.' ) { e.preventDefault(); } }}
+                                                    onChange={(e) => handlePrescriptionFieldChange(row.id, 'd', e.target.value.replace(/\D/g, ''))}
                                                     className="prescription-table-input"
                                                     style={{
                                                         width: '100%',
@@ -2444,7 +3162,10 @@ export default function Treatment() {
                                                 <input
                                                     type="text"
                                                     value={row.days}
-                                                    onChange={(e) => handlePrescriptionFieldChange(row.id, 'days', e.target.value)}
+                                                    inputMode="numeric"
+                                                    pattern="[0-9]*"
+                                                    onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.' ) { e.preventDefault(); } }}
+                                                    onChange={(e) => handlePrescriptionFieldChange(row.id, 'days', e.target.value.replace(/\D/g, ''))}
                                                     className="prescription-table-input"
                                                     style={{
                                                         width: '100%',
@@ -2514,19 +3235,20 @@ export default function Treatment() {
 
                         {/* Previous Visit Section */}
                         <div style={{ marginBottom: '15px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '5px', width: '100%' }}>
-                                <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Previous visit</label>
+                            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '5px', width: '100%', gap: '8px' }}>
+                                <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Prescriptions suggested in previous visit:</label>
                                 <div
                                     onClick={() => setShowPreviousVisit(!showPreviousVisit)}
                                     style={{
                                         cursor: 'pointer',
-                                        fontSize: '16px',
+                                        fontSize: '13px',
                                         color: '#000000',
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
-                                        width: '24px',
-                                        height: '24px'
+                                        height: '20px',
+                                        width: '20px',
+                                        lineHeight: '1'
                                     }}
                                 >
                                     {showPreviousVisit ? '▲' : '▼'}
@@ -2534,41 +3256,58 @@ export default function Treatment() {
                             </div>
                             
                             {/* Previous Visit Prescriptions Table */}
-                            {showPreviousVisit && previousVisitPrescriptions.length > 0 && (
-                                <div style={{ border: '1px solid #ccc', borderRadius: '4px', overflow: 'hidden' }}>
-                                    <div style={{ 
-                                        display: 'grid', 
-                                        gridTemplateColumns: '50px 1fr 50px 50px 50px 50px 1fr' as const, 
-                                        backgroundColor: '#8D6E63', 
-                                        color: 'white',
-                                        fontWeight: 'bold',
-                                        fontSize: '11px'
-                                    }}>
-                                        <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Sr.</div>
-                                        <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Prescriptions</div>
-                                        <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>B</div>
-                                        <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>L</div>
-                                        <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>D</div>
-                                        <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Days</div>
-                                        <div style={{ padding: '6px' }}>Instruction</div>
-                                    </div>
-                                    {previousVisitPrescriptions.map((row, index) => (
-                                        <div key={row.id} style={{ 
-                                            display: 'grid', 
-                                            gridTemplateColumns: '50px 1fr 50px 50px 50px 50px 1fr' as const,
-                                            backgroundColor: index % 2 === 0 ? '#D7CCC8' : '#EFEBE9',
-                                            borderBottom: '1px solid #BCAAA4'
-                                        }}>
-                                            <div style={{ padding: '6px', borderRight: '1px solid #BCAAA4', fontSize: '12px', color: '#5D4037' }}>{index + 1}</div>
-                                            <div style={{ padding: '6px', borderRight: '1px solid #BCAAA4', fontSize: '12px', color: '#5D4037' }}>{row.prescription}</div>
-                                            <div style={{ padding: '6px', borderRight: '1px solid #BCAAA4', fontSize: '12px', color: '#5D4037', textAlign: 'center' }}>{row.b}</div>
-                                            <div style={{ padding: '6px', borderRight: '1px solid #BCAAA4', fontSize: '12px', color: '#5D4037', textAlign: 'center' }}>{row.l}</div>
-                                            <div style={{ padding: '6px', borderRight: '1px solid #BCAAA4', fontSize: '12px', color: '#5D4037', textAlign: 'center' }}>{row.d}</div>
-                                            <div style={{ padding: '6px', borderRight: '1px solid #BCAAA4', fontSize: '12px', color: '#5D4037', textAlign: 'center' }}>{row.days}</div>
-                                            <div style={{ padding: '6px', fontSize: '12px', color: '#5D4037' }}>{row.instruction}</div>
+                            {showPreviousVisit && (
+                                <>
+                                    {previousVisitPrescriptions.length > 0 ? (
+                                        <div style={{ border: '1px solid #ccc', borderRadius: '4px', overflow: 'hidden' }}>
+                                            <div style={{ 
+                                                display: 'grid', 
+                                                gridTemplateColumns: '50px 1fr 50px 50px 50px 50px 1fr' as const, 
+                                                backgroundColor: '#f5f5f5', 
+                                                color: '#666',
+                                                fontWeight: 'bold',
+                                                fontSize: '11px',
+                                                borderBottom: '1px solid #ccc'
+                                            }}>
+                                                <div style={{ padding: '6px', borderRight: '1px solid #ccc' }}>Sr.</div>
+                                                <div style={{ padding: '6px', borderRight: '1px solid #ccc' }}>Prescriptions</div>
+                                                <div style={{ padding: '6px', borderRight: '1px solid #ccc' }}>B</div>
+                                                <div style={{ padding: '6px', borderRight: '1px solid #ccc' }}>L</div>
+                                                <div style={{ padding: '6px', borderRight: '1px solid #ccc' }}>D</div>
+                                                <div style={{ padding: '6px', borderRight: '1px solid #ccc' }}>Days</div>
+                                                <div style={{ padding: '6px' }}>Instruction</div>
+                                            </div>
+                                            {previousVisitPrescriptions.map((row, index) => (
+                                                <div key={row.id} style={{ 
+                                                    display: 'grid', 
+                                                    gridTemplateColumns: '50px 1fr 50px 50px 50px 50px 1fr' as const,
+                                                    backgroundColor: '#f5f5f5',
+                                                    borderBottom: '1px solid #ccc'
+                                                }}>
+                                                    <div style={{ padding: '6px', borderRight: '1px solid #ccc', fontSize: '12px', color: '#666' }}>{index + 1}</div>
+                                                    <div style={{ padding: '6px', borderRight: '1px solid #ccc', fontSize: '12px', color: '#666' }}>{row.prescription}</div>
+                                                    <div style={{ padding: '6px', borderRight: '1px solid #ccc', fontSize: '12px', color: '#666', textAlign: 'center' }}>{row.b}</div>
+                                                    <div style={{ padding: '6px', borderRight: '1px solid #ccc', fontSize: '12px', color: '#666', textAlign: 'center' }}>{row.l}</div>
+                                                    <div style={{ padding: '6px', borderRight: '1px solid #ccc', fontSize: '12px', color: '#666', textAlign: 'center' }}>{row.d}</div>
+                                                    <div style={{ padding: '6px', borderRight: '1px solid #ccc', fontSize: '12px', color: '#666', textAlign: 'center' }}>{row.days}</div>
+                                                    <div style={{ padding: '6px', fontSize: '12px', color: '#666' }}>{row.instruction}</div>
+                                                </div>
+                                            ))}
                                         </div>
-                                    ))}
-                                </div>
+                                    ) : (
+                                        <div style={{ 
+                                            padding: '10px', 
+                                            textAlign: 'center', 
+                                            color: '#666', 
+                                            fontSize: '12px',
+                                            border: '1px solid #ccc', 
+                                            borderRadius: '4px',
+                                            backgroundColor: '#f5f5f5'
+                                        }}>
+                                            No Prescriptions suggested in previous visit.
+                                        </div>
+                                    )}
+                                </>
                             )}
                         </div>
 
@@ -2580,33 +3319,187 @@ export default function Treatment() {
                                     Investigation saved successfully!!
                                 </span>
                             </div>
-                            
+
                             <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-                                <input
-                                    type="text"
-                                    value={investigationInput}
-                                    onChange={(e) => setInvestigationInput(e.target.value)}
-                                    placeholder="Enter Investigation Name"
-                                    style={{
-                                        flex: 1,
-                                        padding: '6px 10px',
-                                        border: '1px solid #ccc',
-                                        borderRadius: '4px',
-                                        fontSize: '13px'
-                                    }}
-                                />
+                                <div style={{ flex: 1, position: 'relative' }} ref={investigationsRef}>
+                                    <div
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                            height: '32px',
+                                            padding: '4px 8px',
+                                            border: '2px solid #B7B7B7',
+                                            borderRadius: '6px',
+                                            fontSize: '12px',
+                                            fontFamily: "'Roboto', sans-serif",
+                                            fontWeight: 500,
+                                            backgroundColor: 'white',
+                                            cursor: 'pointer',
+                                            userSelect: 'none'
+                                        }}
+                                        onClick={() => setIsInvestigationsOpen(!isInvestigationsOpen)}
+                                        onMouseEnter={(e) => {
+                                            (e.currentTarget as HTMLDivElement).style.borderColor = '#1E88E5';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            (e.currentTarget as HTMLDivElement).style.borderColor = '#B7B7B7';
+                                        }}
+                                    >
+                                        <span style={{ color: selectedInvestigations.length > 0 ? '#000' : '#9e9e9e' }}>
+                                            {selectedInvestigations.length > 0 
+                                                ? `${selectedInvestigations.length} investigation selected`
+                                                : 'Select Investigation'
+                                            }
+                                        </span>
+                                        <span style={{ marginLeft: '8px', color: '#666', fontSize: '16px', lineHeight: '1' }}>▾</span>
+                                    </div>
+
+                                    {isInvestigationsOpen && (
+                                        <div style={{
+                                            position: 'absolute',
+                                            top: '100%',
+                                            left: 0,
+                                            right: 0,
+                                            backgroundColor: 'white',
+                                            border: '1px solid #B7B7B7',
+                                            borderRadius: '6px',
+                                            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                                            zIndex: 1000,
+                                            marginTop: '4px',
+                                            maxHeight: '300px',
+                                            overflow: 'hidden'
+                                        }}>
+                                            <div style={{ padding: '6px' }}>
+                                                <input
+                                                    type="text"
+                                                    placeholder="Search investigations..."
+                                                    value={investigationSearch}
+                                                    onChange={(e) => setInvestigationSearch(e.target.value)}
+                                                    style={{
+                                                        width: '100%',
+                                                        height: '28px',
+                                                        padding: '4px 8px',
+                                                        border: '1px solid #B7B7B7',
+                                                        borderRadius: '4px',
+                                                        fontSize: '12px',
+                                                        outline: 'none'
+                                                    }}
+                                                    onFocus={(e) => {
+                                                        (e.target as HTMLInputElement).style.borderColor = '#1E88E5';
+                                                    }}
+                                                    onBlur={(e) => {
+                                                        (e.target as HTMLInputElement).style.borderColor = '#B7B7B7';
+                                                    }}
+                                                />
+                                            </div>
+
+                                            <div className="investigations-dropdown" style={{ maxHeight: '200px', overflowY: 'auto', padding: '4px 6px', display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', columnGap: '8px', rowGap: '6px' }}>
+                                                {investigationsLoading && (
+                                                    <div style={{ padding: '6px', fontSize: '12px', color: '#777', gridColumn: '1 / -1', textAlign: 'center' }}>
+                                                        Loading investigations...
+                                                    </div>
+                                                )}
+                                                {investigationsError && (
+                                                    <div style={{ padding: '6px', fontSize: '12px', color: '#d32f2f', gridColumn: '1 / -1', textAlign: 'center' }}>
+                                                        {investigationsError}
+                                                        <button
+                                                            onClick={() => {
+                                                                setInvestigationsError(null);
+                                                                const doctorId = treatmentData?.doctorId || '1';
+                                                                const clinicId = sessionData?.clinicId || '1';
+                                                                investigationService.getInvestigationsForDoctorAndClinic(doctorId, clinicId)
+                                                                    .then(setInvestigationsOptions)
+                                                                    .catch(e => setInvestigationsError(e.message));
+                                                            }}
+                                                            style={{
+                                                                marginLeft: '8px', 
+                                                                padding: '2px 6px', 
+                                                                fontSize: '10px', 
+                                                                backgroundColor: '#1976d2',
+                                                                color: 'white',
+                                                                border: 'none',
+                                                                borderRadius: '3px', 
+                                                                cursor: 'pointer' 
+                                                            }}
+                                                        >
+                                                            Retry
+                                                        </button>
+                                                    </div>
+                                                )}
+                                                {!investigationsLoading && !investigationsError && filteredInvestigations.length === 0 && (
+                                                    <div style={{ padding: '6px', fontSize: '12px', color: '#777', gridColumn: '1 / -1' }}>No investigations found</div>
+                                                )}
+                                                {!investigationsLoading && !investigationsError && filteredInvestigations.map((opt, index) => {
+                                                    const checked = selectedInvestigations.includes(opt.value);
+                                                    const isFirstUnselected = !checked && index > 0 && selectedInvestigations.includes(filteredInvestigations[index - 1].value);
+                                                    return (
+                                                        <React.Fragment key={opt.value}>
+                                                            {isFirstUnselected && (
+                                                                <div style={{ 
+                                                                    gridColumn: '1 / -1', 
+                                                                    height: '1px', 
+                                                                    backgroundColor: '#e0e0e0', 
+                                                                    margin: '4px 0' 
+                                                                }} />
+                                                            )}
+                                                            <label 
+                                                                style={{ 
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    gap: '4px', 
+                                                                    padding: '4px 2px', 
+                                                                    cursor: 'pointer', 
+                                                                    fontSize: '12px', 
+                                                                    border: 'none',
+                                                                    backgroundColor: checked ? '#e3f2fd' : 'transparent',
+                                                                    borderRadius: '3px',
+                                                                    fontWeight: checked ? '600' : '400'
+                                                                }}
+                                                            >
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={checked}
+                                                                    onChange={(e) => {
+                                                                        setSelectedInvestigations(prev => {
+                                                                            if (e.target.checked) {
+                                                                                if (prev.includes(opt.value)) return prev;
+                                                                                return [...prev, opt.value];
+                                                                            } else {
+                                                                                return prev.filter(v => v !== opt.value);
+                                                                            }
+                                                                        });
+                                                                    }}
+                                                                    style={{ margin: 0 }}
+                                                                />
+                                                                <span style={{ whiteSpace: 'nowrap' }}>{opt.label}</span>
+                                                            </label>
+                                                        </React.Fragment>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
                                 <button
-                                    type="button"
-                                    onClick={handleAddInvestigation}
                                     style={{
+                                        padding: '0 10px',
                                         backgroundColor: '#1976d2',
                                         color: 'white',
                                         border: 'none',
-                                        padding: '6px 12px',
-                                        borderRadius: '4px',
+                                        borderRadius: '6px',
                                         cursor: 'pointer',
-                                        fontSize: '12px'
+                                        fontSize: '12px',
+                                        height: '32px',
+                                        transition: 'background-color 0.2s'
                                     }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.backgroundColor = '#1565c0';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.backgroundColor = '#1976d2';
+                                    }}
+                                    onClick={handleAddInvestigations}
                                 >
                                     Add
                                 </button>
@@ -3006,7 +3899,16 @@ export default function Treatment() {
                                     setCurrentVisitIndex(newIndex);
                                     const selectedVisit = allVisits[newIndex];
                                     const patientName = selectedPatientForForm?.name || '';
-                                    const mapped = mapPreviousVisitToInitialData(selectedVisit, patientName, null);
+                                    const appointmentRow = {
+                                        patientId: treatmentData?.patientId,
+                                        patient: treatmentData?.patientName,
+                                        age: treatmentData?.age,
+                                        gender: treatmentData?.gender,
+                                        contact: treatmentData?.contact,
+                                        doctorId: treatmentData?.doctorId,
+                                        provider: getDoctorLabelById(treatmentData?.doctorId)
+                                    };
+                                    const mapped = mapPreviousVisitToInitialData(selectedVisit, patientName, appointmentRow);
                                     setFormPatientData(mapped);
                                 }
                             }}

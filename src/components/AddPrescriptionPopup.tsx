@@ -340,52 +340,8 @@ const AddPrescriptionPopup: React.FC<AddPrescriptionPopupProps> = ({ open, onClo
                         </div>
                     </div>
 
-                    {/* Instruction and Days - Two fields in one row */}
+                    {/* Breakfast and Lunch - Two fields in one row */}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
-                        <div>
-                            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                Instruction
-                            </label>
-                            <input
-                                type="text"
-                                placeholder="Instruction"
-                                value={prescriptionData.instruction}
-                                onChange={(e) => handleInputChange('instruction', e.target.value)}
-                                style={{
-                                    width: '100%',
-                                    padding: '6px 10px',
-                                    border: '1px solid #ccc',
-                                    borderRadius: '4px',
-                                    fontSize: '13px',
-                                    backgroundColor: 'white',
-                                    outline: 'none'
-                                }}
-                            />
-                        </div>
-                        <div>
-                            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                Days
-                            </label>
-                            <input
-                                type="text"
-                                placeholder="Days"
-                                value={prescriptionData.days}
-                                onChange={(e) => handleInputChange('days', e.target.value)}
-                                style={{
-                                    width: '100%',
-                                    padding: '6px 10px',
-                                    border: '1px solid #ccc',
-                                    borderRadius: '4px',
-                                    fontSize: '13px',
-                                    backgroundColor: 'white',
-                                    outline: 'none'
-                                }}
-                            />
-                        </div>
-                    </div>
-
-                    {/* Meal Times - Three fields in one row */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px', marginBottom: '15px' }}>
                         <div>
                             <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
                                 Breakfast
@@ -426,6 +382,10 @@ const AddPrescriptionPopup: React.FC<AddPrescriptionPopupProps> = ({ open, onClo
                                 }}
                             />
                         </div>
+                    </div>
+
+                    {/* Dinner and Days - Two fields in one row */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
                         <div>
                             <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
                                 Dinner
@@ -446,6 +406,48 @@ const AddPrescriptionPopup: React.FC<AddPrescriptionPopupProps> = ({ open, onClo
                                 }}
                             />
                         </div>
+                        <div>
+                            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                                Days
+                            </label>
+                            <input
+                                type="text"
+                                placeholder="Days"
+                                value={prescriptionData.days}
+                                onChange={(e) => handleInputChange('days', e.target.value)}
+                                style={{
+                                    width: '100%',
+                                    padding: '6px 10px',
+                                    border: '1px solid #ccc',
+                                    borderRadius: '4px',
+                                    fontSize: '13px',
+                                    backgroundColor: 'white',
+                                    outline: 'none'
+                                }}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Instruction - Full width field */}
+                    <div style={{ marginBottom: '15px' }}>
+                        <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                            Instruction
+                        </label>
+                        <input
+                            type="text"
+                            placeholder="Instruction"
+                            value={prescriptionData.instruction}
+                            onChange={(e) => handleInputChange('instruction', e.target.value)}
+                            style={{
+                                width: '100%',
+                                padding: '6px 10px',
+                                border: '1px solid #ccc',
+                                borderRadius: '4px',
+                                fontSize: '13px',
+                                backgroundColor: 'white',
+                                outline: 'none'
+                            }}
+                        />
                     </div>
 
                     {/* Instruction Text */}

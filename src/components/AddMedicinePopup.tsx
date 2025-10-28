@@ -247,52 +247,8 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                         </div>
                     </div>
 
-                    {/* Instruction and Days - Two fields in one row */}
+                    {/* Breakfast and Lunch - Two fields in one row */}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
-                        <div>
-                            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                Instruction
-                            </label>
-                            <input
-                                type="text"
-                                placeholder="Instruction"
-                                value={medicineData.instruction}
-                                onChange={(e) => handleInputChange('instruction', e.target.value)}
-                                style={{
-                                    width: '100%',
-                                    padding: '6px 10px',
-                                    border: '1px solid #ccc',
-                                    borderRadius: '4px',
-                                    fontSize: '13px',
-                                    backgroundColor: 'white',
-                                    outline: 'none'
-                                }}
-                            />
-                        </div>
-                        <div>
-                            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                Days
-                            </label>
-                            <input
-                                type="text"
-                                placeholder="Days"
-                                value={medicineData.days}
-                                onChange={(e) => handleInputChange('days', e.target.value)}
-                                style={{
-                                    width: '100%',
-                                    padding: '6px 10px',
-                                    border: '1px solid #ccc',
-                                    borderRadius: '4px',
-                                    fontSize: '13px',
-                                    backgroundColor: 'white',
-                                    outline: 'none'
-                                }}
-                            />
-                        </div>
-                    </div>
-
-                    {/* Meal Times - Three fields in one row */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px', marginBottom: '15px' }}>
                         <div>
                             <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
                                 Breakfast
@@ -333,6 +289,10 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                                 }}
                             />
                         </div>
+                    </div>
+
+                    {/* Dinner and Days - Two fields in one row */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
                         <div>
                             <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
                                 Dinner
@@ -353,6 +313,48 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                                 }}
                             />
                         </div>
+                        <div>
+                            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                                Days
+                            </label>
+                            <input
+                                type="text"
+                                placeholder="Days"
+                                value={medicineData.days}
+                                onChange={(e) => handleInputChange('days', e.target.value)}
+                                style={{
+                                    width: '100%',
+                                    padding: '6px 10px',
+                                    border: '1px solid #ccc',
+                                    borderRadius: '4px',
+                                    fontSize: '13px',
+                                    backgroundColor: 'white',
+                                    outline: 'none'
+                                }}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Instruction - Full Width */}
+                    <div style={{ marginBottom: '15px' }}>
+                        <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                            Instruction
+                        </label>
+                        <input
+                            type="text"
+                            placeholder="Instruction"
+                            value={medicineData.instruction}
+                            onChange={(e) => handleInputChange('instruction', e.target.value)}
+                            style={{
+                                width: '100%',
+                                padding: '6px 10px',
+                                border: '1px solid #ccc',
+                                borderRadius: '4px',
+                                fontSize: '13px',
+                                backgroundColor: 'white',
+                                outline: 'none'
+                            }}
+                        />
                     </div>
 
                     {/* Instruction Text */}

@@ -2557,7 +2557,10 @@ export default function AppointmentTable() {
                                                                             visitNumber: a.visitNumber,
                                                                             doctorId: a.doctorId,
                                                                             clinicId: clinicId,
-                                                                            appointmentId: a.appointmentId
+                                                                            appointmentId: a.appointmentId,
+                                                                            age: a.age,
+                                                                            gender: a.gender,
+                                                                            contact: a.contact
                                                                         }
                                                                     });
                                                                     }
