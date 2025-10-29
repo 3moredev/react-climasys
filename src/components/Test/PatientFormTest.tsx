@@ -45,7 +45,7 @@ type PatientFormData = {
     smoking: boolean;
     tobacco: boolean;
     alcohol: boolean;
-    inPerson: true;
+    inPerson: boolean;
 
     // Medical Details
     allergy: string;
@@ -425,6 +425,29 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
         return String(raw || '');
     };
 
+    // Complaints: prefer rawVisit.Current_Complaints if present, else form field
+    const getComplaintsValue = (): string => {
+        const rv = formData?.rawVisit || {};
+        const source = rv.Current_Complaints;
+        if (source === undefined || source === null || source === '') {
+            return formData.complaints || '';
+        }
+        if (typeof source === 'string') {
+            // Some backends send JSON-encoded strings
+            try {
+                const parsed = JSON.parse(source);
+                return typeof parsed === 'string' ? parsed : String(source);
+            } catch {
+                return source;
+            }
+        }
+        try {
+            return JSON.stringify(source);
+        } catch {
+            return String(source);
+        }
+    };
+
     const addPrescription = () => {
         setFormData(prev => ({
             ...prev,
@@ -496,7 +519,7 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                 onClick={() => navigateVisitDate('prev')}
                                 disabled={currentVisitIndex <= 0}
                                 style={{
-                                    backgroundColor: currentVisitIndex <= 0 ? 'rgb(221, 221, 221)' : '#000000',
+                                    backgroundColor: currentVisitIndex <= 0 ? 'rgba(0, 0, 0, 0.35)' : 'rgb(25, 118, 210)',
                                     border: '1px solid #90CAF9',
                                     color: '#000',
                                     padding: '6px 10px',
@@ -536,7 +559,7 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                 onClick={() => navigateVisitDate('next')}
                                 disabled={currentVisitIndex >= visitDates.length - 1}
                                 style={{
-                                    backgroundColor: currentVisitIndex >= visitDates.length - 1 ? 'rgb(221, 221, 221)' : '#000000',
+                                    backgroundColor: currentVisitIndex >= visitDates.length - 1 ? 'rgba(0, 0, 0, 0.35)' : 'rgb(25, 118, 210)',
                                     border: '1px solid #90CAF9',
                                     color: '#000',
                                     padding: '6px 10px',
@@ -597,7 +620,7 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                         marginBottom: '12px'
                     }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <label style={{ color: '#212121', fontSize: '0.9rem', fontWeight: 'bold', fontFamily: "'Roboto', sans-serif" }}>Referred By:</label>
+                            <label style={{ color: '#212121', fontSize: '0.9rem', fontWeight: 'bold', fontFamily: "'Roboto', sans-serif" }}>Referred By</label>
                             <input
                                 type="text"
                                 value={isReadOnly ? truncateText(formData.referredBy) : formData.referredBy}
@@ -618,10 +641,10 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                             />
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <label style={{ color: '#212121', fontSize: '0.9rem', fontWeight: 'bold', fontFamily: "'Roboto', sans-serif" }}>In Person:</label>
+                            <label style={{ color: '#212121', fontSize: '0.9rem', fontWeight: 'bold', fontFamily: "'Roboto', sans-serif" }}>In Person</label>
                             <input
                                 type="checkbox"
-                                checked={formData.inPerson}
+                                checked={true}
                                 onChange={() => handleCheckboxChange('inPerson')}
                                 disabled={isReadOnly}
                                 style={{
@@ -670,8 +693,56 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                             </div>
                         </div> */}
                     </div>
-                    {/* Inline groups: will wrap to 2 lines if needed */}
-                    <div style={{
+
+                    {/* Conditions (5 per row) */}
+                    <div style={{ 
+                        display: 'grid', 
+                        gridTemplateColumns: 'repeat(10, 1fr)', 
+                        gap: '10px',
+                        marginBottom: '20px'
+                    }}>
+                        {[
+                            { key: 'hypertension', label: 'Hypertension' },
+                            { key: 'diabetes', label: 'Diabetes' },
+                            { key: 'cholesterol', label: 'Cholesterol' },
+                            { key: 'ihd', label: 'IHD' },
+                            { key: 'asthma', label: 'Asthma' },
+                            { key: 'th', label: 'TH' }, 
+                            { key: 'smoking', label: 'Smoking' },
+                            { key: 'tobacco', label: 'Tobacco' },
+                            { key: 'alcohol', label: 'Alcohol' }
+                        ].map(({ key, label }) => (
+                            <div key={key} style={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: '8px' 
+                            }}>
+                                <input
+                                    type="checkbox"
+                                    checked={formData[key as keyof typeof formData] as boolean}
+                                    onChange={() => handleCheckboxChange(key)}
+                                    disabled={isReadOnly}
+                                    style={{
+                                        width: '16px',
+                                        height: '16px',
+                                        accentColor: '#1E88E5'
+                                    }}
+                                />
+                                <label style={{ 
+                                    color: '#212121', 
+                                    fontSize: '0.9rem', 
+                                    fontWeight: 'bold',
+                                    fontFamily: "'Roboto', sans-serif",
+                                    margin: 0
+                                }}>
+                                    {label}
+                                </label>
+                            </div>
+                        ))}
+                    </div>
+
+                      {/* Inline groups: will wrap to 2 lines if needed */}
+                      <div style={{
                         display: 'flex',
                         flexWrap: 'wrap',
                         alignItems: 'center',
@@ -787,7 +858,7 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                             <label style={{ color: '#212121', fontSize: '0.9rem', fontWeight: 'bold', fontFamily: "'Roboto', sans-serif" }}>TFT:</label>
                             <input
                                 type="text"
-                                value={formData.tft}
+                                value={formData.rawVisit?.ThText ?? ''}
                                 onChange={(e) => handleInputChange('tft', e.target.value)}
                                 disabled={isReadOnly}
                                 style={{
@@ -827,53 +898,6 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                         </div>
                     </div>
 
-                    {/* Conditions (5 per row) */}
-                    <div style={{ 
-                        display: 'grid', 
-                        gridTemplateColumns: 'repeat(10, 1fr)', 
-                        gap: '10px',
-                        marginBottom: '20px'
-                    }}>
-                        {[
-                            { key: 'hypertension', label: ':Hypertension' },
-                            { key: 'diabetes', label: ':Diabetes' },
-                            { key: 'cholesterol', label: ':Cholesterol' },
-                            { key: 'ihd', label: ':IHD' },
-                            { key: 'asthma', label: ':Asthma' },
-                            { key: 'th', label: ':TH' },
-                            { key: 'smoking', label: ':Smoking' },
-                            { key: 'tobacco', label: ':Tobacco' },
-                            { key: 'alcohol', label: ':Alcohol' }
-                        ].map(({ key, label }) => (
-                            <div key={key} style={{ 
-                                display: 'flex', 
-                                alignItems: 'center', 
-                                gap: '8px' 
-                            }}>
-                                <input
-                                    type="checkbox"
-                                    checked={formData[key as keyof typeof formData] as boolean}
-                                    onChange={() => handleCheckboxChange(key)}
-                                    disabled={isReadOnly}
-                                    style={{
-                                        width: '16px',
-                                        height: '16px',
-                                        accentColor: '#1E88E5'
-                                    }}
-                                />
-                                <label style={{ 
-                                    color: '#212121', 
-                                    fontSize: '0.9rem', 
-                                    fontWeight: 'bold',
-                                    fontFamily: "'Roboto', sans-serif",
-                                    margin: 0
-                                }}>
-                                    {label}
-                                </label>
-                            </div>
-                        ))}
-                    </div>
-
                     {/* Narrative fields (5 per row, auto-height) */}
                     <div style={{ 
                         display: 'grid', 
@@ -882,15 +906,15 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                         marginBottom: '20px'
                     }}>
                         {[
-                            { key: 'allergy', label: 'Allergy:' },
+                            { key: 'allergy', label: 'Allergy' },
                             // { key: 'medicalHistory', label: 'Medical History:' },
-                            { key: 'surgicalHistory', label: 'Surgical History:' },
-                            { key: 'visitComments', label: 'Visit Comments:' },
-                            { key: 'medicines', label: 'Exisiting Medicines:' },
-                            { key: 'detailedHistory', label: 'Detailed History/Additional Comments:' },
-                            { key: 'examinationFindings', label: 'Important/Examination Findings:' },
-                            { key: 'complaints', label: 'Complaints:' },
-                            { key: 'provisionalDiagnosis', label: 'Provisional Diagnosis:' },
+                            { key: 'surgicalHistory', label: 'Surgical History' },
+                            { key: 'visitComments', label: 'Visit Comments' },
+                            { key: 'medicines', label: 'Exisiting Medicines' },
+                            { key: 'detailedHistory', label: 'Detailed History/Additional Comments' },
+                            { key: 'examinationFindings', label: 'Important/Examination Findings' },
+                            { key: 'complaints', label: 'Complaints' },
+                            { key: 'provisionalDiagnosis', label: 'Provisional Diagnosis' },
                             // { key: 'examinationComments', label: 'Examination Comments/Detailed History:' },
                             // { key: 'procedurePerformed', label: 'Procedure Performed/Notes:' }
                         ].map(({ key, label }) => (
@@ -907,7 +931,23 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                 </label>
                                 <div style={{ position: 'relative' }}>
                                     <textarea
-                                        value={isReadOnly ? truncateText(key === 'labSuggested' ? getLabSuggestedValue() : (formData[key as keyof typeof formData] as string)) : (key === 'labSuggested' ? getLabSuggestedValue() : (formData[key as keyof typeof formData] as string))}
+                                        value={
+                                            isReadOnly
+                                                ? truncateText(
+                                                    key === 'labSuggested'
+                                                        ? getLabSuggestedValue()
+                                                        : key === 'complaints'
+                                                            ? getComplaintsValue()
+                                                            : (formData[key as keyof typeof formData] as string)
+                                                  )
+                                                : (
+                                                    key === 'labSuggested'
+                                                        ? getLabSuggestedValue()
+                                                        : key === 'complaints'
+                                                            ? getComplaintsValue()
+                                                            : (formData[key as keyof typeof formData] as string)
+                                                  )
+                                        }
                                         onChange={(e) => { handleInputChange(key, e.target.value); }}
                                         placeholder={formData[key as keyof typeof formData] ? '' : '-'}
                                         disabled={isReadOnly}
@@ -927,7 +967,13 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                             textOverflow: 'ellipsis',
                                             whiteSpace: 'nowrap'
                                         }}
-                                        title={key === 'labSuggested' ? getLabSuggestedValue() : (formData[key as keyof typeof formData] as string)}
+                                        title={
+                                            key === 'labSuggested'
+                                                ? getLabSuggestedValue()
+                                                : key === 'complaints'
+                                                    ? getComplaintsValue()
+                                                    : (formData[key as keyof typeof formData] as string)
+                                        }
                                     />
                                 </div>
                             </div>
@@ -1061,10 +1107,10 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                     }}>
                         {[
                             // { key: 'labSuggested', label: 'Lab Suggested:' },
-                            { key: 'medicines', label: 'Medicines:' },
-                            { key: 'dressing', label: 'Dressing:' },
-                            { key: 'procedure', label: 'Procedure:' },
-                            { key: 'plan', label: 'Plan:' }
+                            { key: 'medicines', label: 'Medicines' },
+                            { key: 'dressing', label: 'Dressing' },
+                            { key: 'procedure', label: 'Procedure' },
+                            { key: 'plan', label: 'Plan' }
                         ].map(({ key, label }) => (
                             <div key={key}>
                                 <label style={{ 

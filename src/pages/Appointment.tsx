@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { List, CreditCard, MoreVert, Add as AddIcon, Save, Delete, Info, FastForward, Close, ChatBubbleOutline, Phone, SwapHoriz, ShoppingCart } from "@mui/icons-material";
+import { Snackbar } from '@mui/material';
 import { appointmentService, Appointment, AppointmentRequest, TodayAppointmentsResponse, getDoctorStatusReference, getStatusOptionsByClinic } from "../services/appointmentService";
 import { doctorService, DoctorDetail, Doctor } from "../services/doctorService";
 import { patientService, Patient, formatVisitDateTime, getVisitStatusText } from "../services/patientService";
@@ -93,6 +94,9 @@ export default function AppointmentTable() {
     // Snackbar state
     const [showSnackbar, setShowSnackbar] = useState<boolean>(false);
     const [snackbarMessage, setSnackbarMessage] = useState<string>('');
+    // Snackbar for booking success
+    const [showBookedSnackbar, setShowBookedSnackbar] = useState<boolean>(false);
+    const [bookedSnackbarMessage, setBookedSnackbarMessage] = useState<string>('');
 
     // Doctor selection state
     const [allDoctors, setAllDoctors] = useState<Doctor[]>([]);
@@ -885,8 +889,40 @@ export default function AppointmentTable() {
         setShowDropdown(false);
     };
 
-    // Handle search button click - check if patient has appointment today
+    // Handle search button click - filter table on Doctor screen; keep snackbar flow for others
     const handleSearchButtonClick = () => {
+        // Doctor screen: apply filters to the table based on selected patient or typed query
+        if (isDoctor) {
+            const q = (searchTerm || '').trim();
+
+            if (selectedPatients.length > 0) {
+                const p = selectedPatients[0] as any;
+                const fullName = `${p.first_name || ''} ${p.middle_name || ''} ${p.last_name || ''}`.replace(/\s+/g, ' ').trim();
+                setFilterName(fullName || q);
+                // If patient has a contact, use it to narrow results
+                if (p.mobile_1) setFilterContact(String(p.mobile_1));
+                setCurrentPage(1);
+                setShowDropdown(false);
+                return;
+            }
+
+            if (q) {
+                setFilterName(q);
+                const digits = q.replace(/\D/g, '');
+                if (digits.length >= 3) setFilterContact(digits);
+                setCurrentPage(1);
+                setShowDropdown(false);
+                return;
+            }
+
+            // If nothing to filter by, show a gentle prompt
+            setSnackbarMessage("Type a search term or select a patient to filter");
+            setShowSnackbar(true);
+            setTimeout(() => setShowSnackbar(false), 2500);
+            return;
+        }
+
+        // Existing receptionist behavior: check if selected patient has appointment today
         if (selectedPatients.length === 0) {
             setSnackbarMessage("Please select a patient first!");
             setShowSnackbar(true);
@@ -1550,17 +1586,23 @@ export default function AppointmentTable() {
     // Book appointment - immediately call API
     const handleBookAppointment = async () => {
         if (selectedPatients.length === 0) {
-            alert("Please select a patient to book an appointment.");
+            setSnackbarMessage("Please select a patient to book an appointment.");
+            setShowSnackbar(true);
+            setTimeout(() => setShowSnackbar(false), 3000);
             return;
         }
 
         if (selectedPatients.length > 1) {
-            alert("Please select only one patient at a time.");
+            setSnackbarMessage("Please select only one patient at a time.");
+            setShowSnackbar(true);
+            setTimeout(() => setShowSnackbar(false), 3000);
             return;
         }
 
         if (!selectedDoctorId) {
-            alert("Please select a doctor for the appointment.");
+            setSnackbarMessage("Please select a doctor for the appointment.");
+            setShowSnackbar(true);
+            setTimeout(() => setShowSnackbar(false), 3000);
             return;
         }
 
@@ -1572,7 +1614,9 @@ export default function AppointmentTable() {
                 (a) => a.patientId === String(patient.id) && String(a.status || '').toUpperCase() !== 'COMPLETE'
             );
             if (hasNonCompletedAppointment) {
-                alert("This patient has an existing appointment that is not COMPLETE. Please complete it before booking a new one.");
+                setSnackbarMessage("This patient has an existing appointment that is not COMPLETE. Please complete it before booking a new one.");
+                setShowSnackbar(true);
+                setTimeout(() => setShowSnackbar(false), 4000);
                 return;
             }
 
@@ -1588,7 +1632,9 @@ export default function AppointmentTable() {
             }
 
             if (!clinicId) {
-                alert("Unable to determine clinic ID. Please ensure you are properly logged in and try again.");
+                setSnackbarMessage("Unable to determine clinic ID. Please ensure you are properly logged in and try again.");
+                setShowSnackbar(true);
+                setTimeout(() => setShowSnackbar(false), 4000);
                 return;
             }
 
@@ -1649,7 +1695,8 @@ export default function AppointmentTable() {
                         console.warn('⚠️ fetchPreviousVisits failed for string pid:', appointmentData.patientId, e);
                     }
                     setSelectedPatients([]);
-                    alert(`Successfully booked appointment for ${patient.first_name} ${patient.last_name}!`);
+                    setBookedSnackbarMessage(`Appointment booked for ${patient.first_name} ${patient.last_name}`);
+                    setShowBookedSnackbar(true);
                 } catch (refreshError) {
                     console.error('Failed to refresh appointments after booking:', refreshError);
                     // Fallback: add with default status
@@ -1670,14 +1717,19 @@ export default function AppointmentTable() {
                         console.warn('⚠️ fetchPreviousVisits failed for string pid:', appointmentData.patientId, e);
                     }
                     setSelectedPatients([]);
-                    alert(`Successfully booked appointment for ${patient.first_name} ${patient.last_name}!`);
+                    setBookedSnackbarMessage(`Appointment booked for ${patient.first_name} ${patient.last_name}`);
+                    setShowBookedSnackbar(true);
                 }
             } else {
-                alert(`Failed to book appointment: ${result.error || 'Unknown error'}`);
+                setSnackbarMessage(`Failed to book appointment: ${result.error || 'Unknown error'}`);
+                setShowSnackbar(true);
+                setTimeout(() => setShowSnackbar(false), 4000);
             }
         } catch (error) {
             console.error("Error booking appointment:", error);
-            alert("Failed to book appointment. Please try again.");
+            setSnackbarMessage("Failed to book appointment. Please try again.");
+            setShowSnackbar(true);
+            setTimeout(() => setShowSnackbar(false), 4000);
         }
     };
 
@@ -1705,13 +1757,29 @@ export default function AppointmentTable() {
 
         return nameOk && contactOk && statusOk;
     });
-    // Sort to keep WAITING (statusId === 1) at the top
-    const sortedAppointments = [...filteredAppointments].sort((a, b) => {
-        const aIsWaiting = mapStatusLabelToId(a.status) === 1;
-        const bIsWaiting = mapStatusLabelToId(b.status) === 1;
-        if (aIsWaiting === bIsWaiting) return 0;
-        return aIsWaiting ? -1 : 1;
-    });
+    // Sort order depends on role
+    // - Doctor: WITH DOCTOR (top) -> CONSULT ON CALL -> WAITING
+    // - Others: WAITING (top) as before
+    const sortedAppointments = isDoctor
+        ? [...filteredAppointments].sort((a, b) => {
+            const priority = (s: string) => {
+                const n = normalizeStatusLabel(s);
+                if (n === 'WITH DOCTOR') return 0;
+                if (n === 'CONSULT ON CALL') return 1;
+                if (n === 'WAITING') return 2;
+                return 99;
+            };
+            const pa = priority(a.status);
+            const pb = priority(b.status);
+            if (pa !== pb) return pa - pb;
+            return 0;
+        })
+        : [...filteredAppointments].sort((a, b) => {
+            const aIsWaiting = mapStatusLabelToId(a.status) === 1;
+            const bIsWaiting = mapStatusLabelToId(b.status) === 1;
+            if (aIsWaiting === bIsWaiting) return 0;
+            return aIsWaiting ? -1 : 1;
+        });
     const totalPages = Math.ceil(filteredAppointments.length / pageSize);
     const startIndex = (currentPage - 1) * pageSize;
     const endIndex = startIndex + pageSize;
@@ -1889,6 +1957,17 @@ export default function AppointmentTable() {
 
     // Doctor Screen Component - Same UI but different functionality
     const DoctorScreen = () => {
+        // Show loader until all essential API calls complete for doctor view
+        const isDoctorLoading = (
+            loadingSessionData ||
+            loadingDoctors ||
+            loadingStatuses ||
+            loadingAppointments ||
+            !sessionData ||
+            allDoctors.length === 0 ||
+            !selectedDoctorId
+        );
+
         return (
             <div className="container-fluid mt-3" style={{ fontFamily: "'Roboto', sans-serif" }}>
 
@@ -2328,7 +2407,6 @@ export default function AppointmentTable() {
                                         <div className="spinner-border spinner-border-sm text-primary" role="status">
                                             <span className="visually-hidden">Loading...</span>
                                         </div>
-                                        <span className="ms-2">Searching...</span>
                                     </div>
                                 ) : searchResults.length > 0 ? (
                                     searchResults.map((patient) => {
@@ -2470,18 +2548,39 @@ export default function AppointmentTable() {
 
                 {/* Content Area - Same as receptionist but without booking functionality */}
                 {filteredAppointments.length === 0 ? (
-                    <div className="text-center py-5">
-                        <div className="mb-3">
-                            <i className="fas fa-calendar-check" style={{ fontSize: "3rem", color: "#6c757d" }}></i>
+                    isDoctorLoading ? (
+                        <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '300px' }}>
+                            <div className="spinner-border text-primary" role="status" style={{ width: '3rem', height: '3rem' }}>
+                                <span className="visually-hidden">Loading...</span>
+                            </div>
                         </div>
-                        <h5 className="text-muted">No Patients Currently With You</h5>
-                        <p className="text-muted">No patients are waiting or have "WITH DOCTOR" or "CONSULT ON CALL" status at the moment.</p>
-                    </div>
+                    ) : (
+                        <div className="text-center py-5">
+                            <div className="mb-3">
+                                <i className="fas fa-calendar-check" style={{ fontSize: "3rem", color: "#6c757d" }}></i>
+                            </div>
+                            <h5 className="text-muted">No Patients Currently With You</h5>
+                            <p className="text-muted">No patients are waiting or have "WITH DOCTOR" or "CONSULT ON CALL" status at the moment.</p>
+                        </div>
+                    )
                 ) : (
                     <>
                         {/* List View - Same as receptionist */}
                         {activeView === 'list' && (
-                            <div className="table-responsive">
+                            <div className="table-responsive position-relative">
+                                {/* Loading overlay for appointments refresh (Doctor screen) */}
+                                {isDoctorLoading && (
+                                    <div className="position-absolute top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center" 
+                                         style={{ 
+                                             backgroundColor: 'rgba(255, 255, 255, 0.8)', 
+                                             zIndex: 10,
+                                             minHeight: '200px'
+                                         }}>
+                                        <div className="spinner-border text-primary" role="status">
+                                            <span className="visually-hidden">Refreshing...</span>
+                                        </div>
+                                    </div>
+                                )}
                                 <table className="table table-borderless align-middle appointments-table">
                                     <thead>
                                         <tr>
@@ -2754,7 +2853,20 @@ export default function AppointmentTable() {
 
                         {/* Card View - Same as receptionist */}
                         {activeView === 'card' && (
-                            <div className="card-grid">
+                            <div className="card-grid position-relative">
+                                {/* Loading overlay for appointments refresh (Doctor screen) */}
+                                {isDoctorLoading && (
+                                    <div className="position-absolute top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center" 
+                                         style={{ 
+                                             backgroundColor: 'rgba(255, 255, 255, 0.8)', 
+                                             zIndex: 10,
+                                             minHeight: '200px'
+                                         }}>
+                                        <div className="spinner-border text-primary" role="status">
+                                            <span className="visually-hidden">Refreshing...</span>
+                                        </div>
+                                    </div>
+                                )}
                                 {currentAppointments.map((appointment, index) => {
                                     const originalIndex = startIndex + index;
                                     return (
@@ -3131,19 +3243,8 @@ export default function AppointmentTable() {
     if (!isInitialLoadComplete) {
         return (
             <div className="container-fluid mt-3 d-flex justify-content-center align-items-center" style={{ minHeight: '400px' }}>
-                <div className="text-center">
-                    <div className="spinner-border text-primary" role="status" style={{ width: '3rem', height: '3rem' }}>
-                        <span className="visually-hidden">Loading...</span>
-                    </div>
-                    <div className="mt-3">
-                        <h5 className="text-muted">Loading appointments...</h5>
-                        <div className="small text-muted">
-                            {loadingSessionData && <div>• Loading session data</div>}
-                            {loadingDoctors && <div>• Loading doctors</div>}
-                            {loadingAppointments && <div>• Loading appointments</div>}
-                            {loadingStatuses && <div>• Loading status options</div>}
-                        </div>
-                    </div>
+                <div className="spinner-border text-primary" role="status" style={{ width: '3rem', height: '3rem' }}>
+                    <span className="visually-hidden">Loading...</span>
                 </div>
             </div>
         );
@@ -3503,7 +3604,6 @@ export default function AppointmentTable() {
                                     <div className="spinner-border spinner-border-sm text-primary" role="status">
                                         <span className="visually-hidden">Loading...</span>
                                     </div>
-                                    <span className="ms-2">Searching...</span>
                                 </div>
                             ) : searchResults.length > 0 ? (
                                 searchResults.map((patient) => {
@@ -3724,11 +3824,8 @@ export default function AppointmentTable() {
                                          zIndex: 10,
                                          minHeight: '200px'
                                      }}>
-                                    <div className="text-center">
-                                        <div className="spinner-border text-primary" role="status">
-                                            <span className="visually-hidden">Refreshing appointments...</span>
-                                        </div>
-                                        <div className="mt-2 small text-muted">Refreshing appointments...</div>
+                                    <div className="spinner-border text-primary" role="status">
+                                        <span className="visually-hidden">Refreshing...</span>
                                     </div>
                                 </div>
                             )}
@@ -4027,7 +4124,9 @@ export default function AppointmentTable() {
                                                                     console.log('================================');
 
                                                                     if (!pid || !clinic || !doctor) {
-                                                                        alert('Missing identifiers to update appointment');
+                                                                        setSnackbarMessage('Missing identifiers to update appointment');
+                                                                        setShowSnackbar(true);
+                                                                        setTimeout(() => setShowSnackbar(false), 3000);
                                                                         return;
                                                                     }
 
@@ -4045,7 +4144,9 @@ export default function AppointmentTable() {
                                                                     console.log('Update response:', response);
 
                                                                         if (response.success) {
-                                                                        alert('Appointment updated successfully');
+                                                                        setSnackbarMessage('Appointment updated successfully');
+                                                                        setShowSnackbar(true);
+                                                                        setTimeout(() => setShowSnackbar(false), 3000);
                                                                             // Commit pending status to saved fields
                                                                             if ((appointments[originalIndex] as any).statusPending) {
                                                                                 const committed = (appointments[originalIndex] as any).statusPending;
@@ -4069,11 +4170,15 @@ export default function AppointmentTable() {
                                                                             console.warn('Refresh after save failed:', e);
                                                                         }
                                                                     } else {
-                                                                        alert('Update failed: ' + (response.message || 'Unknown error'));
+                                                                        setSnackbarMessage('Update failed: ' + (response.message || 'Unknown error'));
+                                                                        setShowSnackbar(true);
+                                                                        setTimeout(() => setShowSnackbar(false), 4000);
                                                                     }
                                                                 } catch (err) {
                                                                     console.error('Update appointment failed:', err);
-                                                                    alert('Failed to update appointment: ' + (err as any).message);
+                                                                    setSnackbarMessage('Failed to update appointment: ' + (err as any).message);
+                                                                    setShowSnackbar(true);
+                                                                    setTimeout(() => setShowSnackbar(false), 4000);
                                                                 }
                                                             }}
                                                             style={{
@@ -4132,7 +4237,9 @@ export default function AppointmentTable() {
                                                                     console.log('=== END DEBUG ===');
                                                                     const did = a.doctorId || selectedDoctorId;
                                                                     if (!pid || !vdatetime || !did) {
-                                                                        alert('Missing identifiers to delete appointment');
+                                                                        setSnackbarMessage('Missing identifiers to delete appointment');
+                                                                        setShowSnackbar(true);
+                                                                        setTimeout(() => setShowSnackbar(false), 3000);
                                                                         return;
                                                                     }
                                                                     const confirmDelete = window.confirm('Delete this appointment?');
@@ -4148,7 +4255,9 @@ export default function AppointmentTable() {
                                                                     setAppointments(prev => prev.filter((_, i) => i !== originalIndex));
                                                                 } catch (err) {
                                                                     console.error('Delete appointment failed:', err);
-                                                                    alert('Failed to delete appointment');
+                                                                    setSnackbarMessage('Failed to delete appointment');
+                                                                    setShowSnackbar(true);
+                                                                    setTimeout(() => setShowSnackbar(false), 3000);
                                                                 }
                                                             }}
                                                             style={{
@@ -4382,11 +4491,8 @@ export default function AppointmentTable() {
                                          zIndex: 10,
                                          minHeight: '200px'
                                      }}>
-                                    <div className="text-center">
-                                        <div className="spinner-border text-primary" role="status">
-                                            <span className="visually-hidden">Refreshing appointments...</span>
-                                        </div>
-                                        <div className="mt-2 small text-muted">Refreshing appointments...</div>
+                                    <div className="spinner-border text-primary" role="status">
+                                        <span className="visually-hidden">Refreshing...</span>
                                     </div>
                                 </div>
                             )}
@@ -4607,7 +4713,9 @@ export default function AppointmentTable() {
                                                                 console.log('================================');
 
                                                                 if (!pid || !clinic || !doctor) {
-                                                                    alert('Missing identifiers to update appointment');
+                                                                    setSnackbarMessage('Missing identifiers to update appointment');
+                                                                    setShowSnackbar(true);
+                                                                    setTimeout(() => setShowSnackbar(false), 3000);
                                                                     return;
                                                                 }
 
@@ -4625,7 +4733,9 @@ export default function AppointmentTable() {
                                                                 console.log('Update response:', response);
 
                                                                 if (response.success) {
-                                                                    alert('Appointment updated successfully');
+                                                                    setSnackbarMessage('Appointment updated successfully');
+                                                                    setShowSnackbar(true);
+                                                                    setTimeout(() => setShowSnackbar(false), 2000);
                                                                     // Commit pending status to saved fields
                                                                     if ((appointments[originalIndex] as any).statusPending) {
                                                                         const committed = (appointments[originalIndex] as any).statusPending;
@@ -4647,11 +4757,15 @@ export default function AppointmentTable() {
                                                                         console.warn('Refresh after save failed (card view):', e);
                                                                     }
                                                                 } else {
-                                                                    alert('Update failed: ' + (response.message || 'Unknown error'));
+                                                                    setSnackbarMessage('Update failed: ' + (response.message || 'Unknown error'));
+                                                                    setShowSnackbar(true);
+                                                                    setTimeout(() => setShowSnackbar(false), 4000);
                                                                 }
                                                             } catch (err) {
                                                                 console.error('Update appointment failed:', err);
-                                                                alert('Failed to update appointment');
+                                                                setSnackbarMessage('Failed to update appointment');
+                                                                setShowSnackbar(true);
+                                                                setTimeout(() => setShowSnackbar(false), 4000);
                                                             }
                                                         }}
                                                         style={{
@@ -5048,6 +5162,13 @@ export default function AppointmentTable() {
                     sessionData={sessionData}
                 />
             )}
+            <Snackbar
+                open={showBookedSnackbar}
+                autoHideDuration={3000}
+                onClose={() => setShowBookedSnackbar(false)}
+                message={bookedSnackbarMessage || 'Appointment booked successfully'}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center',}}
+            />
         </div>
     );
 }
