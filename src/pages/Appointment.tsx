@@ -35,6 +35,7 @@ type AppointmentRow = {
     clinicId?: string;
     actions: boolean;
     gender_description?: string;
+    visitDetailsSubmitted?: boolean;
 };
 
 
@@ -292,6 +293,7 @@ export default function AppointmentTable() {
             const shiftId = toNumberSafe(getField(row, ['shift_id', 'Shift_ID', 'shiftId'], 1));
             const clinicIdFromRow = toStringSafe(getField(row, ['clinic_id', 'Clinic_ID', 'clinicId'], ''));
             const genderDescription = toStringSafe(getField(row, ['gender_description', 'genderDescription', 'gender', 'sex'], ''));
+            const visitDetailsSubmitted = !!getField(row, ['Is_Submit_Patient_Visit_Details', 'is_submit_patient_visit_details', 'visitDetailsSubmitted'], false);
 
             // Fix time formatting - ensure proper HH:mm format
             let formattedTime = '00:00'; // Default fallback
@@ -386,7 +388,8 @@ export default function AppointmentTable() {
                 shiftId: shiftId,
                 clinicId: clinicIdFromRow,
                 actions: true,
-                gender_description: genderDescription
+                gender_description: genderDescription,
+                visitDetailsSubmitted: visitDetailsSubmitted
             };
         });
     };
@@ -1783,6 +1786,13 @@ export default function AppointmentTable() {
             // Add the patient ID to the submitted set to change icon color
             setSubmittedVisitDetails(prev => new Set([...prev, selectedPatientForVisit.patientId.toString()]));
             console.log('Patient visit details submitted for patient ID:', selectedPatientForVisit.patientId);
+            
+            // Update the appointment in the local state to reflect the change immediately
+            setAppointments(prev => prev.map(appointment => 
+                appointment.patientId === selectedPatientForVisit.patientId 
+                    ? { ...appointment, visitDetailsSubmitted: true }
+                    : appointment
+            ));
         }
     };
 
@@ -4205,7 +4215,7 @@ export default function AppointmentTable() {
                                                                     const isComplete = statusId === 5;
                                                                     const shouldEnable = !isReceptionist || isWaiting || isComplete;
                                                                     if (!shouldEnable) return '#f5f5f5';
-                                                                    return a.status === 'WITH DOCTOR' ? 'rgb(96, 125, 139)' : (submittedVisitDetails.has(a.patientId) ? '#FFD700' : 'transparent');
+                                                                    return a.status === 'WITH DOCTOR' ? 'rgb(96, 125, 139)' : (a.visitDetailsSubmitted ? '#FFD700' : 'transparent');
                                                                 })(),
                                                                 borderRadius: '4px',
                                                                 border: '1px solid #ddd',
@@ -4224,7 +4234,7 @@ export default function AppointmentTable() {
                                                                 const shouldEnable = !isReceptionist || isWaiting || isComplete;
                                                                 if (!shouldEnable || a.status === 'WITH DOCTOR') return; // Disable hover effects when disabled
                                                                 // Preserve yellow color if visit has been submitted
-                                                                if (submittedVisitDetails.has(a.patientId)) {
+                                                                if (a.visitDetailsSubmitted) {
                                                                     e.currentTarget.style.backgroundColor = '#FFD700';
                                                                     e.currentTarget.style.borderColor = '#FFA000'; // Slightly darker yellow border
                                                                 } else {
@@ -4238,7 +4248,7 @@ export default function AppointmentTable() {
                                                                 const isComplete = statusId === 5;
                                                                 const shouldEnable = !isReceptionist || isWaiting || isComplete;
                                                                 if (!shouldEnable || a.status === 'WITH DOCTOR') return; // Disable hover effects when disabled
-                                                                e.currentTarget.style.backgroundColor = a.status === 'WITH DOCTOR' ? 'rgb(96, 125, 139)' : (submittedVisitDetails.has(a.patientId) ? '#FFD700' : 'transparent');
+                                                                e.currentTarget.style.backgroundColor = a.status === 'WITH DOCTOR' ? 'rgb(96, 125, 139)' : (a.visitDetailsSubmitted ? '#FFD700' : 'transparent');
                                                                 e.currentTarget.style.borderColor = '#ddd';
                                                             }}
                                                         >
@@ -4738,7 +4748,7 @@ export default function AppointmentTable() {
                                                                 const isComplete = statusId === 5;
                                                                 const shouldEnable = !isReceptionist || isWaiting || isComplete;
                                                                 if (!shouldEnable) return '#f5f5f5';
-                                                                return appointment.status === 'WITH DOCTOR' ? 'rgb(96, 125, 139)' : (submittedVisitDetails.has(appointment.patientId) ? '#FFD700' : 'transparent');
+                                                                return appointment.status === 'WITH DOCTOR' ? 'rgb(96, 125, 139)' : (appointment.visitDetailsSubmitted ? '#FFD700' : 'transparent');
                                                             })(),
                                                             borderRadius: '4px',
                                                             padding: '2px',
