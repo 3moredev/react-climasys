@@ -1512,7 +1512,8 @@ export default function Treatment() {
                 originalDiscount: parseFloat(billingData.discount) || 0,
                 
                 // Status and user - Use different status IDs for save vs submit
-                statusId: isSubmit ? 5 : 9, // Status 5 for submit, Status 9 for save
+                // Based on climasys2.0 Constants.cs: SUBMITTED_STATUS_ID = 6, Save_STATUS_ID = 9
+                statusId: isSubmit ? 6 : 9, // Status 6 for submit (SUBMITTED), Status 9 for save
                 userId: String(userId),
                 isSubmitPatientVisitDetails: isSubmit // true for submit, false for save
             };
@@ -1560,8 +1561,14 @@ export default function Treatment() {
                 setTimeout(() => {
                     setSnackbarOpen(false);
                     setSnackbarMessage('');
-                    // Optionally navigate back or reset form
-                    // navigate('/appointments');
+                    // Navigate back to appointments with refresh trigger
+                    navigate('/appointment', { 
+                        state: { 
+                            refreshAppointments: true,
+                            treatmentSubmitted: true,
+                            patientId: treatmentData?.patientId 
+                        } 
+                    });
                 }, 2000);
             } else {
                 console.error(`=== TREATMENT ${actionType} FAILED ===`);

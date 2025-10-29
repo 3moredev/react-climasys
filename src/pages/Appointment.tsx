@@ -78,6 +78,7 @@ export default function AppointmentTable() {
     const [visitDates, setVisitDates] = useState<string[]>([]);
     const [currentVisitIndex, setCurrentVisitIndex] = useState<number>(0);
     const [allVisits, setAllVisits] = useState<any[]>([]);
+    const [showRefreshNotification, setShowRefreshNotification] = useState<boolean>(false);
 
     // Session data state
     const [sessionData, setSessionData] = useState<SessionInfo | null>(null);
@@ -819,6 +820,25 @@ export default function AppointmentTable() {
         );
         setIsInitialLoadComplete(isComplete);
     }, [loadingSessionData, loadingDoctors, loadingAppointments, loadingStatuses, sessionData, allDoctors, selectedDoctorId]);
+
+    // Handle refresh trigger from treatment screen
+    useEffect(() => {
+        if (location.state?.refreshAppointments && location.state?.treatmentSubmitted) {
+            console.log('🔄 Treatment submitted, refreshing appointments...');
+            // Show refresh notification
+            setShowRefreshNotification(true);
+            // Clear the state to prevent infinite refresh
+            window.history.replaceState({}, document.title);
+            // Refresh appointments for the selected doctor
+            if (selectedDoctorId && sessionData?.clinicId) {
+                refreshAppointmentsForSelectedDoctor();
+            }
+            // Hide notification after 3 seconds
+            setTimeout(() => {
+                setShowRefreshNotification(false);
+            }, 3000);
+        }
+    }, [location.state, selectedDoctorId, sessionData?.clinicId]);
 
     // Fetch previous visits for all appointments when appointments change
     // Removed automatic fetching of previous visits - now only fetch when user clicks on last visit link
@@ -2237,6 +2257,15 @@ export default function AppointmentTable() {
             .appointments-table tbody td { font-size: 0.8rem; padding: 3px 5px !important; }
         }
       `}</style>
+
+                {/* Refresh notification */}
+                {showRefreshNotification && (
+                    <div className="alert alert-success alert-dismissible fade show" role="alert" style={{ marginBottom: '1rem' }}>
+                        <i className="fas fa-check-circle me-2"></i>
+                        <strong>Appointments refreshed!</strong> Treatment submitted successfully.
+                        <button type="button" className="btn-close" onClick={() => setShowRefreshNotification(false)}></button>
+                    </div>
+                )}
 
                 {/* Header with Doctor-specific title */}
                 <div className="d-flex justify-content-between align-items-center mb-3">
