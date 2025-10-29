@@ -97,9 +97,16 @@ export default function AppointmentTable() {
     const [selectedDoctorId, setSelectedDoctorId] = useState<string>('');
     const [loadingDoctors, setLoadingDoctors] = useState<boolean>(false);
 
+    // Comprehensive loading states
+    const [loadingSessionData, setLoadingSessionData] = useState<boolean>(true);
+    const [loadingAppointments, setLoadingAppointments] = useState<boolean>(false);
+    const [loadingStatuses, setLoadingStatuses] = useState<boolean>(false);
+    const [isInitialLoadComplete, setIsInitialLoadComplete] = useState<boolean>(false);
+
     // Fetch session data on component mount
     useEffect(() => {
         const fetchSessionData = async () => {
+            setLoadingSessionData(true);
             try {
                 console.log('=== FETCHING SESSION DATA ===');
                 const result = await sessionService.getSessionInfo();
@@ -148,6 +155,8 @@ export default function AppointmentTable() {
                 }
             } catch (error) {
                 console.error('Error fetching session data:', error);
+            } finally {
+                setLoadingSessionData(false);
             }
         };
 
@@ -510,7 +519,7 @@ export default function AppointmentTable() {
                 query: query,
                 status: 'all',
                 page: 0,
-                size: 50 // Increased size to get more results for comprehensive search
+                size: 200 // larger page size to increase coverage
             });
 
             const q = query.trim().toLowerCase();
@@ -518,17 +527,18 @@ export default function AppointmentTable() {
 
 
             // Enhanced search with multiple criteria and priority
-            const searchResults = patients.filter((p: any) => {
+            const queryWords = q.split(/\s+/).filter(word => word.length > 0);
+
+            const tokenMatch = (p: any): boolean => {
                 const patientId = String(p.id || '').toLowerCase();
                 const firstName = String(p.first_name || '').toLowerCase();
                 const middleName = String(p.middle_name || '').toLowerCase();
                 const lastName = String(p.last_name || '').toLowerCase();
                 const fullName = `${firstName} ${middleName} ${lastName}`.replace(/\s+/g, ' ').trim().toLowerCase();
+                const firstLast = `${firstName} ${lastName}`.replace(/\s+/g, ' ').trim();
+                const lastFirst = `${lastName} ${firstName}`.replace(/\s+/g, ' ').trim();
                 const contact = String(p.mobile_1 || '').replace(/\D/g, ''); // Remove non-digits
                 const queryDigits = q.replace(/\D/g, ''); // Remove non-digits from query
-
-                // Split query into individual words for multi-word search
-                const queryWords = q.split(/\s+/).filter(word => word.length > 0);
 
                 // Check if query matches any of the search criteria
                 return (
@@ -538,8 +548,9 @@ export default function AppointmentTable() {
                     patientId.includes(q) ||
                     // Contact number exact match (if query is numeric)
                     (queryDigits.length >= 3 && contact.includes(queryDigits)) ||
-                    // Multi-word name search - all words must be found in the full name
-                    (queryWords.length > 1 && queryWords.every(word => fullName.includes(word))) ||
+                    // Multi-word name search - all words must be found in any order across common combinations
+                    (queryWords.length > 1 && ([fullName, firstLast, lastFirst]
+                        .some(name => queryWords.every(word => name.includes(word))))) ||
                     // Single word name search
                     (queryWords.length === 1 && (
                         firstName.startsWith(q) ||
@@ -551,7 +562,35 @@ export default function AppointmentTable() {
                         lastName.includes(q)
                     ))
                 );
-            });
+            };
+
+            let searchResults = patients.filter((p: any) => tokenMatch(p));
+
+            // Fallback: if no results for multi-word query, fetch per-token and merge, then filter client-side
+            if (searchResults.length === 0 && queryWords.length > 1) {
+                try {
+                    const tokenResponses = await Promise.all(
+                        queryWords.map(word => patientService.searchPatients({
+                            query: word,
+                            status: 'all',
+                            page: 0,
+                            size: 200
+                        }))
+                    );
+                    const mergedById: Record<string, any> = {};
+                    for (const r of tokenResponses) {
+                        const arr = (r?.patients || []) as any[];
+                        for (const p of arr) {
+                            const idKey = String(p.id || '').toLowerCase();
+                            if (!mergedById[idKey]) mergedById[idKey] = p;
+                        }
+                    }
+                    const mergedArray = Object.values(mergedById);
+                    searchResults = mergedArray.filter((p: any) => tokenMatch(p));
+                } catch (e) {
+                    console.warn('Per-token search fallback failed', e);
+                }
+            }
 
 
             // Sort results by priority and relevance
@@ -710,6 +749,7 @@ export default function AppointmentTable() {
         if (!selectedDoctorId || !sessionData?.clinicId) return;
 
         (async () => {
+            setLoadingAppointments(true);
             try {
                 const today = new Date().toISOString().split('T')[0];
                 const doctorId = selectedDoctorId; // Use selected doctor from dropdown
@@ -728,6 +768,8 @@ export default function AppointmentTable() {
                 setAppointments(rows);
             } catch (e) {
                 console.error('Failed to load today\'s appointments (SP endpoint)', e);
+            } finally {
+                setLoadingAppointments(false);
             }
         })();
     }, [selectedDoctorId, sessionData?.clinicId]);
@@ -735,6 +777,7 @@ export default function AppointmentTable() {
     // Load status reference for dynamic statuses
     useEffect(() => {
         (async () => {
+            setLoadingStatuses(true);
             try {
                 const ref = await getDoctorStatusReference();
 
@@ -754,9 +797,25 @@ export default function AppointmentTable() {
             } catch (e) {
                 console.error('❌ Failed to load status reference', e);
                 setAvailableStatuses([]);
+            } finally {
+                setLoadingStatuses(false);
             }
         })();
     }, []);
+
+    // Track when all initial loading is complete
+    useEffect(() => {
+        const isComplete = Boolean(
+            !loadingSessionData && 
+            !loadingDoctors && 
+            !loadingAppointments && 
+            !loadingStatuses && 
+            sessionData && 
+            allDoctors.length > 0 && 
+            selectedDoctorId
+        );
+        setIsInitialLoadComplete(isComplete);
+    }, [loadingSessionData, loadingDoctors, loadingAppointments, loadingStatuses, sessionData, allDoctors, selectedDoctorId]);
 
     // Fetch previous visits for all appointments when appointments change
     // Removed automatic fetching of previous visits - now only fetch when user clicks on last visit link
@@ -772,8 +831,24 @@ export default function AppointmentTable() {
     // }, [appointments]);
 
     // Handle search input change
+    // const handleSearchChange = (value: string) => {
+    //     setSearchTerm(value);
+    //     searchPatients(value);
+    // };
+
+
+
     const handleSearchChange = (value: string) => {
         setSearchTerm(value);
+    
+        const search = value.trim().toLowerCase();
+        if (!search) {
+            setSearchResults([]);
+            setShowDropdown(false);
+            return;
+        }
+    
+        // Use the existing searchPatients function for API-based search
         searchPatients(value);
     };
 
@@ -1427,6 +1502,7 @@ export default function AppointmentTable() {
     const refreshAppointmentsForSelectedDoctor = async () => {
         if (!selectedDoctorId || !sessionData?.clinicId) return;
 
+        setLoadingAppointments(true);
         try {
             const today = new Date().toISOString().split('T')[0];
             console.log('🔄 Refreshing appointments for selected doctor:', selectedDoctorId);
@@ -1443,6 +1519,8 @@ export default function AppointmentTable() {
             console.log('✅ Appointments refreshed for doctor', selectedDoctorId, ':', rows.length, 'appointments');
         } catch (error) {
             console.error('Failed to refresh appointments for selected doctor:', error);
+        } finally {
+            setLoadingAppointments(false);
         }
     };
 
@@ -1904,7 +1982,7 @@ export default function AppointmentTable() {
         .page-btn {
             padding: 6px 12px;
             border: 1px solid #ddd;
-            background: white;
+            background: rgba(0, 0, 0, 0.35);
             color: #333;
             cursor: pointer;
             border-radius: 4px;
@@ -1912,7 +1990,7 @@ export default function AppointmentTable() {
             transition: all 0.2s ease;
         }
         .page-btn:hover:not(:disabled) {
-            background: #f5f5f5;
+            // background: #f5f5f5;
             border-color: #999;
         }
         .page-btn.active {
@@ -1926,12 +2004,12 @@ export default function AppointmentTable() {
         }
         /* Prev/Next buttons as black */
         .nav-btn {
-            background: #000;
+            background: #1E88E5;
             color: #fff;
             border-color: #000;
         }
         .nav-btn:hover:not(:disabled) {
-            background: #111;
+            // background: #111;
             color: #fff;
             border-color: #000;
         }
@@ -2315,7 +2393,7 @@ export default function AppointmentTable() {
                             className="btn d-flex align-items-center justify-content-center"
                             style={{
                                 height: "100%",
-                                backgroundColor: activeView === 'list' ? "#007bff" : "lightgreen",
+                                backgroundColor: activeView === 'list' ? "#007bff" : "rgba(0, 0, 0, 0.35)",
                                 border: "none",
                                 color: "#ffffff",
                                 fontFamily: "'Roboto', sans-serif",
@@ -2334,7 +2412,7 @@ export default function AppointmentTable() {
                             className="btn d-flex align-items-center justify-content-center"
                             style={{
                                 height: "100%",
-                                backgroundColor: activeView === 'card' ? "#007bff" : "lightgreen",
+                                backgroundColor: activeView === 'card' ? "#007bff" : "rgba(0, 0, 0, 0.35)",
                                 border: "none",
                                 color: "#ffffff",
                                 fontFamily: "'Roboto', sans-serif",
@@ -2968,7 +3046,7 @@ export default function AppointmentTable() {
                             position: 'fixed',
                             bottom: '20px',
                             right: '20px',
-                            backgroundColor: snackbarMessage.includes("doesn't have") ? '#dc3545' : '#28a745',
+                            backgroundColor: snackbarMessage.includes("doesn't have") || snackbarMessage.includes("Failed to book") || snackbarMessage.includes("Please select") || snackbarMessage.includes("existing appointment") || snackbarMessage.includes("Unable to determine") || snackbarMessage.includes("Missing identifiers") || snackbarMessage.includes("Update failed") || snackbarMessage.includes("Failed to update") || snackbarMessage.includes("Failed to delete") || snackbarMessage.includes("but failed to refresh") ? '#dc3545' : '#28a745',
                             color: 'white',
                             padding: '12px 20px',
                             borderRadius: '6px',
@@ -2982,7 +3060,7 @@ export default function AppointmentTable() {
                         }}
                     >
                         <div className="d-flex align-items-center">
-                            <i className={`fas ${snackbarMessage.includes("doesn't have") ? 'fa-exclamation-triangle' : 'fa-check-circle'} me-2`}></i>
+                            <i className={`fas ${snackbarMessage.includes("doesn't have") || snackbarMessage.includes("Failed to book") || snackbarMessage.includes("Please select") || snackbarMessage.includes("existing appointment") || snackbarMessage.includes("Unable to determine") || snackbarMessage.includes("Missing identifiers") || snackbarMessage.includes("Update failed") || snackbarMessage.includes("Failed to update") || snackbarMessage.includes("Failed to delete") || snackbarMessage.includes("but failed to refresh") ? 'fa-exclamation-triangle' : 'fa-check-circle'} me-2`}></i>
                             <span>{snackbarMessage}</span>
                             <button
                                 onClick={() => setShowSnackbar(false)}
@@ -3008,6 +3086,28 @@ export default function AppointmentTable() {
     // Conditional rendering based on user role
     if (isDoctor) {
         return <DoctorScreen />;
+    }
+
+    // Show loading spinner while initial data is loading
+    if (!isInitialLoadComplete) {
+        return (
+            <div className="container-fluid mt-3 d-flex justify-content-center align-items-center" style={{ minHeight: '400px' }}>
+                <div className="text-center">
+                    <div className="spinner-border text-primary" role="status" style={{ width: '3rem', height: '3rem' }}>
+                        <span className="visually-hidden">Loading...</span>
+                    </div>
+                    <div className="mt-3">
+                        <h5 className="text-muted">Loading appointments...</h5>
+                        <div className="small text-muted">
+                            {loadingSessionData && <div>• Loading session data</div>}
+                            {loadingDoctors && <div>• Loading doctors</div>}
+                            {loadingAppointments && <div>• Loading appointments</div>}
+                            {loadingStatuses && <div>• Loading status options</div>}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
     }
 
     // Default receptionist screen
@@ -3133,7 +3233,7 @@ export default function AppointmentTable() {
         .page-btn {
             padding: 6px 12px;
             border: 1px solid #ddd;
-            background: white;
+            background: rgba(0, 0, 0, 0.35);
             color: #333;
             cursor: pointer;
             border-radius: 4px;
@@ -3141,7 +3241,7 @@ export default function AppointmentTable() {
             transition: all 0.2s ease;
         }
         .page-btn:hover:not(:disabled) {
-            background: #f5f5f5;
+            // background: #f5f5f5;
             border-color: #999;
         }
         .page-btn.active {
@@ -3155,12 +3255,12 @@ export default function AppointmentTable() {
         }
         /* Prev/Next buttons as black */
         .nav-btn {
-            background: #000;
+            background: #1E88E5;
             color: #fff;
             border-color: #000;
         }
         .nav-btn:hover:not(:disabled) {
-            background: #111;
+            // background: #111;
             color: #fff;
             border-color: #000;
         }
@@ -3500,7 +3600,7 @@ export default function AppointmentTable() {
                         className="btn d-flex align-items-center justify-content-center"
                         style={{
                             height: "100%",
-                            backgroundColor: activeView === 'list' ? "#007bff" : "lightgreen",
+                            backgroundColor: activeView === 'list' ? "#007bff" : "rgba(0, 0, 0, 0.35)",
                             border: "none",
                             color: "#ffffff",
                             fontFamily: "'Roboto', sans-serif",
@@ -3519,7 +3619,7 @@ export default function AppointmentTable() {
                         className="btn d-flex align-items-center justify-content-center"
                         style={{
                             height: "100%",
-                            backgroundColor: activeView === 'card' ? "#007bff" : "lightgreen",
+                            backgroundColor: activeView === 'card' ? "#007bff" : "rgba(0, 0, 0, 0.35)",
                             border: "none",
                             color: "#ffffff",
                             fontFamily: "'Roboto', sans-serif",
@@ -3576,7 +3676,23 @@ export default function AppointmentTable() {
                 <>
                     {/* List View */}
                     {activeView === 'list' && (
-                        <div className="table-responsive">
+                        <div className="table-responsive position-relative">
+                            {/* Loading overlay for appointments refresh */}
+                            {loadingAppointments && (
+                                <div className="position-absolute top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center" 
+                                     style={{ 
+                                         backgroundColor: 'rgba(255, 255, 255, 0.8)', 
+                                         zIndex: 10,
+                                         minHeight: '200px'
+                                     }}>
+                                    <div className="text-center">
+                                        <div className="spinner-border text-primary" role="status">
+                                            <span className="visually-hidden">Refreshing appointments...</span>
+                                        </div>
+                                        <div className="mt-2 small text-muted">Refreshing appointments...</div>
+                                    </div>
+                                </div>
+                            )}
                             <table className="table table-borderless align-middle appointments-table">
                                 <thead>
                                     <tr>
@@ -3769,8 +3885,19 @@ export default function AppointmentTable() {
                                                     }}>
                                                         {/* Lab Details Button */}
                                                         <div
-                                                            title="Lab Details"
+                                                            title={(() => {
+                                                                const statusId = mapStatusLabelToId(a.status);
+                                                                const isWaiting = statusId === 1;
+                                                                const isComplete = statusId === 5;
+                                                                const shouldEnable = !isReceptionist || isWaiting || isComplete;
+                                                                return shouldEnable ? "Lab Details" : "Lab Details (Disabled for Reception)";
+                                                            })()}
                                                             onClick={() => {
+                                                                const statusId = mapStatusLabelToId(a.status);
+                                                                const isWaiting = statusId === 1;
+                                                                const isComplete = statusId === 5;
+                                                                const shouldEnable = !isReceptionist || isWaiting || isComplete;
+                                                                if (!shouldEnable) return; // Disable for reception login unless WAITING or COMPLETE
                                                                 setSelectedPatientForLab(a);
                                                                 setShowLabTestEntry(true);
                                                             }}
@@ -3780,17 +3907,46 @@ export default function AppointmentTable() {
                                                                 justifyContent: 'center',
                                                                 width: '28px',
                                                                 height: '28px',
-                                                                cursor: 'pointer',
+                                                                cursor: (() => {
+                                                                    const statusId = mapStatusLabelToId(a.status);
+                                                                    const isWaiting = statusId === 1;
+                                                                    const isComplete = statusId === 5;
+                                                                    const shouldEnable = !isReceptionist || isWaiting || isComplete;
+                                                                    return shouldEnable ? 'pointer' : 'not-allowed';
+                                                                })(),
                                                                 color: '#000000',
-                                                                backgroundColor: 'transparent',
+                                                                backgroundColor: (() => {
+                                                                    const statusId = mapStatusLabelToId(a.status);
+                                                                    const isWaiting = statusId === 1;
+                                                                    const isComplete = statusId === 5;
+                                                                    const shouldEnable = !isReceptionist || isWaiting || isComplete;
+                                                                    return shouldEnable ? 'transparent' : '#f5f5f5';
+                                                                })(),
                                                                 borderRadius: '4px',
-                                                                border: '1px solid #ddd'
+                                                                border: '1px solid #ddd',
+                                                                opacity: (() => {
+                                                                    const statusId = mapStatusLabelToId(a.status);
+                                                                    const isWaiting = statusId === 1;
+                                                                    const isComplete = statusId === 5;
+                                                                    const shouldEnable = !isReceptionist || isWaiting || isComplete;
+                                                                    return shouldEnable ? 1 : 0.5;
+                                                                })()
                                                             }}
                                                             onMouseEnter={(e) => {
+                                                                const statusId = mapStatusLabelToId(a.status);
+                                                                const isWaiting = statusId === 1;
+                                                                const isComplete = statusId === 5;
+                                                                const shouldEnable = !isReceptionist || isWaiting || isComplete;
+                                                                if (!shouldEnable) return; // Disable hover effects for reception
                                                                 e.currentTarget.style.backgroundColor = 'transparent';
                                                                 e.currentTarget.style.borderColor = 'black';
                                                             }}
                                                             onMouseLeave={(e) => {
+                                                                const statusId = mapStatusLabelToId(a.status);
+                                                                const isWaiting = statusId === 1;
+                                                                const isComplete = statusId === 5;
+                                                                const shouldEnable = !isReceptionist || isWaiting || isComplete;
+                                                                if (!shouldEnable) return; // Disable hover effects for reception
                                                                 e.currentTarget.style.backgroundColor = 'transparent';
                                                                 e.currentTarget.style.borderColor = '#ddd';
                                                             }}
@@ -3891,7 +4047,8 @@ export default function AppointmentTable() {
                                                                 color: '#607D8B',
                                                                 backgroundColor: 'transparent',
                                                                 borderRadius: '4px',
-                                                                border: '1px solid #ddd'
+                                                                border: '1px solid #ddd',
+                                                                opacity: 1
                                                             }}
                                                             onMouseEnter={(e) => {
                                                                 e.currentTarget.style.backgroundColor = 'transparent';
@@ -3907,8 +4064,19 @@ export default function AppointmentTable() {
 
                                                         {/* Delete Button */}
                                                         <div
-                                                            title="Delete"
+                                                            title={(() => {
+                                                                const statusId = mapStatusLabelToId(a.status);
+                                                                const isWaiting = statusId === 1;
+                                                                const isComplete = statusId === 5;
+                                                                const shouldEnable = !isReceptionist || isWaiting || isComplete;
+                                                                return shouldEnable ? "Delete" : "Delete (Disabled for Reception)";
+                                                            })()}
                                                             onClick={async () => {
+                                                                const statusId = mapStatusLabelToId(a.status);
+                                                                const isWaiting = statusId === 1;
+                                                                const isComplete = statusId === 5;
+                                                                const shouldEnable = !isReceptionist || isWaiting || isComplete;
+                                                                if (!shouldEnable) return; // Disable for reception login unless WAITING or COMPLETE
                                                                 try {
                                                                     const pid = a.patientId;
                                                                     const rawVtime = String(a.time || '00:00');
@@ -3950,17 +4118,46 @@ export default function AppointmentTable() {
                                                                 justifyContent: 'center',
                                                                 width: '28px',
                                                                 height: '28px',
-                                                                cursor: 'pointer',
+                                                                cursor: (() => {
+                                                                    const statusId = mapStatusLabelToId(a.status);
+                                                                    const isWaiting = statusId === 1;
+                                                                    const isComplete = statusId === 5;
+                                                                    const shouldEnable = !isReceptionist || isWaiting || isComplete;
+                                                                    return shouldEnable ? 'pointer' : 'not-allowed';
+                                                                })(),
                                                                 color: '#607D8B',
-                                                                backgroundColor: 'transparent',
+                                                                backgroundColor: (() => {
+                                                                    const statusId = mapStatusLabelToId(a.status);
+                                                                    const isWaiting = statusId === 1;
+                                                                    const isComplete = statusId === 5;
+                                                                    const shouldEnable = !isReceptionist || isWaiting || isComplete;
+                                                                    return shouldEnable ? 'transparent' : '#f5f5f5';
+                                                                })(),
                                                                 borderRadius: '4px',
-                                                                border: '1px solid #ddd'
+                                                                border: '1px solid #ddd',
+                                                                opacity: (() => {
+                                                                    const statusId = mapStatusLabelToId(a.status);
+                                                                    const isWaiting = statusId === 1;
+                                                                    const isComplete = statusId === 5;
+                                                                    const shouldEnable = !isReceptionist || isWaiting || isComplete;
+                                                                    return shouldEnable ? 1 : 0.5;
+                                                                })()
                                                             }}
                                                             onMouseEnter={(e) => {
+                                                                const statusId = mapStatusLabelToId(a.status);
+                                                                const isWaiting = statusId === 1;
+                                                                const isComplete = statusId === 5;
+                                                                const shouldEnable = !isReceptionist || isWaiting || isComplete;
+                                                                if (!shouldEnable) return; // Disable hover effects for reception
                                                                 e.currentTarget.style.backgroundColor = 'transparent';
                                                                 e.currentTarget.style.borderColor = 'black';
                                                             }}
                                                             onMouseLeave={(e) => {
+                                                                const statusId = mapStatusLabelToId(a.status);
+                                                                const isWaiting = statusId === 1;
+                                                                const isComplete = statusId === 5;
+                                                                const shouldEnable = !isReceptionist || isWaiting || isComplete;
+                                                                if (!shouldEnable) return; // Disable hover effects for reception
                                                                 e.currentTarget.style.backgroundColor = 'transparent';
                                                                 e.currentTarget.style.borderColor = '#ddd';
                                                             }}
@@ -3970,8 +4167,20 @@ export default function AppointmentTable() {
 
                                                         {/* Checkout Button */}
                                                         <div
-                                                            title={a.status === 'WITH DOCTOR' ? 'Visit Details (Disabled - Patient with doctor)' : 'Visit Details'}
+                                                            title={(() => {
+                                                                const statusId = mapStatusLabelToId(a.status);
+                                                                const isWaiting = statusId === 1;
+                                                                const isComplete = statusId === 5;
+                                                                const shouldEnable = !isReceptionist || isWaiting || isComplete;
+                                                                if (!shouldEnable) return "Visit Details (Disabled for Reception)";
+                                                                return a.status === 'WITH DOCTOR' ? 'Visit Details (Disabled - Patient with doctor)' : 'Visit Details';
+                                                            })()}
                                                             onClick={() => {
+                                                                const statusId = mapStatusLabelToId(a.status);
+                                                                const isWaiting = statusId === 1;
+                                                                const isComplete = statusId === 5;
+                                                                const shouldEnable = !isReceptionist || isWaiting || isComplete;
+                                                                if (!shouldEnable) return; // Disable for reception login unless WAITING or COMPLETE
                                                                 if (a.status === 'WITH DOCTOR') return; // Disable click when status is WITH DOCTOR
                                                                 setSelectedPatientForVisit(a as any);
                                                                 setShowVisitDetails(true);
@@ -3982,15 +4191,38 @@ export default function AppointmentTable() {
                                                                 justifyContent: 'center',
                                                                 width: '28px',
                                                                 height: '28px',
-                                                                cursor: a.status === 'WITH DOCTOR' ? 'not-allowed' : 'pointer',
+                                                                cursor: (() => {
+                                                                    const statusId = mapStatusLabelToId(a.status);
+                                                                    const isWaiting = statusId === 1;
+                                                                    const isComplete = statusId === 5;
+                                                                    const shouldEnable = !isReceptionist || isWaiting || isComplete;
+                                                                    return (shouldEnable && a.status !== 'WITH DOCTOR') ? 'pointer' : 'not-allowed';
+                                                                })(),
                                                                 color: '#607D8B',
-                                                                backgroundColor: a.status === 'WITH DOCTOR' ? 'rgb(96, 125, 139)' : (submittedVisitDetails.has(a.patientId) ? '#FFD700' : 'transparent'),
+                                                                backgroundColor: (() => {
+                                                                    const statusId = mapStatusLabelToId(a.status);
+                                                                    const isWaiting = statusId === 1;
+                                                                    const isComplete = statusId === 5;
+                                                                    const shouldEnable = !isReceptionist || isWaiting || isComplete;
+                                                                    if (!shouldEnable) return '#f5f5f5';
+                                                                    return a.status === 'WITH DOCTOR' ? 'rgb(96, 125, 139)' : (submittedVisitDetails.has(a.patientId) ? '#FFD700' : 'transparent');
+                                                                })(),
                                                                 borderRadius: '4px',
                                                                 border: '1px solid #ddd',
-                                                                opacity: a.status === 'WITH DOCTOR' ? 0.5 : 1
+                                                                opacity: (() => {
+                                                                    const statusId = mapStatusLabelToId(a.status);
+                                                                    const isWaiting = statusId === 1;
+                                                                    const isComplete = statusId === 5;
+                                                                    const shouldEnable = !isReceptionist || isWaiting || isComplete;
+                                                                    return (shouldEnable && a.status !== 'WITH DOCTOR') ? 1 : 0.5;
+                                                                })()
                                                             }}
                                                             onMouseEnter={(e) => {
-                                                                if (a.status === 'WITH DOCTOR') return; // Disable hover effects when disabled
+                                                                const statusId = mapStatusLabelToId(a.status);
+                                                                const isWaiting = statusId === 1;
+                                                                const isComplete = statusId === 5;
+                                                                const shouldEnable = !isReceptionist || isWaiting || isComplete;
+                                                                if (!shouldEnable || a.status === 'WITH DOCTOR') return; // Disable hover effects when disabled
                                                                 // Preserve yellow color if visit has been submitted
                                                                 if (submittedVisitDetails.has(a.patientId)) {
                                                                     e.currentTarget.style.backgroundColor = '#FFD700';
@@ -4001,7 +4233,11 @@ export default function AppointmentTable() {
                                                                 }
                                                             }}
                                                             onMouseLeave={(e) => {
-                                                                if (a.status === 'WITH DOCTOR') return; // Disable hover effects when disabled
+                                                                const statusId = mapStatusLabelToId(a.status);
+                                                                const isWaiting = statusId === 1;
+                                                                const isComplete = statusId === 5;
+                                                                const shouldEnable = !isReceptionist || isWaiting || isComplete;
+                                                                if (!shouldEnable || a.status === 'WITH DOCTOR') return; // Disable hover effects when disabled
                                                                 e.currentTarget.style.backgroundColor = a.status === 'WITH DOCTOR' ? 'rgb(96, 125, 139)' : (submittedVisitDetails.has(a.patientId) ? '#FFD700' : 'transparent');
                                                                 e.currentTarget.style.borderColor = '#ddd';
                                                             }}
@@ -4011,32 +4247,75 @@ export default function AppointmentTable() {
 
                                                         {/* Collection Button */}
                                                         <div
-                                                            title="Collection"
+                                                            title={(() => {
+                                                                const statusId = mapStatusLabelToId(a.status);
+                                                                const isComplete = statusId === 5;
+                                                                const shouldEnable = !isReceptionist || isComplete;
+                                                                if (!shouldEnable) return "Collection (Disabled for Reception)";
+                                                                return mapStatusLabelToId(a.status) !== 5 ? "Collection (Disabled - Status not Complete)" : "Collection";
+                                                            })()}
                                                             onClick={() => {
-                                                                if (mapStatusLabelToId(a.status) === 1) return;
+                                                                const statusId = mapStatusLabelToId(a.status);
+                                                                const isComplete = statusId === 5;
+                                                                const shouldEnable = !isReceptionist || isComplete;
+                                                                if (!shouldEnable) return; // Disable for reception login unless COMPLETE
+                                                                if (mapStatusLabelToId(a.status) !== 5) return;
                                                                 console.log('Collection clicked for patient:', a.patientId);
                                                             }}
-                                                            aria-disabled={mapStatusLabelToId(a.status) === 1}
+                                                            aria-disabled={(() => {
+                                                                const statusId = mapStatusLabelToId(a.status);
+                                                                const isComplete = statusId === 5;
+                                                                const shouldEnable = !isReceptionist || isComplete;
+                                                                return !shouldEnable || mapStatusLabelToId(a.status) !== 5;
+                                                            })()}
                                                             style={{
                                                                 display: 'inline-flex',
                                                                 alignItems: 'center',
                                                                 justifyContent: 'center',
                                                                 width: '28px',
                                                                 height: '28px',
-                                                                cursor: mapStatusLabelToId(a.status) === 1 ? 'not-allowed' : 'pointer',
+                                                                cursor: (() => {
+                                                                    const statusId = mapStatusLabelToId(a.status);
+                                                                    const isComplete = statusId === 5;
+                                                                    const shouldEnable = !isReceptionist || isComplete;
+                                                                    return (shouldEnable && mapStatusLabelToId(a.status) === 5) ? 'pointer' : 'not-allowed';
+                                                                })(),
                                                                 color: '#607D8B',
-                                                                backgroundColor: mapStatusLabelToId(a.status) === 1 ? '#607D8B' : 'transparent',
+                                                                backgroundColor: (() => {
+                                                                    const statusId = mapStatusLabelToId(a.status);
+                                                                    const isComplete = statusId === 5;
+                                                                    const shouldEnable = !isReceptionist || isComplete;
+                                                                    if (!shouldEnable) return '#f5f5f5';
+                                                                    return mapStatusLabelToId(a.status) !== 5 ? '#607D8B' : 'transparent';
+                                                                })(),
                                                                 borderRadius: '4px',
-                                                                border: mapStatusLabelToId(a.status) === 1 ? '1px solid #607D8B' : '1px solid #ddd',
-                                                                opacity: mapStatusLabelToId(a.status) === 1 ? 0.5 : 1
+                                                                border: (() => {
+                                                                    const statusId = mapStatusLabelToId(a.status);
+                                                                    const isComplete = statusId === 5;
+                                                                    const shouldEnable = !isReceptionist || isComplete;
+                                                                    if (!shouldEnable) return '1px solid #ddd';
+                                                                    return mapStatusLabelToId(a.status) !== 5 ? '1px solid #607D8B' : '1px solid #ddd';
+                                                                })(),
+                                                                opacity: (() => {
+                                                                    const statusId = mapStatusLabelToId(a.status);
+                                                                    const isComplete = statusId === 5;
+                                                                    const shouldEnable = !isReceptionist || isComplete;
+                                                                    return (shouldEnable && mapStatusLabelToId(a.status) === 5) ? 1 : 0.5;
+                                                                })()
                                                             }}
                                                             onMouseEnter={(e) => {
-                                                                if (mapStatusLabelToId(a.status) === 1) return;
+                                                                const statusId = mapStatusLabelToId(a.status);
+                                                                const isComplete = statusId === 5;
+                                                                const shouldEnable = !isReceptionist || isComplete;
+                                                                if (!shouldEnable || mapStatusLabelToId(a.status) !== 5) return;
                                                                 e.currentTarget.style.backgroundColor = '#FFF3E0';
                                                                 e.currentTarget.style.borderColor = 'black';
                                                             }}
                                                             onMouseLeave={(e) => {
-                                                                if (mapStatusLabelToId(a.status) === 1) return;
+                                                                const statusId = mapStatusLabelToId(a.status);
+                                                                const isComplete = statusId === 5;
+                                                                const shouldEnable = !isReceptionist || isComplete;
+                                                                if (!shouldEnable || mapStatusLabelToId(a.status) !== 5) return;
                                                                 e.currentTarget.style.backgroundColor = 'transparent';
                                                                 e.currentTarget.style.borderColor = '#ddd';
                                                             }}
@@ -4055,7 +4334,23 @@ export default function AppointmentTable() {
 
                     {/* Card View */}
                     {activeView === 'card' && (
-                        <div className="card-grid">
+                        <div className="card-grid position-relative">
+                            {/* Loading overlay for appointments refresh */}
+                            {loadingAppointments && (
+                                <div className="position-absolute top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center" 
+                                     style={{ 
+                                         backgroundColor: 'rgba(255, 255, 255, 0.8)', 
+                                         zIndex: 10,
+                                         minHeight: '200px'
+                                     }}>
+                                    <div className="text-center">
+                                        <div className="spinner-border text-primary" role="status">
+                                            <span className="visually-hidden">Refreshing appointments...</span>
+                                        </div>
+                                        <div className="mt-2 small text-muted">Refreshing appointments...</div>
+                                    </div>
+                                </div>
+                            )}
                             {currentAppointments.map((appointment, index) => {
                                 const originalIndex = startIndex + index;
                                 return (
@@ -4196,10 +4491,44 @@ export default function AppointmentTable() {
                                                 <div className="crm-actions" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, max-content)', alignItems: 'center', gap: '8px' }}>
                                                     <div
                                                         className="crm-btn"
-                                                        title="Lab Details"
+                                                        title={(() => {
+                                                            const statusId = mapStatusLabelToId(appointment.status);
+                                                            const isWaiting = statusId === 1;
+                                                            const isComplete = statusId === 5;
+                                                            const shouldEnable = !isReceptionist || isWaiting || isComplete;
+                                                            return shouldEnable ? "Lab Details" : "Lab Details (Disabled for Reception)";
+                                                        })()}
                                                         onClick={() => {
+                                                            const statusId = mapStatusLabelToId(appointment.status);
+                                                            const isWaiting = statusId === 1;
+                                                            const isComplete = statusId === 5;
+                                                            const shouldEnable = !isReceptionist || isWaiting || isComplete;
+                                                            if (!shouldEnable) return; // Disable for reception login unless WAITING or COMPLETE
                                                             // Navigate to lab details or open modal
                                                             console.log('Lab Details clicked for patient:', appointment.patientId);
+                                                        }}
+                                                        style={{
+                                                            opacity: (() => {
+                                                                const statusId = mapStatusLabelToId(appointment.status);
+                                                                const isWaiting = statusId === 1;
+                                                                const isComplete = statusId === 5;
+                                                                const shouldEnable = !isReceptionist || isWaiting || isComplete;
+                                                                return shouldEnable ? 1 : 0.5;
+                                                            })(),
+                                                            cursor: (() => {
+                                                                const statusId = mapStatusLabelToId(appointment.status);
+                                                                const isWaiting = statusId === 1;
+                                                                const isComplete = statusId === 5;
+                                                                const shouldEnable = !isReceptionist || isWaiting || isComplete;
+                                                                return shouldEnable ? 'pointer' : 'not-allowed';
+                                                            })(),
+                                                            backgroundColor: (() => {
+                                                                const statusId = mapStatusLabelToId(appointment.status);
+                                                                const isWaiting = statusId === 1;
+                                                                const isComplete = statusId === 5;
+                                                                const shouldEnable = !isReceptionist || isWaiting || isComplete;
+                                                                return shouldEnable ? 'transparent' : '#f5f5f5';
+                                                            })()
                                                         }}
                                                     >
                                                         <img src="/images/avatar/test-tubes_3523917.png" alt="Lab Test" style={{ width: 16, height: 16 }} />
@@ -4286,13 +4615,29 @@ export default function AppointmentTable() {
                                                                 alert('Failed to update appointment');
                                                             }
                                                         }}
+                                                        style={{
+                                                            opacity: 1,
+                                                            cursor: 'pointer',
+                                                            backgroundColor: 'transparent'
+                                                        }}
                                                     >
                                                         <Save fontSize="small" />
                                                     </div>
                                                     <div
                                                         className="crm-btn"
-                                                        title="Delete"
+                                                        title={(() => {
+                                                            const statusId = mapStatusLabelToId(appointment.status);
+                                                            const isWaiting = statusId === 1;
+                                                            const isComplete = statusId === 5;
+                                                            const shouldEnable = !isReceptionist || isWaiting || isComplete;
+                                                            return shouldEnable ? "Delete" : "Delete (Disabled for Reception)";
+                                                        })()}
                                                         onClick={async () => {
+                                                            const statusId = mapStatusLabelToId(appointment.status);
+                                                            const isWaiting = statusId === 1;
+                                                            const isComplete = statusId === 5;
+                                                            const shouldEnable = !isReceptionist || isWaiting || isComplete;
+                                                            if (!shouldEnable) return; // Disable for reception login unless WAITING or COMPLETE
                                                             try {
                                                                 const pid = appointment.patientId;
                                                                 const rawVtime = String(appointment.time || '00:00');
@@ -4309,7 +4654,9 @@ export default function AppointmentTable() {
                                                                 console.log('=== END DEBUG ===');
                                                                 const did = appointment.doctorId || selectedDoctorId;
                                                                 if (!pid || !vdatetime || !did) {
-                                                                    alert('Missing identifiers to delete appointment');
+                                                                    setSnackbarMessage('Missing identifiers to delete appointment');
+                                                                    setShowSnackbar(true);
+                                                                    setTimeout(() => setShowSnackbar(false), 3000);
                                                                     return;
                                                                 }
                                                                 const confirmDelete = window.confirm('Delete this appointment?');
@@ -4326,26 +4673,82 @@ export default function AppointmentTable() {
                                                                 setAppointments(prev => prev.filter((_, i) => i !== originalIndex));
                                                             } catch (err) {
                                                                 console.error('Delete appointment failed:', err);
-                                                                alert('Failed to delete appointment');
+                                                                setSnackbarMessage('Failed to delete appointment');
+                                                                setShowSnackbar(true);
+                                                                setTimeout(() => setShowSnackbar(false), 3000);
                                                             }
+                                                        }}
+                                                        style={{
+                                                            opacity: (() => {
+                                                                const statusId = mapStatusLabelToId(appointment.status);
+                                                                const isWaiting = statusId === 1;
+                                                                const isComplete = statusId === 5;
+                                                                const shouldEnable = !isReceptionist || isWaiting || isComplete;
+                                                                return shouldEnable ? 1 : 0.5;
+                                                            })(),
+                                                            cursor: (() => {
+                                                                const statusId = mapStatusLabelToId(appointment.status);
+                                                                const isWaiting = statusId === 1;
+                                                                const isComplete = statusId === 5;
+                                                                const shouldEnable = !isReceptionist || isWaiting || isComplete;
+                                                                return shouldEnable ? 'pointer' : 'not-allowed';
+                                                            })(),
+                                                            backgroundColor: (() => {
+                                                                const statusId = mapStatusLabelToId(appointment.status);
+                                                                const isWaiting = statusId === 1;
+                                                                const isComplete = statusId === 5;
+                                                                const shouldEnable = !isReceptionist || isWaiting || isComplete;
+                                                                return shouldEnable ? 'transparent' : '#f5f5f5';
+                                                            })()
                                                         }}
                                                     >
                                                         <Delete fontSize="small" />
                                                     </div>
                                                     <div
                                                         className="crm-btn"
-                                                        title={appointment.status === 'WITH DOCTOR' ? 'Visit Details (Disabled - Patient with doctor)' : 'Visit Details'}
+                                                        title={(() => {
+                                                            const statusId = mapStatusLabelToId(appointment.status);
+                                                            const isWaiting = statusId === 1;
+                                                            const isComplete = statusId === 5;
+                                                            const shouldEnable = !isReceptionist || isWaiting || isComplete;
+                                                            if (!shouldEnable) return "Visit Details (Disabled for Reception)";
+                                                            return appointment.status === 'WITH DOCTOR' ? 'Visit Details (Disabled - Patient with doctor)' : 'Visit Details';
+                                                        })()}
                                                         onClick={() => {
+                                                            const statusId = mapStatusLabelToId(appointment.status);
+                                                            const isWaiting = statusId === 1;
+                                                            const isComplete = statusId === 5;
+                                                            const shouldEnable = !isReceptionist || isWaiting || isComplete;
+                                                            if (!shouldEnable) return; // Disable for reception login unless WAITING or COMPLETE
                                                             if (appointment.status === 'WITH DOCTOR') return; // Disable click when status is WITH DOCTOR
                                                             setSelectedPatientForVisit(appointment as any);
                                                             setShowVisitDetails(true);
                                                         }}
                                                         style={{ 
-                                                            cursor: appointment.status === 'WITH DOCTOR' ? 'not-allowed' : 'pointer',
-                                                            backgroundColor: appointment.status === 'WITH DOCTOR' ? 'rgb(96, 125, 139)' : (submittedVisitDetails.has(appointment.patientId) ? '#FFD700' : 'transparent'),
+                                                            cursor: (() => {
+                                                                const statusId = mapStatusLabelToId(appointment.status);
+                                                                const isWaiting = statusId === 1;
+                                                                const isComplete = statusId === 5;
+                                                                const shouldEnable = !isReceptionist || isWaiting || isComplete;
+                                                                return (shouldEnable && appointment.status !== 'WITH DOCTOR') ? 'pointer' : 'not-allowed';
+                                                            })(),
+                                                            backgroundColor: (() => {
+                                                                const statusId = mapStatusLabelToId(appointment.status);
+                                                                const isWaiting = statusId === 1;
+                                                                const isComplete = statusId === 5;
+                                                                const shouldEnable = !isReceptionist || isWaiting || isComplete;
+                                                                if (!shouldEnable) return '#f5f5f5';
+                                                                return appointment.status === 'WITH DOCTOR' ? 'rgb(96, 125, 139)' : (submittedVisitDetails.has(appointment.patientId) ? '#FFD700' : 'transparent');
+                                                            })(),
                                                             borderRadius: '4px',
                                                             padding: '2px',
-                                                            opacity: appointment.status === 'WITH DOCTOR' ? 0.5 : 1
+                                                            opacity: (() => {
+                                                                const statusId = mapStatusLabelToId(appointment.status);
+                                                                const isWaiting = statusId === 1;
+                                                                const isComplete = statusId === 5;
+                                                                const shouldEnable = !isReceptionist || isWaiting || isComplete;
+                                                                return (shouldEnable && appointment.status !== 'WITH DOCTOR') ? 1 : 0.5;
+                                                            })()
                                                         }}
                                                     >
                                                         <img 
@@ -4374,17 +4777,54 @@ export default function AppointmentTable() {
                                                 </div>
                                                 <div
                                                     className="crm-btn ms-auto"
-                                                    title="Collection"
+                                                    title={(() => {
+                                                        const statusId = mapStatusLabelToId(appointment.status);
+                                                        const isComplete = statusId === 5;
+                                                        const shouldEnable = !isReceptionist || isComplete;
+                                                        if (!shouldEnable) return "Collection (Disabled for Reception)";
+                                                        return mapStatusLabelToId(appointment.status) !== 5 ? "Collection (Disabled - Status not Complete)" : "Collection";
+                                                    })()}
                                                     onClick={() => {
-                                                        if (mapStatusLabelToId(appointment.status) === 1) return;
+                                                        const statusId = mapStatusLabelToId(appointment.status);
+                                                        const isComplete = statusId === 5;
+                                                        const shouldEnable = !isReceptionist || isComplete;
+                                                        if (!shouldEnable) return; // Disable for reception login unless COMPLETE
+                                                        if (mapStatusLabelToId(appointment.status) !== 5) return;
                                                         console.log('Collection clicked for patient:', appointment.patientId);
                                                     }}
-                                                    aria-disabled={mapStatusLabelToId(appointment.status) === 1}
+                                                    aria-disabled={(() => {
+                                                        const statusId = mapStatusLabelToId(appointment.status);
+                                                        const isComplete = statusId === 5;
+                                                        const shouldEnable = !isReceptionist || isComplete;
+                                                        return !shouldEnable || mapStatusLabelToId(appointment.status) !== 5;
+                                                    })()}
                                                     style={{
-                                                        opacity: mapStatusLabelToId(appointment.status) === 1 ? 0.5 : 1,
-                                                        cursor: mapStatusLabelToId(appointment.status) === 1 ? 'not-allowed' : 'pointer',
-                                                        backgroundColor: mapStatusLabelToId(appointment.status) === 1 ? '#607D8B' : 'transparent',
-                                                        borderColor: mapStatusLabelToId(appointment.status) === 1 ? '#607D8B' : 'black'
+                                                        opacity: (() => {
+                                                            const statusId = mapStatusLabelToId(appointment.status);
+                                                            const isComplete = statusId === 5;
+                                                            const shouldEnable = !isReceptionist || isComplete;
+                                                            return (shouldEnable && mapStatusLabelToId(appointment.status) === 5) ? 1 : 0.5;
+                                                        })(),
+                                                        cursor: (() => {
+                                                            const statusId = mapStatusLabelToId(appointment.status);
+                                                            const isComplete = statusId === 5;
+                                                            const shouldEnable = !isReceptionist || isComplete;
+                                                            return (shouldEnable && mapStatusLabelToId(appointment.status) === 5) ? 'pointer' : 'not-allowed';
+                                                        })(),
+                                                        backgroundColor: (() => {
+                                                            const statusId = mapStatusLabelToId(appointment.status);
+                                                            const isComplete = statusId === 5;
+                                                            const shouldEnable = !isReceptionist || isComplete;
+                                                            if (!shouldEnable) return '#f5f5f5';
+                                                            return mapStatusLabelToId(appointment.status) !== 5 ? '#607D8B' : 'transparent';
+                                                        })(),
+                                                        borderColor: (() => {
+                                                            const statusId = mapStatusLabelToId(appointment.status);
+                                                            const isComplete = statusId === 5;
+                                                            const shouldEnable = !isReceptionist || isComplete;
+                                                            if (!shouldEnable) return '#ddd';
+                                                            return mapStatusLabelToId(appointment.status) !== 5 ? '#607D8B' : 'black';
+                                                        })()
                                                     }}
                                                 >
                                                     <img src="/images/avatar/wallet.png" alt="Collection" style={{ width: 16, height: 16, filter: 'brightness(0)' }} />
@@ -4483,7 +4923,9 @@ export default function AppointmentTable() {
                     } catch (error) {
                         console.error('❌ Failed to refresh appointments after adding patient:', error);
                         // Show user-friendly error message
-                        alert('Patient added successfully, but failed to refresh the appointments list. Please refresh the page manually.');
+                        setSnackbarMessage('Patient added successfully, but failed to refresh the appointments list. Please refresh the page manually.');
+                        setShowSnackbar(true);
+                        setTimeout(() => setShowSnackbar(false), 3000);
                     } finally {
                         setShowAddPatient(false);
                     }

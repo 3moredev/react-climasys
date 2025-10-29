@@ -183,6 +183,7 @@ export default function Treatment() {
     const [treatmentData, setTreatmentData] = useState<TreatmentData | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
     const [showVitalsTrend, setShowVitalsTrend] = useState<boolean>(false);
+    const [showInstructionPopup, setShowInstructionPopup] = useState<boolean>(false);
     
     // Form data state
     const [formData, setFormData] = useState({
@@ -1424,6 +1425,7 @@ export default function Treatment() {
     }
 
     return (
+        // <>
         <div className="page">
             <style dangerouslySetInnerHTML={{ __html: durationCommentStyles }} />
             <div className="body">
@@ -3024,6 +3026,7 @@ export default function Treatment() {
                                 </button>
                                 <button
                                     type="button"
+                                    onClick={() => setShowInstructionPopup(true)}
                                     style={{
                                         backgroundColor: '#1976d2',
                                         color: 'white',

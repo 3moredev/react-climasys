@@ -253,6 +253,41 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
         return new Date().toISOString().slice(0, 10);
     };
 
+    // Format date as dd-MM-yyyy 00:00:00 for visit_date payload
+    const toDdMmYyyyMidnight = (input?: string): string => {
+        try {
+            let d: Date | null = null;
+            if (input) {
+                const direct = new Date(input);
+                if (!isNaN(direct.getTime())) d = direct;
+            }
+            if (!d && input) {
+                const m = input.match(/^(\d{1,2})-(\d{1,2}|[A-Za-z]{3})-(\d{2,4})$/);
+                if (m) {
+                    const day = parseInt(m[1], 10);
+                    const monToken = m[2];
+                    let year = parseInt(m[3], 10);
+                    if (year < 100) year = 2000 + year;
+                    const month = /^(\d{1,2})$/.test(monToken)
+                        ? Math.max(0, Math.min(11, parseInt(monToken, 10) - 1))
+                        : ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'].indexOf(monToken.toLowerCase());
+                    if (month >= 0) d = new Date(year, month, day);
+                }
+            }
+            if (!d) d = new Date();
+            const dd = String(d.getDate()).padStart(2, '0');
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const yyyy = String(d.getFullYear());
+            return `${yyyy}-${mm}-${dd} 00:00:00`;
+        } catch {
+            const now = new Date();
+            const dd = String(now.getDate()).padStart(2, '0');
+            const mm = String(now.getMonth() + 1).padStart(2, '0');
+            const yyyy = String(now.getFullYear());
+            return `${yyyy}-${mm}-${dd} 00:00:00`;
+        }
+    };
+
     const handleAddResult = () => {
         if (selectedLabTests.length === 0) {
             setSnackbarMessage('Please select at least one lab test');
@@ -347,6 +382,8 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
 
             const visitDateString = (patientData as any)?.visitDate || new Date().toISOString().slice(0, 10);
             const visitDateYMD = toYyyyMmDd(String(visitDateString));
+            // Use yyyy-MM-dd 00:00:00 to match patient_visits FK composite key
+            const visitDateYMDMidnight = `${visitDateYMD} 00:00:00`;
             const reportDateYMD = toYyyyMmDd(String(formData.reportDate));
 
             const requestPayload: import('../services/patientService').LabTestResultRequest = {
@@ -361,7 +398,8 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                 reportDate: reportDateYMD,
                 comment: formData.comment,
                 testReportData: labTestResults.map(r => ({
-                    visitDate: String(visitDateYMD || ''),
+                    // Align with patient_visits FK: yyyy-MM-dd 00:00:00
+                    visitDate: String(visitDateYMDMidnight || ''),
                     patientVisitNo: Number(patientVisitNo || 0),
                     shiftId: Number(shiftId || 0),
                     clinicId: String(clinicId || ''),
@@ -469,7 +507,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                         <div style={{
                             background: 'white',
                             padding: '15px 20px',
-                            borderBottom: '1px solid #e0e0e0',
+                            // borderBottom: '1px solid #e0e0e0',
                             display: 'flex',
                             justifyContent: 'space-between',
                             alignItems: 'center',
@@ -1078,7 +1116,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                         {/* Footer with Action Buttons */}
                         <div style={{
                             padding: '20px',
-                            borderTop: '1px solid #e0e0e0',
+                            // borderTop: '1px solid #e0e0e0',
                             display: 'flex',
                             justifyContent: 'flex-end',
                             gap: '12px',
