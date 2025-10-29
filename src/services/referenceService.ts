@@ -123,3 +123,20 @@ export async function getClinics(): Promise<ClinicItem[]> {
   return data.map(mapClinicItem)
 }
 
+export interface FollowUpTypeItem {
+  id: string
+  followUpDescription: string
+}
+
+function mapFollowUpTypeItem(item: any): FollowUpTypeItem {
+  const id = item?.id ?? item?.followUpTypeId ?? item?.code ?? ''
+  const followUpDescription = item?.followUpDescription ?? item?.name ?? item?.description ?? String(id)
+  return { id: String(id), followUpDescription: String(followUpDescription) }
+}
+
+export async function getFollowUpTypes(): Promise<FollowUpTypeItem[]> {
+  const response = await api.get('/reference/follow-up-types')
+  const data = Array.isArray(response?.data) ? response.data : []
+  return data.map(mapFollowUpTypeItem)
+}
+

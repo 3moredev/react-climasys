@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { useNavigate, useLocation } from "react-router-dom";
+import { visitService, ComprehensiveVisitDataRequest } from '../services/visitService';
 import { sessionService, SessionInfo } from "../services/sessionService";
 import { Delete, Edit, Add, Info } from '@mui/icons-material';
+import { Snackbar } from '@mui/material';
 import { complaintService, ComplaintOption } from "../services/complaintService";
 import { medicineService, MedicineOption } from "../services/medicineService";
 import { diagnosisService, DiagnosisOption } from "../services/diagnosisService";
 import { investigationService, InvestigationOption } from "../services/investigationService";
 import { appointmentService } from "../services/appointmentService";
+import { getFollowUpTypes, FollowUpTypeItem } from "../services/referenceService";
 import PatientFormTest from "../components/Test/PatientFormTest";
 import AddComplaintPopup from "../components/AddComplaintPopup";
 import AddDiagnosisPopup from "../components/AddDiagnosisPopup";
@@ -184,6 +187,11 @@ export default function Treatment() {
     const [loading, setLoading] = useState<boolean>(true);
     const [showVitalsTrend, setShowVitalsTrend] = useState<boolean>(false);
     const [showInstructionPopup, setShowInstructionPopup] = useState<boolean>(false);
+    const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+    const [submitError, setSubmitError] = useState<string | null>(null);
+    const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
+    const [snackbarOpen, setSnackbarOpen] = useState(false);
+    const [snackbarMessage, setSnackbarMessage] = useState('');
     
     // Form data state
     const [formData, setFormData] = useState({
@@ -392,6 +400,11 @@ export default function Treatment() {
         remarkComments: '',
         planAdv: ''
     });
+
+    // Follow-up types data
+    const [followUpTypesOptions, setFollowUpTypesOptions] = useState<FollowUpTypeItem[]>([]);
+    const [followUpTypesLoading, setFollowUpTypesLoading] = useState(false);
+    const [followUpTypesError, setFollowUpTypesError] = useState<string | null>(null);
     
     const [billingData, setBillingData] = useState({
         billed: '',
@@ -611,6 +624,34 @@ export default function Treatment() {
         loadDiagnoses();
         return () => { cancelled = true; };
     }, [treatmentData?.doctorId, sessionData?.clinicId]);
+
+    // Load follow-up types from API when component mounts
+    React.useEffect(() => {
+        let cancelled = false;
+        async function loadFollowUpTypes() {
+            setFollowUpTypesLoading(true);
+            setFollowUpTypesError(null);
+            
+            try {
+                const options = await getFollowUpTypes();
+                if (!cancelled) {
+                    setFollowUpTypesOptions(options);
+                }
+            } catch (error: any) {
+                console.error('Error loading follow-up types:', error);
+                if (!cancelled) {
+                    setFollowUpTypesError(error.message);
+                }
+            } finally {
+                if (!cancelled) {
+                    setFollowUpTypesLoading(false);
+                }
+            }
+        }
+        
+        loadFollowUpTypes();
+        return () => { cancelled = true; };
+    }, []);
 
     const handleBackToAppointments = () => {
         navigate('/appointment');
@@ -1233,6 +1274,326 @@ export default function Treatment() {
         setShowTestLabPopup(false);
     };
 
+    // Function to collect all form fields into an array
+    const collectAllFormFields = () => {
+        const allFields = [
+            // Basic form data
+            { field: 'referralBy', value: formData.referralBy },
+            { field: 'visitType.inPerson', value: formData.visitType.inPerson },
+            { field: 'visitType.followUp', value: formData.visitType.followUp },
+            { field: 'allergy', value: formData.allergy },
+            { field: 'medicalHistoryText', value: formData.medicalHistoryText },
+            { field: 'surgicalHistory', value: formData.surgicalHistory },
+            { field: 'medicines', value: formData.medicines },
+            { field: 'visitComments', value: formData.visitComments },
+            { field: 'pc', value: formData.pc },
+            
+            // Vitals
+            { field: 'height', value: formData.height },
+            { field: 'weight', value: formData.weight },
+            { field: 'bmi', value: formData.bmi },
+            { field: 'pulse', value: formData.pulse },
+            { field: 'bp', value: formData.bp },
+            { field: 'sugar', value: formData.sugar },
+            { field: 'tft', value: formData.tft },
+            { field: 'pallorHb', value: formData.pallorHb },
+            
+            // Medical history checkboxes
+            { field: 'medicalHistory.hypertension', value: formData.medicalHistory.hypertension },
+            { field: 'medicalHistory.diabetes', value: formData.medicalHistory.diabetes },
+            { field: 'medicalHistory.cholesterol', value: formData.medicalHistory.cholesterol },
+            { field: 'medicalHistory.ihd', value: formData.medicalHistory.ihd },
+            { field: 'medicalHistory.asthma', value: formData.medicalHistory.asthma },
+            { field: 'medicalHistory.th', value: formData.medicalHistory.th },
+            { field: 'medicalHistory.smoking', value: formData.medicalHistory.smoking },
+            { field: 'medicalHistory.tobacco', value: formData.medicalHistory.tobacco },
+            { field: 'medicalHistory.alcohol', value: formData.medicalHistory.alcohol },
+            
+            // Clinical data
+            { field: 'detailedHistory', value: formData.detailedHistory },
+            { field: 'examinationFindings', value: formData.examinationFindings },
+            { field: 'additionalComments', value: formData.additionalComments },
+            { field: 'procedurePerformed', value: formData.procedurePerformed },
+            { field: 'dressingBodyParts', value: formData.dressingBodyParts },
+            
+            // Selected complaints
+            { field: 'selectedComplaints', value: selectedComplaints },
+            { field: 'complaintsRows', value: complaintsRows },
+            
+            // Selected diagnoses
+            { field: 'selectedDiagnoses', value: selectedDiagnoses },
+            { field: 'diagnosisRows', value: diagnosisRows },
+            
+            // Selected medicines
+            { field: 'selectedMedicines', value: selectedMedicines },
+            { field: 'medicineRows', value: medicineRows },
+            
+            // Prescriptions
+            { field: 'prescriptionRows', value: prescriptionRows },
+            
+            // Selected investigations
+            { field: 'selectedInvestigations', value: selectedInvestigations },
+            { field: 'investigationRows', value: investigationRows },
+            
+            // Follow-up data
+            { field: 'followUpData.followUpType', value: followUpData.followUpType },
+            { field: 'followUpData.followUp', value: followUpData.followUp },
+            
+            // Billing data
+            { field: 'billingData.billed', value: billingData.billed },
+            { field: 'billingData.discount', value: billingData.discount },
+            
+            // Attachments
+            { field: 'attachments', value: attachments },
+            
+            // Session data
+            { field: 'sessionData', value: sessionData },
+            { field: 'treatmentData', value: treatmentData }
+        ];
+        
+        return allFields;
+    };
+
+    // Function to convert date to YYYY-MM-DD format
+    const toYyyyMmDd = (date: any): string => {
+        if (!date) return new Date().toISOString().slice(0, 10);
+        const d = new Date(date);
+        return d.toISOString().slice(0, 10);
+    };
+
+    // Generic treatment handler for both save and submit
+    const handleTreatmentAction = async (isSubmit: boolean) => {
+        try {
+            const actionType = isSubmit ? 'SUBMIT' : 'SAVE';
+            console.log(`=== TREATMENT FORM ${actionType} STARTED ===`);
+            console.log('Form data:', formData);
+            console.log('Treatment data:', treatmentData);
+            console.log('Session data:', sessionData);
+            console.log('Is Submit:', isSubmit);
+            
+            setIsSubmitting(true);
+            setSubmitError(null);
+            setSubmitSuccess(null);
+            setSnackbarOpen(false);
+            setSnackbarMessage('');
+            
+            // Fetch session data for dynamic values if not already available
+            let currentSessionData = sessionData;
+            if (!currentSessionData) {
+                try {
+                    const sessionResult = await sessionService.getSessionInfo();
+                    if (sessionResult.success) {
+                        currentSessionData = sessionResult.data;
+                        console.log('Session data loaded:', currentSessionData);
+                    }
+                } catch (sessionError) {
+                    console.warn('Could not load session data:', sessionError);
+                }
+            }
+            
+            // Validate required fields are present
+            const doctorId = treatmentData?.doctorId || currentSessionData?.doctorId;
+            const clinicId = treatmentData?.clinicId || currentSessionData?.clinicId;
+            const shiftId = currentSessionData?.clinicId; // Using clinicId as shiftId fallback
+            const userId = currentSessionData?.userId;
+            
+            if (!doctorId) {
+                throw new Error('Doctor ID is required but not found in treatment data or session');
+            }
+            if (!clinicId) {
+                throw new Error('Clinic ID is required but not found in treatment data or session');
+            }
+            if (!userId) {
+                throw new Error('User ID is required but not found in session data');
+            }
+            
+            // Validate patient visit number
+            const patientVisitNo = treatmentData?.visitNumber;
+            if (!patientVisitNo) {
+                throw new Error('Patient Visit Number is required but not found in treatment data');
+            }
+            
+            console.log('=== VALIDATION PASSED ===');
+            console.log('Doctor ID:', doctorId);
+            console.log('Clinic ID:', clinicId);
+            console.log('Shift ID:', shiftId);
+            console.log('User ID:', userId);
+            console.log('Patient Visit No:', patientVisitNo);
+
+            // Map form data to API request format
+            const visitData: ComprehensiveVisitDataRequest = {
+                // Required fields - using validated values
+                patientId: treatmentData?.patientId?.toString() || '',
+                doctorId: String(doctorId),
+                clinicId: String(clinicId),
+                shiftId: parseInt(String(shiftId || clinicId)) || 1, // Use shiftId or fallback to clinicId, default to 1
+                visitDate: toYyyyMmDd(new Date()) + 'T' + new Date().toTimeString().slice(0, 8),
+                patientVisitNo: parseInt(String(patientVisitNo)) || 0,
+                
+                // Referral information
+                referBy: (formData.referralBy === 'Self')
+                    ? 'S'
+                    : 'O', // S for Self, O for Other
+                referralName: formData.referralBy === 'Self' ? 'Self' : (formData.referralBy || ''),
+                referralContact: formData.referralBy === 'Self' ? '' : '',
+                referralEmail: formData.referralBy === 'Self' ? '' : '',
+                referralAddress: formData.referralBy === 'Self' ? '' : '',
+                
+                // Vital signs
+                pulse: parseInt(formData.pulse) || 0,
+                heightInCms: parseFloat(formData.height) || 0,
+                weightInKgs: parseFloat(formData.weight) || 0,
+                bloodPressure: formData.bp,
+                sugar: formData.sugar,
+                tft: formData.tft,
+                
+                // Medical history
+                pastSurgicalHistory: formData.surgicalHistory,
+                previousVisitPlan: formData.visitComments,
+                chiefComplaint: formData.pc,
+                visitComments: formData.visitComments,
+                currentMedicines: formData.medicines,
+                
+                // Medical conditions from form data
+                hypertension: formData.medicalHistory.hypertension,
+                diabetes: formData.medicalHistory.diabetes,
+                cholestrol: formData.medicalHistory.cholesterol,
+                ihd: formData.medicalHistory.ihd,
+                th: formData.medicalHistory.th,
+                asthama: formData.medicalHistory.asthma,
+                smoking: formData.medicalHistory.smoking,
+                tobaco: formData.medicalHistory.tobacco,
+                alchohol: formData.medicalHistory.alcohol,
+                
+                // Additional fields
+                habitDetails: '',
+                allergyDetails: formData.allergy,
+                observation: formData.examinationFindings,
+                inPerson: formData.visitType.inPerson,
+                symptomComment: formData.detailedHistory,
+                reason: '',
+                impression: formData.additionalComments,
+                attendedBy: '',
+                paymentById: 1,
+                paymentRemark: '',
+                attendedById: 0,
+                followUp: followUpData.followUpType ? String(followUpData.followUpType).charAt(0) : 'N', // First character of followUpType or 'N'
+                followUpFlag: formData.visitType.followUp,
+                currentComplaint: selectedComplaints.join(','),
+                visitCommentsField: formData.visitComments,
+                
+                // Clinical fields
+                tpr: '',
+                importantFindings: formData.examinationFindings,
+                additionalComments: formData.additionalComments,
+                systemic: '',
+                odeama: '',
+                pallor: formData.pallorHb,
+                gc: '',
+                
+                // Gynecological fields
+                fmp: '',
+                prmc: '',
+                pamc: '',
+                lmp: '',
+                obstetricHistory: '',
+                surgicalHistory: formData.surgicalHistory,
+                menstrualAddComments: '',
+                followUpComment: followUpData.followUp,
+                followUpDate: new Date().toISOString().slice(0, 19),
+                pregnant: false,
+                edd: new Date().toISOString().slice(0, 19),
+                followUpType: followUpData.followUpType ? String(followUpData.followUpType).charAt(0) : '0', // Single character: first char of followUpType or '0'
+                
+                // Financial fields
+                feesToCollect: parseFloat(billingData.billed) || 0,
+                feesPaid: 0,
+                discount: parseFloat(billingData.discount) || 0,
+                originalDiscount: parseFloat(billingData.discount) || 0,
+                
+                // Status and user - Use different status IDs for save vs submit
+                statusId: isSubmit ? 5 : 9, // Status 5 for submit, Status 9 for save
+                userId: String(userId),
+                isSubmitPatientVisitDetails: isSubmit // true for submit, false for save
+            };
+
+            console.log(`=== ${actionType}ING TREATMENT DATA TO API ===`);
+            console.log('Visit data object:', visitData);
+            console.log('Visit data JSON:', JSON.stringify(visitData, null, 2));
+            console.log('Status ID:', visitData.statusId);
+            console.log('Is Submit Patient Visit Details:', visitData.isSubmitPatientVisitDetails);
+            console.log('Clinic ID:', visitData.clinicId);
+            console.log('Doctor ID:', visitData.doctorId);
+            console.log('Shift ID:', visitData.shiftId);
+            console.log('Patient Visit No:', visitData.patientVisitNo);
+            
+            // Check for null/undefined values that might cause validation errors
+            const nullFields = [];
+            if (!visitData.patientId) nullFields.push('patientId');
+            if (!visitData.doctorId) nullFields.push('doctorId');
+            if (!visitData.clinicId) nullFields.push('clinicId');
+            if (!visitData.shiftId) nullFields.push('shiftId');
+            if (!visitData.patientVisitNo) nullFields.push('patientVisitNo');
+            if (!visitData.visitDate) nullFields.push('visitDate');
+            if (!visitData.statusId) nullFields.push('statusId');
+            if (visitData.discount === null || visitData.discount === undefined) nullFields.push('discount');
+            if (!visitData.userId) nullFields.push('userId');
+            
+            if (nullFields.length > 0) {
+                console.error('=== NULL/UNDEFINED FIELDS DETECTED ===');
+                console.error('Fields with null/undefined values:', nullFields);
+                throw new Error(`Required fields are missing: ${nullFields.join(', ')}`);
+            }
+            
+            const result = await visitService.saveComprehensiveVisitData(visitData);
+            
+            console.log('=== API RESPONSE ===');
+            console.log('API Response:', result);
+            console.log('Success status:', result.success);
+            
+            if (result.success) {
+                console.log(`=== TREATMENT ${actionType}ED SUCCESSFULLY ===`);
+                setSnackbarMessage(`Treatment ${isSubmit ? 'submitted' : 'saved'} successfully!`);
+                setSnackbarOpen(true);
+                
+                // Clear form data after successful submission
+                setTimeout(() => {
+                    setSnackbarOpen(false);
+                    setSnackbarMessage('');
+                    // Optionally navigate back or reset form
+                    // navigate('/appointments');
+                }, 2000);
+            } else {
+                console.error(`=== TREATMENT ${actionType} FAILED ===`);
+                console.error('Error:', result.error || `Failed to ${isSubmit ? 'submit' : 'save'} treatment`);
+                setSnackbarMessage(result.error || `Failed to ${isSubmit ? 'submit' : 'save'} treatment`);
+                setSnackbarOpen(true);
+            }
+        } catch (err: any) {
+            const actionType = isSubmit ? 'SUBMIT' : 'SAVE';
+            console.error(`=== ERROR DURING TREATMENT ${actionType} ===`);
+            console.error(`Error ${isSubmit ? 'submitting' : 'saving'} treatment data:`, err);
+            console.error('Error type:', typeof err);
+            console.error('Error message:', err instanceof Error ? err.message : 'Unknown error');
+            setSnackbarMessage(err.message || `An error occurred while ${isSubmit ? 'submitting' : 'saving'} treatment`);
+            setSnackbarOpen(true);
+        } finally {
+            console.log('=== FINALLY BLOCK ===');
+            console.log('Setting submitting to false');
+            setIsSubmitting(false);
+            console.log('Submitting state updated');
+        }
+    };
+
+    // Specific handlers for save and submit
+    const handleTreatmentSave = async () => {
+        await handleTreatmentAction(false); // false = save
+    };
+
+    const handleTreatmentSubmit = async () => {
+        await handleTreatmentAction(true); // true = submit
+    };
+
     const handleComplaintCommentChange = (rowValue: string, text: string) => {
         setComplaintsRows(prev => prev.map(r => r.value === rowValue ? { ...r, comment: text } : r));
     };
@@ -1309,8 +1670,8 @@ export default function Treatment() {
                         afternoon: medicineOption.afternoon,
                         b: medicineOption.morning.toString(),
                         l: medicineOption.afternoon.toString(),
-                        d: '',
-                        days: '',
+                        d: '0',
+                        days: '1',
                         instruction: ''
                     };
                     setMedicineRows(prev => [...prev, newMedicine]);
@@ -3239,7 +3600,7 @@ export default function Treatment() {
                         {/* Previous Visit Section */}
                         <div style={{ marginBottom: '15px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', marginBottom: '5px', width: '100%', gap: '8px' }}>
-                                <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Prescriptions suggested in previous visit:</label>
+                                <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Prescriptions suggested in previous visit</label>
                                 <div
                                     onClick={() => setShowPreviousVisit(!showPreviousVisit)}
                                     style={{
@@ -3621,19 +3982,30 @@ export default function Treatment() {
                                     <select
                                         value={followUpData.followUpType}
                                         onChange={(e) => handleFollowUpChange('followUpType', e.target.value)}
+                                        disabled={followUpTypesLoading}
                                         style={{
                                             width: '100%',
                                             padding: '6px 10px',
                                             border: '1px solid #ccc',
                                             borderRadius: '4px',
                                             fontSize: '13px',
-                                            height: '32px'
+                                            height: '32px',
+                                            opacity: followUpTypesLoading ? 0.6 : 1
                                         }}
                                     >
-                                        <option value="">Select Follow-up Type</option>
-                                        <option value="Routine">Routine</option>
-                                        <option value="Urgent">Urgent</option>
-                                        <option value="Emergency">Emergency</option>
+                                        <option value="">
+                                            {followUpTypesLoading ? 'Loading...' : 'Select Follow-up Type'}
+                                        </option>
+                                        {followUpTypesOptions.map((option) => (
+                                            <option key={option.id} value={option.id}>
+                                                {option.followUpDescription}
+                                            </option>
+                                        ))}
+                                        {followUpTypesError && (
+                                            <option value="" disabled>
+                                                Error: {followUpTypesError}
+                                            </option>
+                                        )}
                                     </select>
                                 </div>
                                 <div>
@@ -3820,35 +4192,35 @@ export default function Treatment() {
                             </button>
                             <button 
                                 type="button" 
-                                onClick={() => {
-                                    console.log('Saving treatment...');
-                                    alert('Treatment saved successfully!');
-                                }}
+                                onClick={handleTreatmentSave}
+                                disabled={isSubmitting}
                                 style={{
-                                    backgroundColor: '#1976d2',
+                                    backgroundColor: isSubmitting ? '#ccc' : '#1976d2',
                                     color: 'white',
                                     border: 'none',
                                     padding: '8px 12px',
                                     borderRadius: '4px',
-                                    cursor: 'pointer',
+                                    cursor: isSubmitting ? 'not-allowed' : 'pointer',
                                     fontSize: '12px'
                                 }}
                             >
-                                Save
+                                {isSubmitting ? 'Saving...' : 'Save'}
                             </button>
                             <button 
                                 type="button" 
+                                onClick={handleTreatmentSubmit}
+                                disabled={isSubmitting}
                                 style={{
-                                    backgroundColor: '#1976d2',
+                                    backgroundColor: isSubmitting ? '#ccc' : '#1976d2',
                                     color: 'white',
                                     border: 'none',
                                     padding: '8px 12px',
                                     borderRadius: '4px',
-                                    cursor: 'pointer',
+                                    cursor: isSubmitting ? 'not-allowed' : 'pointer',
                                     fontSize: '12px'
                                 }}
                             >
-                                Submit
+                                {isSubmitting ? 'Submitting...' : 'Submit'}
                             </button>
                         </div>
                         </div>
@@ -3953,6 +4325,26 @@ export default function Treatment() {
                 open={showTestLabPopup}
                 onClose={() => setShowTestLabPopup(false)}
                 onSave={handleSaveTestLab}
+            />
+
+            {/* Success/Error Snackbar - Always rendered at bottom center */}
+            <Snackbar
+                open={snackbarOpen}
+                autoHideDuration={2000}
+                onClose={() => {
+                    setSnackbarOpen(false);
+                    setSnackbarMessage('');
+                }}
+                message={snackbarMessage}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+                sx={{
+                    zIndex: 99999, // Ensure snackbar appears above everything
+                    '& .MuiSnackbarContent-root': {
+                        backgroundColor: snackbarMessage.toLowerCase().includes('error') || snackbarMessage.toLowerCase().includes('failed') ? '#f44336' : '#4caf50',
+                        color: 'white',
+                        fontWeight: 'bold'
+                    }
+                }}
             />
 
         </div>

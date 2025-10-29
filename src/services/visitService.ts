@@ -41,9 +41,9 @@ export interface ComprehensiveVisitDataRequest {
   patientId: string;
   doctorId: string;
   clinicId: string;
-  shiftId: string;
+  shiftId: number;
   visitDate: string;
-  patientVisitNo: string;
+  patientVisitNo: number;
   referBy: string;
   referralName: string;
   referralContact: string;
