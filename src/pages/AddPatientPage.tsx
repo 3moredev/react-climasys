@@ -697,9 +697,55 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
           backgroundColor: '#ECEFF1',
           WebkitTextFillColor: 'inherit'
         },
-        // Autocomplete input opacity (visible)
+        // Autocomplete styling to match other inputs and remove inner borders
         '& .MuiAutocomplete-root .MuiAutocomplete-input': {
-          opacity: 1
+          opacity: 1,
+          border: 'none !important',
+          outline: 'none !important'
+        },
+        '& .MuiAutocomplete-root .MuiOutlinedInput-root': {
+          height: 38,
+          borderRadius: '8px',
+          boxShadow: 'none',
+          padding: '0 !important'
+        },
+        '& .MuiAutocomplete-root .MuiOutlinedInput-root .MuiOutlinedInput-input': {
+          border: 'none !important',
+          outline: 'none !important',
+          padding: '6px 12px !important'
+        },
+        '& .MuiAutocomplete-root .MuiOutlinedInput-root .MuiOutlinedInput-notchedOutline': {
+          borderWidth: '2px',
+          borderColor: '#B7B7B7',
+          borderRadius: '8px'
+        },
+        '& .MuiAutocomplete-root .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline': {
+          borderColor: '#999',
+          borderRadius: '8px'
+        },
+        '& .MuiAutocomplete-root .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
+          borderWidth: '2px',
+          borderColor: '#1E88E5',
+          borderRadius: '8px'
+        },
+        '& .MuiAutocomplete-root .MuiOutlinedInput-root.Mui-focused': {
+          boxShadow: 'none !important'
+        },
+        '& .MuiAutocomplete-root .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-input': {
+          border: 'none !important',
+          outline: 'none !important'
+        },
+        // Ensure no double borders on Autocomplete input elements
+        '& .MuiAutocomplete-root input': {
+          border: 'none !important',
+          outline: 'none !important',
+          boxShadow: 'none !important'
+        },
+        '& .MuiAutocomplete-root .MuiTextField-root': {
+          '& .MuiOutlinedInput-root .MuiOutlinedInput-input': {
+            border: 'none !important',
+            outline: 'none !important'
+          }
         },
         // Remove global input borders on this page only
         '& input, & textarea, & select, & .MuiTextField-root input, & .MuiFormControl-root input': {
@@ -953,7 +999,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         InputProps={{
                           ...params.InputProps,
                           endAdornment: (
-                            <InputAdornment position="end">
+                            <InputAdornment position="end" sx={{ pr: 1 }}>
                               <Search sx={{ color: '#666' }} />
                             </InputAdornment>
                           )
@@ -995,7 +1041,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         InputProps={{
                           ...params.InputProps,
                           endAdornment: (
-                            <InputAdornment position="end">
+                        <InputAdornment position="end" sx={{ pr: 1 }}>
                               <Search sx={{ color: '#666' }} />
                             </InputAdornment>
                           )

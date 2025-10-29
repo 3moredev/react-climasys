@@ -3,7 +3,7 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import { useNavigate, useLocation } from "react-router-dom";
 import { visitService, ComprehensiveVisitDataRequest } from '../services/visitService';
 import { sessionService, SessionInfo } from "../services/sessionService";
-import { Delete, Edit, Add, Info } from '@mui/icons-material';
+import { Delete, Edit, Add, Info, TrendingUp } from '@mui/icons-material';
 import { Snackbar } from '@mui/material';
 import { complaintService, ComplaintOption } from "../services/complaintService";
 import { medicineService, MedicineOption } from "../services/medicineService";
@@ -2055,9 +2055,7 @@ export default function Treatment() {
                                         gap: '5px', 
                                         cursor: 'pointer',
                                         fontSize: '13px',
-                                        backgroundColor: value ? '#e3f2fd' : 'transparent',
-                                        borderRadius: '4px',
-                                        border: value ? '1px solid #1976d2' : '1px solid transparent'
+                                        borderRadius: '4px'
                                     }}>
                                         <input
                                             type="checkbox"
@@ -2375,9 +2373,9 @@ export default function Treatment() {
                                                                             cursor: 'pointer', 
                                                                             fontSize: '12px', 
                                                                             border: 'none',
-                                                                            backgroundColor: checked ? '#e3f2fd' : 'transparent',
+                                                                            backgroundColor: 'transparent',
                                                                             borderRadius: '3px',
-                                                                            fontWeight: checked ? '600' : '400'
+                                                                            fontWeight: 400
                                                                         }}
                                                                     >
                                                                         <input
@@ -2650,7 +2648,6 @@ export default function Treatment() {
                                             cursor: 'pointer',
                                             textTransform: 'uppercase'
                                         }}
-                                        onClick={handleAddCustomTestLab}
                                     >
                                         RECORD TEST RESULT
                                     </button>
@@ -2801,9 +2798,9 @@ export default function Treatment() {
                                                                     cursor: 'pointer', 
                                                                     fontSize: '12px', 
                                                                     border: 'none',
-                                                                    backgroundColor: checked ? '#e3f2fd' : 'transparent',
+                                                                    backgroundColor: 'transparent',
                                                                     borderRadius: '3px',
-                                                                    fontWeight: checked ? '600' : '400'
+                                                                    fontWeight: 400
                                                                 }}
                                                             >
                                                                 <input
@@ -3072,9 +3069,9 @@ export default function Treatment() {
                                                                     cursor: 'pointer', 
                                                                     fontSize: '12px', 
                                                                     border: 'none',
-                                                                    backgroundColor: checked ? '#e3f2fd' : 'transparent',
+                                                                    backgroundColor: 'transparent',
                                                                     borderRadius: '3px',
-                                                                    fontWeight: checked ? '600' : '400'
+                                                                    fontWeight: 400
                                                                 }}
                                                             >
                                                                 <input
@@ -3823,9 +3820,10 @@ export default function Treatment() {
                                                                     cursor: 'pointer', 
                                                                     fontSize: '12px', 
                                                                     border: 'none',
-                                                                    backgroundColor: checked ? '#e3f2fd' : 'transparent',
+                                                                    backgroundColor: 'transparent',
                                                                     borderRadius: '3px',
-                                                                    fontWeight: checked ? '600' : '400'
+                                                                    fontWeight: 400,
+                                                                    color: '#333'
                                                                 }}
                                                             >
                                                                 <input
@@ -3897,6 +3895,7 @@ export default function Treatment() {
                                     onMouseLeave={(e) => {
                                         e.currentTarget.style.backgroundColor = '#1976d2';
                                     }}
+                                    onClick={handleAddCustomTestLab}
                                 >
                                     <Add fontSize="small" />
                                 </button>
@@ -3925,7 +3924,7 @@ export default function Treatment() {
                                         e.currentTarget.style.backgroundColor = '#1976d2';
                                     }}
                                 >
-                                    i
+                                    <TrendingUp fontSize="small" />
                                 </button>
                             </div>
 
