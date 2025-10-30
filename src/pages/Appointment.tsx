@@ -1751,7 +1751,7 @@ export default function AppointmentTable() {
         // For doctor screen, show patients with "WAITING", "WITH DOCTOR", or "CONSULT ON CALL" status
         if (isDoctor) {
             const normalizedStatus = normalizeStatusLabel(a.status);
-            const doctorStatusOk = normalizedStatus === 'WAITING' || normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL';
+            const doctorStatusOk = normalizedStatus === 'WAITING' || normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE';
             return nameOk && contactOk && statusOk && doctorStatusOk;
         }
 
@@ -1766,7 +1766,7 @@ export default function AppointmentTable() {
                 const n = normalizeStatusLabel(s);
                 if (n === 'WITH DOCTOR') return 0;
                 if (n === 'CONSULT ON CALL') return 1;
-                if (n === 'WAITING') return 2;
+                if (n === 'WAITING' || n === 'SAVE') return 2;
                 return 99;
             };
             const pa = priority(a.status);
@@ -2752,16 +2752,16 @@ export default function AppointmentTable() {
                                                                 <img src="/images/avatar/Visit_details.svg" alt="Checkout" style={{ width: 16, height: 16 }} />
                                                             </div>
 
-                                                            {/* Treatment Button - Enabled only for WITH DOCTOR or CONSULT ON CALL */}
+                                                            {/* Treatment Button - Enabled for WITH DOCTOR, CONSULT ON CALL, or SAVE */}
                                                             <div
                                                                 title={(() => {
                                                                     const normalizedStatus = normalizeStatusLabel(a.status);
-                                                                    const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL';
+                                                                    const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE';
                                                                     return isEnabled ? "Treatment" : "Treatment (Disabled - Patient not with doctor)";
                                                                 })()}
                                                                 onClick={() => {
                                                                     const normalizedStatus = normalizeStatusLabel(a.status);
-                                                                    const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL';
+                                                                    const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE';
                                                                     if (isEnabled) {
                                                                         // Navigate to treatment or open modal
                                                                         console.log('Treatment clicked for patient:', a.patientId);
@@ -2773,6 +2773,8 @@ export default function AppointmentTable() {
                                                                             visitNumber: a.visitNumber,
                                                                             doctorId: a.doctorId,
                                                                             clinicId: clinicId,
+                                                                            shiftId: Number(a.shiftId || 1),
+                                                                            visitDate: String(a.visitDate || ''),
                                                                             appointmentId: a.appointmentId,
                                                                             age: a.age,
                                                                             gender: a.gender,
@@ -2789,30 +2791,30 @@ export default function AppointmentTable() {
                                                                     height: '28px',
                                                                     cursor: (() => {
                                                                         const normalizedStatus = normalizeStatusLabel(a.status);
-                                                                        const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL';
+                                                                        const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE';
                                                                         return isEnabled ? 'pointer' : 'not-allowed';
                                                                     })(),
                                                                     color: (() => {
                                                                         const normalizedStatus = normalizeStatusLabel(a.status);
-                                                                        const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL';
+                                                                        const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE';
                                                                         return isEnabled ? '#607D8B' : '#BDBDBD';
                                                                     })(),
                                                                     backgroundColor: 'transparent',
                                                                     borderRadius: '4px',
                                                                     border: (() => {
                                                                         const normalizedStatus = normalizeStatusLabel(a.status);
-                                                                        const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL';
+                                                                        const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE';
                                                                         return isEnabled ? '1px solid #ddd' : '1px solid #E0E0E0';
                                                                     })(),
                                                                     opacity: (() => {
                                                                         const normalizedStatus = normalizeStatusLabel(a.status);
-                                                                        const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL';
+                                                                        const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE';
                                                                         return isEnabled ? 1 : 0.5;
                                                                     })()
                                                                 }}
                                                                 onMouseEnter={(e) => {
                                                                     const normalizedStatus = normalizeStatusLabel(a.status);
-                                                                    const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL';
+                                                                    const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE';
                                                                     if (isEnabled) {
                                                                         e.currentTarget.style.backgroundColor = '#FFF3E0';
                                                                         e.currentTarget.style.borderColor = '#FF9800';
@@ -2820,7 +2822,7 @@ export default function AppointmentTable() {
                                                                 }}
                                                                 onMouseLeave={(e) => {
                                                                     const normalizedStatus = normalizeStatusLabel(a.status);
-                                                                    const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL';
+                                                                    const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE';
                                                                     if (isEnabled) {
                                                                         e.currentTarget.style.backgroundColor = 'transparent';
                                                                         e.currentTarget.style.borderColor = '#ddd';
@@ -2835,7 +2837,7 @@ export default function AppointmentTable() {
                                                                         height: 16,
                                                                         filter: (() => {
                                                                             const normalizedStatus = normalizeStatusLabel(a.status);
-                                                                            const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL';
+                                                                            const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE';
                                                                             return isEnabled ? 'none' : 'grayscale(100%)';
                                                                         })()
                                                                     }} 
