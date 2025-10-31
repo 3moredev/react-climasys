@@ -3,7 +3,7 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import { useNavigate, useLocation } from "react-router-dom";
 import { visitService, ComprehensiveVisitDataRequest } from '../services/visitService';
 import { sessionService, SessionInfo } from "../services/sessionService";
-import { Delete, Edit, Add, Info } from '@mui/icons-material';
+import { Delete, Edit, Add, Info, ExpandMore, ExpandLess } from '@mui/icons-material';
 import { Snackbar } from '@mui/material';
 import { complaintService, ComplaintOption } from "../services/complaintService";
 import { medicineService, MedicineOption } from "../services/medicineService";
@@ -11,7 +11,7 @@ import { diagnosisService, DiagnosisOption } from "../services/diagnosisService"
 import { investigationService, InvestigationOption } from "../services/investigationService";
 import { appointmentService } from "../services/appointmentService";
 import { getFollowUpTypes, FollowUpTypeItem } from "../services/referenceService";
-import { patientService, MasterListsRequest } from "../services/patientService";
+import { patientService, MasterListsRequest, SaveMedicineOverwriteRequest } from "../services/patientService";
 import PatientFormTest from "../components/Test/PatientFormTest";
 import AddComplaintPopup from "../components/AddComplaintPopup";
 import AddDiagnosisPopup from "../components/AddDiagnosisPopup";
@@ -199,6 +199,8 @@ export default function Treatment() {
     const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
     const [snackbarOpen, setSnackbarOpen] = useState(false);
     const [snackbarMessage, setSnackbarMessage] = useState('');
+    const [hasSubmittedSuccessfully, setHasSubmittedSuccessfully] = useState<boolean>(false);
+    const [statusId, setStatusId] = useState<number>(9);
     
     // Form data state
     const [formData, setFormData] = useState({
@@ -265,6 +267,9 @@ export default function Treatment() {
     
     // Test Lab popup state
     const [showTestLabPopup, setShowTestLabPopup] = useState(false);
+
+    // Toggle state for showing details till Provisional Diagnosis
+    const [isDetailsOpen, setIsDetailsOpen] = useState<boolean>(false);
 
     // Complaints and diagnosis data
     const [complaintsRows, setComplaintsRows] = useState<ComplaintRow[]>([]);
@@ -1309,6 +1314,13 @@ export default function Treatment() {
         return bmi.toFixed(1);
     };
 
+    // Display helper: show '-' when value is null/undefined/empty string
+    const display = (value: any): string => {
+        if (value === null || value === undefined) return '-';
+        const str = String(value);
+        return str.trim() === '' ? '-' : str;
+    };
+
     const handleMedicalHistoryChange = (field: string, checked: boolean) => {
         setFormData(prev => ({
             ...prev,
@@ -1582,6 +1594,7 @@ export default function Treatment() {
             console.log('Patient Visit No:', patientVisitNo);
 
             // Map form data to API request format
+            const statusForRequest = isSubmit ? 6 : 9;
             const visitData: ComprehensiveVisitDataRequest = {
                 // Required fields - using validated values
                 patientId: treatmentData?.patientId?.toString() || '',
@@ -1672,9 +1685,8 @@ export default function Treatment() {
                 discount: parseFloat(billingData.discount) || 0,
                 originalDiscount: parseFloat(billingData.discount) || 0,
                 
-                // Status and user - Use different status IDs for save vs submit
-                // Based on climasys2.0 Constants.cs: SUBMITTED_STATUS_ID = 6, Save_STATUS_ID = 9
-                statusId: isSubmit ? 6 : 9, // Status 6 for submit (SUBMITTED), Status 9 for save
+                // Status and user - Use 6 for submit, 9 for save; update to 5 after success
+                statusId: statusForRequest,
                 userId: String(userId),
                 isSubmitPatientVisitDetails: isSubmit // true for submit, false for save
             };
@@ -1707,7 +1719,34 @@ export default function Treatment() {
                 throw new Error(`Required fields are missing: ${nullFields.join(', ')}`);
             }
             
-            const result = await visitService.saveComprehensiveVisitData(visitData);
+            // Route to appropriate API based on action
+            let result: any;
+            if (isSubmit) {
+                const overwriteRequest: SaveMedicineOverwriteRequest = {
+                    visitDate: visitData.visitDate,
+                    patientVisitNo: visitData.patientVisitNo,
+                    shiftId: visitData.shiftId,
+                    clinicId: visitData.clinicId,
+                    doctorId: visitData.doctorId,
+                    patientId: visitData.patientId,
+                    medicineRows: medicineRows as any,
+                    prescriptionRows: prescriptionRows as any,
+                    feesToCollect: visitData.feesToCollect,
+                    feesCollected: 0,
+                    userId: visitData.userId,
+                    statusId: statusForRequest,
+                    bloodPressure: visitData.bloodPressure,
+                    allergyDetails: visitData.allergyDetails,
+                    habitDetails: visitData.habitDetails,
+                    comment: visitData.visitComments,
+                    paymentById: 1,
+                    paymentRemark: visitData.paymentRemark,
+                    discount: visitData.discount
+                };
+                result = await patientService.saveMedicineOverwrite(overwriteRequest);
+            } else {
+                result = await visitService.saveComprehensiveVisitData(visitData);
+            }
             
             console.log('=== API RESPONSE ===');
             console.log('API Response:', result);
@@ -1717,6 +1756,10 @@ export default function Treatment() {
                 console.log(`=== TREATMENT ${actionType}ED SUCCESSFULLY ===`);
                 setSnackbarMessage(`Treatment ${isSubmit ? 'submitted' : 'saved'} successfully!`);
                 setSnackbarOpen(true);
+                if (isSubmit) {
+                    setHasSubmittedSuccessfully(true);
+                    setStatusId(5);
+                }
                 
                 // Clear form data after successful submission
                 setTimeout(() => {
@@ -2255,7 +2298,7 @@ export default function Treatment() {
                                         </label>
                                         <input
                                             type="text"
-                                            value={formData[key as keyof typeof formData] as string}
+                                            value={display(formData[key as keyof typeof formData] as string)}
                                             onChange={(e) => handleInputChange(key, e.target.value)}
                                             disabled
                                             style={{
@@ -2275,44 +2318,54 @@ export default function Treatment() {
                         </div>
 
                         {/* Static UI Sections */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-                            <span style={{ fontWeight: 600, fontSize: '13px' }}>Show</span>
-                            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                    <label style={{ fontSize: '12px', color: '#555', whiteSpace: 'nowrap' }}>Height (Cm)</label>
-                                    <input type="text" disabled value={formData.height} style={{ width: 90, padding: '4px 6px', border: '1px solid #ddd', borderRadius: 4, background: '#D5D5D8' }} />
-                                </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                    <label style={{ fontSize: '12px', color: '#555', whiteSpace: 'nowrap' }}>Weight (Kg)</label>
-                                    <input type="text" disabled value={formData.weight} style={{ width: 90, padding: '4px 6px', border: '1px solid #ddd', borderRadius: 4, background: '#D5D5D8' }} />
-                                </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                    <label style={{ fontSize: '12px', color: '#555', whiteSpace: 'nowrap' }}>BMI</label>
-                                    <input type="text" disabled value={formData.bmi} style={{ width: 90, padding: '4px 6px', border: '1px solid #ddd', borderRadius: 4, background: '#D5D5D8' }} />
-                                </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                    <label style={{ fontSize: '12px', color: '#555', whiteSpace: 'nowrap' }}>Pulse (min)</label>
-                                    <input type="text" disabled value={formData.pulse} style={{ width: 90, padding: '4px 6px', border: '1px solid #ddd', borderRadius: 4, background: '#D5D5D8' }} />
-                                </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                    <label style={{ fontSize: '12px', color: '#555', whiteSpace: 'nowrap' }}>BP</label>
-                                    <input type="text" disabled value={formData.bp} style={{ width: 90, padding: '4px 6px', border: '1px solid #ddd', borderRadius: 4, background: '#D5D5D8' }} />
-                                </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                    <label style={{ fontSize: '12px', color: '#555', whiteSpace: 'nowrap' }}>Sugar</label>
-                                    <input type="text" disabled value={formData.sugar} style={{ width: 90, padding: '4px 6px', border: '1px solid #ddd', borderRadius: 4, background: '#D5D5D8' }} />
-                                </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                    <label style={{ fontSize: '12px', color: '#555', whiteSpace: 'nowrap' }}>TFT</label>
-                                    <input type="text" disabled value={formData.tft} style={{ width: 90, padding: '4px 6px', border: '1px solid #ddd', borderRadius: 4, background: '#D5D5D8' }} />
-                                </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                    <label style={{ fontSize: '12px', color: '#555', whiteSpace: 'nowrap' }}>Pallor/HB</label>
-                                    <input type="text" disabled value={formData.pallorHb} style={{ width: 90, padding: '4px 6px', border: '1px solid #ddd', borderRadius: 4, background: '#D5D5D8' }} />
-                                </div>
+                        <div style={{ marginBottom: isDetailsOpen ? '10px' : '0' }}>
+                            <div
+                                onClick={() => setIsDetailsOpen(prev => !prev)}
+                                style={{ fontWeight: 600, fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer', userSelect: 'none' }}
+                                aria-label={isDetailsOpen ? 'Hide details' : 'Show details'}
+                                title={isDetailsOpen ? 'Hide details' : 'Show details'}
+                            >
+                                Show {isDetailsOpen ? '▴' : '▾'}
                             </div>
+                            {isDetailsOpen && (
+                                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', marginTop: 8 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <label style={{ fontSize: '12px', color: '#555', whiteSpace: 'nowrap' }}>Height (Cm)</label>
+                                        <input type="text" disabled value={display(formData.height)} style={{ width: 90, padding: '4px 6px', border: '1px solid #ddd', borderRadius: 4, background: '#D5D5D8' }} />
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <label style={{ fontSize: '12px', color: '#555', whiteSpace: 'nowrap' }}>Weight (Kg)</label>
+                                        <input type="text" disabled value={display(formData.weight)} style={{ width: 90, padding: '4px 6px', border: '1px solid #ddd', borderRadius: 4, background: '#D5D5D8' }} />
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <label style={{ fontSize: '12px', color: '#555', whiteSpace: 'nowrap' }}>BMI</label>
+                                        <input type="text" disabled value={display(formData.bmi)} style={{ width: 90, padding: '4px 6px', border: '1px solid #ddd', borderRadius: 4, background: '#D5D5D8' }} />
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <label style={{ fontSize: '12px', color: '#555', whiteSpace: 'nowrap' }}>Pulse (min)</label>
+                                        <input type="text" disabled value={display(formData.pulse)} style={{ width: 90, padding: '4px 6px', border: '1px solid #ddd', borderRadius: 4, background: '#D5D5D8' }} />
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <label style={{ fontSize: '12px', color: '#555', whiteSpace: 'nowrap' }}>BP</label>
+                                        <input type="text" disabled value={display(formData.bp)} style={{ width: 90, padding: '4px 6px', border: '1px solid #ddd', borderRadius: 4, background: '#D5D5D8' }} />
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <label style={{ fontSize: '12px', color: '#555', whiteSpace: 'nowrap' }}>Sugar</label>
+                                        <input type="text" disabled value={display(formData.sugar)} style={{ width: 90, padding: '4px 6px', border: '1px solid #ddd', borderRadius: 4, background: '#D5D5D8' }} />
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <label style={{ fontSize: '12px', color: '#555', whiteSpace: 'nowrap' }}>TFT</label>
+                                        <input type="text" disabled value={display(formData.tft)} style={{ width: 90, padding: '4px 6px', border: '1px solid #ddd', borderRadius: 4, background: '#D5D5D8' }} />
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <label style={{ fontSize: '12px', color: '#555', whiteSpace: 'nowrap' }}>Pallor/HB</label>
+                                        <input type="text" disabled value={display(formData.pallorHb)} style={{ width: 90, padding: '4px 6px', border: '1px solid #ddd', borderRadius: 4, background: '#D5D5D8' }} />
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
+                        {isDetailsOpen && (
                         <div style={{ border: '1px solid #e0e0e0', borderRadius: 4, overflow: 'hidden', marginBottom: 12 }}>
                             {/* <div style={{ background: '#1976d2', color: '#fff', padding: '8px 10px', fontWeight: 600, fontSize: 13 }}>Complaints, Diagnosis, Medicines</div> */}
                             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -2338,23 +2391,25 @@ export default function Treatment() {
                                 </tbody>
                             </table>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, padding: 12 }}>
-                                <textarea placeholder="Detailed History" disabled style={{ height: 64, width: '100%', border: '1px solid #ddd', padding: 8, fontSize: 12, background: '#D5D5D8' }} />
-                                <textarea placeholder="Examination Findings" disabled style={{ height: 64, width: '100%', border: '1px solid #ddd', padding: 8, fontSize: 12, background: '#D5D5D8' }} />
-                                <textarea placeholder="Additional Comments" disabled style={{ height: 64, width: '100%', border: '1px solid #ddd', padding: 8, fontSize: 12, background: '#D5D5D8' }} />
+                                <textarea value={display(formData.detailedHistory)} placeholder="Detailed History" disabled style={{ height: 64, width: '100%', border: '1px solid #ddd', padding: 8, fontSize: 12, background: '#D5D5D8' }} />
+                                <textarea value={display(formData.examinationFindings)} placeholder="Examination Findings" disabled style={{ height: 64, width: '100%', border: '1px solid #ddd', padding: 8, fontSize: 12, background: '#D5D5D8' }} />
+                                <textarea value={display(formData.additionalComments)} placeholder="Additional Comments" disabled style={{ height: 64, width: '100%', border: '1px solid #ddd', padding: 8, fontSize: 12, background: '#D5D5D8' }} />
                             </div>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 160px', gap: 12, padding: 12, alignItems: 'end' }}>
-                                <textarea placeholder="Procedure Performed" disabled style={{ height: 64, width: '100%', border: '1px solid #ddd', padding: 8, fontSize: 12, background: '#D5D5D8' }} />
-                                <textarea placeholder="Dressing (body parts)" disabled style={{ height: 64, width: '100%', border: '1px solid #ddd', padding: 8, fontSize: 12, background: '#D5D5D8' }} />                                
+                                <textarea value={display(formData.procedurePerformed)} placeholder="Procedure Performed" disabled style={{ height: 64, width: '100%', border: '1px solid #ddd', padding: 8, fontSize: 12, background: '#D5D5D8' }} />
+                                <textarea value={display(formData.dressingBodyParts)} placeholder="Dressing (body parts)" disabled style={{ height: 64, width: '100%', border: '1px solid #ddd', padding: 8, fontSize: 12, background: '#D5D5D8' }} />                                
                             </div>
                         </div>
+                        )}
 
+                        {isDetailsOpen && (
                         <div style={{ border: '1px solid #e0e0e0', borderRadius: 4, overflow: 'hidden', marginBottom: 12 }}>
-                            <div style={{ background: '#1976d2', color: '#fff', padding: '8px 10px', fontWeight: 600, fontSize: 13 }}>Provisional Diagnosis</div>
+                            {/* <div style={{ background: '#1976d2', color: '#fff', padding: '8px 10px', fontWeight: 600, fontSize: 13 }}>Provisional Diagnosis</div> */}
                             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                 <thead>
-                                    <tr style={{ background: '#f5f5f5' }}>
+                                    <tr style={{ background: '#1976d2' }}>
                                         {['Sr.','Provisional Diagnosis'].map(h => (
-                                            <th key={h} style={{ padding: 8, borderBottom: '1px solid #e0e0e0', fontSize: 12, color: '#333', textAlign: 'left' }}>{h}</th>
+                                            <th key={h} style={{ padding: 8, borderBottom: '1px solid #e0e0e0', fontSize: 12, color: '#fff', textAlign: 'left' }}>{h}</th>
                                         ))}
                                     </tr>
                                 </thead>
@@ -2372,14 +2427,15 @@ export default function Treatment() {
                                 </tbody>
                             </table>
                         </div>
+                        )}
 
                         <div style={{ border: '1px solid #e0e0e0', borderRadius: 4, overflow: 'hidden', marginBottom: 12 }}>
-                            <div style={{ background: '#1976d2', color: '#fff', padding: '8px 10px', fontWeight: 600, fontSize: 13 }}>Medicines</div>
+                            {/* <div style={{ background: '#1976d2', color: '#fff', padding: '8px 10px', fontWeight: 600, fontSize: 13 }}>Medicines</div> */}
                             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                 <thead>
-                                    <tr style={{ background: '#f5f5f5' }}>
+                                    <tr style={{ background: '#1976d2' }}>
                                         {['Sr.','Medicines','B','L','D','Days','Instruction'].map(h => (
-                                            <th key={h} style={{ padding: 8, borderBottom: '1px solid #e0e0e0', fontSize: 12, color: '#333', textAlign: 'left' }}>{h}</th>
+                                            <th key={h} style={{ padding: 8, borderBottom: '1px solid #e0e0e0', fontSize: 12, color: '#fff', textAlign: 'left' }}>{h}</th>
                                         ))}
                                     </tr>
                                 </thead>
@@ -2404,12 +2460,12 @@ export default function Treatment() {
                         </div>
 
                         <div style={{ border: '1px solid #e0e0e0', borderRadius: 4, overflow: 'hidden', marginBottom: 12 }}>
-                            <div style={{ background: '#1976d2', color: '#fff', padding: '8px 10px', fontWeight: 600, fontSize: 13 }}>Prescriptions</div>
+                            {/* <div style={{ background: '#1976d2', color: '#fff', padding: '8px 10px', fontWeight: 600, fontSize: 13 }}>Prescriptions</div> */}
                             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                 <thead>
-                                    <tr style={{ background: '#f5f5f5' }}>
+                                    <tr style={{ background: '#1976d2' }}>
                                         {['Sr.','Prescriptions','B','L','D','Days','Instruction'].map(h => (
-                                            <th key={h} style={{ padding: 8, borderBottom: '1px solid #e0e0e0', fontSize: 12, color: '#333', textAlign: 'left' }}>{h}</th>
+                                            <th key={h} style={{ padding: 8, borderBottom: '1px solid #e0e0e0', fontSize: 12, color: '#fff', textAlign: 'left' }}>{h}</th>
                                         ))}
                                     </tr>
                                 </thead>
@@ -2434,12 +2490,12 @@ export default function Treatment() {
                         </div>
 
                         <div style={{ border: '1px solid #e0e0e0', borderRadius: 4, overflow: 'hidden', marginBottom: 12 }}>
-                            <div style={{ background: '#1976d2', color: '#fff', padding: '8px 10px', fontWeight: 600, fontSize: 13 }}>Instructions</div>
+                            {/* <div style={{ background: '#1976d2', color: '#fff', padding: '8px 10px', fontWeight: 600, fontSize: 13 }}>Instructions</div> */}
                             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                 <thead>
-                                    <tr style={{ background: '#f5f5f5' }}>
+                                    <tr style={{ background: '#1976d2' }}>
                                         {['Sr.','Instructions','B','L','D','Days','Instruction'].map(h => (
-                                            <th key={h} style={{ padding: 8, borderBottom: '1px solid #e0e0e0', fontSize: 12, color: '#333', textAlign: 'left' }}>{h}</th>
+                                            <th key={h} style={{ padding: 8, borderBottom: '1px solid #e0e0e0', fontSize: 12, color: '#fff', textAlign: 'left' }}>{h}</th>
                                         ))}
                                     </tr>
                                 </thead>
@@ -2464,12 +2520,12 @@ export default function Treatment() {
                         </div>
 
                         <div style={{ border: '1px solid #e0e0e0', borderRadius: 4, overflow: 'hidden', marginBottom: 12 }}>
-                            <div style={{ background: '#1976d2', color: '#fff', padding: '8px 10px', fontWeight: 600, fontSize: 13 }}>Suggested Tests</div>
+                            {/* <div style={{ background: '#1976d2', color: '#fff', padding: '8px 10px', fontWeight: 600, fontSize: 13 }}>Suggested Tests</div> */}
                             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                 <thead>
-                                    <tr style={{ background: '#f5f5f5' }}>
+                                    <tr style={{ background: '#1976d2' }}>
                                         {['Sr.','Suggested Tests'].map(h => (
-                                            <th key={h} style={{ padding: 8, borderBottom: '1px solid #e0e0e0', fontSize: 12, color: '#333', textAlign: 'left' }}>{h}</th>
+                                            <th key={h} style={{ padding: 8, borderBottom: '1px solid #e0e0e0', fontSize: 12, color: '#fff', textAlign: 'left' }}>{h}</th>
                                         ))}
                                     </tr>
                                 </thead>
@@ -2509,7 +2565,7 @@ export default function Treatment() {
                                     <input
                                         type="text"
                                         disabled
-                                        value={followUpData.followUp || ''}
+                                        value={display(followUpData.followUp || '')}
                                         style={{ border: '1px solid #ddd', padding: '6px 8px', fontSize: 12, background: '#D5D5D8' }}
                                     />
                                 </div>
@@ -2520,14 +2576,14 @@ export default function Treatment() {
                                     <input
                                         type="text"
                                         disabled
-                                        value={followUpData.followUpDate ? new Date(followUpData.followUpDate).toLocaleDateString('en-GB') : ''}
+                                        value={followUpData.followUpDate ? new Date(followUpData.followUpDate).toLocaleDateString('en-GB') : '-'}
                                         style={{ border: '1px solid #ddd', padding: '6px 8px', fontSize: 12, background: '#D5D5D8' }}
                                     />
                                 </div>
                             </div>
                         <div style={{ marginBottom: 12 }}>
                             <label style={{ display: 'block', marginBottom: 6, fontWeight: 600, fontSize: 13 }}>Plan / Adv</label>
-                            <textarea disabled style={{ width: '100%', height: 38, border: '1px solid #ddd', padding: 8, fontSize: 12, background: '#D5D5D8' }} />
+                            <textarea value={display(followUpData.planAdv)} disabled style={{ width: '100%', height: 38, border: '1px solid #ddd', padding: 8, fontSize: 12, background: '#D5D5D8' }} />
                         </div>
 
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, marginBottom: 12 }}>
@@ -2537,7 +2593,7 @@ export default function Treatment() {
                                 <input
                                     type="text"
                                     disabled
-                                    value={billingData.billed}
+                                    value={display(billingData.billed)}
                                     onChange={(e) => handleBillingChange('billed', e.target.value)}
                                     style={{ width: '100%', border: '1px solid #ddd', padding: '6px 8px', fontSize: 12, background: '#D5D5D8' }}
                                 />
@@ -2558,7 +2614,7 @@ export default function Treatment() {
                                 <input
                                     type="text"
                                     disabled
-                                    value={billingData.dues}
+                                    value={display(billingData.dues)}
                                     onChange={(e) => handleBillingChange('dues', e.target.value)}
                                     style={{ width: '100%', border: '1px solid #ddd', padding: '6px 8px', fontSize: 12, background: '#D5D5D8' }}
                                 />
@@ -2569,7 +2625,7 @@ export default function Treatment() {
                                 <input
                                     type="text"
                                     disabled
-                                    value={billingData.acBalance}
+                                    value={display(billingData.acBalance)}
                                     onChange={(e) => handleBillingChange('acBalance', e.target.value)}
                                     style={{ width: '100%', border: '1px solid #ddd', padding: '6px 8px', fontSize: 12, background: '#D5D5D8' }}
                                 />
@@ -2580,7 +2636,7 @@ export default function Treatment() {
                                 <input
                                     type="text"
                                     disabled
-                                    value={billingData.receiptNo}
+                                    value={display(billingData.receiptNo)}
                                     style={{ width: '100%', border: '1px solid #ddd', padding: '6px 8px', fontSize: 12, background: '#D5D5D8' }}
                                 />
                             </div>
@@ -2610,7 +2666,7 @@ export default function Treatment() {
                             {/* Receipt Date (disabled) */}
                             <div>
                                 <label style={{ display: 'block', marginBottom: 4, fontWeight: 600, fontSize: 12 }}>Receipt Date</label>
-                                <input type="text" disabled style={{ width: '100%', border: '1px solid #ddd', padding: '6px 8px', fontSize: 12, background: '#D5D5D8' }} />
+                                <input type="text" disabled value={'-'} style={{ width: '100%', border: '1px solid #ddd', padding: '6px 8px', fontSize: 12, background: '#D5D5D8' }} />
                             </div>
                         </div>
 
@@ -2663,18 +2719,18 @@ export default function Treatment() {
                             <button 
                                 type="button" 
                                 onClick={handleTreatmentSubmit}
-                                disabled={isSubmitting}
+                                disabled={isSubmitting || hasSubmittedSuccessfully}
                                 style={{
-                                    backgroundColor: isSubmitting ? '#ccc' : '#1976d2',
+                                    backgroundColor: (isSubmitting || hasSubmittedSuccessfully) ? '#ccc' : '#1976d2',
                                     color: 'white',
                                     border: 'none',
                                     padding: '8px 12px',
                                     borderRadius: '4px',
-                                    cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                                    cursor: (isSubmitting || hasSubmittedSuccessfully) ? 'not-allowed' : 'pointer',
                                     fontSize: '12px'
                                 }}
                             >
-                                {isSubmitting ? 'Submitting...' : 'Submit'}
+                                {isSubmitting ? 'Submitting...' : hasSubmittedSuccessfully ? 'Submitted' : 'Submit'}
                             </button>
                         </div>
                         </div>
