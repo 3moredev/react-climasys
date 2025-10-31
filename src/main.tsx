@@ -139,6 +139,13 @@ function App() {
                 </MainLayout>
               </AuthGuard>
             } />
+            <Route path="/collection" element={
+              <AuthGuard>
+                <MainLayout>
+                  <Billing />
+                </MainLayout>
+              </AuthGuard>
+            } />
             <Route path="/example-template" element={
               <AuthGuard>
                 <MainLayout>

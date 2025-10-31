@@ -1969,7 +1969,7 @@ export default function AppointmentTable() {
         const appointmentsToCount = isDoctor
             ? appointments.filter(appt => {
                 const normalizedStatus = normalizeStatusLabel(appt.status);
-                return normalizedStatus === 'WAITING' || normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL';
+                return normalizedStatus === 'WAITING' || normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'WAITING FOR MEDICINE';
             })
             : appointments;
 
@@ -4425,24 +4425,37 @@ export default function AppointmentTable() {
                                                         <div
                                                             title={(() => {
                                                                 const statusId = mapStatusLabelToId(a.status);
-                                                                const isComplete = statusId === 5;
+                                                                const isComplete = statusId === 4;
                                                                 const shouldEnable = !isReceptionist || isComplete;
                                                                 if (!shouldEnable) return "Collection (Disabled for Reception)";
-                                                                return mapStatusLabelToId(a.status) !== 5 ? "Collection (Disabled - Status not Complete)" : "Collection";
+                                                                return mapStatusLabelToId(a.status) !== 4 ? "Collection (Disabled - Status not Complete)" : "Collection";
                                                             })()}
                                                             onClick={() => {
                                                                 const statusId = mapStatusLabelToId(a.status);
-                                                                const isComplete = statusId === 5;
+                                                                const isComplete = statusId === 4;
                                                                 const shouldEnable = !isReceptionist || isComplete;
                                                                 if (!shouldEnable) return; // Disable for reception login unless COMPLETE
-                                                                if (mapStatusLabelToId(a.status) !== 5) return;
+                                                                if (mapStatusLabelToId(a.status) !== 4) return;
                                                                 console.log('Collection clicked for patient:', a.patientId);
+                                                                navigate('/collection', {
+                                                                    state: {
+                                                                        patientId: a.patientId,
+                                                                        patientName: a.patient,
+                                                                        visitNumber: a.visitNumber,
+                                                                        doctorId: a.doctorId,
+                                                                        clinicId: clinicId,
+                                                                        appointmentId: a.appointmentId,
+                                                                        age: a.age,
+                                                                        gender: a.gender,
+                                                                        contact: a.contact
+                                                                    }
+                                                                });
                                                             }}
                                                             aria-disabled={(() => {
                                                                 const statusId = mapStatusLabelToId(a.status);
-                                                                const isComplete = statusId === 5;
+                                                                const isComplete = statusId === 4;
                                                                 const shouldEnable = !isReceptionist || isComplete;
-                                                                return !shouldEnable || mapStatusLabelToId(a.status) !== 5;
+                                                                return !shouldEnable || mapStatusLabelToId(a.status) !== 4;
                                                             })()}
                                                             style={{
                                                                 display: 'inline-flex',
@@ -4452,46 +4465,46 @@ export default function AppointmentTable() {
                                                                 height: '28px',
                                                                 cursor: (() => {
                                                                     const statusId = mapStatusLabelToId(a.status);
-                                                                    const isComplete = statusId === 5;
+                                                                    const isComplete = statusId === 4;
                                                                     const shouldEnable = !isReceptionist || isComplete;
-                                                                    return (shouldEnable && mapStatusLabelToId(a.status) === 5) ? 'pointer' : 'not-allowed';
+                                                                    return (shouldEnable && mapStatusLabelToId(a.status) === 4) ? 'pointer' : 'not-allowed';
                                                                 })(),
                                                                 color: '#607D8B',
                                                                 backgroundColor: (() => {
                                                                     const statusId = mapStatusLabelToId(a.status);
-                                                                    const isComplete = statusId === 5;
+                                                                    const isComplete = statusId === 4;
                                                                     const shouldEnable = !isReceptionist || isComplete;
                                                                     if (!shouldEnable) return '#f5f5f5';
-                                                                    return mapStatusLabelToId(a.status) !== 5 ? '#607D8B' : 'transparent';
+                                                                    return mapStatusLabelToId(a.status) !== 4 ? '#607D8B' : 'transparent';
                                                                 })(),
                                                                 borderRadius: '4px',
                                                                 border: (() => {
                                                                     const statusId = mapStatusLabelToId(a.status);
-                                                                    const isComplete = statusId === 5;
+                                                                    const isComplete = statusId === 4;
                                                                     const shouldEnable = !isReceptionist || isComplete;
                                                                     if (!shouldEnable) return '1px solid #ddd';
-                                                                    return mapStatusLabelToId(a.status) !== 5 ? '1px solid #607D8B' : '1px solid #ddd';
+                                                                    return mapStatusLabelToId(a.status) !== 4 ? '1px solid #607D8B' : '1px solid #ddd';
                                                                 })(),
                                                                 opacity: (() => {
                                                                     const statusId = mapStatusLabelToId(a.status);
-                                                                    const isComplete = statusId === 5;
+                                                                    const isComplete = statusId === 4;
                                                                     const shouldEnable = !isReceptionist || isComplete;
-                                                                    return (shouldEnable && mapStatusLabelToId(a.status) === 5) ? 1 : 0.5;
+                                                                    return (shouldEnable && mapStatusLabelToId(a.status) === 4) ? 1 : 0.5;
                                                                 })()
                                                             }}
                                                             onMouseEnter={(e) => {
                                                                 const statusId = mapStatusLabelToId(a.status);
-                                                                const isComplete = statusId === 5;
+                                                                const isComplete = statusId === 4;
                                                                 const shouldEnable = !isReceptionist || isComplete;
-                                                                if (!shouldEnable || mapStatusLabelToId(a.status) !== 5) return;
+                                                                if (!shouldEnable || mapStatusLabelToId(a.status) !== 4) return;
                                                                 e.currentTarget.style.backgroundColor = '#FFF3E0';
                                                                 e.currentTarget.style.borderColor = 'black';
                                                             }}
                                                             onMouseLeave={(e) => {
                                                                 const statusId = mapStatusLabelToId(a.status);
-                                                                const isComplete = statusId === 5;
+                                                                const isComplete = statusId === 4;
                                                                 const shouldEnable = !isReceptionist || isComplete;
-                                                                if (!shouldEnable || mapStatusLabelToId(a.status) !== 5) return;
+                                                                if (!shouldEnable || mapStatusLabelToId(a.status) !== 4) return;
                                                                 e.currentTarget.style.backgroundColor = 'transparent';
                                                                 e.currentTarget.style.borderColor = '#ddd';
                                                             }}
@@ -4960,18 +4973,31 @@ export default function AppointmentTable() {
                                                     className="crm-btn ms-auto"
                                                     title={(() => {
                                                         const statusId = mapStatusLabelToId(appointment.status);
-                                                        const isComplete = statusId === 5;
+                                                        const isComplete = statusId === 4;
                                                         const shouldEnable = !isReceptionist || isComplete;
                                                         if (!shouldEnable) return "Collection (Disabled for Reception)";
-                                                        return mapStatusLabelToId(appointment.status) !== 5 ? "Collection (Disabled - Status not Complete)" : "Collection";
+                                                        return mapStatusLabelToId(appointment.status) !== 4 ? "Collection (Disabled - Status not Complete)" : "Collection";
                                                     })()}
                                                     onClick={() => {
                                                         const statusId = mapStatusLabelToId(appointment.status);
-                                                        const isComplete = statusId === 5;
+                                                        const isComplete = statusId === 4;
                                                         const shouldEnable = !isReceptionist || isComplete;
                                                         if (!shouldEnable) return; // Disable for reception login unless COMPLETE
-                                                        if (mapStatusLabelToId(appointment.status) !== 5) return;
+                                                        if (mapStatusLabelToId(appointment.status) !== 4) return;
                                                         console.log('Collection clicked for patient:', appointment.patientId);
+                                                        navigate('/collection', {
+                                                            state: {
+                                                                patientId: appointment.patientId,
+                                                                patientName: appointment.patient,
+                                                                visitNumber: appointment.visitNumber,
+                                                                doctorId: appointment.doctorId,
+                                                                clinicId: clinicId,
+                                                                appointmentId: appointment.appointmentId,
+                                                                age: appointment.age,
+                                                                gender: appointment.gender,
+                                                                contact: appointment.contact
+                                                            }
+                                                        });
                                                     }}
                                                     aria-disabled={(() => {
                                                         const statusId = mapStatusLabelToId(appointment.status);
@@ -4982,29 +5008,29 @@ export default function AppointmentTable() {
                                                     style={{
                                                         opacity: (() => {
                                                             const statusId = mapStatusLabelToId(appointment.status);
-                                                            const isComplete = statusId === 5;
+                                                            const isComplete = statusId === 4;
                                                             const shouldEnable = !isReceptionist || isComplete;
-                                                            return (shouldEnable && mapStatusLabelToId(appointment.status) === 5) ? 1 : 0.5;
+                                                            return (shouldEnable && mapStatusLabelToId(appointment.status) === 4) ? 1 : 0.5;
                                                         })(),
                                                         cursor: (() => {
                                                             const statusId = mapStatusLabelToId(appointment.status);
-                                                            const isComplete = statusId === 5;
+                                                            const isComplete = statusId === 4;
                                                             const shouldEnable = !isReceptionist || isComplete;
-                                                            return (shouldEnable && mapStatusLabelToId(appointment.status) === 5) ? 'pointer' : 'not-allowed';
+                                                            return (shouldEnable && mapStatusLabelToId(appointment.status) === 4) ? 'pointer' : 'not-allowed';
                                                         })(),
                                                         backgroundColor: (() => {
                                                             const statusId = mapStatusLabelToId(appointment.status);
-                                                            const isComplete = statusId === 5;
+                                                            const isComplete = statusId === 4;
                                                             const shouldEnable = !isReceptionist || isComplete;
                                                             if (!shouldEnable) return '#f5f5f5';
-                                                            return mapStatusLabelToId(appointment.status) !== 5 ? '#607D8B' : 'transparent';
+                                                            return mapStatusLabelToId(appointment.status) !== 4 ? '#607D8B' : 'transparent';
                                                         })(),
                                                         borderColor: (() => {
                                                             const statusId = mapStatusLabelToId(appointment.status);
-                                                            const isComplete = statusId === 5;
+                                                            const isComplete = statusId === 4;
                                                             const shouldEnable = !isReceptionist || isComplete;
                                                             if (!shouldEnable) return '#ddd';
-                                                            return mapStatusLabelToId(appointment.status) !== 5 ? '#607D8B' : 'black';
+                                                            return mapStatusLabelToId(appointment.status) !== 4 ? '#607D8B' : 'black';
                                                         })()
                                                     }}
                                                 >

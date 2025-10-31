@@ -88,6 +88,22 @@ export interface LabTestResultResponse {
   [key: string]: any;
 }
 
+// Master lists request/response contracts
+export interface MasterListsRequest {
+  patientId: string;
+  shiftId: number; // Java Short -> number in TS
+  clinicId: string;
+  doctorId: string;
+  visitDate: string; // YYYY-MM-DD
+  patientVisitNo: number;
+}
+
+export interface MasterListsResponse {
+  success: boolean;
+  // Backend returns a map of lists; keep flexible
+  [key: string]: any;
+}
+
 // Quick registration request interface
 export interface QuickRegistrationRequest {
   doctorId: string;
@@ -455,6 +471,55 @@ export const patientService = {
       }
       
       throw new Error(error.response?.data?.message || 'Failed to fetch patient previous visits with details');
+    }
+  },
+
+
+
+  
+  /**
+   * Get master lists required for visit-related UIs (diagnosis, complaints, meds, etc.)
+   * Mirrors backend @GetMapping("/master-lists") which accepts query params.
+   */
+  async getMasterLists(params: MasterListsRequest): Promise<MasterListsResponse> {
+    try {
+      console.log('Fetching master lists with params:', params);
+      // Primary endpoint as specified
+      try {
+        const resp = await api.get<MasterListsResponse>(`/visits/master-lists`, { params });
+        console.log('Master lists response ("/master-lists"):', resp.data);
+        return resp.data;
+      } catch (e1: any) {
+        if (e1?.response?.status !== 404) throw e1;
+        // Common alternative mount points
+        try {
+          const resp = await api.get<MasterListsResponse>(`/visits/master-lists`, { params });
+          console.log('Master lists response ("/visits/master-lists"):', resp.data);
+          return resp.data;
+        } catch (e2: any) {
+          if (e2?.response?.status !== 404) throw e2;
+          const resp = await api.get<MasterListsResponse>(`/lab/master/visits/master-lists`, { params });
+          console.log('Master lists response ("/lab/master/visits/master-lists"):', resp.data);
+          return resp.data;
+        }
+      }
+    } catch (error: any) {
+      console.error('Get master lists API Error:', error);
+      if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
+        throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
+      }
+      if (error.response?.status === 400) {
+        const msg = error.response?.data?.message || error.response?.data?.error || 'Invalid request parameters.';
+        throw new Error(msg);
+      } else if (error.response?.status === 404) {
+        throw new Error('Master lists endpoint not found. Please confirm backend route.');
+      } else if (error.response?.status === 500) {
+        throw new Error('Server error occurred while fetching master lists.');
+      }
+      if (error.response?.data?.error) {
+        throw new Error(error.response.data.error);
+      }
+      throw new Error(error.response?.data?.message || 'Failed to fetch master lists');
     }
   },
 

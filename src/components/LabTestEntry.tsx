@@ -352,89 +352,185 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
     };
 
     const handleSubmit = async () => {
-        setIsLoading(true);
-        setError(null);
+    setIsLoading(true);
+    setError(null);
 
-        try {
-            // Validate required fields
-            if (!formData.labName || !formData.labDoctorName || !formData.reportDate) {
-                throw new Error('Please fill in all required fields');
-            }
-
-            if (labTestResults.length === 0) {
-                throw new Error('Please add at least one lab test result');
-            }
-
-            // Validate lab test result values only (parameter name is read-only and may be blank for some tests)
-            const missingValues = labTestResults.some(result => !result.value);
-            if (missingValues) {
-                throw new Error('Please provide a value for each result');
-            }
-
-            // Build request payload for submitLabTestResults (new required shape)
-            const doctorId = (sessionData as any)?.doctorId || (patientData as any)?.doctorId || '';
-            const clinicId = (patientData as any)?.clinicId || '';
-            const shiftId = (patientData as any)?.shiftId || 0;
-            const patientVisitNo = (patientData as any)?.patient_visit_no || (patientData as any)?.visitNumber || 0;
-            const userId = (sessionData as any)?.userId || '';
-            const doctorName = (sessionData as any)?.doctorName || '';
-            const patientId = String((patientData as any)?.patientId || '');
-
-            const visitDateString = (patientData as any)?.visitDate || new Date().toISOString().slice(0, 10);
-            const visitDateYMD = toYyyyMmDd(String(visitDateString));
-            // Use yyyy-MM-dd 00:00:00 to match patient_visits FK composite key
-            const visitDateYMDMidnight = `${visitDateYMD} 00:00:00`;
-            const reportDateYMD = toYyyyMmDd(String(formData.reportDate));
-
-            const requestPayload: import('../services/patientService').LabTestResultRequest = {
-                patientId,
-                patientVisitNo: Number(patientVisitNo || 0),
-                doctorId: String(doctorId || ''),
-                clinicId: String(clinicId || ''),
-                shiftId: Number(shiftId || 0),
-                userId: String(userId || ''),
-                doctorName: String(doctorName || ''),
-                labName: formData.labName,
-                reportDate: reportDateYMD,
-                comment: formData.comment,
-                testReportData: labTestResults.map(r => ({
-                    // Align with patient_visits FK: yyyy-MM-dd 00:00:00
-                    visitDate: String(visitDateYMDMidnight || ''),
-                    patientVisitNo: Number(patientVisitNo || 0),
-                    shiftId: Number(shiftId || 0),
-                    clinicId: String(clinicId || ''),
-                    doctorId: String(doctorId || ''),
-                    patientId: patientId,
-                    labTestDescription: r.labTestName,
-                    parameterName: r.parameterName || 'Result', // Ensure parameter name is never empty
-                    testParameterValue: r.value
-                }))
-            };
-
-            // Submit to backend
-            const submitResponse = await patientService.submitLabTestResults(requestPayload as any);
-
-            if (!submitResponse?.success) {
-                const msg = submitResponse?.message || 'Submission failed';
-                throw new Error(msg);
-            }
-
-            setSuccess(submitResponse?.message || 'Lab test entry submitted successfully!');
-            setSnackbarMessage(submitResponse?.message || 'Lab test entry submitted successfully!');
-            setSnackbarOpen(true);
-
-            // Reset form after successful submission
-            handleReset();
-
-        } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'An error occurred';
-            setError(errorMessage);
-            setSnackbarMessage(errorMessage);
-            setSnackbarOpen(true);
-        } finally {
-            setIsLoading(false);
+    try {
+        // Validate required fields
+        if (!formData.labName || !formData.labDoctorName || !formData.reportDate) {
+            throw new Error('Please fill in all required fields');
         }
-    };
+
+        if (labTestResults.length === 0) {
+            throw new Error('Please add at least one lab test result');
+        }
+
+        // Validate lab test result values only
+        const missingValues = labTestResults.some(result => !result.value);
+        if (missingValues) {
+            throw new Error('Please provide a value for each result');
+        }
+
+        // Build request payload
+        const doctorId = (sessionData as any)?.doctorId || (patientData as any)?.doctorId || '';
+        const clinicId = (patientData as any)?.clinicId || '';
+        const shiftId = (patientData as any)?.shiftId || 0;
+        const patientVisitNo = (patientData as any)?.patient_visit_no || (patientData as any)?.visitNumber || 0;
+        const userId = (sessionData as any)?.userId || '';
+        const doctorName = (sessionData as any)?.doctorName || '';
+        const patientId = String((patientData as any)?.patientId || '');
+
+        const visitDateString = (patientData as any)?.visitDate || new Date().toISOString().slice(0, 10);
+        const visitDateYMD = toYyyyMmDd(String(visitDateString));
+        const visitDateYMDMidnight = `${visitDateYMD} 00:00:00`;
+        const reportDateYMD = toYyyyMmDd(String(formData.reportDate));
+
+        const requestPayload: import('../services/patientService').LabTestResultRequest = {
+            patientId,
+            patientVisitNo: Number(patientVisitNo || 0),
+            doctorId: String(doctorId || ''),
+            clinicId: String(clinicId || ''),
+            shiftId: Number(shiftId || 0),
+            userId: String(userId || ''),
+            doctorName: String(doctorName || ''),
+            labName: formData.labName,
+            reportDate: reportDateYMD,
+            comment: formData.comment,
+            testReportData: labTestResults.map(r => ({
+                visitDate: String(visitDateYMDMidnight || ''),
+                patientVisitNo: Number(patientVisitNo || 0),
+                shiftId: Number(shiftId || 0),
+                clinicId: String(clinicId || ''),
+                doctorId: String(doctorId || ''),
+                patientId: patientId,
+                labTestDescription: r.labTestName,
+                parameterName: r.parameterName || 'Result',
+                testParameterValue: r.value
+            }))
+        };
+
+        // Submit to backend
+        const submitResponse = await patientService.submitLabTestResults(requestPayload as any);
+
+        if (!submitResponse?.success) {
+            const msg = submitResponse?.message || 'Submission failed';
+            throw new Error(msg);
+        }
+
+        // Success: reset and close dialog first
+        handleReset();
+        setSuccess(submitResponse?.message || 'Lab test entry submitted successfully!');
+
+        // Close dialog first
+        onClose();
+
+        // Then show snackbar after short delay
+        setTimeout(() => {
+            setSnackbarMessage('Lab added successfully');
+            setSnackbarOpen(true);
+        }, 500); // 0.5s delay for smooth transition
+
+    } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'An error occurred';
+        setError(errorMessage);
+
+        // Show snackbar immediately for errors
+        setSnackbarMessage(errorMessage);
+        setSnackbarOpen(true);
+    } finally {
+        setIsLoading(false);
+    }
+};
+
+    // const handleSubmit = async () => {
+    //     setIsLoading(true);
+    //     setError(null);
+
+    //     try {
+    //         // Validate required fields
+    //         if (!formData.labName || !formData.labDoctorName || !formData.reportDate) {
+    //             throw new Error('Please fill in all required fields');
+    //         }
+
+    //         if (labTestResults.length === 0) {
+    //             throw new Error('Please add at least one lab test result');
+    //         }
+
+    //         // Validate lab test result values only (parameter name is read-only and may be blank for some tests)
+    //         const missingValues = labTestResults.some(result => !result.value);
+    //         if (missingValues) {
+    //             throw new Error('Please provide a value for each result');
+    //         }
+
+    //         // Build request payload for submitLabTestResults (new required shape)
+    //         const doctorId = (sessionData as any)?.doctorId || (patientData as any)?.doctorId || '';
+    //         const clinicId = (patientData as any)?.clinicId || '';
+    //         const shiftId = (patientData as any)?.shiftId || 0;
+    //         const patientVisitNo = (patientData as any)?.patient_visit_no || (patientData as any)?.visitNumber || 0;
+    //         const userId = (sessionData as any)?.userId || '';
+    //         const doctorName = (sessionData as any)?.doctorName || '';
+    //         const patientId = String((patientData as any)?.patientId || '');
+
+    //         const visitDateString = (patientData as any)?.visitDate || new Date().toISOString().slice(0, 10);
+    //         const visitDateYMD = toYyyyMmDd(String(visitDateString));
+    //         // Use yyyy-MM-dd 00:00:00 to match patient_visits FK composite key
+    //         const visitDateYMDMidnight = `${visitDateYMD} 00:00:00`;
+    //         const reportDateYMD = toYyyyMmDd(String(formData.reportDate));
+
+    //         const requestPayload: import('../services/patientService').LabTestResultRequest = {
+    //             patientId,
+    //             patientVisitNo: Number(patientVisitNo || 0),
+    //             doctorId: String(doctorId || ''),
+    //             clinicId: String(clinicId || ''),
+    //             shiftId: Number(shiftId || 0),
+    //             userId: String(userId || ''),
+    //             doctorName: String(doctorName || ''),
+    //             labName: formData.labName,
+    //             reportDate: reportDateYMD,
+    //             comment: formData.comment,
+    //             testReportData: labTestResults.map(r => ({
+    //                 // Align with patient_visits FK: yyyy-MM-dd 00:00:00
+    //                 visitDate: String(visitDateYMDMidnight || ''),
+    //                 patientVisitNo: Number(patientVisitNo || 0),
+    //                 shiftId: Number(shiftId || 0),
+    //                 clinicId: String(clinicId || ''),
+    //                 doctorId: String(doctorId || ''),
+    //                 patientId: patientId,
+    //                 labTestDescription: r.labTestName,
+    //                 parameterName: r.parameterName || 'Result', // Ensure parameter name is never empty
+    //                 testParameterValue: r.value
+    //             }))
+    //         };
+
+    //         // Submit to backend
+    //         const submitResponse = await patientService.submitLabTestResults(requestPayload as any);
+
+    //         if (!submitResponse?.success) {
+    //             const msg = submitResponse?.message || 'Submission failed';
+    //             throw new Error(msg);
+    //         }
+
+    //         setSuccess(submitResponse?.message || 'Lab test entry submitted successfully!');
+    //         setSnackbarMessage('Lab added successfully');
+    //         setSnackbarOpen(true);
+
+    //         // Reset form after successful submission
+    //         handleReset();
+            
+    //         // Close the dialogue box after successful submission
+    //         setTimeout(() => {
+    //             onClose();
+    //         }, 2000);
+
+    //     } catch (err) {
+    //         const errorMessage = err instanceof Error ? err.message : 'An error occurred';
+    //         setError(errorMessage);
+    //         setSnackbarMessage(errorMessage);
+    //         setSnackbarOpen(true);
+    //     } finally {
+    //         setIsLoading(false);
+    //     }
+    // };
 
     const handleReset = () => {
         setFormData({
@@ -1179,7 +1275,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                 autoHideDuration={4000}
                 onClose={() => setSnackbarOpen(false)}
                 message={snackbarMessage}
-                anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
             />
         </>
     );
