@@ -388,15 +388,13 @@ export default function Treatment() {
     
     const [diagnosisRows, setDiagnosisRows] = useState<DiagnosisRow[]>([]);
     const [medicineRows, setMedicineRows] = useState<MedicineRow[]>([]);
-    const [prescriptionRows, setPrescriptionRows] = useState<PrescriptionRow[]>([
-        { id: '1', prescription: 'RABIPLS D (RABEPRAZOLE & DOMPERIDONE)', b: '1', l: '1', d: '1', days: '10', instruction: 'AFTER MEAL' },
-        { id: '2', prescription: 'DYTOR 5 (TORSEMIDE)', b: '1', l: '', d: '', days: '10', instruction: 'AFTER MEAL' },
-        { id: '3', prescription: 'BIO D3 PLUS (CALCIUM + CALCITRIOL)', b: '1', l: '', d: '', days: '10', instruction: 'AFTER MEAL' },
-        { id: '4', prescription: 'VALIAM FORTE (MULTIVITAMIN + MULTIMINERAL)', b: '1', l: '', d: '', days: '10', instruction: 'AFTER MEAL' }
-    ]);
+    const [prescriptionRows, setPrescriptionRows] = useState<PrescriptionRow[]>([]);
     const [selectedComplaint, setSelectedComplaint] = useState('');
     const [selectedDiagnosis, setSelectedDiagnosis] = useState('');
     const [prescriptionInput, setPrescriptionInput] = useState('');
+    const [rxSuggestions, setRxSuggestions] = useState<string[]>([]);
+    const [isRxOpen, setIsRxOpen] = useState(false);
+    const rxRef = React.useRef<HTMLDivElement | null>(null);
     
     // Investigation multi-select state (mirrors Diagnosis)
     const [selectedInvestigations, setSelectedInvestigations] = useState<string[]>([]);
@@ -478,6 +476,58 @@ export default function Treatment() {
 
         fetchSessionData();
     }, []);
+
+    // Close prescription suggestions on outside click
+    React.useEffect(() => {
+        if (!isRxOpen) return;
+        function handleClickOutside(e: MouseEvent) {
+            if (rxRef.current && !rxRef.current.contains(e.target as Node)) {
+                setIsRxOpen(false);
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [isRxOpen]);
+
+    // Fetch prescription suggestions from API on input
+    React.useEffect(() => {
+        const term = prescriptionInput.trim();
+        const doctorId = treatmentData?.doctorId;
+        const clinicId = sessionData?.clinicId;
+        if (!term || !doctorId || !clinicId) {
+            setRxSuggestions([]);
+            setIsRxOpen(false);
+            return;
+        }
+
+        let cancelled = false;
+        const timer = setTimeout(async () => {
+            try {
+                const q = new URLSearchParams({
+                    prefixText: term,
+                    doctorId: doctorId,
+                    clinicId: clinicId
+                }).toString();
+                const resp = await fetch(`/api/refdata/prescription-search?${q}`);
+                if (!resp.ok) throw new Error(`Failed to load prescriptions (${resp.status})`);
+                const data = await resp.json();
+                if (cancelled) return;
+                const list: string[] = Array.isArray(data?.resultSet1) ? data.resultSet1 : [];
+                setRxSuggestions(list);
+                setIsRxOpen(list.length > 0);
+            } catch (e) {
+                if (!cancelled) {
+                    setRxSuggestions([]);
+                    setIsRxOpen(false);
+                }
+            }
+        }, 300);
+
+        return () => {
+            cancelled = true;
+            clearTimeout(timer);
+        };
+    }, [prescriptionInput, treatmentData?.doctorId, sessionData?.clinicId]);
 
     // Get treatment data from location state
     useEffect(() => {
@@ -1477,6 +1527,160 @@ export default function Treatment() {
         return d.toISOString().slice(0, 10);
     };
 
+    // After saving treatment, fetch latest appointment details and patch form values (like PatientVisitDetails)
+    const fetchAndPatchAppointmentDetails = async (params: {
+        patientId: string;
+        doctorId: string;
+        shiftId: number;
+        clinicId: string;
+        patientVisitNo: number;
+        languageId?: number;
+    }) => {
+        try {
+            console.log('=== FETCHING APPOINTMENT DETAILS AFTER SAVE ===');
+            console.log('Request params:', params);
+            const result: any = await visitService.getAppointmentDetails({
+                patientId: String(params.patientId),
+                doctorId: String(params.doctorId),
+                shiftId: Number(params.shiftId),
+                clinicId: String(params.clinicId),
+                patientVisitNo: Number(params.patientVisitNo),
+                languageId: params.languageId ?? 1
+            });
+            console.log('Raw appointment-details API result:', result);
+            if (!result || !result.found || !result.mainData || result.mainData.length === 0) {
+                console.log('No appointment details found to patch.');
+                return;
+            }
+
+            const appointmentData = result.mainData[0] || {};
+            console.log('Appointment data (first item):', appointmentData);
+
+            const normalized: any = {
+                pulse: appointmentData.pulse ?? '',
+                height: appointmentData.heightInCms ?? '',
+                weight: appointmentData.weightInKgs ?? '',
+                bp: appointmentData.bloodPressure ?? '',
+                sugar: appointmentData.sugar ?? '',
+                tft: appointmentData.tft ?? '',
+                surgicalHistory: appointmentData.surgicalHistory ?? '',
+                previousVisitPlan: appointmentData.plan ?? '',
+                currentComplaint: appointmentData.currentComplaint ?? appointmentData.currentComplaints ?? '',
+                visitComments: appointmentData.visitComments ?? appointmentData.visitCommentsField ?? '',
+                currentMedicines: appointmentData.currentMedicines ?? '',
+                allergyDetails: appointmentData.allergyDetails ?? appointmentData.allergy ?? '',
+                inPerson: appointmentData.inPerson,
+                followUpFlag: appointmentData.followUpFlag,
+                followUpType: appointmentData.followUp,
+                billed: appointmentData.feesToCollect ?? appointmentData.fees ?? '',
+                discount: appointmentData.discount ?? appointmentData.originalDiscount ?? '',
+                feesPaid: appointmentData.feesPaid ?? 0
+            };
+            console.log('Normalized appointment fields:', normalized);
+
+            setFormData(prev => {
+                const next: any = { ...prev };
+                const maybeSet = (key: keyof typeof next, value: any) => {
+                    if (value === undefined || value === null || value === '') return;
+                    if (next[key] === '' || next[key] === undefined || next[key] === null) {
+                        next[key] = String(value);
+                    } else {
+                        next[key] = String(value);
+                    }
+                };
+
+                maybeSet('pulse', normalized.pulse);
+                maybeSet('height', normalized.height);
+                maybeSet('weight', normalized.weight);
+                maybeSet('bp', normalized.bp);
+                maybeSet('sugar', normalized.sugar);
+                maybeSet('tft', normalized.tft);
+                maybeSet('surgicalHistory', normalized.surgicalHistory);
+                maybeSet('allergy', normalized.allergyDetails);
+                maybeSet('visitComments', normalized.visitComments);
+                maybeSet('medicines', normalized.currentMedicines);
+                // Do not patch PC with complaints fetched from appointment details
+
+                const heightNum = parseFloat(String(next.height));
+                const weightNum = parseFloat(String(next.weight));
+                if (!isNaN(heightNum) && heightNum > 0 && !isNaN(weightNum) && weightNum > 0) {
+                    next.bmi = (weightNum / ((heightNum / 100) * (heightNum / 100))).toFixed(1);
+                }
+
+                // Patch visitType flags if present
+                if (typeof normalized.inPerson === 'boolean' || typeof normalized.followUpFlag === 'boolean' || typeof normalized.followUpType === 'string') {
+                    next.visitType = {
+                        ...(next.visitType || {}),
+                        inPerson: typeof normalized.inPerson === 'boolean' ? normalized.inPerson : (next.visitType?.inPerson ?? true),
+                        followUp: typeof normalized.followUpFlag === 'boolean' ? normalized.followUpFlag : (next.visitType?.followUp ?? false)
+                    };
+                }
+                console.log('Patched Treatment formData with appointment details:', next);
+                return next;
+            });
+
+            // Patch billing fields based on appointment details
+            try {
+                const billedNum = parseFloat(String(normalized.billed || '')) || 0;
+                const discountNum = parseFloat(String(normalized.discount || '')) || 0;
+                const paidNum = parseFloat(String(normalized.feesPaid || '')) || 0;
+                const duesNum = Math.max(0, billedNum - discountNum - paidNum);
+                setBillingData(prev => ({
+                    ...prev,
+                    billed: billedNum ? String(billedNum) : (prev.billed || ''),
+                    discount: String(discountNum),
+                    dues: String(duesNum),
+                    acBalance: prev.acBalance // keep previous if not provided by API
+                }));
+                console.log('Patched billingData from appointment details:', { billed: billedNum, discount: discountNum, feesPaid: paidNum, dues: duesNum });
+            } catch (billingPatchError) {
+                console.warn('Could not patch billing data from appointment details:', billingPatchError);
+            }
+
+            // Update complaint selections if available
+            if (normalized.currentComplaint && typeof normalized.currentComplaint === 'string') {
+                const parts = normalized.currentComplaint.split(/\*|,/).map((s: string) => s.trim()).filter(Boolean);
+                if (Array.isArray(parts) && parts.length > 0) {
+                    setSelectedComplaints(parts);
+                    console.log('Patched selectedComplaints from appointment details:', parts);
+                }
+            }
+            console.log('=== FINISHED PATCHING FROM APPOINTMENT DETAILS ===');
+        } catch (e) {
+            console.warn('Failed to fetch/patch appointment details after save:', e);
+        }
+    };
+
+    // On page load: fetch today's latest appointment details (if data available) and patch form
+    const appointmentPatchedRef = React.useRef(false);
+    React.useEffect(() => {
+        const pid = treatmentData?.patientId;
+        const did = treatmentData?.doctorId || sessionData?.doctorId;
+        const cid = treatmentData?.clinicId || sessionData?.clinicId;
+        const visitNo = treatmentData?.visitNumber;
+        const shiftId = (sessionData as any)?.shiftId || 1;
+
+        if (!pid || !did || !cid || !visitNo) {
+            return;
+        }
+        if (appointmentPatchedRef.current) {
+            return;
+        }
+
+        console.log('=== AUTO FETCH APPOINTMENT DETAILS ON LOAD ===');
+        console.log('Resolved params:', { patientId: pid, doctorId: did, clinicId: cid, shiftId, patientVisitNo: visitNo });
+
+        appointmentPatchedRef.current = true;
+        fetchAndPatchAppointmentDetails({
+            patientId: String(pid),
+            doctorId: String(did),
+            shiftId: Number(shiftId) || 1,
+            clinicId: String(cid),
+            patientVisitNo: Number(visitNo) || 0,
+            languageId: 1
+        });
+    }, [treatmentData?.patientId, treatmentData?.doctorId, sessionData?.doctorId, treatmentData?.clinicId, sessionData?.clinicId, treatmentData?.visitNumber]);
+
     // Generic treatment handler for both save and submit
     const handleTreatmentAction = async (isSubmit: boolean) => {
         try {
@@ -1673,6 +1877,21 @@ export default function Treatment() {
                 setSnackbarMessage(`Treatment ${isSubmit ? 'submitted' : 'saved'} successfully!`);
                 setSnackbarOpen(true);
                 
+                // Fetch latest appointment details and patch values before navigating away
+                try {
+                    const apptParams = {
+                        patientId: String(treatmentData?.patientId || ''),
+                        doctorId: String(doctorId),
+                        shiftId: parseInt(String(shiftId || clinicId)) || 1,
+                        clinicId: String(clinicId),
+                        patientVisitNo: Number(patientVisitNo) || 0,
+                        languageId: 1
+                    };
+                    await fetchAndPatchAppointmentDetails(apptParams);
+                } catch (e) {
+                    console.warn('Could not patch appointment details after save:', e);
+                }
+
                 // Clear form data after successful submission
                 setTimeout(() => {
                     setSnackbarOpen(false);
@@ -1691,6 +1910,21 @@ export default function Treatment() {
                 console.error('Error:', result.error || `Failed to ${isSubmit ? 'submit' : 'save'} treatment`);
                 setSnackbarMessage(result.error || `Failed to ${isSubmit ? 'submit' : 'save'} treatment`);
                 setSnackbarOpen(true);
+
+                // Even on failure, attempt to fetch latest appointment details for debugging/visibility
+                try {
+                    const apptParams = {
+                        patientId: String(treatmentData?.patientId || ''),
+                        doctorId: String(doctorId),
+                        shiftId: parseInt(String(shiftId || clinicId)) || 1,
+                        clinicId: String(clinicId),
+                        patientVisitNo: Number(patientVisitNo) || 0,
+                        languageId: 1
+                    };
+                    await fetchAndPatchAppointmentDetails(apptParams);
+                } catch (e) {
+                    console.warn('Could not patch appointment details after failed save:', e);
+                }
             }
         } catch (err: any) {
             const actionType = isSubmit ? 'SUBMIT' : 'SAVE';
@@ -1732,6 +1966,57 @@ export default function Treatment() {
         // Also uncheck from selector
         setSelectedComplaints(prev => prev.filter(v => v !== rowValue));
     };
+
+    // Keep complaints table in sync with selectedComplaints and available options
+    React.useEffect(() => {
+        if (!Array.isArray(selectedComplaints)) return;
+
+        setComplaintsRows(prev => {
+            const existingByValue = new Map(prev.map(r => [r.value, r]));
+
+            // Build rows for all currently selected complaints
+            const nextRows: ComplaintRow[] = selectedComplaints.map(val => {
+                const opt = complaintsOptions.find(o => o.value === val);
+                const existing = existingByValue.get(val);
+                return {
+                    id: existing?.id || String(val),
+                    value: val,
+                    label: opt?.label || existing?.label || val,
+                    comment: existing?.comment || ''
+                };
+            });
+
+            return nextRows;
+        });
+    }, [selectedComplaints, complaintsOptions]);
+
+    // Auto-select billed charges based on billed amount from appointment details
+    React.useEffect(() => {
+        const billedAmount = parseFloat(billingData.billed);
+        if (!billedAmount || billedAmount <= 0) return;
+        if (!billingDetailsOptions || billingDetailsOptions.length === 0) return;
+        if (selectedBillingDetailIds.length > 0) return; // respect manual selections
+
+        // Try exact match first
+        const exact = billingDetailsOptions.find(opt => {
+            const fee = typeof opt.default_fees === 'number' ? opt.default_fees : Number(opt.default_fees || 0);
+            return fee === billedAmount;
+        });
+        if (exact) {
+            setSelectedBillingDetailIds([exact.id]);
+            return;
+        }
+
+        // Otherwise, pick the single closest fee below or equal to billed amount
+        const withFees = billingDetailsOptions
+            .map(opt => ({ id: opt.id, fee: (typeof opt.default_fees === 'number' ? opt.default_fees : Number(opt.default_fees || 0)) }))
+            .filter(x => !isNaN(x.fee) && x.fee > 0)
+            .sort((a, b) => b.fee - a.fee);
+        const candidate = withFees.find(x => x.fee <= billedAmount);
+        if (candidate) {
+            setSelectedBillingDetailIds([candidate.id]);
+        }
+    }, [billingData.billed, billingDetailsOptions]);
 
     const handleAddDiagnosis = () => {
         if (selectedDiagnosis.trim()) {
@@ -1827,19 +2112,37 @@ export default function Treatment() {
     };
 
     const handleAddPrescription = () => {
-        if (prescriptionInput.trim()) {
-            const newPrescription: PrescriptionRow = {
-                id: Date.now().toString(),
-                prescription: prescriptionInput,
-                b: '',
-                l: '',
-                d: '',
-                days: '',
-                instruction: ''
-            };
-            setPrescriptionRows(prev => [...prev, newPrescription]);
-            setPrescriptionInput('');
+        const raw = prescriptionInput.trim();
+        if (!raw) return;
+
+        // Expected format: Name | composition | B-L-D | Days | Instruction
+        // We only use Name as prescription column, split B-L-D into b/l/d, map days and instruction
+        const parts = raw.split('|').map(p => p.trim()).filter(p => p.length > 0);
+        const name = parts[0] || raw;
+        const dose = (parts[2] || '').replace(/\s+/g, ''); // e.g., 1-1-1
+        const days = (parts[3] || '').trim();
+        const instruction = parts[4] || '';
+
+        let b = '', l = '', d = '';
+        if (dose) {
+            const dparts = dose.split('-');
+            b = dparts[0] || '';
+            l = dparts[1] || '';
+            d = dparts[2] || '';
         }
+
+        const newPrescription: PrescriptionRow = {
+            id: Date.now().toString(),
+            prescription: name,
+            b,
+            l,
+            d,
+            days,
+            instruction
+        };
+
+        setPrescriptionRows(prev => [...prev, newPrescription]);
+        setPrescriptionInput('');
     };
 
     const handleRemovePrescription = (id: string) => {
@@ -3615,6 +3918,23 @@ export default function Treatment() {
                                     i
                                 </button>
                             </div>
+
+                            {isRxOpen && rxSuggestions.length > 0 && (
+                                <div ref={rxRef} style={{ border: '1px solid #ccc', borderRadius: '4px', background: '#fff', maxHeight: '180px', overflowY: 'auto', width: '88%', marginBottom: '12px' }}>
+                                    {rxSuggestions.map((item, idx) => (
+                                        <div
+                                            key={idx}
+                                            onClick={() => { setPrescriptionInput(item); setIsRxOpen(false); }}
+                                            style={{ padding: '6px 10px', cursor: 'pointer', fontSize: '12px', borderBottom: '1px solid #eee' }}
+                                            onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = '#f5f5f5'; }}
+                                            onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = '#fff'; }}
+                                            title={item}
+                                        >
+                                            {item}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
 
                             {/* Prescription Table */}
                             {prescriptionRows.length > 0 && (
