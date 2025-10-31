@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { useNavigate, useLocation } from "react-router-dom";
 import { visitService, ComprehensiveVisitDataRequest } from '../services/visitService';
+import trendsService, { PatientTrendItem } from '../services/trendsService';
 import { sessionService, SessionInfo } from "../services/sessionService";
 import { Delete, Edit, Add, Info, TrendingUp } from '@mui/icons-material';
 import { Snackbar } from '@mui/material';
@@ -17,6 +18,7 @@ import AddDiagnosisPopup from "../components/AddDiagnosisPopup";
 import AddMedicinePopup, { MedicineData } from "../components/AddMedicinePopup";
 import AddPrescriptionPopup, { PrescriptionData } from "../components/AddPrescriptionPopup";
 import AddTestLabPopup, { TestLabData } from "../components/AddTestLabPopup";
+import LabTestEntry from "../components/LabTestEntry";
 
 // Specific styles for Duration/Comment input in table
 const durationCommentStyles = `
@@ -108,6 +110,22 @@ const durationCommentStyles = `
     border: none !important;
     box-shadow: none !important;
   }
+  /* Billing dropdown checkboxes */
+  .billing-dropdown input[type="checkbox"] {
+    width: auto !important;
+    padding: 0 !important;
+    border: none !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    font-size: inherit !important;
+    font-family: inherit !important;
+    margin: 0 !important;
+  }
+  .billing-dropdown input[type="checkbox"]:focus {
+    outline: none !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
 `;
 
 interface TreatmentData {
@@ -179,6 +197,19 @@ interface Attachment {
     type: 'pdf' | 'docx' | 'xlsx';
 }
 
+interface BillingDetailOption {
+    id: string; // synthesized key
+    billing_details: string;
+    billing_group_name?: string;
+    billing_subgroup_name?: string;
+    default_fees?: number;
+    visit_type?: string;
+    visit_type_description?: string;
+    visit_type_id?: string;
+    isdefault?: boolean;
+    sequence_no?: number;
+}
+
 export default function Treatment() {
     const navigate = useNavigate();
     const location = useLocation();
@@ -186,10 +217,14 @@ export default function Treatment() {
     const [treatmentData, setTreatmentData] = useState<TreatmentData | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
     const [showVitalsTrend, setShowVitalsTrend] = useState<boolean>(false);
+    const [trendLoading, setTrendLoading] = useState<boolean>(false);
+    const [trendError, setTrendError] = useState<string | null>(null);
+    const [trendRows, setTrendRows] = useState<Array<{ date: string; height: string; weight: string; pulse: string; bp: string; sugar: string; tft: string; pallorHb: string; findings: string; history: string }>>([]);
     const [showInstructionPopup, setShowInstructionPopup] = useState<boolean>(false);
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
     const [submitError, setSubmitError] = useState<string | null>(null);
     const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
+    const [billingError, setBillingError] = useState<string | null>(null);
     const [snackbarOpen, setSnackbarOpen] = useState(false);
     const [snackbarMessage, setSnackbarMessage] = useState('');
     
@@ -258,6 +293,8 @@ export default function Treatment() {
     
     // Test Lab popup state
     const [showTestLabPopup, setShowTestLabPopup] = useState(false);
+    const [showLabTestEntry, setShowLabTestEntry] = useState<boolean>(false);
+    const [selectedPatientForLab, setSelectedPatientForLab] = useState<any>(null);
 
     // Complaints and diagnosis data
     const [complaintsRows, setComplaintsRows] = useState<ComplaintRow[]>([]);
@@ -655,6 +692,85 @@ export default function Treatment() {
 
     const handleBackToAppointments = () => {
         navigate('/appointment');
+    };
+
+    // Billing details (from symptom-data API)
+    const [billingDetailsOptions, setBillingDetailsOptions] = useState<BillingDetailOption[]>([]);
+    const [selectedBillingDetailIds, setSelectedBillingDetailIds] = useState<string[]>([]);
+    const [isBillingOpen, setIsBillingOpen] = useState(false);
+    const [billingSearch, setBillingSearch] = useState('');
+    const billingRef = React.useRef<HTMLDivElement | null>(null);
+
+    const filteredBillingDetails = React.useMemo(() => {
+        const term = billingSearch.trim().toLowerCase();
+        if (!term) {
+            const selectedOptions = billingDetailsOptions.filter(opt => selectedBillingDetailIds.includes(opt.id));
+            const unselectedOptions = billingDetailsOptions.filter(opt => !selectedBillingDetailIds.includes(opt.id));
+            return [...selectedOptions, ...unselectedOptions];
+        }
+        const matches = (opt: BillingDetailOption) =>
+            (opt.billing_details || '').toLowerCase().includes(term) ||
+            (opt.billing_group_name || '').toLowerCase().includes(term) ||
+            (opt.billing_subgroup_name || '').toLowerCase().includes(term);
+
+        const selectedFiltered = billingDetailsOptions.filter(opt => selectedBillingDetailIds.includes(opt.id) && matches(opt));
+        const unselectedFiltered = billingDetailsOptions.filter(opt => !selectedBillingDetailIds.includes(opt.id) && matches(opt));
+        return [...selectedFiltered, ...unselectedFiltered];
+    }, [billingDetailsOptions, billingSearch, selectedBillingDetailIds]);
+
+    useEffect(() => {
+        let cancelled = false;
+        async function loadBillingDetails() {
+            if (!treatmentData?.doctorId || !sessionData?.clinicId) return;
+            try {
+                const doctorId = encodeURIComponent(treatmentData.doctorId);
+                const clinicId = encodeURIComponent(sessionData.clinicId);
+                const resp = await fetch(`/api/refdata/symptom-data?doctorId=${doctorId}&clinicId=${clinicId}`);
+                if (!resp.ok) throw new Error(`Failed to load billing details (${resp.status})`);
+                const data = await resp.json();
+                const raw: any[] = Array.isArray(data?.billingDetails)
+                    ? data.billingDetails
+                    : Array.isArray(data?.resultSet2)
+                        ? data.resultSet2
+                        : [];
+                const mapped: BillingDetailOption[] = raw.map((item: any, idx: number) => ({
+                    id: String(item.id ?? item.sequence_no ?? idx),
+                    billing_details: String(item.billing_details ?? item.billing_group_name ?? 'Unknown'),
+                    billing_group_name: item.billing_group_name,
+                    billing_subgroup_name: item.billing_subgroup_name,
+                    default_fees: typeof item.default_fees === 'number' ? item.default_fees : Number(item.default_fees ?? 0),
+                    visit_type: item.visit_type,
+                    visit_type_description: item.visit_type_description,
+                    visit_type_id: item.visit_type_id,
+                    isdefault: Boolean(item.isdefault),
+                    sequence_no: typeof item.sequence_no === 'number' ? item.sequence_no : Number(item.sequence_no ?? idx)
+                }));
+                if (!cancelled) setBillingDetailsOptions(mapped);
+            } catch (e) {
+                console.error('Error loading billing details:', e);
+                if (!cancelled) setBillingDetailsOptions([]);
+            }
+        }
+        loadBillingDetails();
+        return () => { cancelled = true; };
+    }, [treatmentData?.doctorId, sessionData?.clinicId]);
+
+    // Close Billing dropdown on outside click
+    React.useEffect(() => {
+        if (!isBillingOpen) return;
+        function handleClickOutside(e: MouseEvent) {
+            if (billingRef.current && !billingRef.current.contains(e.target as Node)) {
+                setIsBillingOpen(false);
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [isBillingOpen]);
+
+    const toggleBillingDetail = (id: string) => {
+        setSelectedBillingDetailIds((prev) =>
+            prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+        );
     };
 
     // Fetch previous visits for the current patient
@@ -1598,6 +1714,12 @@ export default function Treatment() {
     };
 
     const handleTreatmentSubmit = async () => {
+        const billedNum = parseFloat(billingData.billed) || 0;
+        if (billedNum <= 0) {
+            setBillingError('Please enter billed amount');
+            return;
+        }
+        setBillingError(null);
         await handleTreatmentAction(true); // true = submit
     };
 
@@ -1769,10 +1891,13 @@ export default function Treatment() {
     };
 
     const handleBillingChange = (field: string, value: string) => {
-        setBillingData(prev => ({
-            ...prev,
-            [field]: value
-        }));
+        setBillingData(prev => {
+            const next = { ...prev, [field]: value };
+            const billedNum = parseFloat(next.billed) || 0;
+            const discountNum = parseFloat(next.discount) || 0;
+            const newAcBalance = billedNum - discountNum;
+            return { ...next, acBalance: String(newAcBalance) };
+        });
     };
 
     if (loading) {
@@ -2169,7 +2294,60 @@ export default function Treatment() {
                                                     onMouseLeave={(e) => {
                                                         e.currentTarget.style.backgroundColor = '#1976d2';
                                                     }}
-                                                    onClick={() => setShowVitalsTrend((prev) => !prev)}
+                                                    onClick={async () => {
+                                                        const next = !showVitalsTrend;
+                                                        setShowVitalsTrend(next);
+                                                        if (next) {
+                                                            // Load trends when opening
+                                                            try {
+                                                                setTrendError(null);
+                                                                setTrendLoading(true);
+                                                                const patientId = treatmentData?.patientId;
+                                                                const clinicId = (treatmentData?.clinicId || sessionData?.clinicId) as string | undefined;
+                                                                const doctorId = (treatmentData?.doctorId || sessionData?.doctorId) as string | undefined;
+                                                                const shiftId = 1; // fallback if no shift available in session
+                                                                const visitDate = new Date().toISOString().slice(0, 10);
+                                                                const patientVisitNo = (treatmentData?.visitNumber ?? 0) as number;
+
+                                                                if (!patientId || !clinicId) {
+                                                                    throw new Error('Missing patient or clinic to load trends');
+                                                                }
+
+                                                                const data: PatientTrendItem[] = await trendsService.getPatientTrends({
+                                                                    patientId,
+                                                                    doctorId: doctorId ?? null,
+                                                                    clinicId,
+                                                                    shiftId,
+                                                                    visitDate,
+                                                                    patientVisitNo,
+                                                                });
+
+                                                                const mapped = (data || []).map((item) => {
+                                                                    const datePart = item.preDates ?? (item.visitDate ?? '--');
+                                                                    const shiftPart = item.shiftDescription ? ` ${item.shiftDescription}` : '';
+                                                                    const date = `${datePart}${shiftPart}`.trim();
+
+                                                                    const height = (item.heightInCms?.toFixed?.(2) ?? item.preHeightInCms ?? '--').toString();
+                                                                    const weight = (item.weightInKgs?.toFixed?.(2) ?? item.preWeight ?? '--').toString();
+                                                                    const pulse = ((item.pulse as unknown as string) ?? item.prePulse ?? '--').toString();
+                                                                    const bp = (item.bloodPressure ?? item.preBp ?? '--').toString();
+                                                                    const sugar = (item.sugar ?? item.preSugar ?? '--').toString();
+                                                                    const tft = (item.thtext ?? item.preThtext ?? '--').toString();
+                                                                    const pallorHb = (item.pallor ?? item.prePallor ?? '--').toString();
+                                                                    const findings = (item.importantFindings ?? item.preImportantFindings ?? '--').toString();
+                                                                    const history = (item.additionalComments ?? item.preAdditionalComments ?? '--').toString();
+                                                                    return { date, height, weight, pulse, bp, sugar, tft, pallorHb, findings, history };
+                                                                });
+
+                                                                setTrendRows(mapped);
+                                                            } catch (err: any) {
+                                                                setTrendError(err?.message || 'Failed to load patient trends');
+                                                                setTrendRows([]);
+                                                            } finally {
+                                                                setTrendLoading(false);
+                                                            }
+                                                        }
+                                                    }}
                                                 >
                                                     Trend
                                                 </button>
@@ -2203,13 +2381,16 @@ export default function Treatment() {
                                         <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Important Findings</div>
                                         <div style={{ padding: '6px' }}>Detailed History</div>
                                     </div>
-                                    {[
-                                        { date: '07-Jun-2022 : M', height: '171.00', weight: '76.00', pulse: '78', bp: '132 - 82.0', sugar: '--', tft: '--', pallorHb: '--', findings: '--', history: '--' },
-                                        { date: '07-Jun-2022 : M', height: '171.00', weight: '76.00', pulse: '78', bp: '132 - 82.0', sugar: '--', tft: '--', pallorHb: '--', findings: '--', history: '--' },
-                                        { date: '07-Jun-2022 : M', height: '171.00', weight: '76.00', pulse: '78', bp: '132 - 82.0', sugar: '--', tft: '--', pallorHb: '--', findings: '--', history: '--' },
-                                        { date: '07-Jun-2022 : M', height: '171.00', weight: '76.00', pulse: '78', bp: '132 - 82.0', sugar: '--', tft: '--', pallorHb: '--', findings: '--', history: '--' },
-                                        { date: '07-Jun-2022 : M', height: '171.00', weight: '76.00', pulse: '78', bp: '132 - 82.0', sugar: '--', tft: '--', pallorHb: '--', findings: '--', history: '--' }
-                                    ].map((row, index) => (
+                                    {trendLoading && (
+                                        <div style={{ padding: '10px', fontSize: '12px' }}>Loading trends...</div>
+                                    )}
+                                    {trendError && !trendLoading && (
+                                        <div style={{ padding: '10px', color: '#d32f2f', fontSize: '12px' }}>{trendError}</div>
+                                    )}
+                                    {!trendLoading && !trendError && trendRows.length === 0 && (
+                                        <div style={{ padding: '10px', fontSize: '12px' }}>No trends available.</div>
+                                    )}
+                                    {trendRows.map((row, index) => (
                                         <div key={index} style={{ 
                                             display: 'grid', 
                                             gridTemplateColumns: '120px 80px 80px 80px 100px 80px 80px 100px 120px 120px' as const,
@@ -2647,6 +2828,22 @@ export default function Treatment() {
                                             fontWeight: 'bold',
                                             cursor: 'pointer',
                                             textTransform: 'uppercase'
+                                        }}
+                                        onClick={() => {
+                                            const appointmentRow: any = {
+                                                patient: treatmentData?.patientName || '',
+                                                patientId: String(treatmentData?.patientId || ''),
+                                                age: Number(treatmentData?.age || 0),
+                                                gender: treatmentData?.gender || '',
+                                                contact: treatmentData?.contact || '',
+                                                doctorId: treatmentData?.doctorId || '',
+                                                clinicId: treatmentData?.clinicId || '',
+                                                visitNumber: Number(treatmentData?.visitNumber || 0),
+                                                provider: getDoctorLabelById(treatmentData?.doctorId),
+                                                visitDate: new Date().toISOString().slice(0, 10)
+                                            };
+                                            setSelectedPatientForLab(appointmentRow);
+                                            setShowLabTestEntry(true);
                                         }}
                                     >
                                         RECORD TEST RESULT
@@ -4076,6 +4273,192 @@ export default function Treatment() {
                             />
                         </div>
 
+                        {/* Select Billed Charges - Diagnosis */}
+                        <div style={{ marginBottom: '15px' }}>
+                            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                                Select Billed charges
+                            </label>
+                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '12px' }}>
+                                <div style={{ flex: 1, position: 'relative' }} ref={billingRef}>
+                                    <div
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                            height: '32px',
+                                            padding: '4px 8px',
+                                            border: '2px solid #B7B7B7',
+                                            borderRadius: '6px',
+                                            fontSize: '12px',
+                                            fontFamily: "'Roboto', sans-serif",
+                                            fontWeight: 500,
+                                            backgroundColor: 'white',
+                                            cursor: 'pointer',
+                                            userSelect: 'none'
+                                        }}
+                                        onClick={() => setIsBillingOpen(!isBillingOpen)}
+                                        onMouseEnter={(e) => {
+                                            (e.currentTarget as HTMLDivElement).style.borderColor = '#1E88E5';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            (e.currentTarget as HTMLDivElement).style.borderColor = '#B7B7B7';
+                                        }}
+                                    >
+                                        <span style={{ color: selectedBillingDetailIds.length > 0 ? '#000' : '#9e9e9e' }}>
+                                            {selectedBillingDetailIds.length > 0 
+                                                ? `${selectedBillingDetailIds.length} item(s) selected`
+                                                : 'Select Charges'}
+                                        </span>
+                                        <span style={{ marginLeft: '8px', color: '#666', fontSize: '16px', lineHeight: '1' }}>▾</span>
+                                    </div>
+
+                                    {isBillingOpen && (
+                                        <div style={{
+                                            position: 'absolute',
+                                            bottom: '100%',
+                                            left: 0,
+                                            right: 0,
+                                            backgroundColor: 'white',
+                                            border: '1px solid #B7B7B7',
+                                            borderRadius: '6px',
+                                            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                                            zIndex: 1000,
+                                            marginBottom: '4px',
+                                            maxHeight: '300px',
+                                            overflow: 'hidden'
+                                        }}>
+                                            <div style={{ padding: '6px' }}>
+                                                <input
+                                                    type="text"
+                                                    placeholder="Search charges..."
+                                                    value={billingSearch}
+                                                    onChange={(e) => setBillingSearch(e.target.value)}
+                                                    style={{
+                                                        width: '100%',
+                                                        height: '28px',
+                                                        padding: '4px 8px',
+                                                        border: '1px solid #B7B7B7',
+                                                        borderRadius: '4px',
+                                                        fontSize: '12px',
+                                                        outline: 'none'
+                                                    }}
+                                                    onFocus={(e) => {
+                                                        (e.target as HTMLInputElement).style.borderColor = '#1E88E5';
+                                                    }}
+                                                    onBlur={(e) => {
+                                                        (e.target as HTMLInputElement).style.borderColor = '#B7B7B7';
+                                                    }}
+                                                />
+                                            </div>
+
+                                            <div className="billing-dropdown" style={{ maxHeight: '200px', overflowY: 'auto', padding: '4px 6px', display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', columnGap: '8px', rowGap: '6px' }}>
+                                                {filteredBillingDetails.length === 0 && (
+                                                    <div style={{ padding: '6px', fontSize: '12px', color: '#777', gridColumn: '1 / -1' }}>No charges found</div>
+                                                )}
+                                                {filteredBillingDetails.map((opt, index) => {
+                                                    const checked = selectedBillingDetailIds.includes(opt.id);
+                                                    const isFirstUnselected = !checked && index > 0 && selectedBillingDetailIds.includes(filteredBillingDetails[index - 1].id);
+                                                    return (
+                                                        <React.Fragment key={opt.id}>
+                                                            {isFirstUnselected && (
+                                                                <div style={{ 
+                                                                    gridColumn: '1 / -1', 
+                                                                    height: '1px', 
+                                                                    backgroundColor: '#e0e0e0', 
+                                                                    margin: '4px 0' 
+                                                                }} />
+                                                            )}
+                                                            <label 
+                                                                style={{ 
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    gap: '4px', 
+                                                                    padding: '4px 2px', 
+                                                                    cursor: 'pointer', 
+                                                                    fontSize: '12px', 
+                                                                    border: 'none',
+                                                                    backgroundColor: 'transparent',
+                                                                    borderRadius: '3px',
+                                                                    fontWeight: 400
+                                                                }}
+                                                            >
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={checked}
+                                                                    onChange={(e) => {
+                                                                        setSelectedBillingDetailIds(prev => {
+                                                                            if (e.target.checked) {
+                                                                                if (prev.includes(opt.id)) return prev;
+                                                                                return [...prev, opt.id];
+                                                                            } else {
+                                                                                return prev.filter(v => v !== opt.id);
+                                                                            }
+                                                                        });
+                                                                    }}
+                                                                    style={{ margin: 0 }}
+                                                                />
+                                                                <span style={{ whiteSpace: 'nowrap', display: 'inline-flex', gap: '6px', alignItems: 'center' }}>
+                                                                    <span>
+                                                                        {[
+                                                                            opt.billing_group_name,
+                                                                            opt.billing_subgroup_name,
+                                                                            opt.billing_details
+                                                                        ]
+                                                                            .filter((v) => v !== undefined && v !== null && String(v).trim() !== '')
+                                                                            .map((part, idx, arr) => (
+                                                                                <React.Fragment key={idx}>
+                                                                                    <span>{part}</span>
+                                                                                    {idx < arr.length - 1 && (
+                                                                                        <span style={{ color: '#555', opacity: 0.8, padding: '0 2px' }}>||</span>
+                                                                                    )}
+                                                                                </React.Fragment>
+                                                                            ))}
+                                                                    </span>
+                                                                    {typeof opt.default_fees === 'number' && !isNaN(opt.default_fees) && (
+                                                                        <span style={{ color: '#1976d2' }}>₹{opt.default_fees}</span>
+                                                                    )}
+                                                                </span>
+                                                            </label>
+                                                        </React.Fragment>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                                <button
+                                    type="button"
+                                    style={{
+                                        padding: '0 10px',
+                                        height: '32px',
+                                        alignSelf: 'flex-start',
+                                        backgroundColor: '#1976d2',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '4px',
+                                        fontSize: '13px',
+                                        cursor: 'pointer',
+                                        whiteSpace: 'nowrap'
+                                    }}
+                                    onClick={() => {
+                                        const total = billingDetailsOptions
+                                            .filter(opt => selectedBillingDetailIds.includes(opt.id))
+                                            .reduce((sum, opt) => sum + (typeof opt.default_fees === 'number' && !isNaN(opt.default_fees) ? opt.default_fees : Number(opt.default_fees || 0)), 0);
+                                        setBillingData(prev => {
+                                            const discountNum = parseFloat(prev.discount) || 0;
+                                            const newAcBalance = total - discountNum;
+                                            return { ...prev, billed: String(total), acBalance: String(newAcBalance) };
+                                        });
+                                        if (total > 0) {
+                                            setBillingError(null);
+                                        }
+                                    }}
+                                >
+                                    Add
+                                </button>
+                            </div>
+                        </div>
+
                         {/* Billing Section */}
                         <div style={{ marginBottom: '15px' }}>
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
@@ -4087,14 +4470,24 @@ export default function Treatment() {
                                         type="text"
                                         value={billingData.billed}
                                         onChange={(e) => handleBillingChange('billed', e.target.value)}
+                                        disabled
+                                        placeholder="Billed Amount"
                                         style={{
                                             width: '100%',
                                             padding: '6px 10px',
-                                            border: '1px solid #ccc',
+                                            border: billingError ? '1px solid red' : '1px solid #ccc',
                                             borderRadius: '4px',
-                                            fontSize: '13px'
+                                            fontSize: '13px',
+                                            backgroundColor: '#f5f5f5',
+                                            color: '#666',
+                                            cursor: 'not-allowed'
                                         }}
                                     />
+                                    {billingError && (
+                                        <div style={{ color: 'red', fontSize: '12px', marginTop: '4px' }}>
+                                            {billingError}
+                                        </div>
+                                    )}
                                 </div>
                                 <div>
                                     <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
@@ -4104,6 +4497,7 @@ export default function Treatment() {
                                         type="text"
                                         value={billingData.discount}
                                         onChange={(e) => handleBillingChange('discount', e.target.value)}
+                                        placeholder="0.00"
                                         style={{
                                             width: '100%',
                                             padding: '6px 10px',
@@ -4121,12 +4515,17 @@ export default function Treatment() {
                                         type="text"
                                         value={billingData.dues}
                                         onChange={(e) => handleBillingChange('dues', e.target.value)}
+                                        disabled
+                                        placeholder="0.00"
                                         style={{
                                             width: '100%',
                                             padding: '6px 10px',
                                             border: '1px solid #ccc',
                                             borderRadius: '4px',
-                                            fontSize: '13px'
+                                            fontSize: '13px',
+                                            backgroundColor: '#f5f5f5',
+                                            color: '#666',
+                                            cursor: 'not-allowed'
                                         }}
                                     />
                                 </div>
@@ -4139,12 +4538,17 @@ export default function Treatment() {
                                         type="text"
                                         value={billingData.acBalance}
                                         onChange={(e) => handleBillingChange('acBalance', e.target.value)}
+                                        disabled
+                                        placeholder="0.00"
                                         style={{
                                             width: '100%',
                                             padding: '6px 10px',
                                             border: '1px solid #ccc',
                                             borderRadius: '4px',
-                                            fontSize: '13px'
+                                            fontSize: '13px',
+                                            backgroundColor: '#f5f5f5',
+                                            color: '#666',
+                                            cursor: 'not-allowed'
                                         }}
                                     />
                                 </div>
@@ -4332,6 +4736,19 @@ export default function Treatment() {
                 onClose={() => setShowTestLabPopup(false)}
                 onSave={handleSaveTestLab}
             />
+
+            {showLabTestEntry && selectedPatientForLab && (
+                <LabTestEntry
+                    open={true}
+                    onClose={() => {
+                        setShowLabTestEntry(false);
+                        setSelectedPatientForLab(null);
+                    }}
+                    patientData={selectedPatientForLab}
+                    appointment={selectedPatientForLab}
+                    sessionData={sessionData}
+                />
+            )}
 
             {/* Success/Error Snackbar - Always rendered at bottom center */}
             <Snackbar
