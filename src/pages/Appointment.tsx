@@ -421,11 +421,12 @@ export default function AppointmentTable() {
             case 'WAITING': return 'bg-primary';
             case 'WITH DOCTOR': return 'bg-success';
             case 'CONSULT ON CALL': return 'bg-info';
-            case 'CHECK OUT': return 'bg-warning';
+            case 'CHECK OUT': return 'bg-secondary';
             case 'COMPLETE': return 'bg-dark';
             case 'SAVE': return 'bg-danger';
-            case 'SUBMITTED': return 'bg-warning'; // Orange/yellow for submitted status (Bootstrap warning color)
-            case 'COLLECTION': return 'bg-warning'; // Orange/yellow for collection status (status ID 6)
+            case 'SUBMITTED': return 'bg-secondary';
+            case 'COLLECTION': return 'bg-warning'; // Yellow for collection status (status ID 6)
+            case 'WAITING FOR MEDICINE': return 'bg-orange-custom'; // Orange for waiting for medicine status (status ID 4) - handled with inline style
             default: return 'bg-secondary';
         }
     };
@@ -1759,10 +1760,10 @@ export default function AppointmentTable() {
         const contactOk = filterContact ? (a.contact || '').toString().includes(filterContact) : true;
         const statusOk = filterStatus ? (a.status || '').toUpperCase() === filterStatus.toUpperCase() : true;
 
-        // For doctor screen, show patients with "WAITING", "WITH DOCTOR", "CONSULT ON CALL", "SAVE", "SUBMITTED", "COLLECTION", or "COMPLETE" status
+        // For doctor screen, show patients with "WAITING", "WITH DOCTOR", "CONSULT ON CALL", "WAITING FOR MEDICINE", "SAVE", "SUBMITTED", "COLLECTION", or "COMPLETE" status
         if (isDoctor) {
             const normalizedStatus = normalizeStatusLabel(a.status);
-            const doctorStatusOk = normalizedStatus === 'WAITING' || normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'SUBMITTED' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'COMPLETE';
+            const doctorStatusOk = normalizedStatus === 'WAITING' || normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'WAITING FOR MEDICINE' || normalizedStatus === 'SAVE' || normalizedStatus === 'SUBMITTED' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'COMPLETE';
             if (!doctorStatusOk) {
                 console.log('🔍 Appointment filtered out:', {
                     patient: a.patient,
@@ -1970,7 +1971,8 @@ export default function AppointmentTable() {
             'COMPLETE': 0,
             'SAVE': 0,
             'SUBMITTED': 0,
-            'COLLECTION': 0
+            'COLLECTION': 0,
+            'WAITING FOR MEDICINE': 0
         };
 
         // For doctor screen, count all visible appointments (same as filteredAppointments logic)
@@ -1981,6 +1983,7 @@ export default function AppointmentTable() {
                 return normalizedStatus === 'WAITING' || 
                        normalizedStatus === 'WITH DOCTOR' || 
                        normalizedStatus === 'CONSULT ON CALL' || 
+                       normalizedStatus === 'WAITING FOR MEDICINE' ||
                        normalizedStatus === 'SAVE' || 
                        normalizedStatus === 'SUBMITTED' || 
                        normalizedStatus === 'COLLECTION' ||
@@ -2397,13 +2400,13 @@ export default function AppointmentTable() {
                         |
                         <span className="mx-1"><span className="rounded-circle d-inline-block bg-info" style={{ width: 10, height: 10 }}></span> {statusCounts['CONSULT ON CALL'] || 0} </span>
                         |
-                        <span className="mx-1"><span className="rounded-circle d-inline-block bg-warning" style={{ width: 10, height: 10 }}></span> {statusCounts['CHECK OUT'] || 0} </span>
-                        |
                         <span className="mx-1"><span className="rounded-circle d-inline-block bg-dark" style={{ width: 10, height: 10 }}></span> {statusCounts['COMPLETE'] || 0} </span>
                         |
                         <span className="mx-1"><span className="rounded-circle d-inline-block bg-danger" style={{ width: 10, height: 10 }}></span> {statusCounts['SAVE'] || 0} </span>
                         |
-                        <span className="ms-1"><span className="rounded-circle d-inline-block bg-warning" style={{ width: 10, height: 10 }}></span> {(statusCounts['SUBMITTED'] || 0) + (statusCounts['COLLECTION'] || 0)} </span>
+                        <span className="ms-1"><span className="rounded-circle d-inline-block bg-warning" style={{ width: 10, height: 10 }}></span> {statusCounts['COLLECTION'] || 0} </span>
+                        |
+                        <span className="ms-1"><span className="rounded-circle d-inline-block" style={{ width: 10, height: 10, backgroundColor: '#FF9800' }}></span> {statusCounts['WAITING FOR MEDICINE'] || 0} </span>
                     </div>
                 </div>
 
@@ -2664,7 +2667,7 @@ export default function AppointmentTable() {
                                                     </td>
                                                     <td style={{ position: "relative" }} title={(a as any).statusPending || a.status}>
                                                         <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
-                                                            <span className={`d-inline-block rounded-circle ${(a as any).statusColorPending || a.statusColor}`} style={{ width: "14px", height: "14px" }}></span>
+                                                            <span className={`d-inline-block rounded-circle ${((a as any).statusColorPending || a.statusColor) === 'bg-orange-custom' ? '' : ((a as any).statusColorPending || a.statusColor)}`} style={{ width: "14px", height: "14px", backgroundColor: ((a as any).statusColorPending || a.statusColor) === 'bg-orange-custom' ? '#FF9800' : undefined }}></span>
                                                             <span style={{ fontSize: '0.9rem', color: '#263238' }}>{(a as any).statusPending || a.status}</span>
                                                             <div
                                                                 aria-label="Change Status (Disabled)"
@@ -2795,16 +2798,16 @@ export default function AppointmentTable() {
                                                                 <img src="/images/avatar/Visit_details.svg" alt="Checkout" style={{ width: 16, height: 16 }} />
                                                             </div>
 
-                                                            {/* Treatment Button - Enabled for WITH DOCTOR, CONSULT ON CALL, or SAVE */}
+                                                            {/* Treatment Button - Enabled for WITH DOCTOR, CONSULT ON CALL, SAVE, COLLECTION, or WAITING FOR MEDICINE */}
                                                             <div
                                                                 title={(() => {
                                                                     const normalizedStatus = normalizeStatusLabel(a.status);
-                                                                    const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE';
+                                                                    const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'WAITING FOR MEDICINE';
                                                                     return isEnabled ? "Treatment" : "Treatment (Disabled - Patient not with doctor)";
                                                                 })()}
                                                                 onClick={() => {
                                                                     const normalizedStatus = normalizeStatusLabel(a.status);
-                                                                    const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE';
+                                                                    const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'WAITING FOR MEDICINE';
                                                                     if (isEnabled) {
                                                                         // Navigate to treatment or open modal
                                                                         console.log('Treatment clicked for patient:', a.patientId);
@@ -2834,30 +2837,30 @@ export default function AppointmentTable() {
                                                                     height: '28px',
                                                                     cursor: (() => {
                                                                         const normalizedStatus = normalizeStatusLabel(a.status);
-                                                                        const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE';
+                                                                        const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'WAITING FOR MEDICINE';
                                                                         return isEnabled ? 'pointer' : 'not-allowed';
                                                                     })(),
                                                                     color: (() => {
                                                                         const normalizedStatus = normalizeStatusLabel(a.status);
-                                                                        const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE';
+                                                                        const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'WAITING FOR MEDICINE';
                                                                         return isEnabled ? '#607D8B' : '#BDBDBD';
                                                                     })(),
                                                                     backgroundColor: 'transparent',
                                                                     borderRadius: '4px',
                                                                     border: (() => {
                                                                         const normalizedStatus = normalizeStatusLabel(a.status);
-                                                                        const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE';
+                                                                        const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'WAITING FOR MEDICINE';
                                                                         return isEnabled ? '1px solid #ddd' : '1px solid #E0E0E0';
                                                                     })(),
                                                                     opacity: (() => {
                                                                         const normalizedStatus = normalizeStatusLabel(a.status);
-                                                                        const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE';
+                                                                        const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'WAITING FOR MEDICINE';
                                                                         return isEnabled ? 1 : 0.5;
                                                                     })()
                                                                 }}
                                                                 onMouseEnter={(e) => {
                                                                     const normalizedStatus = normalizeStatusLabel(a.status);
-                                                                    const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE';
+                                                                    const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'WAITING FOR MEDICINE';
                                                                     if (isEnabled) {
                                                                         e.currentTarget.style.backgroundColor = '#FFF3E0';
                                                                         e.currentTarget.style.borderColor = '#FF9800';
@@ -2865,7 +2868,7 @@ export default function AppointmentTable() {
                                                                 }}
                                                                 onMouseLeave={(e) => {
                                                                     const normalizedStatus = normalizeStatusLabel(a.status);
-                                                                    const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE';
+                                                                    const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'WAITING FOR MEDICINE';
                                                                     if (isEnabled) {
                                                                         e.currentTarget.style.backgroundColor = 'transparent';
                                                                         e.currentTarget.style.borderColor = '#ddd';
@@ -2880,7 +2883,7 @@ export default function AppointmentTable() {
                                                                         height: 16,
                                                                         filter: (() => {
                                                                             const normalizedStatus = normalizeStatusLabel(a.status);
-                                                                            const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE';
+                                                                            const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'WAITING FOR MEDICINE';
                                                                             return isEnabled ? 'none' : 'grayscale(100%)';
                                                                         })()
                                                                     }} 
@@ -2919,7 +2922,7 @@ export default function AppointmentTable() {
                                             <div className="appointment-card">
                                                 <div className="card-header">
                                                     <div className="d-flex align-items-center" style={{ gap: '8px' }}>
-                                                        <span className={`d-inline-block rounded-circle ${(appointment as any).statusColorPending || appointment.statusColor}`} style={{ width: '10px', height: '10px' }}></span>
+                                                        <span className={`d-inline-block rounded-circle ${((appointment as any).statusColorPending || appointment.statusColor) === 'bg-orange-custom' ? '' : ((appointment as any).statusColorPending || appointment.statusColor)}`} style={{ width: '10px', height: '10px', backgroundColor: ((appointment as any).statusColorPending || appointment.statusColor) === 'bg-orange-custom' ? '#FF9800' : undefined }}></span>
                                                         <a href={`/patients/${appointment.patientId}`} className="patient-name" style={{ textDecoration: 'underline', color: '#1E88E5' }}>{appointment.patient}</a>
                                                     </div>
                                                     <div
@@ -3045,41 +3048,56 @@ export default function AppointmentTable() {
                                                         className="crm-btn ms-auto"
                                                         title={(() => {
                                                             const normalizedStatus = normalizeStatusLabel(appointment.status);
-                                                            const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL';
+                                                            const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'WAITING FOR MEDICINE';
                                                             return isEnabled ? "Treatment" : "Treatment (Disabled - Patient not with doctor)";
                                                         })()}
                                                         onClick={() => {
                                                             const normalizedStatus = normalizeStatusLabel(appointment.status);
-                                                            const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL';
+                                                            const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'WAITING FOR MEDICINE';
                                                             if (isEnabled) {
                                                                 // Treatment button functionality - can be implemented as needed
                                                                 console.log('Treatment clicked for patient:', appointment.patientId);
+                                                                navigate('/treatment', {
+                                                                    state: {
+                                                                        patientId: appointment.patientId,
+                                                                        patientName: appointment.patient,
+                                                                        visitNumber: appointment.visitNumber,
+                                                                        doctorId: appointment.doctorId,
+                                                                        clinicId: clinicId,
+                                                                        shiftId: Number(appointment.shiftId || 1),
+                                                                        visitDate: String(appointment.visitDate || ''),
+                                                                        appointmentId: appointment.appointmentId,
+                                                                        age: appointment.age,
+                                                                        gender: appointment.gender,
+                                                                        contact: appointment.contact
+                                                                    }
+                                                                });
                                                             }
                                                         }}
                                                         style={{
                                                             cursor: (() => {
                                                                 const normalizedStatus = normalizeStatusLabel(appointment.status);
-                                                                const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL';
+                                                                const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'WAITING FOR MEDICINE';
                                                                 return isEnabled ? 'pointer' : 'not-allowed';
                                                             })(),
                                                             backgroundColor: (() => {
                                                                 const normalizedStatus = normalizeStatusLabel(appointment.status);
-                                                                const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL';
+                                                                const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'WAITING FOR MEDICINE';
                                                                 return isEnabled ? '#ECEFF1' : '#F5F5F5';
                                                             })(),
                                                             color: (() => {
                                                                 const normalizedStatus = normalizeStatusLabel(appointment.status);
-                                                                const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL';
+                                                                const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'WAITING FOR MEDICINE';
                                                                 return isEnabled ? '#607D8B' : '#BDBDBD';
                                                             })(),
                                                             border: (() => {
                                                                 const normalizedStatus = normalizeStatusLabel(appointment.status);
-                                                                const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL';
+                                                                const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'WAITING FOR MEDICINE';
                                                                 return isEnabled ? '1px solid #CFD8DC' : '1px solid #E0E0E0';
                                                             })(),
                                                             opacity: (() => {
                                                                 const normalizedStatus = normalizeStatusLabel(appointment.status);
-                                                                const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL';
+                                                                const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'WAITING FOR MEDICINE';
                                                                 return isEnabled ? 1 : 0.5;
                                                             })()
                                                         }}
@@ -3092,7 +3110,7 @@ export default function AppointmentTable() {
                                                                 height: 16, 
                                                                 filter: (() => {
                                                                     const normalizedStatus = normalizeStatusLabel(appointment.status);
-                                                                    const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL';
+                                                                    const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'WAITING FOR MEDICINE';
                                                                     return isEnabled ? 'brightness(0)' : 'grayscale(100%) brightness(0.5)';
                                                                 })()
                                                             }} 
@@ -3608,13 +3626,13 @@ export default function AppointmentTable() {
                     |
                     <span className="mx-1"><span className="rounded-circle d-inline-block bg-info" style={{ width: 10, height: 10 }}></span> {statusCounts['CONSULT ON CALL'] || 0} </span>
                     |
-                    <span className="mx-1"><span className="rounded-circle d-inline-block bg-warning" style={{ width: 10, height: 10 }}></span> {statusCounts['CHECK OUT'] || 0} </span>
-                    |
                     <span className="mx-1"><span className="rounded-circle d-inline-block bg-dark" style={{ width: 10, height: 10 }}></span> {statusCounts['COMPLETE'] || 0} </span>
                     |
                     <span className="mx-1"><span className="rounded-circle d-inline-block bg-danger" style={{ width: 10, height: 10 }}></span> {statusCounts['SAVE'] || 0} </span>
                     |
-                    <span className="ms-1"><span className="rounded-circle d-inline-block bg-warning" style={{ width: 10, height: 10 }}></span> {(statusCounts['SUBMITTED'] || 0) + (statusCounts['COLLECTION'] || 0)} </span>
+                    <span className="ms-1"><span className="rounded-circle d-inline-block bg-warning" style={{ width: 10, height: 10 }}></span> {statusCounts['COLLECTION'] || 0} </span>
+                    |
+                    <span className="ms-1"><span className="rounded-circle d-inline-block" style={{ width: 10, height: 10, backgroundColor: '#FF9800' }}></span> {statusCounts['WAITING FOR MEDICINE'] || 0} </span>
                 </div>
             </div>
 
@@ -3926,7 +3944,7 @@ export default function AppointmentTable() {
                                                 </td>
                                                 <td style={{ position: "relative" }} title={(a as any).statusPending || a.status}>
                                                     <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
-                                                        <span className={`d-inline-block rounded-circle ${(a as any).statusColorPending || a.statusColor}`} style={{ width: "14px", height: "14px" }}></span>
+                                                        <span className={`d-inline-block rounded-circle ${((a as any).statusColorPending || a.statusColor) === 'bg-orange-custom' ? '' : ((a as any).statusColorPending || a.statusColor)}`} style={{ width: "14px", height: "14px", backgroundColor: ((a as any).statusColorPending || a.statusColor) === 'bg-orange-custom' ? '#FF9800' : undefined }}></span>
                                                         <span style={{ fontSize: '0.9rem', color: '#263238' }}>{(a as any).statusPending || a.status}</span>
                                                         <div
                                                             onClick={async (e) => {
@@ -4530,6 +4548,96 @@ export default function AppointmentTable() {
                                                         >
                                                             <img src="/images/avatar/wallet.png" alt="Collection" style={{ width: 16, height: 16, filter: 'brightness(0)' }} />
                                                         </div>
+
+                                                        {/* Treatment Button - Enabled for COLLECTION status */}
+                                                        <div
+                                                            title={(() => {
+                                                                const normalizedStatus = normalizeStatusLabel(a.status);
+                                                                const isEnabled = normalizedStatus === 'COLLECTION';
+                                                                return isEnabled ? "Treatment" : "Treatment (Disabled - Only enabled for Collection status)";
+                                                            })()}
+                                                            onClick={() => {
+                                                                const normalizedStatus = normalizeStatusLabel(a.status);
+                                                                const isEnabled = normalizedStatus === 'COLLECTION';
+                                                                if (isEnabled) {
+                                                                    console.log('Treatment clicked for patient:', a.patientId);
+                                                                    navigate('/treatment', {
+                                                                        state: {
+                                                                            patientId: a.patientId,
+                                                                            patientName: a.patient,
+                                                                            visitNumber: a.visitNumber,
+                                                                            doctorId: a.doctorId,
+                                                                            clinicId: clinicId,
+                                                                            shiftId: Number(a.shiftId || 1),
+                                                                            visitDate: String(a.visitDate || ''),
+                                                                            appointmentId: a.appointmentId,
+                                                                            age: a.age,
+                                                                            gender: a.gender,
+                                                                            contact: a.contact
+                                                                        }
+                                                                    });
+                                                                }
+                                                            }}
+                                                            style={{
+                                                                display: 'inline-flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                width: '28px',
+                                                                height: '28px',
+                                                                cursor: (() => {
+                                                                    const normalizedStatus = normalizeStatusLabel(a.status);
+                                                                    const isEnabled = normalizedStatus === 'COLLECTION';
+                                                                    return isEnabled ? 'pointer' : 'not-allowed';
+                                                                })(),
+                                                                color: (() => {
+                                                                    const normalizedStatus = normalizeStatusLabel(a.status);
+                                                                    const isEnabled = normalizedStatus === 'COLLECTION';
+                                                                    return isEnabled ? '#607D8B' : '#BDBDBD';
+                                                                })(),
+                                                                backgroundColor: 'transparent',
+                                                                borderRadius: '4px',
+                                                                border: (() => {
+                                                                    const normalizedStatus = normalizeStatusLabel(a.status);
+                                                                    const isEnabled = normalizedStatus === 'COLLECTION';
+                                                                    return isEnabled ? '1px solid #ddd' : '1px solid #E0E0E0';
+                                                                })(),
+                                                                opacity: (() => {
+                                                                    const normalizedStatus = normalizeStatusLabel(a.status);
+                                                                    const isEnabled = normalizedStatus === 'COLLECTION';
+                                                                    return isEnabled ? 1 : 0.5;
+                                                                })()
+                                                            }}
+                                                            onMouseEnter={(e) => {
+                                                                const normalizedStatus = normalizeStatusLabel(a.status);
+                                                                const isEnabled = normalizedStatus === 'COLLECTION';
+                                                                if (isEnabled) {
+                                                                    e.currentTarget.style.backgroundColor = '#FFF3E0';
+                                                                    e.currentTarget.style.borderColor = '#FF9800';
+                                                                }
+                                                            }}
+                                                            onMouseLeave={(e) => {
+                                                                const normalizedStatus = normalizeStatusLabel(a.status);
+                                                                const isEnabled = normalizedStatus === 'COLLECTION';
+                                                                if (isEnabled) {
+                                                                    e.currentTarget.style.backgroundColor = 'transparent';
+                                                                    e.currentTarget.style.borderColor = '#ddd';
+                                                                }
+                                                            }}
+                                                        >
+                                                            <img 
+                                                                src="/images/avatar/Treatment.svg" 
+                                                                alt="Treatment" 
+                                                                style={{ 
+                                                                    width: 16, 
+                                                                    height: 16,
+                                                                    filter: (() => {
+                                                                        const normalizedStatus = normalizeStatusLabel(a.status);
+                                                                        const isEnabled = normalizedStatus === 'COLLECTION';
+                                                                        return isEnabled ? 'none' : 'grayscale(100%)';
+                                                                    })()
+                                                                }} 
+                                                            />
+                                                        </div>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -4563,7 +4671,7 @@ export default function AppointmentTable() {
                                         <div className="appointment-card">
                                             <div className="card-header">
                                                 <div className="d-flex align-items-center" style={{ gap: '8px' }}>
-                                                    <span className={`d-inline-block rounded-circle ${appointment.statusColor}`} style={{ width: '10px', height: '10px' }}></span>
+                                                    <span className={`d-inline-block rounded-circle ${appointment.statusColor === 'bg-orange-custom' ? '' : appointment.statusColor}`} style={{ width: '10px', height: '10px', backgroundColor: appointment.statusColor === 'bg-orange-custom' ? '#FF9800' : undefined }}></span>
                                                     <a href={`/patients/${appointment.patientId}`} className="patient-name" style={{ textDecoration: 'underline', color: '#1E88E5' }}>{appointment.patient}</a>
                                                 </div>
                                                 <div
@@ -5054,6 +5162,77 @@ export default function AppointmentTable() {
                                                     }}
                                                 >
                                                     <img src="/images/avatar/wallet.png" alt="Collection" style={{ width: 16, height: 16, filter: 'brightness(0)' }} />
+                                                </div>
+                                                <div
+                                                    className="crm-btn"
+                                                    title={(() => {
+                                                        const normalizedStatus = normalizeStatusLabel(appointment.status);
+                                                        const isEnabled = normalizedStatus === 'COLLECTION';
+                                                        return isEnabled ? "Treatment" : "Treatment (Disabled - Only enabled for Collection status)";
+                                                    })()}
+                                                    onClick={() => {
+                                                        const normalizedStatus = normalizeStatusLabel(appointment.status);
+                                                        const isEnabled = normalizedStatus === 'COLLECTION';
+                                                        if (isEnabled) {
+                                                            console.log('Treatment clicked for patient:', appointment.patientId);
+                                                            navigate('/treatment', {
+                                                                state: {
+                                                                    patientId: appointment.patientId,
+                                                                    patientName: appointment.patient,
+                                                                    visitNumber: appointment.visitNumber,
+                                                                    doctorId: appointment.doctorId,
+                                                                    clinicId: clinicId,
+                                                                    shiftId: Number(appointment.shiftId || 1),
+                                                                    visitDate: String(appointment.visitDate || ''),
+                                                                    appointmentId: appointment.appointmentId,
+                                                                    age: appointment.age,
+                                                                    gender: appointment.gender,
+                                                                    contact: appointment.contact
+                                                                }
+                                                            });
+                                                        }
+                                                    }}
+                                                    style={{
+                                                        cursor: (() => {
+                                                            const normalizedStatus = normalizeStatusLabel(appointment.status);
+                                                            const isEnabled = normalizedStatus === 'COLLECTION';
+                                                            return isEnabled ? 'pointer' : 'not-allowed';
+                                                        })(),
+                                                        backgroundColor: (() => {
+                                                            const normalizedStatus = normalizeStatusLabel(appointment.status);
+                                                            const isEnabled = normalizedStatus === 'COLLECTION';
+                                                            return isEnabled ? '#ECEFF1' : '#F5F5F5';
+                                                        })(),
+                                                        color: (() => {
+                                                            const normalizedStatus = normalizeStatusLabel(appointment.status);
+                                                            const isEnabled = normalizedStatus === 'COLLECTION';
+                                                            return isEnabled ? '#607D8B' : '#BDBDBD';
+                                                        })(),
+                                                        border: (() => {
+                                                            const normalizedStatus = normalizeStatusLabel(appointment.status);
+                                                            const isEnabled = normalizedStatus === 'COLLECTION';
+                                                            return isEnabled ? '1px solid #CFD8DC' : '1px solid #E0E0E0';
+                                                        })(),
+                                                        opacity: (() => {
+                                                            const normalizedStatus = normalizeStatusLabel(appointment.status);
+                                                            const isEnabled = normalizedStatus === 'COLLECTION';
+                                                            return isEnabled ? 1 : 0.5;
+                                                        })()
+                                                    }}
+                                                >
+                                                    <img 
+                                                        src="/images/avatar/Treatment.svg" 
+                                                        alt="Treatment" 
+                                                        style={{ 
+                                                            width: 16, 
+                                                            height: 16, 
+                                                            filter: (() => {
+                                                                const normalizedStatus = normalizeStatusLabel(appointment.status);
+                                                                const isEnabled = normalizedStatus === 'COLLECTION';
+                                                                return isEnabled ? 'brightness(0)' : 'grayscale(100%) brightness(0.5)';
+                                                            })()
+                                                        }} 
+                                                    />
                                                 </div>
                                             </div>
                                         </div>
