@@ -370,6 +370,7 @@ export default function AppointmentTable() {
             }
 
             const finalPatientId = String(patientIdRaw || '');
+            const rowDoctorId = toStringSafe(getField(row, ['doctor_id', 'doctorId'], ''));
 
             return {
                 appointmentId: toStringSafe(getField(row, ['appointmentId', 'appointment_id', 'id'], '')),
@@ -381,14 +382,14 @@ export default function AppointmentTable() {
                 gender: gender,
                 contact: mobile,
                 time: displayTime,
-                provider: doctorId,
+                provider: rowDoctorId || doctorId, // Use row's doctor_id, fallback to state doctorId
                 online: onlineTime || '',
                 status: status,
                 statusColor: getStatusColor(status),
                 lastOpd: lastOpd,
                 labs: '',
                 reports_received: reportsAsked,
-                doctorId: toStringSafe(getField(row, ['doctor_id', 'doctorId'], '')),
+                doctorId: rowDoctorId,
                 visitNumber: visitNumber,
                 shiftId: shiftId,
                 clinicId: clinicIdFromRow,
@@ -418,6 +419,7 @@ export default function AppointmentTable() {
             case 'CHECK OUT': return 'bg-warning';
             case 'COMPLETE': return 'bg-dark';
             case 'SAVE': return 'bg-danger';
+            case 'SUBMITTED': return 'bg-dark';
             default: return 'bg-secondary';
         }
     };
@@ -772,7 +774,10 @@ export default function AppointmentTable() {
                     languageId: 1
                 });
                 console.log('📅 Today\'s appointments loaded for doctor', doctorId, ':', (resp?.resultSet1 || []).length, 'appointments');
+                console.log('📋 Raw resultSet1 data:', resp?.resultSet1);
                 const rows = convertSPResultToRows(resp?.resultSet1 || []);
+                console.log('✅ Converted rows:', rows);
+                console.log('✅ Converted rows count:', rows.length);
                 setAppointments(rows);
             } catch (e) {
                 console.error('Failed to load today\'s appointments (SP endpoint)', e);
@@ -1748,15 +1753,35 @@ export default function AppointmentTable() {
         const contactOk = filterContact ? (a.contact || '').toString().includes(filterContact) : true;
         const statusOk = filterStatus ? (a.status || '').toUpperCase() === filterStatus.toUpperCase() : true;
 
-        // For doctor screen, show patients with "WAITING", "WITH DOCTOR", or "CONSULT ON CALL" status
+        // For doctor screen, show patients with "WAITING", "WITH DOCTOR", "CONSULT ON CALL", "SAVE", or "SUBMITTED" status
         if (isDoctor) {
             const normalizedStatus = normalizeStatusLabel(a.status);
-            const doctorStatusOk = normalizedStatus === 'WAITING' || normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE';
+            const doctorStatusOk = normalizedStatus === 'WAITING' || normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'SUBMITTED';
+            if (!doctorStatusOk) {
+                console.log('🔍 Appointment filtered out:', {
+                    patient: a.patient,
+                    status: a.status,
+                    normalizedStatus: normalizedStatus,
+                    isDoctor: isDoctor
+                });
+            }
             return nameOk && contactOk && statusOk && doctorStatusOk;
         }
 
         return nameOk && contactOk && statusOk;
     });
+    
+    // Debug logging for filtered results
+    useEffect(() => {
+        if (appointments.length > 0) {
+            console.log('📊 Appointments state:', {
+                total: appointments.length,
+                filtered: filteredAppointments.length,
+                isDoctor: isDoctor,
+                sampleStatuses: appointments.slice(0, 3).map(a => ({ patient: a.patient, status: a.status, normalized: normalizeStatusLabel(a.status) }))
+            });
+        }
+    }, [appointments.length, isDoctor]);
     // Sort order depends on role
     // - Doctor: WITH DOCTOR (top) -> CONSULT ON CALL -> WAITING
     // - Others: WAITING (top) as before
@@ -1767,6 +1792,7 @@ export default function AppointmentTable() {
                 if (n === 'WITH DOCTOR') return 0;
                 if (n === 'CONSULT ON CALL') return 1;
                 if (n === 'WAITING' || n === 'SAVE') return 2;
+                if (n === 'SUBMITTED') return 3;
                 return 99;
             };
             const pa = priority(a.status);
