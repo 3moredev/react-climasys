@@ -10,6 +10,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import AddPatientPage from "./AddPatientPage";
 import PatientVisitDetails from "./PatientVisitDetails";
 import { sessionService, SessionInfo } from "../services/sessionService";
+import { sessionPersistence } from "../utils/sessionPersistence";
 import PatientFormTest from "../components/Test/PatientFormTest";
 import LabTestEntry from "../components/LabTestEntry";
 
@@ -118,13 +119,14 @@ export default function AppointmentTable() {
                 const result = await sessionService.getSessionInfo();
                 if (result.success && result.data) {
                     console.log('Session data received:', result.data);
-                    setSessionData(result.data);
-                    setDoctorId(result.data.doctorId);
-                    setClinicId(result.data.clinicId);
+                    const sessionData = result.data;
+                    setSessionData(sessionData);
+                    setDoctorId(sessionData.doctorId);
+                    setClinicId(sessionData.clinicId);
 
                     // Determine user role based on sessionType or userId
-                    const sessionType = result.data.sessionType?.toLowerCase() || '';
-                    const userId = result.data.userId;
+                    const sessionType = sessionData.sessionType?.toLowerCase() || '';
+                    const userId = sessionData.userId;
 
                     // Set role based on sessionType or userId
                     if (sessionType.includes('receptionist') || userId === 1) {
@@ -154,10 +156,13 @@ export default function AppointmentTable() {
                     }
 
                     console.log('User role determined:', userRole, 'isReceptionist:', isReceptionist, 'isDoctor:', isDoctor);
-                    console.log('Doctor ID set to:', result.data.doctorId);
-                    console.log('Clinic ID set to:', result.data.clinicId);
+                    console.log('Doctor ID set to:', sessionData.doctorId);
+                    console.log('Clinic ID set to:', sessionData.clinicId);
                 } else {
-                    console.error('Failed to fetch session data:', result.error);
+                    // Session expired or invalid - redirect to login
+                    console.warn('Session expired or invalid, redirecting to login');
+                    sessionPersistence.clearAll();
+                    navigate('/login', { replace: true });
                 }
             } catch (error) {
                 console.error('Error fetching session data:', error);
@@ -419,7 +424,8 @@ export default function AppointmentTable() {
             case 'CHECK OUT': return 'bg-warning';
             case 'COMPLETE': return 'bg-dark';
             case 'SAVE': return 'bg-danger';
-            case 'SUBMITTED': return 'bg-dark';
+            case 'SUBMITTED': return 'bg-warning'; // Orange/yellow for submitted status (Bootstrap warning color)
+            case 'COLLECTION': return 'bg-warning'; // Orange/yellow for collection status (status ID 6)
             default: return 'bg-secondary';
         }
     };
@@ -1753,10 +1759,10 @@ export default function AppointmentTable() {
         const contactOk = filterContact ? (a.contact || '').toString().includes(filterContact) : true;
         const statusOk = filterStatus ? (a.status || '').toUpperCase() === filterStatus.toUpperCase() : true;
 
-        // For doctor screen, show patients with "WAITING", "WITH DOCTOR", "CONSULT ON CALL", "SAVE", or "SUBMITTED" status
+        // For doctor screen, show patients with "WAITING", "WITH DOCTOR", "CONSULT ON CALL", "SAVE", "SUBMITTED", "COLLECTION", or "COMPLETE" status
         if (isDoctor) {
             const normalizedStatus = normalizeStatusLabel(a.status);
-            const doctorStatusOk = normalizedStatus === 'WAITING' || normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'SUBMITTED';
+            const doctorStatusOk = normalizedStatus === 'WAITING' || normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'SUBMITTED' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'COMPLETE';
             if (!doctorStatusOk) {
                 console.log('🔍 Appointment filtered out:', {
                     patient: a.patient,
@@ -1962,14 +1968,23 @@ export default function AppointmentTable() {
             'CONSULT ON CALL': 0,
             'CHECK OUT': 0,
             'COMPLETE': 0,
-            'SAVE': 0
+            'SAVE': 0,
+            'SUBMITTED': 0,
+            'COLLECTION': 0
         };
 
-        // For doctor screen, count patients with "WAITING", "WITH DOCTOR", or "CONSULT ON CALL" status
+        // For doctor screen, count all visible appointments (same as filteredAppointments logic)
         const appointmentsToCount = isDoctor
             ? appointments.filter(appt => {
                 const normalizedStatus = normalizeStatusLabel(appt.status);
-                return normalizedStatus === 'WAITING' || normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'WAITING FOR MEDICINE';
+                // Include all statuses visible to doctors
+                return normalizedStatus === 'WAITING' || 
+                       normalizedStatus === 'WITH DOCTOR' || 
+                       normalizedStatus === 'CONSULT ON CALL' || 
+                       normalizedStatus === 'SAVE' || 
+                       normalizedStatus === 'SUBMITTED' || 
+                       normalizedStatus === 'COLLECTION' ||
+                       normalizedStatus === 'COMPLETE';
             })
             : appointments;
 
@@ -2386,7 +2401,9 @@ export default function AppointmentTable() {
                         |
                         <span className="mx-1"><span className="rounded-circle d-inline-block bg-dark" style={{ width: 10, height: 10 }}></span> {statusCounts['COMPLETE'] || 0} </span>
                         |
-                        <span className="ms-1"><span className="rounded-circle d-inline-block bg-danger" style={{ width: 10, height: 10 }}></span> {statusCounts['SAVE'] || 0} </span>
+                        <span className="mx-1"><span className="rounded-circle d-inline-block bg-danger" style={{ width: 10, height: 10 }}></span> {statusCounts['SAVE'] || 0} </span>
+                        |
+                        <span className="ms-1"><span className="rounded-circle d-inline-block bg-warning" style={{ width: 10, height: 10 }}></span> {(statusCounts['SUBMITTED'] || 0) + (statusCounts['COLLECTION'] || 0)} </span>
                     </div>
                 </div>
 
@@ -3595,7 +3612,9 @@ export default function AppointmentTable() {
                     |
                     <span className="mx-1"><span className="rounded-circle d-inline-block bg-dark" style={{ width: 10, height: 10 }}></span> {statusCounts['COMPLETE'] || 0} </span>
                     |
-                    <span className="ms-1"><span className="rounded-circle d-inline-block bg-danger" style={{ width: 10, height: 10 }}></span> {statusCounts['SAVE'] || 0} </span>
+                    <span className="mx-1"><span className="rounded-circle d-inline-block bg-danger" style={{ width: 10, height: 10 }}></span> {statusCounts['SAVE'] || 0} </span>
+                    |
+                    <span className="ms-1"><span className="rounded-circle d-inline-block bg-warning" style={{ width: 10, height: 10 }}></span> {(statusCounts['SUBMITTED'] || 0) + (statusCounts['COLLECTION'] || 0)} </span>
                 </div>
             </div>
 
