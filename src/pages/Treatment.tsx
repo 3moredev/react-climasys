@@ -19,6 +19,7 @@ import AddMedicinePopup, { MedicineData } from "../components/AddMedicinePopup";
 import AddPrescriptionPopup, { PrescriptionData } from "../components/AddPrescriptionPopup";
 import AddTestLabPopup, { TestLabData } from "../components/AddTestLabPopup";
 import LabTestEntry from "../components/LabTestEntry";
+import InstructionGroupsPopup from "../components/InstructionGroupsPopup";
 
 // Specific styles for Duration/Comment input in table
 const durationCommentStyles = `
@@ -295,6 +296,10 @@ export default function Treatment() {
     const [showTestLabPopup, setShowTestLabPopup] = useState(false);
     const [showLabTestEntry, setShowLabTestEntry] = useState<boolean>(false);
     const [selectedPatientForLab, setSelectedPatientForLab] = useState<any>(null);
+
+    // Addendum modal state
+    const [showAddendumModal, setShowAddendumModal] = useState<boolean>(false);
+    const [addendumText, setAddendumText] = useState<string>("");
 
     // Complaints and diagnosis data
     const [complaintsRows, setComplaintsRows] = useState<ComplaintRow[]>([]);
@@ -4879,6 +4884,7 @@ export default function Treatment() {
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '20px', marginBottom: '40px', flexWrap: 'wrap' }}>
                             <button 
                                 type="button" 
+                                onClick={() => setShowAddendumModal(true)}
                                 style={{
                                     backgroundColor: '#1976d2',
                                     color: 'white',
@@ -5050,12 +5056,115 @@ export default function Treatment() {
                 onSave={handleSavePrescription}
             />
 
+            {/* Instruction Groups Popup */}
+            <InstructionGroupsPopup
+                isOpen={showInstructionPopup}
+                onClose={() => setShowInstructionPopup(false)}
+                patientName={treatmentData?.patientName || ''}
+                patientAge={Number(treatmentData?.age || 0)}
+                patientGender={(treatmentData?.gender || '').toString()}
+            />
+
             {/* Add Test Lab Popup */}
             <AddTestLabPopup
                 open={showTestLabPopup}
                 onClose={() => setShowTestLabPopup(false)}
                 onSave={handleSaveTestLab}
             />
+
+            {/* Addendum Modal */}
+            {showAddendumModal && (
+                <div
+                    role="dialog"
+                    aria-modal="true"
+                    style={{
+                        position: 'fixed',
+                        inset: 0,
+                        backgroundColor: 'rgba(0,0,0,0.4)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 100000
+                    }}
+                    onClick={() => setShowAddendumModal(false)}
+                >
+                    <div
+                        style={{
+                            width: '95%',
+                            maxWidth: 700,
+                            maxHeight: '80vh',
+                            overflow: 'auto',
+                            background: '#fff',
+                            borderRadius: 8,
+                            boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
+                            fontFamily: 'Roboto, sans-serif'
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div style={{
+                            background: 'linear-gradient(90deg, #1976d2 0%, #42a5f5 100%)',
+                            color: '#fff',
+                            padding: '12px 16px',
+                            borderTopLeftRadius: 8,
+                            borderTopRightRadius: 8,
+                            fontWeight: 700,
+                            fontSize: 16
+                        }}>
+                            {treatmentData?.patientName || 'Patient'} / {treatmentData?.gender || ''} / {treatmentData?.age ? `${treatmentData.age} Y` : ''}
+                        </div>
+
+                        <div style={{ padding: 16 }}>
+                            <div style={{ fontWeight: 600, color: '#2e7d32', marginBottom: 8 }}>Addendum:</div>
+                            <textarea
+                                value={addendumText}
+                                onChange={(e) => {
+                                    const text = e.target.value.slice(0, 1000);
+                                    setAddendumText(text);
+                                }}
+                                placeholder="Type addendum..."
+                                style={{
+                                    width: '100%',
+                                    height: 140,
+                                    border: '1px solid #cfd8dc',
+                                    borderRadius: 6,
+                                    padding: 10,
+                                    fontSize: 13,
+                                    outline: 'none'
+                                }}
+                            />
+                            <div style={{ color: '#607d8b', fontSize: 11, marginTop: 6 }}>Maximum 1000 character</div>
+
+                            <div style={{ display: 'flex', gap: 8, marginTop: 14, justifyContent: 'flex-end' }}>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setSnackbarMessage('Addendum saved');
+                                        setSnackbarOpen(true);
+                                        setShowAddendumModal(false);
+                                    }}
+                                    style={{ backgroundColor: '#1976d2', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
+                                >
+                                    Submit
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setAddendumText('')}
+                                    style={{ backgroundColor: '#e0e0e0', color: '#000', border: 'none', padding: '6px 12px', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
+                                >
+                                    Clear
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowAddendumModal(false)}
+                                    style={{ backgroundColor: '#eeeeee', color: '#000', border: '1px solid #cfd8dc', padding: '6px 12px', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
+                                >
+                                    Close
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {showLabTestEntry && selectedPatientForLab && (
                 <LabTestEntry

@@ -432,7 +432,10 @@ export default function Treatment() {
         discount: '',
         acBalance: '',
         dues: '',
-        receiptNo: ''
+        receiptNo: '',
+        paymentBy: '',
+        feesCollected: '',
+        paymentRemark: ''
     });
     
     // Attachments data
@@ -441,6 +444,8 @@ export default function Treatment() {
         { id: '2', name: 'Jyoti Shinde.docx', type: 'docx' },
         { id: '3', name: 'Sachin Patankar.xlsx', type: 'xlsx' }
     ]);
+
+    // Addendum modal moved to Treatment page
 
     // Fetch session data on component mount
     useEffect(() => {
@@ -463,6 +468,46 @@ export default function Treatment() {
 
         fetchSessionData();
     }, []);
+
+    // Load Payment By reference data and populate dropdown
+    React.useEffect(() => {
+        let cancelled = false;
+        async function loadPaymentByOptions() {
+            try {
+                const ref = await patientService.getAllReferenceData();
+                if (cancelled) return;
+                // Prefer exact key shape: paymentMethods [{ id, paymentDescription }]
+                const preferKeys = ['paymentMethods', 'paymentBy', 'paymentTypes', 'paymentModes', 'payments', 'paymentByList'];
+                let raw: any[] = [];
+                for (const key of preferKeys) {
+                    if (Array.isArray((ref as any)?.[key])) { raw = (ref as any)[key]; break; }
+                }
+                // If specific keys not found, try to find an array with recognizable fields
+                if (raw.length === 0) {
+                    const firstArrayKey = Object.keys(ref || {}).find(k => Array.isArray((ref as any)[k]) && ((ref as any)[k][0] && (('description' in (ref as any)[k][0]) || ('label' in (ref as any)[k][0]) || ('name' in (ref as any)[k][0]))));
+                    if (firstArrayKey) raw = (ref as any)[firstArrayKey];
+                }
+                const toStr = (v: any) => (v === undefined || v === null ? '' : String(v));
+                const options: { value: string; label: string }[] = Array.isArray(raw)
+                    ? raw.map((r: any) => ({
+                        value: toStr(r?.id ?? r?.value ?? r?.code ?? r?.paymentById ?? r?.key ?? r),
+                        label: toStr(r?.paymentDescription ?? r?.description ?? r?.label ?? r?.name ?? r?.paymentBy ?? r)
+                      })).filter(o => o.label)
+                    : [];
+                // Initialize selected value if empty
+                if (options.length > 0) {
+                    setBillingData(prev => ({ ...prev, paymentBy: prev.paymentBy || options[0].value }));
+                }
+                setPaymentByOptions(options);
+            } catch (e) {
+                // swallow; non-critical for page rendering
+            }
+        }
+        loadPaymentByOptions();
+        return () => { cancelled = true; };
+    }, []);
+
+    const [paymentByOptions, setPaymentByOptions] = useState<Array<{ value: string; label: string }>>([]);
 
     // Load master lists for the current visit context
     useEffect(() => {
@@ -543,7 +588,10 @@ export default function Treatment() {
                                 discount: uiFields?.discountRs !== undefined && uiFields?.discountRs !== null ? String(uiFields.discountRs) : prev.discount,
                                 dues: uiFields?.duesRs !== undefined && uiFields?.duesRs !== null ? String(uiFields.duesRs) : prev.dues,
                                 acBalance: uiFields?.acBalanceRs !== undefined && uiFields?.acBalanceRs !== null ? String(uiFields.acBalanceRs) : prev.acBalance,
-                                receiptNo: uiFields?.receiptNo !== undefined && uiFields?.receiptNo !== null ? String(uiFields.receiptNo) : prev.receiptNo
+                                receiptNo: uiFields?.receiptNo !== undefined && uiFields?.receiptNo !== null ? String(uiFields.receiptNo) : prev.receiptNo,
+                                feesCollected: uiFields?.feesCollected !== undefined && uiFields?.feesCollected !== null ? String(uiFields.feesCollected) : prev.feesCollected,
+                                paymentRemark: uiFields?.paymentRemark !== undefined && uiFields?.paymentRemark !== null ? String(uiFields.paymentRemark) : prev.paymentRemark,
+                                paymentBy: uiFields?.paymentById !== undefined && uiFields?.paymentById !== null ? String(uiFields.paymentById) : prev.paymentBy
                             }));
                         } catch (_) {
                             // ignore mapping errors
@@ -1594,7 +1642,8 @@ export default function Treatment() {
             console.log('Patient Visit No:', patientVisitNo);
 
             // Map form data to API request format
-            const statusForRequest = isSubmit ? 6 : 9;
+            // Status 5 = Complete, 9 = Draft/Saved
+            const statusForRequest = isSubmit ? 5 : 9;
             const visitData: ComprehensiveVisitDataRequest = {
                 // Required fields - using validated values
                 patientId: treatmentData?.patientId?.toString() || '',
@@ -1685,7 +1734,7 @@ export default function Treatment() {
                 discount: parseFloat(billingData.discount) || 0,
                 originalDiscount: parseFloat(billingData.discount) || 0,
                 
-                // Status and user - Use 6 for submit, 9 for save; update to 5 after success
+                // Status and user - Use 5 for submit (Complete), 9 for save (Draft)
                 statusId: statusForRequest,
                 userId: String(userId),
                 isSubmitPatientVisitDetails: isSubmit // true for submit, false for save
@@ -1732,15 +1781,15 @@ export default function Treatment() {
                     medicineRows: medicineRows as any,
                     prescriptionRows: prescriptionRows as any,
                     feesToCollect: visitData.feesToCollect,
-                    feesCollected: 0,
+                    feesCollected: parseFloat(billingData.feesCollected) || 0,
                     userId: visitData.userId,
                     statusId: statusForRequest,
                     bloodPressure: visitData.bloodPressure,
                     allergyDetails: visitData.allergyDetails,
                     habitDetails: visitData.habitDetails,
                     comment: visitData.visitComments,
-                    paymentById: 1,
-                    paymentRemark: visitData.paymentRemark,
+                    paymentById: parseInt(billingData.paymentBy) || undefined,
+                    paymentRemark: billingData.paymentRemark || undefined,
                     discount: visitData.discount
                 };
                 result = await patientService.saveMedicineOverwrite(overwriteRequest);
@@ -2584,6 +2633,7 @@ export default function Treatment() {
                         <div style={{ marginBottom: 12 }}>
                             <label style={{ display: 'block', marginBottom: 6, fontWeight: 600, fontSize: 13 }}>Plan / Adv</label>
                             <textarea value={display(followUpData.planAdv)} disabled style={{ width: '100%', height: 38, border: '1px solid #ddd', padding: 8, fontSize: 12, background: '#D5D5D8' }} />
+                            {/* Addendum button moved to Treatment page */}
                         </div>
 
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, marginBottom: 12 }}>
@@ -2646,7 +2696,12 @@ export default function Treatment() {
                             {/* Collected (enabled) */}
                             <div>
                                 <label style={{ display: 'block', marginBottom: 4, fontWeight: 600, fontSize: 12 }}>Collected (Rs)</label>
-                                <input type="text" style={{ width: '100%', border: '1px solid #ddd', padding: '6px 8px', fontSize: 12, background: 'white' }} />
+                                <input 
+                                    type="text" 
+                                    value={billingData.feesCollected}
+                                    onChange={(e) => handleBillingChange('feesCollected', e.target.value)}
+                                    style={{ width: '100%', border: '1px solid #ddd', padding: '6px 8px', fontSize: 12, background: 'white' }} 
+                                />
                             </div>
                             {/* Reason (enabled) */}
                             <div>
@@ -2656,12 +2711,29 @@ export default function Treatment() {
                             {/* Payment By (enabled) */}
                             <div>
                                 <label style={{ display: 'block', marginBottom: 4, fontWeight: 600, fontSize: 12 }}>Payment By</label>
-                                <input type="text" style={{ width: '100%', border: '1px solid #ddd', padding: '6px 8px', fontSize: 12, background: 'white' }} />
+                                <select
+                                    value={billingData.paymentBy}
+                                    onChange={(e) => handleBillingChange('paymentBy', e.target.value)}
+                                    style={{ width: '100%', border: '1px solid #ddd', padding: '6px 8px', fontSize: 12, background: 'white' }}
+                                >
+                                    {paymentByOptions.length === 0 ? (
+                                        <option value="">—</option>
+                                    ) : (
+                                        paymentByOptions.map(opt => (
+                                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                        ))
+                                    )}
+                                </select>
                             </div>
                             {/* Payment Remark (enabled) */}
                             <div>
                                 <label style={{ display: 'block', marginBottom: 4, fontWeight: 600, fontSize: 12 }}>Payment Remark</label>
-                                <input type="text" style={{ width: '100%', border: '1px solid #ddd', padding: '6px 8px', fontSize: 12, background: 'white' }} />
+                                <input 
+                                    type="text" 
+                                    value={billingData.paymentRemark}
+                                    onChange={(e) => handleBillingChange('paymentRemark', e.target.value)}
+                                    style={{ width: '100%', border: '1px solid #ddd', padding: '6px 8px', fontSize: 12, background: 'white' }} 
+                                />
                             </div>
                             {/* Receipt Date (disabled) */}
                             <div>
@@ -2689,6 +2761,7 @@ export default function Treatment() {
                                 </button>
                             <button 
                                 type="button" 
+                                onClick={() => window.print()}
                                 style={{
                                     backgroundColor: '#1976d2',
                                     color: 'white',
@@ -2815,6 +2888,8 @@ export default function Treatment() {
                     </div>
                 </div>
             )}
+
+            {/* Addendum Modal moved to Treatment page */}
 
         </div>
     );

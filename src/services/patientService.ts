@@ -88,6 +88,35 @@ export interface LabTestResultResponse {
   [key: string]: any;
 }
 
+// Save Medicine Overwrite request/response contracts
+export interface SaveMedicineOverwriteRequest {
+  visitDate: string;
+  patientVisitNo: number;
+  shiftId: number;
+  clinicId: string;
+  doctorId: string;
+  patientId: string;
+  medicineRows: Array<Record<string, any>>;
+  prescriptionRows: Array<Record<string, any>>;
+  feesToCollect: number;
+  feesCollected: number;
+  userId: string;
+  statusId: number;
+  bloodPressure?: string;
+  allergyDetails?: string;
+  habitDetails?: string;
+  comment?: string;
+  paymentById?: number;
+  paymentRemark?: string;
+  discount?: number;
+}
+
+export interface SaveMedicineOverwriteResponse {
+  success: boolean;
+  message?: string;
+  [key: string]: any;
+}
+
 // Master lists request/response contracts
 export interface MasterListsRequest {
   patientId: string;
@@ -101,6 +130,12 @@ export interface MasterListsRequest {
 export interface MasterListsResponse {
   success: boolean;
   // Backend returns a map of lists; keep flexible
+  [key: string]: any;
+}
+
+// All reference data response (flexible map)
+export interface AllReferenceDataResponse {
+  // The backend returns a map of reference lists keyed by name
   [key: string]: any;
 }
 
@@ -684,6 +719,86 @@ export const patientService = {
         throw new Error(error.response.data.error);
       }
       throw new Error(error.response?.data?.message || 'Failed to submit lab test results');
+    }
+  }
+  ,
+
+  /**
+   * Save medicine overwrite
+   * Mirrors backend @PostMapping("/save-medicine-overwrite") and tries common base paths.
+   */
+  async saveMedicineOverwrite(request: SaveMedicineOverwriteRequest): Promise<SaveMedicineOverwriteResponse> {
+    try {
+      console.log('Saving medicine overwrite:', request);
+      // Try several common base paths to accommodate different controller mount points
+      // 1) Under /visits
+      try {
+        const resp = await api.post<SaveMedicineOverwriteResponse>(`/visits/save-medicine-overwrite`, request);
+        console.log('Save medicine overwrite (/visits/save-medicine-overwrite):', resp.data);
+        return resp.data;
+      } catch (e1: any) {
+        if (e1?.response?.status !== 404) throw e1;
+        // 2) Root mapping
+        try {
+          const resp = await api.post<SaveMedicineOverwriteResponse>(`/save-medicine-overwrite`, request);
+          console.log('Save medicine overwrite (/save-medicine-overwrite):', resp.data);
+          return resp.data;
+        } catch (e2: any) {
+          if (e2?.response?.status !== 404) throw e2;
+          // 3) Under /patient/visits
+          const resp = await api.post<SaveMedicineOverwriteResponse>(`/patient/visits/save-medicine-overwrite`, request);
+          console.log('Save medicine overwrite (/patient/visits/save-medicine-overwrite):', resp.data);
+          return resp.data;
+        }
+      }
+    } catch (error: any) {
+      console.error('Save medicine overwrite API Error:', error);
+      if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
+        throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
+      }
+      if (error.response?.status === 400) {
+        const msg = error.response?.data?.message || error.response?.data?.error || 'Invalid request payload.';
+        throw new Error(msg);
+      } else if (error.response?.status === 404) {
+        throw new Error('Save medicine endpoint not found. Please confirm backend route.');
+      } else if (error.response?.status === 500) {
+        throw new Error('Server error occurred while saving medicine overwrite.');
+      }
+      if (error.response?.data?.error) {
+        throw new Error(error.response.data.error);
+      }
+      throw new Error(error.response?.data?.message || 'Failed to save medicine overwrite');
+    }
+  }
+  ,
+
+  /**
+   * Get all reference data used across the application
+   * Mirrors backend @GetMapping("/all-reference-data")
+   */
+  async getAllReferenceData(): Promise<AllReferenceDataResponse> {
+    try {
+      console.log('Fetching all reference data');
+      const response = await api.get('/reference/all-reference-data');
+      console.log('All reference data response:', response.data);
+      return response.data as AllReferenceDataResponse;
+    } catch (error: any) {
+      console.error('Get all reference data API Error:', error);
+      if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
+        throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
+      }
+      if (error.response?.status === 400) {
+        const msg = error.response?.data?.message || error.response?.data?.error || 'Invalid request.';
+        throw new Error(msg);
+      } else if (error.response?.status === 404) {
+        throw new Error('All reference data endpoint not found. Please confirm backend route.');
+      } else if (error.response?.status === 500) {
+        throw new Error('Server error occurred while fetching reference data.');
+      }
+      if (error.response?.data?.error) {
+        throw new Error(error.response.data.error);
+      }
+      throw new Error(error.response?.data?.message || 'Failed to fetch all reference data');
     }
   }
 };

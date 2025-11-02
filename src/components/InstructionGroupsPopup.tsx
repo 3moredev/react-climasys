@@ -521,7 +521,7 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
                         }}>
                           Instructions
                         </th>
-                        <th style={{
+                        {/* <th style={{
                           padding: '12px',
                           textAlign: 'center',
                           borderBottom: '1px solid #ddd',
@@ -530,7 +530,7 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
                           width: '80px'
                         }}>
                           Action
-                        </th>
+                        </th> */}
                       </tr>
                     </thead>
                     <tbody>
@@ -563,7 +563,7 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
                           }}>
                             {group.instructions}
                           </td>
-                          <td style={{
+                          {/* <td style={{
                             padding: '12px',
                             borderBottom: '1px solid #eee',
                             textAlign: 'center',
@@ -591,7 +591,7 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
                             >
                               <Delete fontSize="small" style={{ color: 'black' }} />
                             </button>
-                          </td>
+                          </td> */}
                         </tr>
                       ))}
                     </tbody>
