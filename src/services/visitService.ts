@@ -41,9 +41,9 @@ export interface ComprehensiveVisitDataRequest {
   patientId: string;
   doctorId: string;
   clinicId: string;
-  shiftId: number;
+  shiftId: string;
   visitDate: string;
-  patientVisitNo: number;
+  patientVisitNo: string;
   referBy: string;
   referralName: string;
   referralContact: string;
@@ -110,6 +110,10 @@ export interface ComprehensiveVisitDataRequest {
   statusId: number;
   userId: string;
   isSubmitPatientVisitDetails: boolean;
+  diagnosisRows?: Array<{ short_description?: string; diagnosis?: string; [key: string]: any }>;
+  medicineRows?: Array<{ short_description?: string; medicine?: string; morning?: number; afternoon?: number; night?: number; days?: number | string; instruction?: string; [key: string]: any }>;
+  prescriptionRows?: Array<{ prescription?: string; b?: number | string; l?: number | string; d?: number | string; days?: number | string; instruction?: string; [key: string]: any }>;
+  investigationRows?: Array<{ investigation?: string; [key: string]: any }>;
 }
 
 export const visitService = {

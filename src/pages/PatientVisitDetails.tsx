@@ -542,9 +542,10 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                 
                 console.log('=== APPOINTMENT DETAILS LOADED SUCCESSFULLY ===');
                 
-                // Load existing documents for this patient visit
+                // Load existing documents for this patient visit using the correct visit number
                 if (patientData?.patientId) {
-                    await loadExistingDocuments(String(patientData.patientId), 1); // Using visit number 1
+                    const visitNoToLoad = Number(patientData.visitNumber || appointmentData?.patientVisitNo || 1);
+                    await loadExistingDocuments(String(patientData.patientId), visitNoToLoad);
                 }
                 
             } catch (e) {
@@ -1032,6 +1033,18 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                         } else {
                             setSnackbarMessage('Visit details and documents saved successfully!');
                         }
+
+                        // Refresh existing documents list to reflect newly uploaded files
+                        try {
+                            if (patientData?.patientId && patientVisitNo) {
+                                await loadExistingDocuments(String(patientData.patientId), Number(patientVisitNo));
+                            }
+                        } catch (reloadErr) {
+                            console.warn('Failed to reload existing documents after upload:', reloadErr);
+                        }
+
+                        // Clear selected attachments after successful upload to avoid duplicates
+                        setFormData(prev => ({ ...prev, attachments: [] }));
                     } catch (documentError) {
                         console.error('Error uploading documents:', documentError);
                         setSnackbarMessage('Visit details saved successfully, but documents failed to upload.');

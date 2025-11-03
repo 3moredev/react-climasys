@@ -155,6 +155,29 @@ export class DocumentService {
   }
 
   /**
+   * Download a document file by documentId
+   * Returns blob and best-effort filename from Content-Disposition
+   */
+  static async downloadDocumentFile(documentId: number): Promise<{ blob: Blob; filename?: string }>{
+    try {
+      const response = await api.get(`/patient-documents/treatment/download/${documentId}` as string, {
+        responseType: 'blob'
+      });
+      const headers: any = response.headers || {};
+      const disposition: string | undefined = headers['content-disposition'];
+      let filename: string | undefined;
+      if (disposition) {
+        const match = disposition.match(/filename\s*=\s*"?([^";]+)"?/i);
+        if (match && match[1]) filename = decodeURIComponent(match[1]);
+      }
+      return { blob: response.data as Blob, filename };
+    } catch (error: any) {
+      console.error('Error downloading document:', error);
+      throw new Error(error.response?.data?.error || 'Failed to download document');
+    }
+  }
+
+  /**
    * Update document name
    * @param documentId Document ID
    * @param request Update request

@@ -4,7 +4,8 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { visitService, ComprehensiveVisitDataRequest } from '../services/visitService';
 import trendsService, { PatientTrendItem } from '../services/trendsService';
 import { sessionService, SessionInfo } from "../services/sessionService";
-import { Delete, Edit, Add, Info, TrendingUp } from '@mui/icons-material';
+import { DocumentService } from "../services/documentService";
+import { Delete, Edit, Add, Info, TrendingUp, Download as DownloadIcon } from '@mui/icons-material';
 import { Snackbar } from '@mui/material';
 import { complaintService, ComplaintOption } from "../services/complaintService";
 import { medicineService, MedicineOption } from "../services/medicineService";
@@ -21,6 +22,7 @@ import AddTestLabPopup, { TestLabData } from "../components/AddTestLabPopup";
 import LabTestEntry from "../components/LabTestEntry";
 import InstructionGroupsPopup from "../components/InstructionGroupsPopup";
 import { patientService } from "../services/patientService";
+import PastServicesPopup from "../components/PastServicesPopup";
 
 // Specific styles for Duration/Comment input in table
 const durationCommentStyles = `
@@ -297,6 +299,10 @@ export default function Treatment() {
     const [showTestLabPopup, setShowTestLabPopup] = useState(false);
     const [showLabTestEntry, setShowLabTestEntry] = useState<boolean>(false);
     const [selectedPatientForLab, setSelectedPatientForLab] = useState<any>(null);
+    
+    // Past Services popup state
+    const [showPastServicesPopup, setShowPastServicesPopup] = useState(false);
+    const [selectedPastServiceDate, setSelectedPastServiceDate] = useState<string | null>(null);
 
     // Addendum modal state
     const [showAddendumModal, setShowAddendumModal] = useState<boolean>(false);
@@ -460,6 +466,63 @@ export default function Treatment() {
         { id: '2', name: 'Jyoti Shinde.docx', type: 'docx' },
         { id: '3', name: 'Sachin Patankar.xlsx', type: 'xlsx' }
     ]);
+
+    // Existing documents for current visit (from backend)
+    const [existingDocuments, setExistingDocuments] = useState<any[]>([]);
+    const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
+    const [downloadingDocumentId, setDownloadingDocumentId] = useState<number | null>(null);
+
+    // Load existing documents for the current patient visit
+    const loadExistingDocuments = async (patientId: string, visitNo: number) => {
+        if (!patientId || !visitNo) return;
+        setIsLoadingDocuments(true);
+        try {
+            const result = await DocumentService.getDocumentsByVisit(patientId, visitNo);
+            if (result.success && result.documents) {
+                setExistingDocuments(result.documents);
+            } else {
+                setExistingDocuments([]);
+            }
+        } catch (e) {
+            setExistingDocuments([]);
+        } finally {
+            setIsLoadingDocuments(false);
+        }
+    };
+
+    // Whenever treatmentData changes, fetch documents for that visit
+    useEffect(() => {
+        const pid = treatmentData?.patientId;
+        const vno = treatmentData?.visitNumber;
+        if (pid && vno) {
+            loadExistingDocuments(String(pid), Number(vno));
+        }
+    }, [treatmentData?.patientId, treatmentData?.visitNumber]);
+
+    // Download a document by ID
+    const handleDownloadDocument = async (doc: any) => {
+        // Support various id field names
+        const docId: number | undefined = doc.documentId || doc.id || doc.document_id || doc.documentID;
+        if (!docId) return;
+        if (downloadingDocumentId === docId) return;
+        try {
+            setDownloadingDocumentId(docId);
+            const { blob, filename } = await DocumentService.downloadDocumentFile(docId);
+            const objectUrl = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = objectUrl;
+            const safeName = (filename || doc.documentName || `document-${docId}`).toString();
+            link.download = safeName;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(objectUrl);
+        } catch (e) {
+            console.error('Error downloading document', e);
+        } finally {
+            setDownloadingDocumentId(null);
+        }
+    };
 
     // Fetch session data on component mount
     useEffect(() => {
@@ -1050,6 +1113,12 @@ export default function Treatment() {
     };
 
 
+    // Handler for Past Services date click
+    const handlePastServiceDateClick = (date: string) => {
+        setSelectedPastServiceDate(date);
+        setShowPastServicesPopup(true);
+    };
+
     // Helper function to format date for display
     const formatVisitDate = (dateString: string): string => {
         if (!dateString) return 'N/A';
@@ -1580,7 +1649,24 @@ export default function Treatment() {
                 followUpType: appointmentData.followUp,
                 billed: appointmentData.feesToCollect ?? appointmentData.fees ?? '',
                 discount: appointmentData.discount ?? appointmentData.originalDiscount ?? '',
-                feesPaid: appointmentData.feesPaid ?? 0
+                feesPaid: appointmentData.feesPaid ?? 0,
+                // Medical history checkboxes (handling spelling differences from API)
+                hypertension: appointmentData.hypertension ?? false,
+                diabetes: appointmentData.diabetes ?? false,
+                cholesterol: appointmentData.cholestrol ?? false, // API uses "cholestrol"
+                ihd: appointmentData.ihd ?? false,
+                asthma: appointmentData.asthama ?? false, // API uses "asthama"
+                th: appointmentData.th ?? false,
+                smoking: appointmentData.smoking ?? false,
+                tobacco: appointmentData.tobaco ?? false, // API uses "tobaco"
+                alcohol: appointmentData.alchohol ?? false, // API uses "alchohol"
+                // Additional fields
+                pallorHb: appointmentData.pallor ?? '',
+                detailedHistory: appointmentData.symptomComment ?? '',
+                examinationFindings: appointmentData.observation ?? appointmentData.importantFindings ?? '',
+                additionalComments: appointmentData.additionalComments ?? appointmentData.impression ?? '',
+                habitDetails: appointmentData.habitDetails ?? '',
+                procedurePerformed: appointmentData.observation ?? ''
             };
             console.log('Normalized appointment fields:', normalized);
 
@@ -1605,12 +1691,46 @@ export default function Treatment() {
                 maybeSet('allergy', normalized.allergyDetails);
                 maybeSet('visitComments', normalized.visitComments);
                 maybeSet('medicines', normalized.currentMedicines);
+                maybeSet('pallorHb', normalized.pallorHb);
+                maybeSet('detailedHistory', normalized.detailedHistory);
+                maybeSet('examinationFindings', normalized.examinationFindings);
+                maybeSet('additionalComments', normalized.additionalComments);
+                maybeSet('medicalHistoryText', normalized.habitDetails);
+                maybeSet('procedurePerformed', normalized.procedurePerformed);
                 // Do not patch PC with complaints fetched from appointment details
 
                 const heightNum = parseFloat(String(next.height));
                 const weightNum = parseFloat(String(next.weight));
                 if (!isNaN(heightNum) && heightNum > 0 && !isNaN(weightNum) && weightNum > 0) {
                     next.bmi = (weightNum / ((heightNum / 100) * (heightNum / 100))).toFixed(1);
+                }
+
+                // Patch medical history checkboxes
+                if (next.medicalHistory) {
+                    next.medicalHistory = {
+                        ...(next.medicalHistory || {}),
+                        hypertension: typeof normalized.hypertension === 'boolean' ? normalized.hypertension : (next.medicalHistory?.hypertension ?? false),
+                        diabetes: typeof normalized.diabetes === 'boolean' ? normalized.diabetes : (next.medicalHistory?.diabetes ?? false),
+                        cholesterol: typeof normalized.cholesterol === 'boolean' ? normalized.cholesterol : (next.medicalHistory?.cholesterol ?? false),
+                        ihd: typeof normalized.ihd === 'boolean' ? normalized.ihd : (next.medicalHistory?.ihd ?? false),
+                        asthma: typeof normalized.asthma === 'boolean' ? normalized.asthma : (next.medicalHistory?.asthma ?? false),
+                        th: typeof normalized.th === 'boolean' ? normalized.th : (next.medicalHistory?.th ?? false),
+                        smoking: typeof normalized.smoking === 'boolean' ? normalized.smoking : (next.medicalHistory?.smoking ?? false),
+                        tobacco: typeof normalized.tobacco === 'boolean' ? normalized.tobacco : (next.medicalHistory?.tobacco ?? false),
+                        alcohol: typeof normalized.alcohol === 'boolean' ? normalized.alcohol : (next.medicalHistory?.alcohol ?? false)
+                    };
+                } else {
+                    next.medicalHistory = {
+                        hypertension: normalized.hypertension ?? false,
+                        diabetes: normalized.diabetes ?? false,
+                        cholesterol: normalized.cholesterol ?? false,
+                        ihd: normalized.ihd ?? false,
+                        asthma: normalized.asthma ?? false,
+                        th: normalized.th ?? false,
+                        smoking: normalized.smoking ?? false,
+                        tobacco: normalized.tobacco ?? false,
+                        alcohol: normalized.alcohol ?? false
+                    };
                 }
 
                 // Patch visitType flags if present
@@ -1647,10 +1767,88 @@ export default function Treatment() {
             if (normalized.currentComplaint && typeof normalized.currentComplaint === 'string') {
                 const parts = normalized.currentComplaint.split(/\*|,/).map((s: string) => s.trim()).filter(Boolean);
                 if (Array.isArray(parts) && parts.length > 0) {
-                    setSelectedComplaints(parts);
-                    console.log('Patched selectedComplaints from appointment details:', parts);
+                    const uniqueParts = Array.from(new Set(parts));
+                    setSelectedComplaints(uniqueParts);
+                    console.log('Patched selectedComplaints from appointment details (deduped):', uniqueParts);
                 }
             }
+
+            // Load diagnosis rows from API response (support multiple shapes)
+            const diagnosisSource = Array.isArray(appointmentData.diagnosisRows)
+                ? appointmentData.diagnosisRows
+                : (Array.isArray(appointmentData.diagnosis) ? appointmentData.diagnosis : null);
+            if (diagnosisSource && diagnosisSource.length > 0) {
+                const mappedDiagnosisRows: DiagnosisRow[] = diagnosisSource.map((row: any, index: number) => ({
+                    id: `diag-${index}-${Date.now()}`,
+                    value: row.short_description || row.diagnosis_description || row.desease_description || '',
+                    diagnosis: row.diagnosis || row.desease_description || row.diagnosis_description || '',
+                    comment: ''
+                }));
+                setDiagnosisRows(mappedDiagnosisRows);
+                console.log('Loaded diagnosis rows from API:', mappedDiagnosisRows);
+            } else if (Array.isArray(diagnosisSource)) {
+                // Empty array - clear existing rows
+                setDiagnosisRows([]);
+            }
+
+            // Load medicine rows from API response (support multiple shapes)
+            const medicineSource = Array.isArray(appointmentData.medicineRows)
+                ? appointmentData.medicineRows
+                : (Array.isArray(appointmentData.medicines) ? appointmentData.medicines : null);
+            if (medicineSource && medicineSource.length > 0) {
+                const mappedMedicineRows: MedicineRow[] = medicineSource.map((row: any, index: number) => ({
+                    id: `med-${index}-${Date.now()}`,
+                    medicine: row.medicine || row.medicine_description || row.short_description || '',
+                    short_description: row.short_description || row.medicine_description || '',
+                    morning: row.morning || 0,
+                    afternoon: row.afternoon || 0,
+                    b: String(row.morning || ''),
+                    l: String(row.afternoon || ''),
+                    d: String(row.night || ''),
+                    days: String(row.days || row.no_of_days || ''),
+                    instruction: row.instruction || ''
+                }));
+                setMedicineRows(mappedMedicineRows);
+                console.log('Loaded medicine rows from API:', mappedMedicineRows);
+            } else if (Array.isArray(medicineSource)) {
+                setMedicineRows([]);
+            }
+
+            // Load prescription rows from API response (support multiple shapes)
+            const prescriptionSource = Array.isArray(appointmentData.prescriptionRows)
+                ? appointmentData.prescriptionRows
+                : (Array.isArray(appointmentData.prescriptions) ? appointmentData.prescriptions : null);
+            if (prescriptionSource && prescriptionSource.length > 0) {
+                const mappedPrescriptionRows: PrescriptionRow[] = prescriptionSource.map((row: any, index: number) => ({
+                    id: `pres-${index}-${Date.now()}`,
+                    prescription: row.prescription || `${row.brand_name || ''} ${row.medicine_name || ''}`.trim() || row.medicine_description || row.short_description || '',
+                    b: String(row.b || row.morning || ''),
+                    l: String(row.l || row.afternoon || ''),
+                    d: String(row.d || row.night || ''),
+                    days: String(row.days || row.no_of_days || ''),
+                    instruction: row.instruction || ''
+                }));
+                setPrescriptionRows(mappedPrescriptionRows);
+                console.log('Loaded prescription rows from API:', mappedPrescriptionRows);
+            } else if (Array.isArray(prescriptionSource)) {
+                setPrescriptionRows([]);
+            }
+
+            // Load investigation rows from API response (support multiple shapes)
+            const investigationSource = Array.isArray(appointmentData.investigationRows)
+                ? appointmentData.investigationRows
+                : (Array.isArray(appointmentData.investigations) ? appointmentData.investigations : null);
+            if (investigationSource && investigationSource.length > 0) {
+                const mappedInvestigationRows: InvestigationRow[] = investigationSource.map((row: any, index: number) => ({
+                    id: `inv-${index}-${Date.now()}`,
+                    investigation: row.investigation || row.lab_test_description || row.id || ''
+                }));
+                setInvestigationRows(mappedInvestigationRows);
+                console.log('Loaded investigation rows from API:', mappedInvestigationRows);
+            } else if (Array.isArray(investigationSource)) {
+                setInvestigationRows([]);
+            }
+
             console.log('=== FINISHED PATCHING FROM APPOINTMENT DETAILS ===');
         } catch (e) {
             console.warn('Failed to fetch/patch appointment details after save:', e);
@@ -1720,7 +1918,8 @@ export default function Treatment() {
             // Validate required fields are present
             const doctorId = treatmentData?.doctorId || currentSessionData?.doctorId;
             const clinicId = treatmentData?.clinicId || currentSessionData?.clinicId;
-            const shiftId = currentSessionData?.clinicId; // Using clinicId as shiftId fallback
+            // Get shiftId from session, must be numeric - never use clinicId as fallback since it's not numeric (e.g., "CL-00001")
+            const shiftId = (currentSessionData as any)?.shiftId || 1;
             const userId = currentSessionData?.userId;
             
             if (!doctorId) {
@@ -1752,9 +1951,9 @@ export default function Treatment() {
                 patientId: treatmentData?.patientId?.toString() || '',
                 doctorId: String(doctorId),
                 clinicId: String(clinicId),
-                shiftId: parseInt(String(shiftId || clinicId)) || 1, // Use shiftId or fallback to clinicId, default to 1
-                visitDate: toYyyyMmDd(new Date()) + 'T' + new Date().toTimeString().slice(0, 8),
-                patientVisitNo: parseInt(String(patientVisitNo)) || 0,
+                shiftId: String(shiftId || 1), // Convert to string - must be numeric (backend parses as Short)
+                visitDate: `${toYyyyMmDd(new Date())} ${new Date().toTimeString().slice(0, 8)}`,
+                patientVisitNo: String(patientVisitNo || 0), // Convert to string
                 
                 // Referral information
                 referBy: (formData.referralBy === 'Self')
@@ -1792,9 +1991,9 @@ export default function Treatment() {
                 alchohol: formData.medicalHistory.alcohol,
                 
                 // Additional fields
-                habitDetails: '',
+                habitDetails: formData.medicalHistoryText || '',
                 allergyDetails: formData.allergy,
-                observation: formData.examinationFindings,
+                observation: formData.procedurePerformed || '',
                 inPerson: formData.visitType.inPerson,
                 symptomComment: formData.detailedHistory,
                 reason: '',
@@ -1805,7 +2004,7 @@ export default function Treatment() {
                 attendedById: 0,
                 followUp: followUpData.followUpType ? String(followUpData.followUpType).charAt(0) : 'N', // First character of followUpType or 'N'
                 followUpFlag: formData.visitType.followUp,
-                currentComplaint: selectedComplaints.join(','),
+                currentComplaint: Array.from(new Set(selectedComplaints)).join(','),
                 visitCommentsField: formData.visitComments,
                 
                 // Clinical fields
@@ -1839,9 +2038,48 @@ export default function Treatment() {
                 
                 // Status and user - Use different status IDs for save vs submit
                 // Based on climasys2.0 Constants.cs: SUBMITTED_STATUS_ID = 6, Save_STATUS_ID = 9
-                statusId: isSubmit ? 6 : 9, // Status 6 for submit (SUBMITTED), Status 9 for save
+                statusId: isSubmit ? 4 : 9, // Status 6 for submit (SUBMITTED), Status 9 for save
                 userId: String(userId),
-                isSubmitPatientVisitDetails: isSubmit // true for submit, false for save
+                isSubmitPatientVisitDetails: isSubmit, // true for submit, false for save
+                
+                // Diagnosis rows - minimal API shape
+                diagnosisRows: diagnosisRows.map(row => ({
+                    short_description: row.value || '',
+                    diagnosis: row.diagnosis || ''
+                })),
+                
+                // Medicine rows - map to API format (ensure numeric days)
+                medicineRows: medicineRows.map(row => {
+                    let night = 0;
+                    if (row.d && !isNaN(parseFloat(row.d))) {
+                        night = parseInt(row.d) || 0;
+                    }
+                    const daysNum = isNaN(Number(row.days)) ? 0 : Number(row.days);
+                    return {
+                        short_description: row.short_description || '',
+                        medicine: row.medicine || '',
+                        morning: row.morning || 0,
+                        afternoon: row.afternoon || 0,
+                        night: night,
+                        days: daysNum,
+                        instruction: row.instruction || ''
+                    };
+                }),
+                
+                // Prescription rows - numeric b/l/d/days
+                prescriptionRows: prescriptionRows.map(row => ({
+                    prescription: row.prescription || '',
+                    b: isNaN(Number(row.b)) ? 0 : Number(row.b),
+                    l: isNaN(Number(row.l)) ? 0 : Number(row.l),
+                    d: isNaN(Number(row.d)) ? 0 : Number(row.d),
+                    days: isNaN(Number(row.days)) ? 0 : Number(row.days),
+                    instruction: row.instruction || ''
+                })),
+                
+                // Investigation rows - map to API format
+                investigationRows: investigationRows.map(row => ({
+                    investigation: row.investigation || ''
+                }))
             };
 
             console.log(`=== ${actionType}ING TREATMENT DATA TO API ===`);
@@ -1882,6 +2120,58 @@ export default function Treatment() {
                 console.log(`=== TREATMENT ${actionType}ED SUCCESSFULLY ===`);
                 setSnackbarMessage(`Treatment ${isSubmit ? 'submitted' : 'saved'} successfully!`);
                 setSnackbarOpen(true);
+                
+                // Load rows directly from save response if available
+                if (result.diagnosisRows && Array.isArray(result.diagnosisRows) && result.diagnosisRows.length > 0) {
+                    const mappedDiagnosisRows: DiagnosisRow[] = result.diagnosisRows.map((row: any, index: number) => ({
+                        id: `diag-${index}-${Date.now()}`,
+                        value: row.short_description || '',
+                        diagnosis: row.diagnosis || row.desease_description || '',
+                        comment: ''
+                    }));
+                    setDiagnosisRows(mappedDiagnosisRows);
+                    console.log('Loaded diagnosis rows from save response:', mappedDiagnosisRows);
+                }
+                
+                if (result.medicineRows && Array.isArray(result.medicineRows) && result.medicineRows.length > 0) {
+                    const mappedMedicineRows: MedicineRow[] = result.medicineRows.map((row: any, index: number) => ({
+                        id: `med-${index}-${Date.now()}`,
+                        medicine: row.medicine || row.medicine_description || '',
+                        short_description: row.short_description || '',
+                        morning: row.morning || 0,
+                        afternoon: row.afternoon || 0,
+                        b: String(row.morning || ''),
+                        l: String(row.afternoon || ''),
+                        d: String(row.night || ''),
+                        days: String(row.days || row.no_of_days || ''),
+                        instruction: row.instruction || ''
+                    }));
+                    setMedicineRows(mappedMedicineRows);
+                    console.log('Loaded medicine rows from save response:', mappedMedicineRows);
+                }
+                
+                if (result.prescriptionRows && Array.isArray(result.prescriptionRows) && result.prescriptionRows.length > 0) {
+                    const mappedPrescriptionRows: PrescriptionRow[] = result.prescriptionRows.map((row: any, index: number) => ({
+                        id: `pres-${index}-${Date.now()}`,
+                        prescription: row.prescription || `${row.brand_name || ''} ${row.medicine_name || ''}`.trim() || '',
+                        b: String(row.b || row.morning || ''),
+                        l: String(row.l || row.afternoon || ''),
+                        d: String(row.d || row.night || ''),
+                        days: String(row.days || row.no_of_days || ''),
+                        instruction: row.instruction || ''
+                    }));
+                    setPrescriptionRows(mappedPrescriptionRows);
+                    console.log('Loaded prescription rows from save response:', mappedPrescriptionRows);
+                }
+                
+                if (result.investigationRows && Array.isArray(result.investigationRows) && result.investigationRows.length > 0) {
+                    const mappedInvestigationRows: InvestigationRow[] = result.investigationRows.map((row: any, index: number) => ({
+                        id: `inv-${index}-${Date.now()}`,
+                        investigation: row.investigation || row.lab_test_description || ''
+                    }));
+                    setInvestigationRows(mappedInvestigationRows);
+                    console.log('Loaded investigation rows from save response:', mappedInvestigationRows);
+                }
                 
                 // Fetch latest appointment details and patch values before navigating away
                 try {
@@ -2376,31 +2666,100 @@ export default function Treatment() {
                             }}>
                                 Attachments
                             </div>
-                            <div style={{ padding: '0' }}>
-                                {attachments.map((attachment, index) => (
-                                    <div 
-                                        key={attachment.id}
-                                        style={{
-                                            padding: '10px 15px',
-                                            borderBottom: '1px solid #e0e0e0',
-                                            backgroundColor: 'white',
-                                            cursor: 'pointer',
-                                            fontSize: '13px',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '8px'
-                                        }}
-                                    >
-                                        <div style={{ fontSize: '16px' }}>
-                                            {attachment.type === 'pdf' && '📄'}
-                                            {attachment.type === 'docx' && '📝'}
-                                            {attachment.type === 'xlsx' && '📊'}
-                                        </div>
-                                        <div style={{ fontWeight: '500', color: '#333', flex: 1 }}>
-                                            {attachment.name}
-                                        </div>
+                            <div style={{ padding: '10px', maxWidth: '100%', overflowX: 'hidden', boxSizing: 'border-box' }}>
+                                {isLoadingDocuments && (
+                                    <div style={{ 
+                                        display: 'flex', 
+                                        alignItems: 'center', 
+                                        gap: '8px',
+                                        color: '#2e7d32',
+                                        fontSize: '12px'
+                                    }}>
+                                        <div style={{
+                                            width: '12px',
+                                            height: '12px',
+                                            border: '2px solid #2e7d32',
+                                            borderTop: '2px solid transparent',
+                                            borderRadius: '50%',
+                                            animation: 'spin 1s linear infinite'
+                                        }}></div>
+                                        Loading documents...
                                     </div>
-                                ))}
+                                )}
+
+                                {!isLoadingDocuments && existingDocuments.length === 0 && (
+                                    <div style={{ color: '#666', fontSize: '12px' }}>
+                                        No documents found for this visit
+                                    </div>
+                                )}
+
+                                {!isLoadingDocuments && existingDocuments.length > 0 && (
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', maxWidth: '100%' }}>
+                                        {existingDocuments.map((doc, index) => {
+                                            const docId: number | undefined = doc.documentId || doc.id || doc.document_id || doc.documentID;
+                                            const isDownloading = downloadingDocumentId === docId;
+                                            return (
+                                                <span key={`existing-${index}`} style={{ 
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    padding: '4px 8px',
+                                                    backgroundColor: '#e8f5e8',
+                                                    borderRadius: '6px',
+                                                    border: '1px solid #c8e6c9',
+                                                    fontSize: '12px',
+                                                    fontFamily: "'Roboto', sans-serif",
+                                                    fontWeight: 500,
+                                                    color: '#2e7d32',
+                                                    maxWidth: '100%'
+                                                }}>
+                                                    <span style={{ marginRight: '5px' }}>📄</span>
+                                                    <span style={{ maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                        {doc.documentName || `Document ${index + 1}`}
+                                                    </span>
+                                                    {doc.fileSize && (
+                                                        <span style={{ 
+                                                            marginLeft: '6px', 
+                                                            fontSize: '11px', 
+                                                            color: '#2e7d32', 
+                                                            fontWeight: 400
+                                                        }}>
+                                                            ({(() => {
+                                                                const size = doc.fileSize;
+                                                                if (size === 0) return '0 B';
+                                                                const units = ['B', 'KB', 'MB', 'GB'];
+                                                                let fileSize = size;
+                                                                let unitIndex = 0;
+                                                                while (fileSize >= 1024 && unitIndex < units.length - 1) {
+                                                                    fileSize /= 1024;
+                                                                    unitIndex++;
+                                                                }
+                                                                return `${fileSize.toFixed(1)} ${units[unitIndex]}`;
+                                                            })()})
+                                                        </span>
+                                                    )}
+                                                    {docId && (
+                                                        <span
+                                                            onClick={() => { if (!isDownloading) handleDownloadDocument(doc); }}
+                                                            style={{
+                                                                marginLeft: '8px',
+                                                                width: '24px',
+                                                                height: '24px',
+                                                                display: 'inline-flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                color: isDownloading ? '#9e9e9e' : '#000000',
+                                                                cursor: isDownloading ? 'not-allowed' : 'pointer'
+                                                            }}
+                                                            title={isDownloading ? 'Downloading...' : 'Download'}
+                                                        >
+                                                            <DownloadIcon style={{ fontSize: '16px' }} />
+                                                        </span>
+                                                    )}
+                                                </span>
+                                            );
+                                        })}
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -2425,7 +2784,27 @@ export default function Treatment() {
                                     alignItems: 'center'
                                 }}>
                                     <div style={{ fontWeight: '500', color: '#333' }}>
-                                        03-May-19
+                                        <a 
+                                            href="#"
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                handlePastServiceDateClick('03-May-19');
+                                            }}
+                                            style={{ 
+                                                textDecoration: 'underline', 
+                                                color: '#1976d2',
+                                                cursor: 'pointer',
+                                                fontWeight: 'bold'
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                e.currentTarget.style.color = '#0d47a1';
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.currentTarget.style.color = '#1976d2';
+                                            }}
+                                        >
+                                            03-May-19
+                                        </a>
                                     </div>
                                 </div>
                             </div>
@@ -5199,6 +5578,23 @@ export default function Treatment() {
                     sessionData={sessionData}
                 />
             )}
+
+            {/* Past Services Popup */}
+            <PastServicesPopup
+                open={showPastServicesPopup}
+                onClose={() => {
+                    setShowPastServicesPopup(false);
+                    setSelectedPastServiceDate(null);
+                }}
+                date={selectedPastServiceDate}
+                patientData={treatmentData ? {
+                    patientName: treatmentData.patientName,
+                    gender: treatmentData.gender,
+                    age: treatmentData.age,
+                    patientId: treatmentData.patientId
+                } : null}
+                sessionData={sessionData}
+            />
 
             {/* Success/Error Snackbar - Always rendered at bottom center */}
             <Snackbar
