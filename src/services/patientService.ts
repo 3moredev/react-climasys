@@ -117,6 +117,21 @@ export interface SaveMedicineOverwriteResponse {
   [key: string]: any;
 }
 
+// Update addendum request/response contracts
+export interface UpdateAddendumRequest {
+  addendum: string;
+  visitDate: string; // YYYY-MM-DD or ISO date-time
+  patientId: string;
+  patientVisitNo: number;
+  userId: string;
+}
+
+export interface UpdateAddendumResponse {
+  success: boolean;
+  message?: string;
+  [key: string]: any;
+}
+
 // Master lists request/response contracts
 export interface MasterListsRequest {
   patientId: string;
@@ -136,6 +151,11 @@ export interface MasterListsResponse {
 // All reference data response (flexible map)
 export interface AllReferenceDataResponse {
   // The backend returns a map of reference lists keyed by name
+  [key: string]: any;
+}
+
+// Patient profile ref data response (flexible map)
+export interface PatientProfileRefDataResponse {
   [key: string]: any;
 }
 
@@ -799,6 +819,100 @@ export const patientService = {
         throw new Error(error.response.data.error);
       }
       throw new Error(error.response?.data?.message || 'Failed to fetch all reference data');
+    }
+  }
+  ,
+
+  /**
+   * Get patient profile reference data for a doctor and clinic
+   * Mirrors backend @GetMapping("/patient-profile") with query params doctorId & clinicId
+   */
+  async getPatientProfileRefData(doctorId: string, clinicId: string): Promise<PatientProfileRefDataResponse> {
+    try {
+      console.log('Fetching patient profile ref data for:', { doctorId, clinicId });
+      // Prefer /reference namespace; fall back to root or alternative
+      try {
+        const resp = await api.get<PatientProfileRefDataResponse>(`/reference/patient-profile`, { params: { doctorId, clinicId } });
+        console.log('Patient profile ref data (/reference/patient-profile):', resp.data);
+        return resp.data;
+      } catch (e1: any) {
+        if (e1?.response?.status !== 404) throw e1;
+        try {
+          const resp = await api.get<PatientProfileRefDataResponse>(`/patient-profile`, { params: { doctorId, clinicId } });
+          console.log('Patient profile ref data (/patient-profile):', resp.data);
+          return resp.data;
+        } catch (e2: any) {
+          if (e2?.response?.status !== 404) throw e2;
+          const resp = await api.get<PatientProfileRefDataResponse>(`/refdata/patient-profile`, { params: { doctorId, clinicId } });
+          console.log('Patient profile ref data (/refdata/patient-profile):', resp.data);
+          return resp.data;
+        }
+      }
+    } catch (error: any) {
+      console.error('Get patient profile ref data API Error:', error);
+      if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
+        throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
+      }
+      if (error.response?.status === 400) {
+        const msg = error.response?.data?.message || error.response?.data?.error || 'Invalid request.';
+        throw new Error(msg);
+      } else if (error.response?.status === 404) {
+        throw new Error('Patient profile ref data endpoint not found. Please confirm backend route.');
+      } else if (error.response?.status === 500) {
+        throw new Error('Server error occurred while fetching patient profile ref data.');
+      }
+      if (error.response?.data?.error) {
+        throw new Error(error.response.data.error);
+      }
+      throw new Error(error.response?.data?.message || 'Failed to fetch patient profile ref data');
+    }
+  },
+
+  /**
+   * Update visit addendum text for a patient visit
+   * Mirrors backend @PostMapping("/update-addendum")
+   */
+  async updateAddendum(request: UpdateAddendumRequest): Promise<UpdateAddendumResponse> {
+    try {
+      console.log('Updating addendum:', request);
+      // Try several common base paths to accommodate different controller mount points
+      // 1) Under /visits
+      try {
+        const resp = await api.post<UpdateAddendumResponse>(`/visits/update-addendum`, request);
+        console.log('Update addendum (/visits/update-addendum):', resp.data);
+        return resp.data;
+      } catch (e1: any) {
+        if (e1?.response?.status !== 404) throw e1;
+        // 2) Under /patient/visits
+        try {
+          const resp = await api.post<UpdateAddendumResponse>(`/patient/visits/update-addendum`, request);
+          console.log('Update addendum (/patient/visits/update-addendum):', resp.data);
+          return resp.data;
+        } catch (e2: any) {
+          if (e2?.response?.status !== 404) throw e2;
+          // 3) Root mapping
+          const resp = await api.post<UpdateAddendumResponse>(`/update-addendum`, request);
+          console.log('Update addendum (/update-addendum):', resp.data);
+          return resp.data;
+        }
+      }
+    } catch (error: any) {
+      console.error('Update addendum API Error:', error);
+      if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
+        throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
+      }
+      if (error.response?.status === 400) {
+        const msg = error.response?.data?.message || error.response?.data?.error || 'Invalid request payload.';
+        throw new Error(msg);
+      } else if (error.response?.status === 404) {
+        throw new Error('Update addendum endpoint not found. Please confirm backend route.');
+      } else if (error.response?.status === 500) {
+        throw new Error('Server error occurred while updating addendum.');
+      }
+      if (error.response?.data?.error) {
+        throw new Error(error.response.data.error);
+      }
+      throw new Error(error.response?.data?.message || 'Failed to update addendum');
     }
   }
 };

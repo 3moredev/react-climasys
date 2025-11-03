@@ -439,7 +439,7 @@ export default function AppointmentTable() {
             case 'CONSULT ON CALL': return 3;
             case 'WAITING FOR MEDICINE': return 4;
             case 'COMPLETE': return 5;
-            case 'SUBMITTED': return 6;
+            case 'COLLECTION': return 6;
             case 'WAITING FOR SERVICE': return 7;
             case 'SERVICE COMPLETED': return 8;
             case 'SAVE': return 9;
@@ -4549,7 +4549,8 @@ export default function AppointmentTable() {
                                                             <img src="/images/avatar/wallet.png" alt="Collection" style={{ width: 16, height: 16, filter: 'brightness(0)' }} />
                                                         </div>
 
-                                                        {/* Treatment Button - Enabled for COLLECTION status */}
+                                                        {/* Treatment Button - Hidden for Reception login */}
+                                                        {!isReceptionist && (
                                                         <div
                                                             title={(() => {
                                                                 const normalizedStatus = normalizeStatusLabel(a.status);
@@ -4638,6 +4639,7 @@ export default function AppointmentTable() {
                                                                 }} 
                                                             />
                                                         </div>
+                                                        )}
                                                     </div>
                                                 </td>
                                             </tr>
@@ -5163,6 +5165,8 @@ export default function AppointmentTable() {
                                                 >
                                                     <img src="/images/avatar/wallet.png" alt="Collection" style={{ width: 16, height: 16, filter: 'brightness(0)' }} />
                                                 </div>
+                                                {/* Treatment Button - Hidden for Reception login */}
+                                                {!isReceptionist && (
                                                 <div
                                                     className="crm-btn"
                                                     title={(() => {
@@ -5234,6 +5238,7 @@ export default function AppointmentTable() {
                                                         }} 
                                                     />
                                                 </div>
+                                                )}
                                             </div>
                                         </div>
                                     </div>

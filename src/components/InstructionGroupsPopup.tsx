@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Close, Search, Delete, Add } from '@mui/icons-material';
+import { patientService } from '../services/patientService';
+import { sessionService } from '../services/sessionService';
 
 interface InstructionGroup {
   id: string;
@@ -30,57 +32,62 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
   const [showSelectedTable, setShowSelectedTable] = useState(false);
   const groupsRef = useRef<HTMLDivElement | null>(null);
 
-  // Static instruction groups data matching the reference image
-  const instructionGroups: InstructionGroup[] = [
-    {
-      id: '1',
-      name: 'DIABETIC',
-      nameHindi: 'मधुमेह',
-      instructions: 'Monitor blood sugar levels regularly. Take medications as prescribed. Follow diabetic diet. Exercise regularly. Check feet daily for any cuts or sores.'
-    },
-    {
-      id: '2',
-      name: 'HYPERTENSIVE',
-      nameHindi: 'उच्च रक्तचाप',
-      instructions: 'Take blood pressure medication as prescribed. Monitor blood pressure daily. Reduce salt intake. Exercise regularly. Avoid stress and get adequate sleep.'
-    },
-    {
-      id: '3',
-      name: 'CARDIAC',
-      nameHindi: 'हृदय रोग',
-      instructions: 'Take cardiac medications as prescribed. Monitor heart rate and blood pressure. Follow low-sodium diet. Avoid strenuous activities. Report any chest pain immediately.'
-    },
-    {
-      id: '4',
-      name: 'RENAL',
-      nameHindi: 'गुर्दे की बीमारी',
-      instructions: 'Monitor kidney function regularly. Follow renal diet. Limit protein intake. Take medications as prescribed. Stay hydrated but avoid excess fluids.'
-    },
-    {
-      id: '5',
-      name: 'RESPIRATORY',
-      nameHindi: 'श्वसन रोग',
-      instructions: 'Use inhalers as prescribed. Avoid smoking and pollutants. Practice breathing exercises. Get flu and pneumonia vaccines. Report breathing difficulties immediately.'
-    },
-    {
-      id: '6',
-      name: 'NEUROLOGICAL',
-      nameHindi: 'न्यूरोलॉजिकल',
-      instructions: 'Take neurological medications as prescribed. Monitor symptoms regularly. Follow up with neurologist. Report any changes in condition immediately.'
-    },
-    {
-      id: '7',
-      name: 'GASTROINTESTINAL',
-      nameHindi: 'पाचन तंत्र',
-      instructions: 'Follow gastrointestinal diet. Take medications as prescribed. Monitor symptoms. Avoid trigger foods. Report any digestive issues.'
-    },
-    {
-      id: '8',
-      name: 'DERMATOLOGICAL',
-      nameHindi: 'त्वचा रोग',
-      instructions: 'Apply topical medications as prescribed. Keep skin clean and moisturized. Avoid harsh chemicals. Protect from sun exposure. Report any skin changes.'
+  // Dynamic instruction groups fetched from backend
+  const [instructionGroups, setInstructionGroups] = useState<InstructionGroup[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Load instruction groups when popup opens
+  useEffect(() => {
+    let cancelled = false;
+    async function loadGroups() {
+      if (!isOpen) return;
+      setLoading(true);
+      setError(null);
+      try {
+        // Get session for doctor/clinic
+        const session = await sessionService.getSessionInfo();
+        const doctorId = session?.data?.doctorId || '';
+        const clinicId = session?.data?.clinicId || '';
+        if (!doctorId || !clinicId) {
+          throw new Error('Missing doctor or clinic context');
+        }
+        const data = await patientService.getPatientProfileRefData(doctorId, clinicId);
+        console.log('Instruction groups data:', data);
+        const raw = (data as any)?.InstructionGroups || (data as any)?.instructionGroups || [];
+        const mapped: InstructionGroup[] = Array.isArray(raw)
+          ? raw.map((g: any, idx: number) => {
+              const groupDesc = g?.group_description ?? g?.groupDescription ?? g?.groupName ?? g?.name;
+              const instrList = g?.instructions_description;
+              const instrText = Array.isArray(instrList)
+                ? instrList.map((s: any) => String(s)).join(' ')
+                : (g?.instructions ?? g?.instructionText ?? g?.text ?? g?.instructions_description ?? '');
+              return {
+                id: String(g?.id ?? g?.groupId ?? idx + 1),
+                name: String(groupDesc ?? 'Group').toUpperCase(),
+                nameHindi: String(g?.nameHindi ?? g?.hindiName ?? g?.name_hi ?? ''),
+                instructions: String(instrText)
+              };
+            })
+          : [];
+        if (!cancelled) {
+          setInstructionGroups(mapped);
+          // reset selections when data changes
+          setSelectedGroupIds([]);
+          setSelectedGroups([]);
+        }
+      } catch (e: any) {
+        if (!cancelled) {
+          setInstructionGroups([]);
+          setError(e?.message || 'Failed to load instruction groups');
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     }
-  ];
+    loadGroups();
+    return () => { cancelled = true; };
+  }, [isOpen]);
 
   const filteredGroups = instructionGroups.filter(group =>
     group.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -296,7 +303,17 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
                         ))}
                       </div>
                     )}
-                    <div style={{ maxHeight: '240px', overflowY: 'auto', padding: '4px 6px', display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', columnGap: '8px', rowGap: '6px' }}>
+            <div style={{ maxHeight: '240px', overflowY: 'auto', padding: '4px 6px', display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', columnGap: '8px', rowGap: '6px' }}>
+              {loading && (
+                <div style={{ padding: '6px', fontSize: '12px', color: '#777', gridColumn: '1 / -1', textAlign: 'center' }}>
+                  Loading instruction groups...
+                </div>
+              )}
+              {error && !loading && (
+                <div style={{ padding: '6px', fontSize: '12px', color: '#d32f2f', gridColumn: '1 / -1', textAlign: 'center' }}>
+                  {error}
+                </div>
+              )}
                       {filteredGroups.length === 0 && (
                         <div style={{ padding: '6px', fontSize: '12px', color: '#777', gridColumn: '1 / -1' }}>No instruction groups found</div>
                       )}

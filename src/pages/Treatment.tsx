@@ -20,6 +20,7 @@ import AddPrescriptionPopup, { PrescriptionData } from "../components/AddPrescri
 import AddTestLabPopup, { TestLabData } from "../components/AddTestLabPopup";
 import LabTestEntry from "../components/LabTestEntry";
 import InstructionGroupsPopup from "../components/InstructionGroupsPopup";
+import { patientService } from "../services/patientService";
 
 // Specific styles for Duration/Comment input in table
 const durationCommentStyles = `
@@ -5137,10 +5138,30 @@ export default function Treatment() {
                             <div style={{ display: 'flex', gap: 8, marginTop: 14, justifyContent: 'flex-end' }}>
                                 <button
                                     type="button"
-                                    onClick={() => {
-                                        setSnackbarMessage('Addendum saved');
-                                        setSnackbarOpen(true);
-                                        setShowAddendumModal(false);
+                                    onClick={async () => {
+                                        try {
+                                            const pid = String(treatmentData?.patientId || '').trim();
+                                            const visitNo = Number(treatmentData?.visitNumber || 0);
+                                            const userId = String(sessionData?.userId || '').trim();
+                                            const visitDate = new Date().toISOString().slice(0, 10);
+                                            if (!pid || !visitNo || !userId) {
+                                                throw new Error('Missing patient, visit or user context');
+                                            }
+                                            const resp = await patientService.updateAddendum({
+                                                addendum: addendumText || '',
+                                                visitDate,
+                                                patientId: pid,
+                                                patientVisitNo: visitNo,
+                                                userId
+                                            });
+                                            const msg = resp?.message || 'Addendum updated';
+                                            setSnackbarMessage(msg);
+                                            setSnackbarOpen(true);
+                                            setShowAddendumModal(false);
+                                        } catch (e: any) {
+                                            setSnackbarMessage(e?.message || 'Failed to update addendum');
+                                            setSnackbarOpen(true);
+                                        }
                                     }}
                                     style={{ backgroundColor: '#1976d2', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
                                 >
@@ -5149,14 +5170,14 @@ export default function Treatment() {
                                 <button
                                     type="button"
                                     onClick={() => setAddendumText('')}
-                                    style={{ backgroundColor: '#e0e0e0', color: '#000', border: 'none', padding: '6px 12px', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
+                                    style={{ backgroundColor: 'rgb(25, 118, 210)', color: '#000', border: 'none', padding: '6px 12px', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
                                 >
                                     Clear
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => setShowAddendumModal(false)}
-                                    style={{ backgroundColor: '#eeeeee', color: '#000', border: '1px solid #cfd8dc', padding: '6px 12px', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
+                                    style={{ backgroundColor: 'rgb(24, 120, 215)', color: '#000', border: '1px solid #cfd8dc', padding: '6px 12px', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
                                 >
                                     Close
                                 </button>
