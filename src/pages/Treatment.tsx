@@ -608,22 +608,25 @@ export default function Treatment() {
         }
     }, [location.state]);
 
-    // Check if form should be disabled (status is "Waiting for Medicine" or statusId is 4)
+    // Check if form should be disabled (status is "Waiting for Medicine" or "Complete")
     const isFormDisabled = React.useMemo(() => {
         if (!treatmentData) return false;
         const statusId = treatmentData.statusId;
         const status = (treatmentData.status || '').toUpperCase().trim();
-        const normalizedStatus = status === 'WAITING FOR MEDICINE' || status === 'WAITINGFOR MEDICINE' || status === 'WAITINGFORMEDICINE';
-        return statusId === 4 || normalizedStatus;
+        const isWaitingForMedicine = status === 'WAITING FOR MEDICINE' || status === 'WAITINGFOR MEDICINE' || status === 'WAITINGFORMEDICINE';
+        const isComplete = status === 'COMPLETE' || status === 'COMPLETED';
+        // Consider common IDs as well (4: Waiting for Medicine, 6: Complete/Submitted in some flows)
+        return isWaitingForMedicine || isComplete || statusId === 4 || statusId === 6;
     }, [treatmentData?.statusId, treatmentData?.status]);
 
-    // Check if Addendum button should be enabled (only for "Waiting for Medicine" status)
+    // Check if Addendum button should be enabled (for "Waiting for Medicine" and "Complete")
     const isAddendumEnabled = React.useMemo(() => {
         if (!treatmentData) return false;
         const statusId = treatmentData.statusId;
         const status = (treatmentData.status || '').toUpperCase().trim();
-        const normalizedStatus = status === 'WAITING FOR MEDICINE' || status === 'WAITINGFOR MEDICINE' || status === 'WAITINGFORMEDICINE';
-        return statusId === 4 || normalizedStatus;
+        const isWaitingForMedicine = status === 'WAITING FOR MEDICINE' || status === 'WAITINGFOR MEDICINE' || status === 'WAITINGFORMEDICINE';
+        const isComplete = status === 'COMPLETE' || status === 'COMPLETED';
+        return isWaitingForMedicine || isComplete || statusId === 4 || statusId === 6;
     }, [treatmentData?.statusId, treatmentData?.status]);
 
     // Close Investigation dropdown on outside click
