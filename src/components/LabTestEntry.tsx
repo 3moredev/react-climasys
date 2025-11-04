@@ -174,6 +174,112 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
             .finally(() => setLabTestsLoading(false));
     }, [open, patientData?.doctorId, patientData?.provider, patientData?.clinicId, sessionData?.clinicId]);
 
+    // Fetch existing lab test results when modal opens
+    useEffect(() => {
+        if (!open) return;
+        
+        // Get required parameters from patientData/appointment
+        const patientId = String((patientData as any)?.patientId || '');
+        const patientVisitNo = Number((patientData as any)?.patient_visit_no || (patientData as any)?.visitNumber || 0);
+        const doctorId = String((patientData as any)?.doctorId || (patientData as any)?.provider || (sessionData as any)?.doctorId || '');
+        const clinicId = String((patientData as any)?.clinicId || (sessionData as any)?.clinicId || '');
+        const shiftId = Number((patientData as any)?.shiftId || (sessionData as any)?.shiftId || 1);
+        
+        // Get visit date - handle multiple formats
+        const visitDateString = (patientData as any)?.visitDate || (patientData as any)?.visit_date || new Date().toISOString().slice(0, 10);
+        
+        // Convert visit date to ISO 8601 format (YYYY-MM-DDTHH:mm:ss) to avoid URL encoding issues
+        // This format is standard and doesn't require URL encoding, and backend can parse it directly
+        let visitDate: string;
+        try {
+            // Parse the date string
+            const date = new Date(visitDateString);
+            if (!isNaN(date.getTime())) {
+                // Format as ISO 8601: YYYY-MM-DDTHH:mm:ss
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                visitDate = `${year}-${month}-${day}T00:00:00`;
+            } else {
+                // If parsing fails, try to extract date part and format
+                if (visitDateString.includes('T')) {
+                    // Already in ISO format, use as-is
+                    visitDate = visitDateString.length >= 19 ? visitDateString.slice(0, 19) : `${visitDateString.slice(0, 10)}T00:00:00`;
+                } else if (visitDateString.includes(' ')) {
+                    // Convert space to T for ISO format
+                    visitDate = visitDateString.replace(' ', 'T');
+                } else {
+                    // Date-only format, add time part
+                    visitDate = `${visitDateString}T00:00:00`;
+                }
+            }
+        } catch {
+            // Fallback: try to format as ISO
+            if (visitDateString.includes('T')) {
+                visitDate = visitDateString.length >= 19 ? visitDateString.slice(0, 19) : `${visitDateString.slice(0, 10)}T00:00:00`;
+            } else if (visitDateString.includes(' ')) {
+                visitDate = visitDateString.replace(' ', 'T');
+            } else {
+                visitDate = `${visitDateString}T00:00:00`;
+            }
+        }
+        
+        if (!patientId || !patientVisitNo || !doctorId || !clinicId) {
+            console.log('Missing required parameters for fetching lab test results:', { patientId, patientVisitNo, doctorId, clinicId });
+            return;
+        }
+        
+        console.log('Fetching existing lab test results for visit:', { patientId, patientVisitNo, doctorId, clinicId, shiftId, visitDate });
+        
+        // Fetch existing lab test results
+        patientService.getLabTestResultsForVisit({
+            patientId,
+            patientVisitNo,
+            shiftId,
+            clinicId,
+            doctorId,
+            visitDate
+        })
+        .then((results: any[]) => {
+            console.log('Fetched lab test results:', results);
+            
+            if (results && results.length > 0) {
+                // Map backend results to frontend format
+                const mappedResults: LabTestResult[] = results.map((result: any, index: number) => ({
+                    id: `existing-${index}`,
+                    labTestName: result.labTestDescription || result.lab_test_description || '',
+                    parameterName: result.parameterName || result.parameter_name || 'Result',
+                    value: result.testParameterValue || result.test_parameter_value || ''
+                }));
+                
+                setLabTestResults(mappedResults);
+                
+                // Populate form fields from first result (assuming all results share same metadata)
+                const firstResult = results[0];
+                if (firstResult) {
+                    setFormData(prev => ({
+                        ...prev,
+                        labName: firstResult.labName || firstResult.lab_name || '',
+                        labDoctorName: firstResult.doctorName || firstResult.doctor_name || '',
+                        reportDate: firstResult.reportDate || firstResult.report_date || '',
+                        comment: firstResult.comment || ''
+                    }));
+                }
+                
+                console.log('Loaded', mappedResults.length, 'existing lab test results');
+            } else {
+                console.log('No existing lab test results found for this visit');
+                // Reset form when no results found
+                setLabTestResults([]);
+            }
+        })
+        .catch((e: any) => {
+            console.error('Failed to fetch lab test results:', e);
+            // Don't show error to user, just log it - it's okay if no results exist
+            setLabTestResults([]);
+        });
+    }, [open, patientData, sessionData]);
+
     // Filtered options by search
     const filteredLabTests = useMemo(() => {
         const term = labTestSearch.trim().toLowerCase();

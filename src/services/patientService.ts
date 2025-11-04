@@ -740,6 +740,72 @@ export const patientService = {
       }
       throw new Error(error.response?.data?.message || 'Failed to submit lab test results');
     }
+  },
+
+  /**
+   * Get lab test results for a patient visit
+   * Mirrors backend @GetMapping("/visit") under the lab test results controller.
+   */
+  async getLabTestResultsForVisit(params: {
+    patientId: string;
+    patientVisitNo: number;
+    shiftId: number;
+    clinicId: string;
+    doctorId: string;
+    visitDate: string; // ISO date-time string or YYYY-MM-DD HH:mm:ss format
+  }): Promise<any[]> {
+    try {
+      console.log('Fetching lab test results for visit:', params);
+      
+      // Build query parameters
+      // Note: Backend expects 'visitDateStr' as parameter name
+      const queryParams = new URLSearchParams({
+        patientId: params.patientId,
+        patientVisitNo: params.patientVisitNo.toString(),
+        shiftId: params.shiftId.toString(),
+        clinicId: params.clinicId,
+        doctorId: params.doctorId,
+        visitDateStr: params.visitDate  // Backend parameter name is visitDateStr
+      });
+
+      try {
+        const resp = await api.get(`/lab/results/visit?${queryParams.toString()}`);
+        console.log('Get lab test results response:', resp.data);
+        return Array.isArray(resp.data) ? resp.data : [];
+      } catch (e1: any) {
+        if (e1?.response?.status !== 404) throw e1;
+        // Fallback to alternative endpoint
+        try {
+          const resp = await api.get(`/lab/master/results/visit?${queryParams.toString()}`);
+          console.log('Get lab test results response (fallback):', resp.data);
+          return Array.isArray(resp.data) ? resp.data : [];
+        } catch (e2: any) {
+          if (e2?.response?.status !== 404) throw e2;
+          // Last fallback
+          const resp = await api.get(`/lab/tests/results/visit?${queryParams.toString()}`);
+          console.log('Get lab test results response (fallback 2):', resp.data);
+          return Array.isArray(resp.data) ? resp.data : [];
+        }
+      }
+    } catch (error: any) {
+      console.error('Get lab test results API Error:', error);
+      if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
+        throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
+      }
+      if (error.response?.status === 404) {
+        // No results found is not an error, just return empty array
+        console.log('No lab test results found for this visit');
+        return [];
+      } else if (error.response?.status === 400) {
+        throw new Error(error.response?.data?.message || 'Invalid request parameters');
+      } else if (error.response?.status === 500) {
+        throw new Error('Server error occurred while fetching lab test results.');
+      }
+      if (error.response?.data?.error) {
+        throw new Error(error.response.data.error);
+      }
+      throw new Error(error.response?.data?.message || 'Failed to fetch lab test results');
+    }
   }
   ,
 
