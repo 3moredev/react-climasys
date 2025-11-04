@@ -617,6 +617,15 @@ export default function Treatment() {
         return statusId === 4 || normalizedStatus;
     }, [treatmentData?.statusId, treatmentData?.status]);
 
+    // Check if Addendum button should be enabled (only for "Waiting for Medicine" status)
+    const isAddendumEnabled = React.useMemo(() => {
+        if (!treatmentData) return false;
+        const statusId = treatmentData.statusId;
+        const status = (treatmentData.status || '').toUpperCase().trim();
+        const normalizedStatus = status === 'WAITING FOR MEDICINE' || status === 'WAITINGFOR MEDICINE' || status === 'WAITINGFORMEDICINE';
+        return statusId === 4 || normalizedStatus;
+    }, [treatmentData?.statusId, treatmentData?.status]);
+
     // Close Investigation dropdown on outside click
     React.useEffect(() => {
         if (!isInvestigationsOpen) return;
@@ -2541,11 +2550,10 @@ export default function Treatment() {
         });
     };
 
-    // Helper style for disabled state
+    // Helper style for disabled state (visual only - individual elements have disabled props)
     const disabledStyle = isFormDisabled ? {
         opacity: 0.6,
-        cursor: 'not-allowed',
-        pointerEvents: 'none' as const
+        cursor: 'not-allowed'
     } : {};
 
     if (loading) {
@@ -3580,17 +3588,18 @@ export default function Treatment() {
                                     </label>
                                     <button
                                         type="button"
+                                        disabled={isFormDisabled}
                                         style={{
                                             width: '100%',
                                             height: '40px',
                                             padding: '6px 10px',
-                                            backgroundColor: '#1976d2',
+                                            backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
                                             color: 'white',
                                             border: 'none',
                                             borderRadius: '4px',
                                             fontSize: '13px',
                                             fontWeight: 'bold',
-                                            cursor: 'pointer',
+                                            cursor: isFormDisabled ? 'not-allowed' : 'pointer',
                                             textTransform: 'uppercase'
                                         }}
                                         onClick={() => {
@@ -3814,13 +3823,14 @@ export default function Treatment() {
                                 </button>
                                 <button
                                     type="button"
+                                    disabled={isFormDisabled}
                                     style={{
-                                        backgroundColor: '#1976d2',
+                                        backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
                                         color: 'white',
                                         border: 'none',
                                         padding: '6px',
                                         borderRadius: '6px',
-                                        cursor: 'pointer',
+                                        cursor: isFormDisabled ? 'not-allowed' : 'pointer',
                                         width: '32px',
                                         height: '32px',
                                         display: 'flex',
@@ -3830,10 +3840,10 @@ export default function Treatment() {
                                         transition: 'background-color 0.2s'
                                     }}
                                     onMouseEnter={(e) => {
-                                        e.currentTarget.style.backgroundColor = '#1565c0';
+                                        if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1565c0';
                                     }}
                                     onMouseLeave={(e) => {
-                                        e.currentTarget.style.backgroundColor = '#1976d2';
+                                        if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1976d2';
                                     }}
                                     onClick={handleAddCustomDiagnosis}
                                 >
@@ -4080,13 +4090,14 @@ export default function Treatment() {
                                 </button>
                                 <button
                                     type="button"
+                                    disabled={isFormDisabled}
                                     style={{
-                                        backgroundColor: '#1976d2',
+                                        backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
                                         color: 'white',
                                         border: 'none',
                                         padding: '6px',
                                         borderRadius: '6px',
-                                        cursor: 'pointer',
+                                        cursor: isFormDisabled ? 'not-allowed' : 'pointer',
                                         width: '32px',
                                         height: '32px',
                                         display: 'flex',
@@ -4096,10 +4107,10 @@ export default function Treatment() {
                                         transition: 'background-color 0.2s'
                                     }}
                                     onMouseEnter={(e) => {
-                                        e.currentTarget.style.backgroundColor = '#1565c0';
+                                        if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1565c0';
                                     }}
                                     onMouseLeave={(e) => {
-                                        e.currentTarget.style.backgroundColor = '#1976d2';
+                                        if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1976d2';
                                     }}
                                     onClick={handleAddCustomMedicine}
                                 >
@@ -4334,13 +4345,14 @@ export default function Treatment() {
                                 </button>
                                 <button
                                     type="button"
+                                    disabled={isFormDisabled}
                                     style={{
-                                        backgroundColor: '#1976d2',
+                                        backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
                                         color: 'white',
                                         border: 'none',
                                         padding: '6px',
                                         borderRadius: '6px',
-                                        cursor: 'pointer',
+                                        cursor: isFormDisabled ? 'not-allowed' : 'pointer',
                                         width: '32px',
                                         height: '32px',
                                         display: 'flex',
@@ -4350,10 +4362,10 @@ export default function Treatment() {
                                         transition: 'background-color 0.2s'
                                     }}
                                     onMouseEnter={(e) => {
-                                        e.currentTarget.style.backgroundColor = '#1565c0';
+                                        if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1565c0';
                                     }}
                                     onMouseLeave={(e) => {
-                                        e.currentTarget.style.backgroundColor = '#1976d2';
+                                        if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1976d2';
                                     }}
                                     onClick={handleAddCustomPrescription}
                                 >
@@ -4362,13 +4374,14 @@ export default function Treatment() {
                                 <button
                                     type="button"
                                     onClick={() => setShowInstructionPopup(true)}
+                                    disabled={isFormDisabled}
                                     style={{
-                                        backgroundColor: '#1976d2',
+                                        backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
                                         color: 'white',
                                         border: 'none',
                                         padding: '6px',
                                         borderRadius: '50%',
-                                        cursor: 'pointer',
+                                        cursor: isFormDisabled ? 'not-allowed' : 'pointer',
                                         width: '32px',
                                         height: '32px',
                                         display: 'flex',
@@ -4379,10 +4392,10 @@ export default function Treatment() {
                                         transition: 'background-color 0.2s'
                                     }}
                                     onMouseEnter={(e) => {
-                                        e.currentTarget.style.backgroundColor = '#1565c0';
+                                        if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1565c0';
                                     }}
                                     onMouseLeave={(e) => {
-                                        e.currentTarget.style.backgroundColor = '#1976d2';
+                                        if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1976d2';
                                     }}
                                 >
                                     i
@@ -4863,13 +4876,14 @@ export default function Treatment() {
                                 </button>
                                 <button
                                     type="button"
+                                    disabled={isFormDisabled}
                                     style={{
-                                        backgroundColor: '#1976d2',
+                                        backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
                                         color: 'white',
                                         border: 'none',
                                         padding: '6px',
                                         borderRadius: '6px',
-                                        cursor: 'pointer',
+                                        cursor: isFormDisabled ? 'not-allowed' : 'pointer',
                                         width: '32px',
                                         height: '32px',
                                         display: 'flex',
@@ -4879,10 +4893,10 @@ export default function Treatment() {
                                         transition: 'background-color 0.2s'
                                     }}
                                     onMouseEnter={(e) => {
-                                        e.currentTarget.style.backgroundColor = '#1565c0';
+                                        if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1565c0';
                                     }}
                                     onMouseLeave={(e) => {
-                                        e.currentTarget.style.backgroundColor = '#1976d2';
+                                        if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1976d2';
                                     }}
                                     onClick={handleAddCustomTestLab}
                                 >
@@ -4890,13 +4904,14 @@ export default function Treatment() {
                                 </button>
                                 <button
                                     type="button"
+                                    disabled={isFormDisabled}
                                     style={{
-                                        backgroundColor: '#1976d2',
+                                        backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
                                         color: 'white',
                                         border: 'none',
                                         padding: '6px',
                                         borderRadius: '50%',
-                                        cursor: 'pointer',
+                                        cursor: isFormDisabled ? 'not-allowed' : 'pointer',
                                         width: '32px',
                                         height: '32px',
                                         display: 'flex',
@@ -4907,10 +4922,10 @@ export default function Treatment() {
                                         transition: 'background-color 0.2s'
                                     }}
                                     onMouseEnter={(e) => {
-                                        e.currentTarget.style.backgroundColor = '#1565c0';
+                                        if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1565c0';
                                     }}
                                     onMouseLeave={(e) => {
-                                        e.currentTarget.style.backgroundColor = '#1976d2';
+                                        if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1976d2';
                                     }}
                                 >
                                     <TrendingUp fontSize="small" />
@@ -5235,16 +5250,17 @@ export default function Treatment() {
                                 </div>
                                 <button
                                     type="button"
+                                    disabled={isFormDisabled}
                                     style={{
                                         padding: '0 10px',
                                         height: '32px',
                                         alignSelf: 'flex-start',
-                                        backgroundColor: '#1976d2',
+                                        backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
                                         color: 'white',
                                         border: 'none',
                                         borderRadius: '4px',
                                         fontSize: '13px',
-                                        cursor: 'pointer',
+                                        cursor: isFormDisabled ? 'not-allowed' : 'pointer',
                                         whiteSpace: 'nowrap'
                                     }}
                                     onClick={() => {
@@ -5367,10 +5383,43 @@ export default function Treatment() {
                         </div>
 
                         {/* Action Buttons */}
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '20px', marginBottom: '40px', flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '20px', marginBottom: '40px', flexWrap: 'wrap', pointerEvents: 'auto', opacity: 1 }}>
                             <button 
                                 type="button" 
-                                onClick={() => setShowAddendumModal(true)}
+                                onClick={() => isAddendumEnabled && setShowAddendumModal(true)}
+                                disabled={!isAddendumEnabled}
+                                style={{
+                                    backgroundColor: isAddendumEnabled ? '#1976d2' : '#ccc',
+                                    color: 'white',
+                                    border: 'none',
+                                    padding: '8px 12px',
+                                    borderRadius: '4px',
+                                    cursor: isAddendumEnabled ? 'pointer' : 'not-allowed',
+                                    fontSize: '12px',
+                                    pointerEvents: 'auto',
+                                    opacity: isAddendumEnabled ? 1 : 0.6,
+                                    zIndex: 10,
+                                    position: 'relative',
+                                    fontWeight: 'bold',
+                                    boxShadow: isAddendumEnabled ? '0 2px 4px rgba(0,0,0,0.2)' : 'none'
+                                }}
+                                onMouseEnter={(e) => {
+                                    if (isAddendumEnabled) {
+                                        e.currentTarget.style.backgroundColor = '#1565c0';
+                                        e.currentTarget.style.boxShadow = '0 3px 6px rgba(0,0,0,0.3)';
+                                    }
+                                }}
+                                onMouseLeave={(e) => {
+                                    if (isAddendumEnabled) {
+                                        e.currentTarget.style.backgroundColor = '#1976d2';
+                                        e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
+                                    }
+                                }}
+                            >
+                                Addendum
+                            </button>
+                            <button 
+                                type="button" 
                                 style={{
                                     backgroundColor: '#1976d2',
                                     color: 'white',
@@ -5378,21 +5427,6 @@ export default function Treatment() {
                                     padding: '8px 12px',
                                     borderRadius: '4px',
                                     cursor: 'pointer',
-                                    fontSize: '12px'
-                                }}
-                            >
-                                Addendum
-                            </button>
-                            <button 
-                                type="button" 
-                                disabled={isFormDisabled}
-                                style={{
-                                    backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
-                                    color: 'white',
-                                    border: 'none',
-                                    padding: '8px 12px',
-                                    borderRadius: '4px',
-                                    cursor: isFormDisabled ? 'not-allowed' : 'pointer',
                                     fontSize: '12px'
                                 }}
                             >
