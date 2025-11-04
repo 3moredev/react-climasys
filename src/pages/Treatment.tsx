@@ -142,6 +142,8 @@ interface TreatmentData {
     age?: number;
     gender?: string;
     contact?: string;
+    status?: string;
+    statusId?: number;
 }
 
 interface PreviousVisit {
@@ -319,6 +321,7 @@ export default function Treatment() {
     const [complaintsOptions, setComplaintsOptions] = useState<ComplaintOption[]>([]);
     const [complaintsLoading, setComplaintsLoading] = useState(false);
     const [complaintsError, setComplaintsError] = useState<string | null>(null);
+    const complaintsRowsBuiltFromApiRef = React.useRef(false);
     
     const filteredComplaints = React.useMemo(() => {
         const term = complaintSearch.trim().toLowerCase();
@@ -604,6 +607,15 @@ export default function Treatment() {
             setTreatmentData(location.state as TreatmentData);
         }
     }, [location.state]);
+
+    // Check if form should be disabled (status is "Waiting for Medicine" or statusId is 4)
+    const isFormDisabled = React.useMemo(() => {
+        if (!treatmentData) return false;
+        const statusId = treatmentData.statusId;
+        const status = (treatmentData.status || '').toUpperCase().trim();
+        const normalizedStatus = status === 'WAITING FOR MEDICINE' || status === 'WAITINGFOR MEDICINE' || status === 'WAITINGFORMEDICINE';
+        return statusId === 4 || normalizedStatus;
+    }, [treatmentData?.statusId, treatmentData?.status]);
 
     // Close Investigation dropdown on outside click
     React.useEffect(() => {
@@ -1425,7 +1437,8 @@ export default function Treatment() {
             const next = [...prev, ...newRows];
             return next;
         });
-        // Keep dropdown selections as-is; close menu
+        // Clear selections and close menu after adding
+        setSelectedComplaints([]);
         setIsComplaintsOpen(false);
     };
 
@@ -1763,7 +1776,27 @@ export default function Treatment() {
                 console.warn('Could not patch billing data from appointment details:', billingPatchError);
             }
 
-            // Update complaint selections if available
+            // Load complaints rows from API response (support multiple shapes)
+            const complaintsSource = Array.isArray(appointmentData.complaintsRows)
+                ? appointmentData.complaintsRows
+                : (Array.isArray(appointmentData.complaints) ? appointmentData.complaints : null);
+            if (complaintsSource && complaintsSource.length > 0) {
+                const mappedComplaintsRows: ComplaintRow[] = complaintsSource.map((row: any, index: number) => ({
+                    id: `complaint-${index}-${Date.now()}`,
+                    value: row.value || row.complaint_description || row.short_description || row.complaint || '',
+                    label: row.label || row.complaint_description || row.complaint || row.short_description || '',
+                    comment: row.comment || row.duration || ''
+                }));
+                setComplaintsRows(mappedComplaintsRows);
+                complaintsRowsBuiltFromApiRef.current = true; // Mark as built from API
+                console.log('Loaded complaints rows from API:', mappedComplaintsRows);
+            } else if (Array.isArray(complaintsSource)) {
+                // Empty array - clear existing rows
+                setComplaintsRows([]);
+                complaintsRowsBuiltFromApiRef.current = false; // Reset flag
+            }
+
+            // Update complaint selections if available (for dropdown display)
             if (normalized.currentComplaint && typeof normalized.currentComplaint === 'string') {
                 const parts = normalized.currentComplaint.split(/\*|,/).map((s: string) => s.trim()).filter(Boolean);
                 if (Array.isArray(parts) && parts.length > 0) {
@@ -2263,28 +2296,37 @@ export default function Treatment() {
         setSelectedComplaints(prev => prev.filter(v => v !== rowValue));
     };
 
-    // Keep complaints table in sync with selectedComplaints and available options
+    // Build complaintsRows from selectedComplaints when loading existing visit data
+    // This only runs when complaintsOptions are loaded (after API call) and selectedComplaints exist
+    // This is needed for loading existing visit data, but won't interfere with manual selection
     React.useEffect(() => {
-        if (!Array.isArray(selectedComplaints)) return;
-
-        setComplaintsRows(prev => {
-            const existingByValue = new Map(prev.map(r => [r.value, r]));
-
-            // Build rows for all currently selected complaints
-            const nextRows: ComplaintRow[] = selectedComplaints.map(val => {
-                const opt = complaintsOptions.find(o => o.value === val);
-                const existing = existingByValue.get(val);
-                return {
-                    id: existing?.id || String(val),
-                    value: val,
-                    label: opt?.label || existing?.label || val,
-                    comment: existing?.comment || ''
-                };
-            });
-
-            return nextRows;
+        // Only build rows if:
+        // 1. complaintsOptions are loaded (meaning we're ready to map values to labels)
+        // 2. selectedComplaints exist 
+        // 3. complaintsRows are empty (meaning we're loading from appointment data)
+        // 4. We haven't already built rows from API (to prevent interfering with manual selection)
+        if (complaintsOptions.length === 0 || selectedComplaints.length === 0) return;
+        if (complaintsRows.length > 0) {
+            complaintsRowsBuiltFromApiRef.current = true; // Mark as built
+            return; // Don't overwrite if rows already exist
+        }
+        if (complaintsRowsBuiltFromApiRef.current) return; // Don't run if we've already built from API
+        
+        // Build rows from selectedComplaints (only on initial load from appointment data)
+        const newRows: ComplaintRow[] = selectedComplaints.map(val => {
+            const opt = complaintsOptions.find(o => o.value === val);
+            return {
+                id: `${val}`,
+                value: val,
+                label: opt?.label || val,
+                comment: ''
+            };
         });
-    }, [selectedComplaints, complaintsOptions]);
+        
+        setComplaintsRows(newRows);
+        complaintsRowsBuiltFromApiRef.current = true; // Mark as built
+        console.log('Built complaintsRows from selectedComplaints:', newRows);
+    }, [complaintsOptions, selectedComplaints, complaintsRows.length]); // Include complaintsRows.length to detect when it changes
 
     // Auto-select billed charges based on billed amount from appointment details
     React.useEffect(() => {
@@ -2499,6 +2541,13 @@ export default function Treatment() {
         });
     };
 
+    // Helper style for disabled state
+    const disabledStyle = isFormDisabled ? {
+        opacity: 0.6,
+        cursor: 'not-allowed',
+        pointerEvents: 'none' as const
+    } : {};
+
     if (loading) {
         return (
             <div className="page">
@@ -2529,7 +2578,7 @@ export default function Treatment() {
                 </div>
 
                 {/* Main Content - Two Column Layout */}
-                <div style={{ display: 'flex', minHeight: 'calc(100vh - 120px)', fontFamily: "'Roboto', sans-serif", overflowY: 'auto' }}>
+                <div style={{ display: 'flex', minHeight: 'calc(100vh - 120px)', fontFamily: "'Roboto', sans-serif", overflowY: 'auto', ...disabledStyle }}>
                     {/* Left Sidebar - Previous Visits and Attachments */}
                     <div style={{ 
                         width: '240px', 
@@ -2838,19 +2887,21 @@ export default function Treatment() {
                                             fontWeight: 500
                                         }}>Self</span>
                                     </div>
-                                    <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', fontSize: '12px', whiteSpace: 'nowrap' }}>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: isFormDisabled ? 'not-allowed' : 'pointer', fontSize: '12px', whiteSpace: 'nowrap' }}>
                                         <input
                                             type="checkbox"
                                             checked={formData.visitType.inPerson}
                                             onChange={(e) => handleVisitTypeChange('inPerson', e.target.checked)}
+                                            disabled={isFormDisabled}
                                         />
                                         In-Person
                                     </label>
-                                    <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', fontSize: '12px', whiteSpace: 'nowrap' }}>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: isFormDisabled ? 'not-allowed' : 'pointer', fontSize: '12px', whiteSpace: 'nowrap' }}>
                                         <input
                                             type="checkbox"
                                             checked={formData.visitType.followUp}
                                             onChange={(e) => handleVisitTypeChange('followUp', e.target.checked)}
+                                            disabled={isFormDisabled}
                                         />
                                         Follow-up
                                     </label>
@@ -2866,7 +2917,7 @@ export default function Treatment() {
                                         display: 'flex', 
                                         alignItems: 'center', 
                                         gap: '5px', 
-                                        cursor: 'pointer',
+                                        cursor: isFormDisabled ? 'not-allowed' : 'pointer',
                                         fontSize: '13px',
                                         borderRadius: '4px'
                                     }}>
@@ -2874,6 +2925,7 @@ export default function Treatment() {
                                             type="checkbox"
                                             checked={value}
                                             onChange={(e) => handleMedicalHistoryChange(key, e.target.checked)}
+                                            disabled={isFormDisabled}
                                             style={{ margin: 0 }}
                                         />
                                         <span style={{ textTransform: 'capitalize', fontWeight: '500' }}>
@@ -2903,16 +2955,16 @@ export default function Treatment() {
                                             type="text"
                                             value={formData[key as keyof typeof formData] as string}
                                             onChange={(e) => handleInputChange(key, e.target.value)}
-                                            disabled={key === 'pc'}
+                                            disabled={key === 'pc' || isFormDisabled}
                                             style={{
                                                 width: '100%',
                                                 padding: '6px 10px',
                                                 border: '1px solid #ccc',
                                                 borderRadius: '4px',
                                                 fontSize: '13px',
-                                                backgroundColor: key === 'pc' ? '#f5f5f5' : 'white',
-                                                color: key === 'pc' ? '#666' : '#333',
-                                                cursor: key === 'pc' ? 'not-allowed' : 'text'
+                                                backgroundColor: key === 'pc' || isFormDisabled ? '#f5f5f5' : 'white',
+                                                color: key === 'pc' || isFormDisabled ? '#666' : '#333',
+                                                cursor: key === 'pc' || isFormDisabled ? 'not-allowed' : 'text'
                                             }}
                                         />
                                     </div>
@@ -2942,33 +2994,34 @@ export default function Treatment() {
                                                 type="text"
                                                 value={formData[key as keyof typeof formData] as string}
                                                 onChange={(e) => handleInputChange(key, e.target.value)}
-                                                disabled={key === 'bmi'}
+                                                disabled={key === 'bmi' || isFormDisabled}
                                                 style={{
                                                     flex: 1,
                                                     padding: '6px 10px',
                                                     border: '1px solid #ccc',
                                                     borderRadius: '4px',
                                                     fontSize: '13px',
-                                                    backgroundColor: key === 'bmi' ? '#f5f5f5' : 'white',
-                                                    color: key === 'bmi' ? '#666' : '#333',
-                                                    cursor: key === 'bmi' ? 'not-allowed' : 'text'
+                                                    backgroundColor: key === 'bmi' || isFormDisabled ? '#f5f5f5' : 'white',
+                                                    color: key === 'bmi' || isFormDisabled ? '#666' : '#333',
+                                                    cursor: key === 'bmi' || isFormDisabled ? 'not-allowed' : 'text'
                                                 }}
                                             />
                                             {key === 'pallorHb' && (
                                                 <button
                                                     type="button"
+                                                    disabled={isFormDisabled}
                                                     style={{
                                                         position: 'absolute',
                                                         left: 'calc(100% + 13px)',
                                                         top: '50%',
                                                         marginTop: '-16px',
-                                                        backgroundColor: '#1976d2',
+                                                        backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
                                                         color: 'white',
                                                         border: 'none',
                                                         height: '32px',
                                                         padding: '0 10px',
                                                         borderRadius: '6px',
-                                                        cursor: 'pointer',
+                                                        cursor: isFormDisabled ? 'not-allowed' : 'pointer',
                                                         fontSize: '12px',
                                                         fontWeight: '500',
                                                         lineHeight: 1,
@@ -3114,7 +3167,7 @@ export default function Treatment() {
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                         <div ref={complaintsRef} style={{ position: 'relative', flex: 1 }}>
                                             <div
-                                                onClick={() => setIsComplaintsOpen(prev => !prev)}
+                                                onClick={() => !isFormDisabled && setIsComplaintsOpen(prev => !prev)}
                                             style={{
                                                     display: 'flex',
                                                     alignItems: 'center',
@@ -3126,9 +3179,10 @@ export default function Treatment() {
                                                     fontSize: '12px',
                                                     fontFamily: "'Roboto', sans-serif",
                                                     fontWeight: 500,
-                                                    backgroundColor: 'white',
-                                                    cursor: 'pointer',
-                                                    userSelect: 'none'
+                                                    backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
+                                                    cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                                    userSelect: 'none',
+                                                    opacity: isFormDisabled ? 0.6 : 1
                                                 }}
                                                 onMouseEnter={(e) => {
                                                     (e.currentTarget as HTMLDivElement).style.borderColor = '#1E88E5';
@@ -3272,23 +3326,24 @@ export default function Treatment() {
                                             )}
                                         </div>
                                         <button
+                                            disabled={isFormDisabled}
                                             style={{
                                                 padding: '0 10px',
-                                                backgroundColor: '#1976d2',
+                                                backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
                                                 color: 'white',
                                                 border: 'none',
                                                 borderRadius: '6px',
-                                                cursor: 'pointer',
+                                                cursor: isFormDisabled ? 'not-allowed' : 'pointer',
                                                 fontSize: '12px',
                                                 fontWeight: '500',
                                                 height: '32px',
                                                 transition: 'background-color 0.2s'
                                             }}
                                             onMouseEnter={(e) => {
-                                                e.currentTarget.style.backgroundColor = '#1565c0';
+                                                if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1565c0';
                                             }}
                                             onMouseLeave={(e) => {
-                                                e.currentTarget.style.backgroundColor = '#1976d2';
+                                                if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1976d2';
                                             }}
                                             onClick={handleAddComplaints}
                                         >
@@ -3296,13 +3351,14 @@ export default function Treatment() {
                                         </button>
                                         <button
                                             type="button"
+                                            disabled={isFormDisabled}
                                             style={{
-                                                backgroundColor: '#1976d2',
+                                                backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
                                                 color: 'white',
                                                 border: 'none',
                                                 padding: '6px',
                                                 borderRadius: '6px',
-                                                cursor: 'pointer',
+                                                cursor: isFormDisabled ? 'not-allowed' : 'pointer',
                                                 width: '32px',
                                                 height: '32px',
                                                 display: 'flex',
@@ -3312,10 +3368,10 @@ export default function Treatment() {
                                                 transition: 'background-color 0.2s'
                                             }}
                                             onMouseEnter={(e) => {
-                                                e.currentTarget.style.backgroundColor = '#1565c0';
+                                                if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1565c0';
                                             }}
                                             onMouseLeave={(e) => {
-                                                e.currentTarget.style.backgroundColor = '#1976d2';
+                                                if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1976d2';
                                             }}
                                             onClick={handleAddCustomComplaint}
                                         >
@@ -3409,6 +3465,7 @@ export default function Treatment() {
                                     <textarea
                                         value={formData.detailedHistory}
                                         onChange={(e) => handleInputChange('detailedHistory', e.target.value)}
+                                        disabled={isFormDisabled}
                                         rows={3}
                                         style={{
                                             width: '100%',
@@ -3416,7 +3473,10 @@ export default function Treatment() {
                                             border: '1px solid #ccc',
                                             borderRadius: '4px',
                                             fontSize: '13px',
-                                            resize: 'vertical'
+                                            resize: 'vertical',
+                                            backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
+                                            color: isFormDisabled ? '#666' : '#333',
+                                            cursor: isFormDisabled ? 'not-allowed' : 'text'
                                         }}
                                     />
                                 </div>
@@ -3427,6 +3487,7 @@ export default function Treatment() {
                                     <textarea
                                         value={formData.examinationFindings}
                                         onChange={(e) => handleInputChange('examinationFindings', e.target.value)}
+                                        disabled={isFormDisabled}
                                         rows={3}
                                         style={{
                                             width: '100%',
@@ -3434,7 +3495,10 @@ export default function Treatment() {
                                             border: '1px solid #ccc',
                                             borderRadius: '4px',
                                             fontSize: '13px',
-                                            resize: 'vertical'
+                                            resize: 'vertical',
+                                            backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
+                                            color: isFormDisabled ? '#666' : '#333',
+                                            cursor: isFormDisabled ? 'not-allowed' : 'text'
                                         }}
                                     />
                                 </div>
@@ -3445,6 +3509,7 @@ export default function Treatment() {
                                     <textarea
                                         value={formData.additionalComments}
                                         onChange={(e) => handleInputChange('additionalComments', e.target.value)}
+                                        disabled={isFormDisabled}
                                         rows={3}
                                         style={{
                                             width: '100%',
@@ -3452,7 +3517,10 @@ export default function Treatment() {
                                             border: '1px solid #ccc',
                                             borderRadius: '4px',
                                             fontSize: '13px',
-                                            resize: 'vertical'
+                                            resize: 'vertical',
+                                            backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
+                                            color: isFormDisabled ? '#666' : '#333',
+                                            cursor: isFormDisabled ? 'not-allowed' : 'text'
                                         }}
                                     />
                                 </div>
@@ -3469,6 +3537,7 @@ export default function Treatment() {
                                     <textarea
                                         value={formData.procedurePerformed}
                                         onChange={(e) => handleInputChange('procedurePerformed', e.target.value)}
+                                        disabled={isFormDisabled}
                                         rows={3}
                                         style={{
                                             width: '100%',
@@ -3476,7 +3545,10 @@ export default function Treatment() {
                                             border: '1px solid #ccc',
                                             borderRadius: '4px',
                                             fontSize: '13px',
-                                            resize: 'vertical'
+                                            resize: 'vertical',
+                                            backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
+                                            color: isFormDisabled ? '#666' : '#333',
+                                            cursor: isFormDisabled ? 'not-allowed' : 'text'
                                         }}
                                     />
                                 </div>
@@ -3487,6 +3559,7 @@ export default function Treatment() {
                                     <textarea
                                         value={formData.dressingBodyParts}
                                         onChange={(e) => handleInputChange('dressingBodyParts', e.target.value)}
+                                        disabled={isFormDisabled}
                                         rows={3}
                                         style={{
                                             width: '100%',
@@ -3494,7 +3567,10 @@ export default function Treatment() {
                                             border: '1px solid #ccc',
                                             borderRadius: '4px',
                                             fontSize: '13px',
-                                            resize: 'vertical'
+                                            resize: 'vertical',
+                                            backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
+                                            color: isFormDisabled ? '#666' : '#333',
+                                            cursor: isFormDisabled ? 'not-allowed' : 'text'
                                         }}
                                     />
                                 </div>
@@ -3563,11 +3639,12 @@ export default function Treatment() {
                                             fontSize: '12px',
                                             fontFamily: "'Roboto', sans-serif",
                                             fontWeight: 500,
-                                            backgroundColor: 'white',
-                                            cursor: 'pointer',
-                                            userSelect: 'none'
+                                            backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
+                                            cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                            userSelect: 'none',
+                                            opacity: isFormDisabled ? 0.6 : 1
                                         }}
-                                        onClick={() => setIsDiagnosesOpen(!isDiagnosesOpen)}
+                                        onClick={() => !isFormDisabled && setIsDiagnosesOpen(!isDiagnosesOpen)}
                                         onMouseEnter={(e) => {
                                             (e.currentTarget as HTMLDivElement).style.borderColor = '#1E88E5';
                                         }}
@@ -3713,22 +3790,23 @@ export default function Treatment() {
                                     )}
                                 </div>
                                 <button
+                                    disabled={isFormDisabled}
                                     style={{
                                         padding: '0 10px',
-                                        backgroundColor: '#1976d2',
+                                        backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
                                         color: 'white',
                                         border: 'none',
                                         borderRadius: '6px',
-                                        cursor: 'pointer',
+                                        cursor: isFormDisabled ? 'not-allowed' : 'pointer',
                                         fontSize: '12px',
                                         height: '32px',
                                         transition: 'background-color 0.2s'
                                     }}
                                     onMouseEnter={(e) => {
-                                        e.currentTarget.style.backgroundColor = '#1565c0';
+                                        if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1565c0';
                                     }}
                                     onMouseLeave={(e) => {
-                                        e.currentTarget.style.backgroundColor = '#1976d2';
+                                        if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1976d2';
                                     }}
                                     onClick={handleAddDiagnoses}
                                 >
@@ -3825,7 +3903,7 @@ export default function Treatment() {
                             <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
                                 <div style={{ position: 'relative', flex: 1 }} ref={medicinesRef}>
                                     <div
-                                        onClick={() => setIsMedicinesOpen(!isMedicinesOpen)}
+                                        onClick={() => !isFormDisabled && setIsMedicinesOpen(!isMedicinesOpen)}
                                         style={{
                                             display: 'flex',
                                             alignItems: 'center',
@@ -3837,9 +3915,10 @@ export default function Treatment() {
                                             fontSize: '12px',
                                             fontFamily: "'Roboto', sans-serif",
                                             fontWeight: 500,
-                                            backgroundColor: 'white',
-                                            cursor: 'pointer',
-                                            userSelect: 'none'
+                                            backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
+                                            cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                            userSelect: 'none',
+                                            opacity: isFormDisabled ? 0.6 : 1
                                         }}
                                         onMouseEnter={(e) => {
                                             (e.currentTarget as HTMLDivElement).style.borderColor = '#1E88E5';
@@ -3986,13 +4065,14 @@ export default function Treatment() {
                                 <button
                                     type="button"
                                     onClick={handleAddMedicine}
+                                    disabled={isFormDisabled}
                                     style={{
-                                        backgroundColor: '#1976d2',
+                                        backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
                                         color: 'white',
                                         border: 'none',
                                         padding: '6px 12px',
                                         borderRadius: '4px',
-                                        cursor: 'pointer',
+                                        cursor: isFormDisabled ? 'not-allowed' : 'pointer',
                                         fontSize: '12px'
                                     }}
                                 >
@@ -4222,26 +4302,31 @@ export default function Treatment() {
                                 <input
                                     type="text"
                                     value={prescriptionInput}
-                                    onChange={(e) => setPrescriptionInput(e.target.value)}
+                                    onChange={(e) => !isFormDisabled && setPrescriptionInput(e.target.value)}
+                                    disabled={isFormDisabled}
                                     placeholder="Enter Brand Name / Prescription"
                                     style={{
                                         flex: 1,
                                         padding: '6px 10px',
                                         border: '1px solid #ccc',
                                         borderRadius: '4px',
-                                        fontSize: '13px'
+                                        fontSize: '13px',
+                                        backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
+                                        color: isFormDisabled ? '#666' : '#333',
+                                        cursor: isFormDisabled ? 'not-allowed' : 'text'
                                     }}
                                 />
                                 <button
                                     type="button"
                                     onClick={handleAddPrescription}
+                                    disabled={isFormDisabled}
                                     style={{
-                                        backgroundColor: '#1976d2',
+                                        backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
                                         color: 'white',
                                         border: 'none',
                                         padding: '6px 12px',
                                         borderRadius: '4px',
-                                        cursor: 'pointer',
+                                        cursor: isFormDisabled ? 'not-allowed' : 'pointer',
                                         fontSize: '12px'
                                     }}
                                 >
@@ -4604,11 +4689,12 @@ export default function Treatment() {
                                             fontSize: '12px',
                                             fontFamily: "'Roboto', sans-serif",
                                             fontWeight: 500,
-                                            backgroundColor: 'white',
-                                            cursor: 'pointer',
-                                            userSelect: 'none'
+                                            backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
+                                            cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                            userSelect: 'none',
+                                            opacity: isFormDisabled ? 0.6 : 1
                                         }}
-                                        onClick={() => setIsInvestigationsOpen(!isInvestigationsOpen)}
+                                        onClick={() => !isFormDisabled && setIsInvestigationsOpen(!isInvestigationsOpen)}
                                         onMouseEnter={(e) => {
                                             (e.currentTarget as HTMLDivElement).style.borderColor = '#1E88E5';
                                         }}
@@ -4753,22 +4839,23 @@ export default function Treatment() {
                                     )}
                                 </div>
                                 <button
+                                    disabled={isFormDisabled}
                                     style={{
                                         padding: '0 10px',
-                                        backgroundColor: '#1976d2',
+                                        backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
                                         color: 'white',
                                         border: 'none',
                                         borderRadius: '6px',
-                                        cursor: 'pointer',
+                                        cursor: isFormDisabled ? 'not-allowed' : 'pointer',
                                         fontSize: '12px',
                                         height: '32px',
                                         transition: 'background-color 0.2s'
                                     }}
                                     onMouseEnter={(e) => {
-                                        e.currentTarget.style.backgroundColor = '#1565c0';
+                                        if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1565c0';
                                     }}
                                     onMouseLeave={(e) => {
-                                        e.currentTarget.style.backgroundColor = '#1976d2';
+                                        if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1976d2';
                                     }}
                                     onClick={handleAddInvestigations}
                                 >
@@ -4890,7 +4977,7 @@ export default function Treatment() {
                                     <select
                                         value={followUpData.followUpType}
                                         onChange={(e) => handleFollowUpChange('followUpType', e.target.value)}
-                                        disabled={followUpTypesLoading}
+                                        disabled={followUpTypesLoading || isFormDisabled}
                                         style={{
                                             width: '100%',
                                             padding: '6px 10px',
@@ -4898,7 +4985,9 @@ export default function Treatment() {
                                             borderRadius: '4px',
                                             fontSize: '13px',
                                             height: '32px',
-                                            opacity: followUpTypesLoading ? 0.6 : 1
+                                            opacity: (followUpTypesLoading || isFormDisabled) ? 0.6 : 1,
+                                            backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
+                                            cursor: isFormDisabled ? 'not-allowed' : 'pointer'
                                         }}
                                     >
                                         <option value="">
@@ -4924,12 +5013,16 @@ export default function Treatment() {
                                         type="text"
                                         value={followUpData.followUp}
                                         onChange={(e) => handleFollowUpChange('followUp', e.target.value)}
+                                        disabled={isFormDisabled}
                                         style={{
                                             width: '100%',
                                             padding: '6px 10px',
                                             border: '1px solid #ccc',
                                             borderRadius: '4px',
-                                            fontSize: '13px'
+                                            fontSize: '13px',
+                                            backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
+                                            color: isFormDisabled ? '#666' : '#333',
+                                            cursor: isFormDisabled ? 'not-allowed' : 'text'
                                         }}
                                     />
                                 </div>
@@ -4940,6 +5033,7 @@ export default function Treatment() {
                                     <textarea
                                         value={followUpData.remarkComments}
                                         onChange={(e) => handleFollowUpChange('remarkComments', e.target.value)}
+                                        disabled={isFormDisabled}
                                         rows={1}
                                         style={{
                                             width: '100%',
@@ -4951,7 +5045,10 @@ export default function Treatment() {
                                             height: '32px',
                                             minHeight: '32px',
                                             maxHeight: '32px',
-                                            overflow: 'hidden'
+                                            overflow: 'hidden',
+                                            backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
+                                            color: isFormDisabled ? '#666' : '#333',
+                                            cursor: isFormDisabled ? 'not-allowed' : 'text'
                                         }}
                                     />
                                 </div>
@@ -4966,6 +5063,7 @@ export default function Treatment() {
                             <textarea
                                 value={followUpData.planAdv}
                                 onChange={(e) => handleFollowUpChange('planAdv', e.target.value)}
+                                disabled={isFormDisabled}
                                 rows={2}
                                 style={{
                                     width: '100%',
@@ -4973,7 +5071,10 @@ export default function Treatment() {
                                     border: '1px solid #ccc',
                                     borderRadius: '4px',
                                     fontSize: '13px',
-                                    resize: 'vertical'
+                                    resize: 'vertical',
+                                    backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
+                                    color: isFormDisabled ? '#666' : '#333',
+                                    cursor: isFormDisabled ? 'not-allowed' : 'text'
                                 }}
                             />
                         </div>
@@ -4997,11 +5098,12 @@ export default function Treatment() {
                                             fontSize: '12px',
                                             fontFamily: "'Roboto', sans-serif",
                                             fontWeight: 500,
-                                            backgroundColor: 'white',
-                                            cursor: 'pointer',
-                                            userSelect: 'none'
+                                            backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
+                                            cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                            userSelect: 'none',
+                                            opacity: isFormDisabled ? 0.6 : 1
                                         }}
-                                        onClick={() => setIsBillingOpen(!isBillingOpen)}
+                                        onClick={() => !isFormDisabled && setIsBillingOpen(!isBillingOpen)}
                                         onMouseEnter={(e) => {
                                             (e.currentTarget as HTMLDivElement).style.borderColor = '#1E88E5';
                                         }}
@@ -5202,13 +5304,17 @@ export default function Treatment() {
                                         type="text"
                                         value={billingData.discount}
                                         onChange={(e) => handleBillingChange('discount', e.target.value)}
+                                        disabled={isFormDisabled}
                                         placeholder="0.00"
                                         style={{
                                             width: '100%',
                                             padding: '6px 10px',
                                             border: '1px solid #ccc',
                                             borderRadius: '4px',
-                                            fontSize: '13px'
+                                            fontSize: '13px',
+                                            backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
+                                            color: isFormDisabled ? '#666' : '#333',
+                                            cursor: isFormDisabled ? 'not-allowed' : 'text'
                                         }}
                                     />
                                 </div>
@@ -5279,13 +5385,14 @@ export default function Treatment() {
                             </button>
                             <button 
                                 type="button" 
+                                disabled={isFormDisabled}
                                 style={{
-                                    backgroundColor: '#1976d2',
+                                    backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
                                     color: 'white',
                                     border: 'none',
                                     padding: '8px 12px',
                                     borderRadius: '4px',
-                                    cursor: 'pointer',
+                                    cursor: isFormDisabled ? 'not-allowed' : 'pointer',
                                     fontSize: '12px'
                                 }}
                             >
@@ -5294,13 +5401,14 @@ export default function Treatment() {
                             <button 
                                 type="button" 
                                 onClick={handleBackToAppointments}
+                                disabled={isFormDisabled}
                                 style={{
-                                    backgroundColor: '#1976d2',
+                                    backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
                                     color: 'white',
                                     border: 'none',
                                     padding: '8px 12px',
                                     borderRadius: '4px',
-                                    cursor: 'pointer',
+                                    cursor: isFormDisabled ? 'not-allowed' : 'pointer',
                                     fontSize: '12px'
                                 }}
                             >
@@ -5309,14 +5417,14 @@ export default function Treatment() {
                             <button 
                                 type="button" 
                                 onClick={handleTreatmentSave}
-                                disabled={isSubmitting}
+                                disabled={isSubmitting || isFormDisabled}
                                 style={{
-                                    backgroundColor: isSubmitting ? '#ccc' : '#1976d2',
+                                    backgroundColor: (isSubmitting || isFormDisabled) ? '#ccc' : '#1976d2',
                                     color: 'white',
                                     border: 'none',
                                     padding: '8px 12px',
                                     borderRadius: '4px',
-                                    cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                                    cursor: (isSubmitting || isFormDisabled) ? 'not-allowed' : 'pointer',
                                     fontSize: '12px'
                                 }}
                             >
@@ -5325,14 +5433,14 @@ export default function Treatment() {
                             <button 
                                 type="button" 
                                 onClick={handleTreatmentSubmit}
-                                disabled={isSubmitting}
+                                disabled={isSubmitting || isFormDisabled}
                                 style={{
-                                    backgroundColor: isSubmitting ? '#ccc' : '#1976d2',
+                                    backgroundColor: (isSubmitting || isFormDisabled) ? '#ccc' : '#1976d2',
                                     color: 'white',
                                     border: 'none',
                                     padding: '8px 12px',
                                     borderRadius: '4px',
-                                    cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                                    cursor: (isSubmitting || isFormDisabled) ? 'not-allowed' : 'pointer',
                                     fontSize: '12px'
                                 }}
                             >

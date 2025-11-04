@@ -2824,7 +2824,9 @@ export default function AppointmentTable() {
                                                                             appointmentId: a.appointmentId,
                                                                             age: a.age,
                                                                             gender: a.gender,
-                                                                            contact: a.contact
+                                                                            contact: a.contact,
+                                                                            status: a.status,
+                                                                            statusId: mapStatusLabelToId(a.status)
                                                                         }
                                                                     });
                                                                     }
@@ -3069,7 +3071,9 @@ export default function AppointmentTable() {
                                                                         appointmentId: appointment.appointmentId,
                                                                         age: appointment.age,
                                                                         gender: appointment.gender,
-                                                                        contact: appointment.contact
+                                                                        contact: appointment.contact,
+                                                                        status: appointment.status,
+                                                                        statusId: mapStatusLabelToId(appointment.status)
                                                                     }
                                                                 });
                                                             }
@@ -4574,7 +4578,9 @@ export default function AppointmentTable() {
                                                                             appointmentId: a.appointmentId,
                                                                             age: a.age,
                                                                             gender: a.gender,
-                                                                            contact: a.contact
+                                                                            contact: a.contact,
+                                                                            status: a.status,
+                                                                            statusId: mapStatusLabelToId(a.status)
                                                                         }
                                                                     });
                                                                 }
@@ -5191,7 +5197,9 @@ export default function AppointmentTable() {
                                                                     appointmentId: appointment.appointmentId,
                                                                     age: appointment.age,
                                                                     gender: appointment.gender,
-                                                                    contact: appointment.contact
+                                                                    contact: appointment.contact,
+                                                                    status: appointment.status,
+                                                                    statusId: mapStatusLabelToId(appointment.status)
                                                                 }
                                                             });
                                                         }
