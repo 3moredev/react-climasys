@@ -18,6 +18,7 @@ import AddDiagnosisPopup from "../components/AddDiagnosisPopup";
 import AddMedicinePopup, { MedicineData } from "../components/AddMedicinePopup";
 import AddPrescriptionPopup, { PrescriptionData } from "../components/AddPrescriptionPopup";
 import AddTestLabPopup, { TestLabData } from "../components/AddTestLabPopup";
+import PastServicesPopup from "../components/PastServicesPopup";
 
 // Specific styles for Duration/Comment input in table
 const durationCommentStyles = `
@@ -252,6 +253,13 @@ export default function Treatment() {
     const [currentVisitIndex, setCurrentVisitIndex] = useState(0);
     const [previousVisitsError, setPreviousVisitsError] = useState<string | null>(null);
     const [allDoctors, setAllDoctors] = useState<any[]>([]);
+
+    // Past Services dates (service visits)
+    const [pastServiceDates, setPastServiceDates] = useState<string[]>([]);
+    const [loadingPastServices, setLoadingPastServices] = useState<boolean>(false);
+    const [pastServicesError, setPastServicesError] = useState<string | null>(null);
+    const [showPastServicesPopup, setShowPastServicesPopup] = useState(false);
+    const [selectedPastServiceDate, setSelectedPastServiceDate] = useState<string | null>(null);
 
     // Complaint popup state
     const [showComplaintPopup, setShowComplaintPopup] = useState(false);
@@ -865,6 +873,57 @@ export default function Treatment() {
         return () => { cancelled = true; };
     }, []);
 
+    // Load Previous Service Visit Dates for sidebar
+    React.useEffect(() => {
+        let cancelled = false;
+        async function loadPastServices() {
+            try {
+                if (!treatmentData?.patientId || !sessionData?.doctorId || !sessionData?.clinicId) return;
+                setLoadingPastServices(true);
+                setPastServicesError(null);
+                const todaysVisitDate = new Date().toISOString().slice(0, 10);
+                const resp: any = await patientService.getPreviousServiceVisitDates({
+                    patientId: String(treatmentData.patientId),
+                    // doctorId: 'DR-00C10',
+                    clinicId: String(sessionData.clinicId),
+                    todaysVisitDate
+                });
+                if (cancelled) return;
+                // Extract visitDate from visits array (priority: resp.visits)
+                let dates: string[] = [];
+                if (resp?.success && Array.isArray(resp?.visits)) {
+                    // Parse visits array and extract visitDate
+                    dates = resp.visits
+                        .map((visit: any) => visit?.visitDate || visit?.visit_date || visit?.Visit_Date)
+                        .filter((d: any) => d && String(d).trim() !== '')
+                        .map((d: any) => String(d));
+                } else {
+                    // Fallback to previous parsing logic
+                    const tryArrays: any[] = [];
+                    if (Array.isArray(resp)) tryArrays.push(resp);
+                    if (Array.isArray(resp?.dates)) tryArrays.push(resp.dates);
+                    if (Array.isArray(resp?.resultSet1)) tryArrays.push(resp.resultSet1);
+                    if (Array.isArray(resp?.visits)) tryArrays.push(resp.visits);
+                    const firstArray = tryArrays.find(arr => Array.isArray(arr)) || [];
+                    if (firstArray.length > 0) {
+                        dates = firstArray.map((item: any) => {
+                            if (typeof item === 'string') return item;
+                            const d = item?.visitDate || item?.visit_date || item?.Visit_Date || item?.appointmentDate || item?.appointment_date || item?.serviceDate || item?.date;
+                            return d ? String(d) : '';
+                        }).filter((s: string) => !!s);
+                    }
+                }
+                setPastServiceDates(dates);
+            } catch (e: any) {
+                if (!cancelled) setPastServicesError(e?.message || 'Failed to load past services');
+            } finally {
+                if (!cancelled) setLoadingPastServices(false);
+            }
+        }
+        loadPastServices();
+        return () => { cancelled = true; };
+    }, [treatmentData?.patientId, sessionData?.doctorId, sessionData?.clinicId]);
+
     const handleBackToAppointments = () => {
         navigate('/appointment');
     };
@@ -1106,6 +1165,28 @@ export default function Treatment() {
         } catch (error) {
             return dateString; // Return original if parsing fails
         }
+    };
+
+    // Helper function to format date as dd-mmm-yy for Past Services
+    const formatPastServiceDate = (dateString: string): string => {
+        if (!dateString) return 'N/A';
+        try {
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) return dateString;
+            const day = String(date.getDate()).padStart(2, '0');
+            const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const month = monthNames[date.getMonth()];
+            const year = String(date.getFullYear()).slice(-2);
+            return `${day}-${month}-${year}`;
+        } catch (error) {
+            return dateString;
+        }
+    };
+
+    // Handler for clicking on a past service date
+    const handlePastServiceDateClick = (dateStr: string) => {
+        setSelectedPastServiceDate(dateStr);
+        setShowPastServicesPopup(true);
     };
 
     // Map previous visit data to form data (copied from Appointment page)
@@ -1649,9 +1730,9 @@ export default function Treatment() {
                 patientId: treatmentData?.patientId?.toString() || '',
                 doctorId: String(doctorId),
                 clinicId: String(clinicId),
-                shiftId: parseInt(String(shiftId || clinicId)) || 1, // Use shiftId or fallback to clinicId, default to 1
+                shiftId: String(parseInt(String(shiftId || clinicId)) || 1), // Use shiftId or fallback to clinicId, default to 1
                 visitDate: toYyyyMmDd(new Date()) + 'T' + new Date().toTimeString().slice(0, 8),
-                patientVisitNo: parseInt(String(patientVisitNo)) || 0,
+                patientVisitNo: String(parseInt(String(patientVisitNo)) || 0),
                 
                 // Referral information
                 referBy: (formData.referralBy === 'Self')
@@ -1773,8 +1854,8 @@ export default function Treatment() {
             if (isSubmit) {
                 const overwriteRequest: SaveMedicineOverwriteRequest = {
                     visitDate: visitData.visitDate,
-                    patientVisitNo: visitData.patientVisitNo,
-                    shiftId: visitData.shiftId,
+                    patientVisitNo: Number(visitData.patientVisitNo) || 0,
+                    shiftId: Number(visitData.shiftId) || 1,
                     clinicId: visitData.clinicId,
                     doctorId: visitData.doctorId,
                     patientId: visitData.patientId,
@@ -2022,10 +2103,25 @@ export default function Treatment() {
     };
 
     const handleBillingChange = (field: string, value: string) => {
-        setBillingData(prev => ({
-            ...prev,
-            [field]: value
-        }));
+        setBillingData(prev => {
+            const updated = {
+                ...prev,
+                [field]: value
+            };
+            
+            // When discount changes, automatically subtract it from fees_collected
+            // Formula: fees_collected = billed - discount
+            if (field === 'discount') {
+                const billedAmount = parseFloat(prev.billed) || 0;
+                const discountAmount = parseFloat(value) || 0;
+                // Calculate new fees_collected: billed minus discount (handles float/double)
+                const newFeesCollected = Math.max(0, billedAmount - discountAmount);
+                // Format to 2 decimal places for float/double values, or empty string if 0
+                updated.feesCollected = newFeesCollected > 0 ? newFeesCollected.toFixed(2) : '';
+            }
+            
+            return updated;
+        });
     };
 
     if (loading) {
@@ -2235,18 +2331,60 @@ export default function Treatment() {
                                 Past Services
                             </div>
                             <div style={{ padding: '0' }}>
-                                <div style={{
-                                    padding: '10px 15px',
-                                    borderBottom: '1px solid #e0e0e0',
-                                    backgroundColor: 'white',
-                                    fontSize: '13px',
-                                    display: 'flex',
-                                    alignItems: 'center'
-                                }}>
-                                    <div style={{ fontWeight: '500', color: '#333' }}>
-                                        03-May-19
+                                {loadingPastServices ? (
+                                    <div style={{ 
+                                        padding: '10px 15px',
+                                        textAlign: 'center',
+                                        color: '#666',
+                                        fontSize: '12px'
+                                    }}>
+                                        Loading...
                                     </div>
-                                </div>
+                                ) : pastServicesError ? (
+                                    <div style={{ 
+                                        padding: '10px 15px',
+                                        textAlign: 'center',
+                                        color: '#d32f2f',
+                                        fontSize: '12px',
+                                        backgroundColor: '#ffebee',
+                                        border: '1px solid #ffcdd2',
+                                        margin: '8px'
+                                    }}>
+                                        {pastServicesError}
+                                    </div>
+                                ) : pastServiceDates.length === 0 ? (
+                                    <div style={{ 
+                                        padding: '10px 15px',
+                                        textAlign: 'center',
+                                        color: '#666',
+                                        fontSize: '12px'
+                                    }}>
+                                        No past services
+                                    </div>
+                                ) : (
+                                    pastServiceDates.map((dateStr, idx) => (
+                                        <div 
+                                            key={`${dateStr}_${idx}`}
+                                            style={{
+                                                padding: '10px 15px',
+                                                borderBottom: '1px solid #e0e0e0',
+                                                backgroundColor: idx % 2 === 0 ? '#ffffff' : '#f9f9f9',
+                                                fontSize: '13px'
+                                            }}
+                                        >
+                                            <a
+                                                href="#"
+                                                onClick={(e) => { 
+                                                    e.preventDefault(); 
+                                                    handlePastServiceDateClick(dateStr);
+                                                }}
+                                                style={{ color: '#1976d2', textDecoration: 'underline', cursor: 'pointer' }}
+                                            >
+                                                {formatPastServiceDate(dateStr)}
+                                            </a>
+                                        </div>
+                                    ))
+                                )}
                             </div>
                         </div>
                     </div>
@@ -2538,35 +2676,232 @@ export default function Treatment() {
                             </table>
                         </div>
 
-                        <div style={{ border: '1px solid #e0e0e0', borderRadius: 4, overflow: 'hidden', marginBottom: 12 }}>
-                            {/* <div style={{ background: '#1976d2', color: '#fff', padding: '8px 10px', fontWeight: 600, fontSize: 13 }}>Instructions</div> */}
-                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                                <thead>
-                                    <tr style={{ background: '#1976d2' }}>
-                                        {['Sr.','Instructions','B','L','D','Days','Instruction'].map(h => (
-                                            <th key={h} style={{ padding: 8, borderBottom: '1px solid #e0e0e0', fontSize: 12, color: '#fff', textAlign: 'left' }}>{h}</th>
-                                        ))}
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {mlInstructionsTable.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={7} style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12, color: '#777' }}>No instructions</td>
-                                        </tr>
-                                    ) : mlInstructionsTable.map((row, idx) => (
-                                        <tr key={row.id} style={{ background: idx % 2 === 0 ? '#fff' : '#fafafa' }}>
-                                            <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{idx+1}</td>
-                                            <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{row.prescription}</td>
-                                            <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{row.b || '1'}</td>
-                                            <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{row.l || '1'}</td>
-                                            <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{row.d || '1'}</td>
-                                            <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{row.days}</td>
-                                            <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{row.instruction}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+                        {/* Instructions Section */}
+                        {/* {mlInstructionsTable.length > 0 && ( */}
+                            <div style={{ marginBottom: 12 }}>
+                                <div style={{
+                                    backgroundColor: '#1976d2',
+                                    color: 'white',
+                                    padding: '12px 16px',
+                                    borderRadius: '4px 4px 0 0',
+                                    fontWeight: '600',
+                                    fontSize: '16px'
+                                }}>
+                                    Instructions
+                                </div>
+
+                                {/* First Table: Instructions Summary with B/L/D/Days */}
+                                <div style={{
+                                    border: '1px solid #ddd',
+                                    borderTop: 'none',
+                                    borderRadius: '0',
+                                    overflow: 'hidden'
+                                }}>
+                                    <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+                                        <thead>
+                                            <tr style={{ backgroundColor: '#f5f5f5' }}>
+                                                <th style={{
+                                                    padding: '12px',
+                                                    textAlign: 'left',
+                                                    borderBottom: '1px solid #ddd',
+                                                    fontWeight: '600',
+                                                    color: '#333',
+                                                    width: '60px'
+                                                }}>
+                                                    Sr.
+                                                </th>
+                                                <th style={{
+                                                    padding: '12px',
+                                                    textAlign: 'left',
+                                                    borderBottom: '1px solid #ddd',
+                                                    fontWeight: '600',
+                                                    color: '#333'
+                                                }}>
+                                                    Instructions
+                                                </th>
+                                                <th style={{
+                                                    padding: '12px',
+                                                    textAlign: 'left',
+                                                    borderBottom: '1px solid #ddd',
+                                                    fontWeight: '600',
+                                                    color: '#333',
+                                                    width: '60px'
+                                                }}>
+                                                    B
+                                                </th>
+                                                <th style={{
+                                                    padding: '12px',
+                                                    textAlign: 'left',
+                                                    borderBottom: '1px solid #ddd',
+                                                    fontWeight: '600',
+                                                    color: '#333',
+                                                    width: '60px'
+                                                }}>
+                                                    L
+                                                </th>
+                                                <th style={{
+                                                    padding: '12px',
+                                                    textAlign: 'left',
+                                                    borderBottom: '1px solid #ddd',
+                                                    fontWeight: '600',
+                                                    color: '#333',
+                                                    width: '60px'
+                                                }}>
+                                                    D
+                                                </th>
+                                                <th style={{
+                                                    padding: '12px',
+                                                    textAlign: 'left',
+                                                    borderBottom: '1px solid #ddd',
+                                                    fontWeight: '600',
+                                                    color: '#333',
+                                                    width: '80px'
+                                                }}>
+                                                    Days
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {mlInstructionsTable.map((row, idx) => (
+                                                <tr key={row.id}>
+                                                    <td style={{
+                                                        padding: '12px',
+                                                        borderBottom: '1px solid #eee',
+                                                        color: '#666',
+                                                        height: '38px',
+                                                        fontSize: '14px'
+                                                    }}>
+                                                        {idx + 1}
+                                                    </td>
+                                                    <td style={{
+                                                        padding: '12px',
+                                                        borderBottom: '1px solid #eee',
+                                                        color: '#666',
+                                                        height: '38px',
+                                                        fontSize: '14px'
+                                                    }}>
+                                                        {row.prescription}
+                                                    </td>
+                                                    <td style={{
+                                                        padding: '12px',
+                                                        borderBottom: '1px solid #eee',
+                                                        color: '#666',
+                                                        height: '38px',
+                                                        fontSize: '14px'
+                                                    }}>
+                                                        {row.b || '1'}
+                                                    </td>
+                                                    <td style={{
+                                                        padding: '12px',
+                                                        borderBottom: '1px solid #eee',
+                                                        color: '#666',
+                                                        height: '38px',
+                                                        fontSize: '14px'
+                                                    }}>
+                                                        {row.l || '1'}
+                                                    </td>
+                                                    <td style={{
+                                                        padding: '12px',
+                                                        borderBottom: '1px solid #eee',
+                                                        color: '#666',
+                                                        height: '38px',
+                                                        fontSize: '14px'
+                                                    }}>
+                                                        {row.d || '1'}
+                                                    </td>
+                                                    <td style={{
+                                                        padding: '12px',
+                                                        borderBottom: '1px solid #eee',
+                                                        color: '#666',
+                                                        height: '38px',
+                                                        fontSize: '14px'
+                                                    }}>
+                                                        {row.days}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                {/* Second Table: Detailed Instructions */}
+                                <div style={{
+                                    border: '1px solid #ddd',
+                                    borderTop: 'none',
+                                    borderRadius: '0 0 4px 4px',
+                                    overflow: 'hidden'
+                                }}>
+                                    <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+                                        <thead>
+                                            <tr style={{ backgroundColor: '#f5f5f5' }}>
+                                                <th style={{
+                                                    padding: '12px',
+                                                    textAlign: 'left',
+                                                    borderBottom: '1px solid #ddd',
+                                                    fontWeight: '600',
+                                                    color: '#333',
+                                                    width: '60px'
+                                                }}>
+                                                    Sr.
+                                                </th>
+                                                <th style={{
+                                                    padding: '12px',
+                                                    textAlign: 'left',
+                                                    borderBottom: '1px solid #ddd',
+                                                    fontWeight: '600',
+                                                    color: '#333',
+                                                    width: '200px'
+                                                }}>
+                                                    Instructions
+                                                </th>
+                                                <th style={{
+                                                    padding: '12px',
+                                                    textAlign: 'left',
+                                                    borderBottom: '1px solid #ddd',
+                                                    fontWeight: '600',
+                                                    color: '#333'
+                                                }}>
+                                                    Instruction
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {mlInstructionsTable.map((row, idx) => (
+                                                <tr key={row.id}>
+                                                    <td style={{
+                                                        padding: '12px',
+                                                        borderBottom: '1px solid #eee',
+                                                        color: '#666',
+                                                        height: '38px',
+                                                        fontSize: '14px'
+                                                    }}>
+                                                        {idx + 1}
+                                                    </td>
+                                                    <td style={{
+                                                        padding: '12px',
+                                                        borderBottom: '1px solid #eee',
+                                                        color: '#666',
+                                                        height: '38px',
+                                                        fontSize: '14px'
+                                                    }}>
+                                                        {row.prescription}
+                                                    </td>
+                                                    <td style={{
+                                                        padding: '12px',
+                                                        borderBottom: '1px solid #eee',
+                                                        color: '#666',
+                                                        height: '38px',
+                                                        fontSize: '14px'
+                                                    }}>
+                                                        {row.instruction}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        
 
                         <div style={{ border: '1px solid #e0e0e0', borderRadius: 4, overflow: 'hidden', marginBottom: 12 }}>
                             {/* <div style={{ background: '#1976d2', color: '#fff', padding: '8px 10px', fontWeight: 600, fontSize: 13 }}>Suggested Tests</div> */}
@@ -2890,6 +3225,23 @@ export default function Treatment() {
             )}
 
             {/* Addendum Modal moved to Treatment page */}
+
+            {/* Past Services Popup */}
+            <PastServicesPopup
+                open={showPastServicesPopup}
+                onClose={() => {
+                    setShowPastServicesPopup(false);
+                    setSelectedPastServiceDate(null);
+                }}
+                date={selectedPastServiceDate}
+                patientData={treatmentData ? {
+                    patientName: treatmentData.patientName,
+                    gender: treatmentData.gender,
+                    age: treatmentData.age,
+                    patientId: treatmentData.patientId
+                } : null}
+                sessionData={sessionData}
+            />
 
         </div>
     );

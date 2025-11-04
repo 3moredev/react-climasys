@@ -2798,16 +2798,18 @@ export default function AppointmentTable() {
                                                                 <img src="/images/avatar/Visit_details.svg" alt="Checkout" style={{ width: 16, height: 16 }} />
                                                             </div>
 
-                                                            {/* Treatment Button - Enabled for WITH DOCTOR, CONSULT ON CALL, SAVE, COLLECTION, or WAITING FOR MEDICINE */}
+                                                            {/* Treatment Button - Enabled for WITH DOCTOR, CONSULT ON CALL, SAVE, COLLECTION, WAITING FOR MEDICINE, or COMPLETE */}
                                                             <div
                                                                 title={(() => {
+                                                                    const statusId = mapStatusLabelToId(a.status);
                                                                     const normalizedStatus = normalizeStatusLabel(a.status);
-                                                                    const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'WAITING FOR MEDICINE';
+                                                                    const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'WAITING FOR MEDICINE' || statusId === 5;
                                                                     return isEnabled ? "Treatment" : "Treatment (Disabled - Patient not with doctor)";
                                                                 })()}
                                                                 onClick={() => {
+                                                                    const statusId = mapStatusLabelToId(a.status);
                                                                     const normalizedStatus = normalizeStatusLabel(a.status);
-                                                                    const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'WAITING FOR MEDICINE';
+                                                                    const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'WAITING FOR MEDICINE' || statusId === 5;
                                                                     if (isEnabled) {
                                                                         // Navigate to treatment or open modal
                                                                         console.log('Treatment clicked for patient:', a.patientId);
@@ -2838,39 +2840,45 @@ export default function AppointmentTable() {
                                                                     width: '28px',
                                                                     height: '28px',
                                                                     cursor: (() => {
+                                                                        const statusId = mapStatusLabelToId(a.status);
                                                                         const normalizedStatus = normalizeStatusLabel(a.status);
-                                                                        const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'WAITING FOR MEDICINE';
+                                                                        const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'WAITING FOR MEDICINE' || statusId === 5;
                                                                         return isEnabled ? 'pointer' : 'not-allowed';
                                                                     })(),
                                                                     color: (() => {
+                                                                        const statusId = mapStatusLabelToId(a.status);
                                                                         const normalizedStatus = normalizeStatusLabel(a.status);
-                                                                        const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'WAITING FOR MEDICINE';
+                                                                        const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'WAITING FOR MEDICINE' || statusId === 5;
                                                                         return isEnabled ? '#607D8B' : '#BDBDBD';
                                                                     })(),
                                                                     backgroundColor: 'transparent',
                                                                     borderRadius: '4px',
                                                                     border: (() => {
+                                                                        const statusId = mapStatusLabelToId(a.status);
                                                                         const normalizedStatus = normalizeStatusLabel(a.status);
-                                                                        const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'WAITING FOR MEDICINE';
+                                                                        const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'WAITING FOR MEDICINE' || statusId === 5;
                                                                         return isEnabled ? '1px solid #ddd' : '1px solid #E0E0E0';
                                                                     })(),
                                                                     opacity: (() => {
+                                                                        const statusId = mapStatusLabelToId(a.status);
                                                                         const normalizedStatus = normalizeStatusLabel(a.status);
-                                                                        const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'WAITING FOR MEDICINE';
+                                                                        const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'WAITING FOR MEDICINE' || statusId === 5;
                                                                         return isEnabled ? 1 : 0.5;
                                                                     })()
                                                                 }}
                                                                 onMouseEnter={(e) => {
+                                                                    const statusId = mapStatusLabelToId(a.status);
                                                                     const normalizedStatus = normalizeStatusLabel(a.status);
-                                                                    const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'WAITING FOR MEDICINE';
+                                                                    const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'WAITING FOR MEDICINE' || statusId === 5;
                                                                     if (isEnabled) {
                                                                         e.currentTarget.style.backgroundColor = '#FFF3E0';
                                                                         e.currentTarget.style.borderColor = '#FF9800';
                                                                     }
                                                                 }}
                                                                 onMouseLeave={(e) => {
+                                                                    const statusId = mapStatusLabelToId(a.status);
                                                                     const normalizedStatus = normalizeStatusLabel(a.status);
-                                                                    const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'WAITING FOR MEDICINE';
+                                                                    const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'WAITING FOR MEDICINE' || statusId === 5;
                                                                     if (isEnabled) {
                                                                         e.currentTarget.style.backgroundColor = 'transparent';
                                                                         e.currentTarget.style.borderColor = '#ddd';
@@ -2884,8 +2892,9 @@ export default function AppointmentTable() {
                                                                         width: 16, 
                                                                         height: 16,
                                                                         filter: (() => {
+                                                                            const statusId = mapStatusLabelToId(a.status);
                                                                             const normalizedStatus = normalizeStatusLabel(a.status);
-                                                                            const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'WAITING FOR MEDICINE';
+                                                                            const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'WAITING FOR MEDICINE' || statusId === 5;
                                                                             return isEnabled ? 'none' : 'grayscale(100%)';
                                                                         })()
                                                                     }} 
@@ -3049,13 +3058,15 @@ export default function AppointmentTable() {
                                                     <div
                                                         className="crm-btn ms-auto"
                                                         title={(() => {
+                                                            const statusId = mapStatusLabelToId(appointment.status);
                                                             const normalizedStatus = normalizeStatusLabel(appointment.status);
-                                                            const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'WAITING FOR MEDICINE';
+                                                            const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'WAITING FOR MEDICINE' || statusId === 5;
                                                             return isEnabled ? "Treatment" : "Treatment (Disabled - Patient not with doctor)";
                                                         })()}
                                                         onClick={() => {
+                                                            const statusId = mapStatusLabelToId(appointment.status);
                                                             const normalizedStatus = normalizeStatusLabel(appointment.status);
-                                                            const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'WAITING FOR MEDICINE';
+                                                            const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'WAITING FOR MEDICINE' || statusId === 5;
                                                             if (isEnabled) {
                                                                 // Treatment button functionality - can be implemented as needed
                                                                 console.log('Treatment clicked for patient:', appointment.patientId);
@@ -3080,28 +3091,33 @@ export default function AppointmentTable() {
                                                         }}
                                                         style={{
                                                             cursor: (() => {
+                                                                const statusId = mapStatusLabelToId(appointment.status);
                                                                 const normalizedStatus = normalizeStatusLabel(appointment.status);
-                                                                const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'WAITING FOR MEDICINE';
+                                                                const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'WAITING FOR MEDICINE' || statusId === 5;
                                                                 return isEnabled ? 'pointer' : 'not-allowed';
                                                             })(),
                                                             backgroundColor: (() => {
+                                                                const statusId = mapStatusLabelToId(appointment.status);
                                                                 const normalizedStatus = normalizeStatusLabel(appointment.status);
-                                                                const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'WAITING FOR MEDICINE';
+                                                                const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'WAITING FOR MEDICINE' || statusId === 5;
                                                                 return isEnabled ? '#ECEFF1' : '#F5F5F5';
                                                             })(),
                                                             color: (() => {
+                                                                const statusId = mapStatusLabelToId(appointment.status);
                                                                 const normalizedStatus = normalizeStatusLabel(appointment.status);
-                                                                const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'WAITING FOR MEDICINE';
+                                                                const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'WAITING FOR MEDICINE' || statusId === 5;
                                                                 return isEnabled ? '#607D8B' : '#BDBDBD';
                                                             })(),
                                                             border: (() => {
+                                                                const statusId = mapStatusLabelToId(appointment.status);
                                                                 const normalizedStatus = normalizeStatusLabel(appointment.status);
-                                                                const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'WAITING FOR MEDICINE';
+                                                                const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'WAITING FOR MEDICINE' || statusId === 5;
                                                                 return isEnabled ? '1px solid #CFD8DC' : '1px solid #E0E0E0';
                                                             })(),
                                                             opacity: (() => {
+                                                                const statusId = mapStatusLabelToId(appointment.status);
                                                                 const normalizedStatus = normalizeStatusLabel(appointment.status);
-                                                                const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'WAITING FOR MEDICINE';
+                                                                const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'WAITING FOR MEDICINE' || statusId === 5;
                                                                 return isEnabled ? 1 : 0.5;
                                                             })()
                                                         }}
@@ -3113,8 +3129,9 @@ export default function AppointmentTable() {
                                                                 width: 16, 
                                                                 height: 16, 
                                                                 filter: (() => {
+                                                                    const statusId = mapStatusLabelToId(appointment.status);
                                                                     const normalizedStatus = normalizeStatusLabel(appointment.status);
-                                                                    const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'WAITING FOR MEDICINE';
+                                                                    const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'WAITING FOR MEDICINE' || statusId === 5;
                                                                     return isEnabled ? 'brightness(0)' : 'grayscale(100%) brightness(0.5)';
                                                                 })()
                                                             }} 
@@ -3952,6 +3969,9 @@ export default function AppointmentTable() {
                                                         <span style={{ fontSize: '0.9rem', color: '#263238' }}>{(a as any).statusPending || a.status}</span>
                                                         <div
                                                             onClick={async (e) => {
+                                                                const statusId = mapStatusLabelToId(a.status);
+                                                                const shouldDisable = isReceptionist && statusId >= 2;
+                                                                if (shouldDisable) return; // Disable status dropdown for reception when statusId >= 2
                                                                 const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
                                                                 setMenuPosition({ top: rect.bottom + 6, left: rect.left - 66 });
                                                                 // Fetch clinic-based status options on open
@@ -3989,17 +4009,34 @@ export default function AppointmentTable() {
                                                                 setOpenStatusIndex(openStatusIndex === originalIndex ? null : originalIndex);
                                                             }}
                                                             aria-label="Change Status"
-                                                            title="Change Status"
+                                                            title={(() => {
+                                                                const statusId = mapStatusLabelToId(a.status);
+                                                                const shouldDisable = isReceptionist && statusId >= 2;
+                                                                return shouldDisable ? "Change Status (Disabled - Status >= 2)" : "Change Status";
+                                                            })()}
                                                             style={{
                                                                 display: "inline-flex",
                                                                 alignItems: "center",
                                                                 justifyContent: "center",
                                                                 width: "28px",
                                                                 height: "28px",
-                                                                cursor: "pointer",
+                                                                cursor: (() => {
+                                                                    const statusId = mapStatusLabelToId(a.status);
+                                                                    const shouldDisable = isReceptionist && statusId >= 2;
+                                                                    return shouldDisable ? 'not-allowed' : 'pointer';
+                                                                })(),
                                                                 color: "#607D8B",
-                                                                backgroundColor: "transparent",
+                                                                backgroundColor: (() => {
+                                                                    const statusId = mapStatusLabelToId(a.status);
+                                                                    const shouldDisable = isReceptionist && statusId >= 2;
+                                                                    return shouldDisable ? '#f5f5f5' : 'transparent';
+                                                                })(),
                                                                 borderRadius: "4px",
+                                                                opacity: (() => {
+                                                                    const statusId = mapStatusLabelToId(a.status);
+                                                                    const shouldDisable = isReceptionist && statusId >= 2;
+                                                                    return shouldDisable ? 0.5 : 1;
+                                                                })()
                                                             }}
                                                         >
                                                             <MoreVert fontSize="small" />
@@ -4092,6 +4129,8 @@ export default function AppointmentTable() {
                                                         <div
                                                             title={(() => {
                                                                 const statusId = mapStatusLabelToId(a.status);
+                                                                const shouldDisable = isReceptionist && statusId >= 2;
+                                                                if (shouldDisable) return "Lab Details (Disabled - Status >= 2)";
                                                                 const isWaiting = statusId === 1;
                                                                 const isComplete = statusId === 5;
                                                                 const shouldEnable = !isReceptionist || isWaiting || isComplete;
@@ -4099,6 +4138,8 @@ export default function AppointmentTable() {
                                                             })()}
                                                             onClick={() => {
                                                                 const statusId = mapStatusLabelToId(a.status);
+                                                                const shouldDisable = isReceptionist && statusId >= 2;
+                                                                if (shouldDisable) return; // Disable for reception when statusId >= 2
                                                                 const isWaiting = statusId === 1;
                                                                 const isComplete = statusId === 5;
                                                                 const shouldEnable = !isReceptionist || isWaiting || isComplete;
@@ -4114,6 +4155,8 @@ export default function AppointmentTable() {
                                                                 height: '28px',
                                                                 cursor: (() => {
                                                                     const statusId = mapStatusLabelToId(a.status);
+                                                                    const shouldDisable = isReceptionist && statusId >= 2;
+                                                                    if (shouldDisable) return 'not-allowed';
                                                                     const isWaiting = statusId === 1;
                                                                     const isComplete = statusId === 5;
                                                                     const shouldEnable = !isReceptionist || isWaiting || isComplete;
@@ -4122,6 +4165,8 @@ export default function AppointmentTable() {
                                                                 color: '#000000',
                                                                 backgroundColor: (() => {
                                                                     const statusId = mapStatusLabelToId(a.status);
+                                                                    const shouldDisable = isReceptionist && statusId >= 2;
+                                                                    if (shouldDisable) return '#f5f5f5';
                                                                     const isWaiting = statusId === 1;
                                                                     const isComplete = statusId === 5;
                                                                     const shouldEnable = !isReceptionist || isWaiting || isComplete;
@@ -4131,6 +4176,8 @@ export default function AppointmentTable() {
                                                                 border: '1px solid #ddd',
                                                                 opacity: (() => {
                                                                     const statusId = mapStatusLabelToId(a.status);
+                                                                    const shouldDisable = isReceptionist && statusId >= 2;
+                                                                    if (shouldDisable) return 0.5;
                                                                     const isWaiting = statusId === 1;
                                                                     const isComplete = statusId === 5;
                                                                     const shouldEnable = !isReceptionist || isWaiting || isComplete;
@@ -4139,6 +4186,8 @@ export default function AppointmentTable() {
                                                             }}
                                                             onMouseEnter={(e) => {
                                                                 const statusId = mapStatusLabelToId(a.status);
+                                                                const shouldDisable = isReceptionist && statusId >= 2;
+                                                                if (shouldDisable) return;
                                                                 const isWaiting = statusId === 1;
                                                                 const isComplete = statusId === 5;
                                                                 const shouldEnable = !isReceptionist || isWaiting || isComplete;
@@ -4148,6 +4197,8 @@ export default function AppointmentTable() {
                                                             }}
                                                             onMouseLeave={(e) => {
                                                                 const statusId = mapStatusLabelToId(a.status);
+                                                                const shouldDisable = isReceptionist && statusId >= 2;
+                                                                if (shouldDisable) return;
                                                                 const isWaiting = statusId === 1;
                                                                 const isComplete = statusId === 5;
                                                                 const shouldEnable = !isReceptionist || isWaiting || isComplete;
@@ -4161,8 +4212,15 @@ export default function AppointmentTable() {
 
                                                         {/* Save Button */}
                                                         <div
-                                                            title="Save"
+                                                            title={(() => {
+                                                                const statusId = mapStatusLabelToId(a.status);
+                                                                const shouldDisable = isReceptionist && statusId >= 2;
+                                                                return shouldDisable ? "Save (Disabled - Status >= 2)" : "Save";
+                                                            })()}
                                                             onClick={async () => {
+                                                                const statusId = mapStatusLabelToId(a.status);
+                                                                const shouldDisable = isReceptionist && statusId >= 2;
+                                                                if (shouldDisable) return;
                                                                 try {
                                                                     const pid = a.patientId;
                                                                     // Use the visit number from the selected appointment row
@@ -4256,18 +4314,36 @@ export default function AppointmentTable() {
                                                                 justifyContent: 'center',
                                                                 width: '28px',
                                                                 height: '28px',
-                                                                cursor: 'pointer',
+                                                                cursor: (() => {
+                                                                    const statusId = mapStatusLabelToId(a.status);
+                                                                    const shouldDisable = isReceptionist && statusId >= 2;
+                                                                    return shouldDisable ? 'not-allowed' : 'pointer';
+                                                                })(),
                                                                 color: '#607D8B',
-                                                                backgroundColor: 'transparent',
+                                                                backgroundColor: (() => {
+                                                                    const statusId = mapStatusLabelToId(a.status);
+                                                                    const shouldDisable = isReceptionist && statusId >= 2;
+                                                                    return shouldDisable ? '#f5f5f5' : 'transparent';
+                                                                })(),
                                                                 borderRadius: '4px',
                                                                 border: '1px solid #ddd',
-                                                                opacity: 1
+                                                                opacity: (() => {
+                                                                    const statusId = mapStatusLabelToId(a.status);
+                                                                    const shouldDisable = isReceptionist && statusId >= 2;
+                                                                    return shouldDisable ? 0.5 : 1;
+                                                                })()
                                                             }}
                                                             onMouseEnter={(e) => {
+                                                                const statusId = mapStatusLabelToId(a.status);
+                                                                const shouldDisable = isReceptionist && statusId >= 2;
+                                                                if (shouldDisable) return;
                                                                 e.currentTarget.style.backgroundColor = 'transparent';
                                                                 e.currentTarget.style.borderColor = 'black';
                                                             }}
                                                             onMouseLeave={(e) => {
+                                                                const statusId = mapStatusLabelToId(a.status);
+                                                                const shouldDisable = isReceptionist && statusId >= 2;
+                                                                if (shouldDisable) return;
                                                                 e.currentTarget.style.backgroundColor = 'transparent';
                                                                 e.currentTarget.style.borderColor = '#ddd';
                                                             }}
@@ -4279,6 +4355,8 @@ export default function AppointmentTable() {
                                                         <div
                                                             title={(() => {
                                                                 const statusId = mapStatusLabelToId(a.status);
+                                                                const shouldDisable = isReceptionist && statusId >= 2;
+                                                                if (shouldDisable) return "Delete (Disabled - Status >= 2)";
                                                                 const isWaiting = statusId === 1;
                                                                 const isComplete = statusId === 5;
                                                                 const shouldEnable = !isReceptionist || isWaiting || isComplete;
@@ -4286,6 +4364,8 @@ export default function AppointmentTable() {
                                                             })()}
                                                             onClick={async () => {
                                                                 const statusId = mapStatusLabelToId(a.status);
+                                                                const shouldDisable = isReceptionist && statusId >= 2;
+                                                                if (shouldDisable) return; // Disable for reception when statusId >= 2
                                                                 const isWaiting = statusId === 1;
                                                                 const isComplete = statusId === 5;
                                                                 const shouldEnable = !isReceptionist || isWaiting || isComplete;
@@ -4337,6 +4417,8 @@ export default function AppointmentTable() {
                                                                 height: '28px',
                                                                 cursor: (() => {
                                                                     const statusId = mapStatusLabelToId(a.status);
+                                                                    const shouldDisable = isReceptionist && statusId >= 2;
+                                                                    if (shouldDisable) return 'not-allowed';
                                                                     const isWaiting = statusId === 1;
                                                                     const isComplete = statusId === 5;
                                                                     const shouldEnable = !isReceptionist || isWaiting || isComplete;
@@ -4345,6 +4427,8 @@ export default function AppointmentTable() {
                                                                 color: '#607D8B',
                                                                 backgroundColor: (() => {
                                                                     const statusId = mapStatusLabelToId(a.status);
+                                                                    const shouldDisable = isReceptionist && statusId >= 2;
+                                                                    if (shouldDisable) return '#f5f5f5';
                                                                     const isWaiting = statusId === 1;
                                                                     const isComplete = statusId === 5;
                                                                     const shouldEnable = !isReceptionist || isWaiting || isComplete;
@@ -4354,6 +4438,8 @@ export default function AppointmentTable() {
                                                                 border: '1px solid #ddd',
                                                                 opacity: (() => {
                                                                     const statusId = mapStatusLabelToId(a.status);
+                                                                    const shouldDisable = isReceptionist && statusId >= 2;
+                                                                    if (shouldDisable) return 0.5;
                                                                     const isWaiting = statusId === 1;
                                                                     const isComplete = statusId === 5;
                                                                     const shouldEnable = !isReceptionist || isWaiting || isComplete;
@@ -4362,6 +4448,8 @@ export default function AppointmentTable() {
                                                             }}
                                                             onMouseEnter={(e) => {
                                                                 const statusId = mapStatusLabelToId(a.status);
+                                                                const shouldDisable = isReceptionist && statusId >= 2;
+                                                                if (shouldDisable) return;
                                                                 const isWaiting = statusId === 1;
                                                                 const isComplete = statusId === 5;
                                                                 const shouldEnable = !isReceptionist || isWaiting || isComplete;
@@ -4371,6 +4459,8 @@ export default function AppointmentTable() {
                                                             }}
                                                             onMouseLeave={(e) => {
                                                                 const statusId = mapStatusLabelToId(a.status);
+                                                                const shouldDisable = isReceptionist && statusId >= 2;
+                                                                if (shouldDisable) return;
                                                                 const isWaiting = statusId === 1;
                                                                 const isComplete = statusId === 5;
                                                                 const shouldEnable = !isReceptionist || isWaiting || isComplete;
@@ -4386,6 +4476,8 @@ export default function AppointmentTable() {
                                                         <div
                                                             title={(() => {
                                                                 const statusId = mapStatusLabelToId(a.status);
+                                                                const shouldDisable = isReceptionist && statusId >= 2;
+                                                                if (shouldDisable) return "Visit Details (Disabled - Status >= 2)";
                                                                 const isWaiting = statusId === 1;
                                                                 const isComplete = statusId === 5;
                                                                 const shouldEnable = !isReceptionist || isWaiting || isComplete;
@@ -4394,6 +4486,8 @@ export default function AppointmentTable() {
                                                             })()}
                                                             onClick={() => {
                                                                 const statusId = mapStatusLabelToId(a.status);
+                                                                const shouldDisable = isReceptionist && statusId >= 2;
+                                                                if (shouldDisable) return; // Disable for reception when statusId >= 2
                                                                 const isWaiting = statusId === 1;
                                                                 const isComplete = statusId === 5;
                                                                 const shouldEnable = !isReceptionist || isWaiting || isComplete;
@@ -4410,6 +4504,8 @@ export default function AppointmentTable() {
                                                                 height: '28px',
                                                                 cursor: (() => {
                                                                     const statusId = mapStatusLabelToId(a.status);
+                                                                    const shouldDisable = isReceptionist && statusId >= 2;
+                                                                    if (shouldDisable) return 'not-allowed';
                                                                     const isWaiting = statusId === 1;
                                                                     const isComplete = statusId === 5;
                                                                     const shouldEnable = !isReceptionist || isWaiting || isComplete;
@@ -4418,6 +4514,8 @@ export default function AppointmentTable() {
                                                                 color: '#607D8B',
                                                                 backgroundColor: (() => {
                                                                     const statusId = mapStatusLabelToId(a.status);
+                                                                    const shouldDisable = isReceptionist && statusId >= 2;
+                                                                    if (shouldDisable) return '#f5f5f5';
                                                                     const isWaiting = statusId === 1;
                                                                     const isComplete = statusId === 5;
                                                                     const shouldEnable = !isReceptionist || isWaiting || isComplete;
@@ -4428,6 +4526,8 @@ export default function AppointmentTable() {
                                                                 border: '1px solid #ddd',
                                                                 opacity: (() => {
                                                                     const statusId = mapStatusLabelToId(a.status);
+                                                                    const shouldDisable = isReceptionist && statusId >= 2;
+                                                                    if (shouldDisable) return 0.5;
                                                                     const isWaiting = statusId === 1;
                                                                     const isComplete = statusId === 5;
                                                                     const shouldEnable = !isReceptionist || isWaiting || isComplete;
@@ -4436,6 +4536,8 @@ export default function AppointmentTable() {
                                                             }}
                                                             onMouseEnter={(e) => {
                                                                 const statusId = mapStatusLabelToId(a.status);
+                                                                const shouldDisable = isReceptionist && statusId >= 2;
+                                                                if (shouldDisable) return;
                                                                 const isWaiting = statusId === 1;
                                                                 const isComplete = statusId === 5;
                                                                 const shouldEnable = !isReceptionist || isWaiting || isComplete;
@@ -4451,6 +4553,8 @@ export default function AppointmentTable() {
                                                             }}
                                                             onMouseLeave={(e) => {
                                                                 const statusId = mapStatusLabelToId(a.status);
+                                                                const shouldDisable = isReceptionist && statusId >= 2;
+                                                                if (shouldDisable) return;
                                                                 const isWaiting = statusId === 1;
                                                                 const isComplete = statusId === 5;
                                                                 const shouldEnable = !isReceptionist || isWaiting || isComplete;
@@ -4467,6 +4571,9 @@ export default function AppointmentTable() {
                                                             title={(() => {
                                                                 const statusId = mapStatusLabelToId(a.status);
                                                                 const isCollectible = statusId === 4 || statusId === 6;
+                                                                // Allow statusId 4 and 6 even for reception, otherwise disable for reception when statusId >= 2
+                                                                const shouldDisable = isReceptionist && statusId >= 2 && !isCollectible;
+                                                                if (shouldDisable) return "Collection (Disabled - Status >= 2)";
                                                                 const shouldEnable = !isReceptionist || isCollectible;
                                                                 if (!shouldEnable) return "Collection (Disabled for Reception)";
                                                                 return !isCollectible ? "Collection (Disabled - Status not Complete/Submited)" : "Collection";
@@ -4474,6 +4581,9 @@ export default function AppointmentTable() {
                                                             onClick={() => {
                                                                 const statusId = mapStatusLabelToId(a.status);
                                                                 const isCollectible = statusId === 4 || statusId === 6;
+                                                                // Allow statusId 4 and 6 even for reception, otherwise disable for reception when statusId >= 2
+                                                                const shouldDisable = isReceptionist && statusId >= 2 && !isCollectible;
+                                                                if (shouldDisable) return; // Disable for reception when statusId >= 2 (except statusId 4 and 6)
                                                                 const shouldEnable = !isReceptionist || isCollectible;
                                                                 if (!shouldEnable) return; // Disable for reception login unless COMPLETE or SUBMITTED
                                                                 if (!isCollectible) return;
@@ -4495,6 +4605,9 @@ export default function AppointmentTable() {
                                                             aria-disabled={(() => {
                                                                 const statusId = mapStatusLabelToId(a.status);
                                                                 const isCollectible = statusId === 4 || statusId === 6;
+                                                                // Allow statusId 4 and 6 even for reception, otherwise disable for reception when statusId >= 2
+                                                                const shouldDisable = isReceptionist && statusId >= 2 && !isCollectible;
+                                                                if (shouldDisable) return true;
                                                                 const shouldEnable = !isReceptionist || isCollectible;
                                                                 return !shouldEnable || !isCollectible;
                                                             })()}
@@ -4507,6 +4620,9 @@ export default function AppointmentTable() {
                                                                 cursor: (() => {
                                                                     const statusId = mapStatusLabelToId(a.status);
                                                                     const isCollectible = statusId === 4 || statusId === 6;
+                                                                    // Allow statusId 4 and 6 even for reception, otherwise disable for reception when statusId >= 2
+                                                                    const shouldDisable = isReceptionist && statusId >= 2 && !isCollectible;
+                                                                    if (shouldDisable) return 'not-allowed';
                                                                     const shouldEnable = !isReceptionist || isCollectible;
                                                                     return (shouldEnable && isCollectible) ? 'pointer' : 'not-allowed';
                                                                 })(),
@@ -4514,6 +4630,9 @@ export default function AppointmentTable() {
                                                                 backgroundColor: (() => {
                                                                     const statusId = mapStatusLabelToId(a.status);
                                                                     const isCollectible = statusId === 4 || statusId === 6;
+                                                                    // Allow statusId 4 and 6 even for reception, otherwise disable for reception when statusId >= 2
+                                                                    const shouldDisable = isReceptionist && statusId >= 2 && !isCollectible;
+                                                                    if (shouldDisable) return '#f5f5f5';
                                                                     const shouldEnable = !isReceptionist || isCollectible;
                                                                     if (!shouldEnable) return '#f5f5f5';
                                                                     return !isCollectible ? '#607D8B' : 'transparent';
@@ -4522,6 +4641,9 @@ export default function AppointmentTable() {
                                                                 border: (() => {
                                                                     const statusId = mapStatusLabelToId(a.status);
                                                                     const isCollectible = statusId === 4 || statusId === 6;
+                                                                    // Allow statusId 4 and 6 even for reception, otherwise disable for reception when statusId >= 2
+                                                                    const shouldDisable = isReceptionist && statusId >= 2 && !isCollectible;
+                                                                    if (shouldDisable) return '1px solid #ddd';
                                                                     const shouldEnable = !isReceptionist || isCollectible;
                                                                     if (!shouldEnable) return '1px solid #ddd';
                                                                     return !isCollectible ? '1px solid #607D8B' : '1px solid #ddd';
@@ -4529,6 +4651,9 @@ export default function AppointmentTable() {
                                                                 opacity: (() => {
                                                                     const statusId = mapStatusLabelToId(a.status);
                                                                     const isCollectible = statusId === 4 || statusId === 6;
+                                                                    // Allow statusId 4 and 6 even for reception, otherwise disable for reception when statusId >= 2
+                                                                    const shouldDisable = isReceptionist && statusId >= 2 && !isCollectible;
+                                                                    if (shouldDisable) return 0.5;
                                                                     const shouldEnable = !isReceptionist || isCollectible;
                                                                     return (shouldEnable && isCollectible) ? 1 : 0.5;
                                                                 })()
@@ -4536,6 +4661,9 @@ export default function AppointmentTable() {
                                                             onMouseEnter={(e) => {
                                                                 const statusId = mapStatusLabelToId(a.status);
                                                                 const isCollectible = statusId === 4 || statusId === 6;
+                                                                // Allow statusId 4 and 6 even for reception, otherwise disable for reception when statusId >= 2
+                                                                const shouldDisable = isReceptionist && statusId >= 2 && !isCollectible;
+                                                                if (shouldDisable) return;
                                                                 const shouldEnable = !isReceptionist || isCollectible;
                                                                 if (!shouldEnable || !isCollectible) return;
                                                                 e.currentTarget.style.backgroundColor = '#FFF3E0';
@@ -4544,6 +4672,9 @@ export default function AppointmentTable() {
                                                             onMouseLeave={(e) => {
                                                                 const statusId = mapStatusLabelToId(a.status);
                                                                 const isCollectible = statusId === 4 || statusId === 6;
+                                                                // Allow statusId 4 and 6 even for reception, otherwise disable for reception when statusId >= 2
+                                                                const shouldDisable = isReceptionist && statusId >= 2 && !isCollectible;
+                                                                if (shouldDisable) return;
                                                                 const shouldEnable = !isReceptionist || isCollectible;
                                                                 if (!shouldEnable || !isCollectible) return;
                                                                 e.currentTarget.style.backgroundColor = 'transparent';
@@ -4684,21 +4815,41 @@ export default function AppointmentTable() {
                                                 </div>
                                                 <div
                                                     onClick={(e) => {
+                                                        const statusId = mapStatusLabelToId(appointment.status);
+                                                        const shouldDisable = isReceptionist && statusId >= 2;
+                                                        if (shouldDisable) return; // Disable status dropdown for reception when statusId >= 2
                                                         const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
                                                         setMenuPosition({ top: rect.bottom + 6, left: rect.left - 120 });
                                                         setOpenStatusIndex(openStatusIndex === originalIndex ? null : originalIndex);
                                                     }}
-                                                    title="Change Status"
+                                                    title={(() => {
+                                                        const statusId = mapStatusLabelToId(appointment.status);
+                                                        const shouldDisable = isReceptionist && statusId >= 2;
+                                                        return shouldDisable ? "Change Status (Disabled - Status >= 2)" : "Change Status";
+                                                    })()}
                                                     style={{
                                                         display: 'inline-flex',
                                                         alignItems: 'center',
                                                         justifyContent: 'center',
                                                         width: '28px',
                                                         height: '28px',
-                                                        cursor: 'pointer',
+                                                        cursor: (() => {
+                                                            const statusId = mapStatusLabelToId(appointment.status);
+                                                            const shouldDisable = isReceptionist && statusId >= 2;
+                                                            return shouldDisable ? 'not-allowed' : 'pointer';
+                                                        })(),
                                                         color: '#000000',
-                                                        backgroundColor: 'transparent',
-                                                        borderRadius: '4px'
+                                                        backgroundColor: (() => {
+                                                            const statusId = mapStatusLabelToId(appointment.status);
+                                                            const shouldDisable = isReceptionist && statusId >= 2;
+                                                            return shouldDisable ? '#f5f5f5' : 'transparent';
+                                                        })(),
+                                                        borderRadius: '4px',
+                                                        opacity: (() => {
+                                                            const statusId = mapStatusLabelToId(appointment.status);
+                                                            const shouldDisable = isReceptionist && statusId >= 2;
+                                                            return shouldDisable ? 0.5 : 1;
+                                                        })()
                                                     }}
                                                 >
                                                     <MoreVert fontSize="small" />
@@ -4814,6 +4965,8 @@ export default function AppointmentTable() {
                                                         className="crm-btn"
                                                         title={(() => {
                                                             const statusId = mapStatusLabelToId(appointment.status);
+                                                            const shouldDisable = isReceptionist && statusId >= 2;
+                                                            if (shouldDisable) return "Lab Details (Disabled - Status >= 2)";
                                                             const isWaiting = statusId === 1;
                                                             const isComplete = statusId === 5;
                                                             const shouldEnable = !isReceptionist || isWaiting || isComplete;
@@ -4821,6 +4974,8 @@ export default function AppointmentTable() {
                                                         })()}
                                                         onClick={() => {
                                                             const statusId = mapStatusLabelToId(appointment.status);
+                                                            const shouldDisable = isReceptionist && statusId >= 2;
+                                                            if (shouldDisable) return; // Disable for reception when statusId >= 2
                                                             const isWaiting = statusId === 1;
                                                             const isComplete = statusId === 5;
                                                             const shouldEnable = !isReceptionist || isWaiting || isComplete;
@@ -4831,6 +4986,8 @@ export default function AppointmentTable() {
                                                         style={{
                                                             opacity: (() => {
                                                                 const statusId = mapStatusLabelToId(appointment.status);
+                                                                const shouldDisable = isReceptionist && statusId >= 2;
+                                                                if (shouldDisable) return 0.5;
                                                                 const isWaiting = statusId === 1;
                                                                 const isComplete = statusId === 5;
                                                                 const shouldEnable = !isReceptionist || isWaiting || isComplete;
@@ -4838,6 +4995,8 @@ export default function AppointmentTable() {
                                                             })(),
                                                             cursor: (() => {
                                                                 const statusId = mapStatusLabelToId(appointment.status);
+                                                                const shouldDisable = isReceptionist && statusId >= 2;
+                                                                if (shouldDisable) return 'not-allowed';
                                                                 const isWaiting = statusId === 1;
                                                                 const isComplete = statusId === 5;
                                                                 const shouldEnable = !isReceptionist || isWaiting || isComplete;
@@ -4845,6 +5004,8 @@ export default function AppointmentTable() {
                                                             })(),
                                                             backgroundColor: (() => {
                                                                 const statusId = mapStatusLabelToId(appointment.status);
+                                                                const shouldDisable = isReceptionist && statusId >= 2;
+                                                                if (shouldDisable) return '#f5f5f5';
                                                                 const isWaiting = statusId === 1;
                                                                 const isComplete = statusId === 5;
                                                                 const shouldEnable = !isReceptionist || isWaiting || isComplete;
@@ -4856,8 +5017,15 @@ export default function AppointmentTable() {
                                                     </div>
                                                     <div
                                                         className="crm-btn"
-                                                        title="Save"
+                                                        title={(() => {
+                                                            const statusId = mapStatusLabelToId(appointment.status);
+                                                            const shouldDisable = isReceptionist && statusId >= 2;
+                                                            return shouldDisable ? "Save (Disabled - Status >= 2)" : "Save";
+                                                        })()}
                                                         onClick={async () => {
+                                                            const statusId = mapStatusLabelToId(appointment.status);
+                                                            const shouldDisable = isReceptionist && statusId >= 2;
+                                                            if (shouldDisable) return;
                                                             try {
                                                                 const pid = appointment.patientId;
                                                                 // Use the visit number from the selected appointment card
@@ -4945,9 +5113,21 @@ export default function AppointmentTable() {
                                                             }
                                                         }}
                                                         style={{
-                                                            opacity: 1,
-                                                            cursor: 'pointer',
-                                                            backgroundColor: 'transparent'
+                                                            opacity: (() => {
+                                                                const statusId = mapStatusLabelToId(appointment.status);
+                                                                const shouldDisable = isReceptionist && statusId >= 2;
+                                                                return shouldDisable ? 0.5 : 1;
+                                                            })(),
+                                                            cursor: (() => {
+                                                                const statusId = mapStatusLabelToId(appointment.status);
+                                                                const shouldDisable = isReceptionist && statusId >= 2;
+                                                                return shouldDisable ? 'not-allowed' : 'pointer';
+                                                            })(),
+                                                            backgroundColor: (() => {
+                                                                const statusId = mapStatusLabelToId(appointment.status);
+                                                                const shouldDisable = isReceptionist && statusId >= 2;
+                                                                return shouldDisable ? '#f5f5f5' : 'transparent';
+                                                            })()
                                                         }}
                                                     >
                                                         <Save fontSize="small" />
@@ -4956,6 +5136,8 @@ export default function AppointmentTable() {
                                                         className="crm-btn"
                                                         title={(() => {
                                                             const statusId = mapStatusLabelToId(appointment.status);
+                                                            const shouldDisable = isReceptionist && statusId >= 2;
+                                                            if (shouldDisable) return "Delete (Disabled - Status >= 2)";
                                                             const isWaiting = statusId === 1;
                                                             const isComplete = statusId === 5;
                                                             const shouldEnable = !isReceptionist || isWaiting || isComplete;
@@ -4963,6 +5145,8 @@ export default function AppointmentTable() {
                                                         })()}
                                                         onClick={async () => {
                                                             const statusId = mapStatusLabelToId(appointment.status);
+                                                            const shouldDisable = isReceptionist && statusId >= 2;
+                                                            if (shouldDisable) return; // Disable for reception when statusId >= 2
                                                             const isWaiting = statusId === 1;
                                                             const isComplete = statusId === 5;
                                                             const shouldEnable = !isReceptionist || isWaiting || isComplete;
@@ -5010,6 +5194,8 @@ export default function AppointmentTable() {
                                                         style={{
                                                             opacity: (() => {
                                                                 const statusId = mapStatusLabelToId(appointment.status);
+                                                                const shouldDisable = isReceptionist && statusId >= 2;
+                                                                if (shouldDisable) return 0.5;
                                                                 const isWaiting = statusId === 1;
                                                                 const isComplete = statusId === 5;
                                                                 const shouldEnable = !isReceptionist || isWaiting || isComplete;
@@ -5017,6 +5203,8 @@ export default function AppointmentTable() {
                                                             })(),
                                                             cursor: (() => {
                                                                 const statusId = mapStatusLabelToId(appointment.status);
+                                                                const shouldDisable = isReceptionist && statusId >= 2;
+                                                                if (shouldDisable) return 'not-allowed';
                                                                 const isWaiting = statusId === 1;
                                                                 const isComplete = statusId === 5;
                                                                 const shouldEnable = !isReceptionist || isWaiting || isComplete;
@@ -5024,6 +5212,8 @@ export default function AppointmentTable() {
                                                             })(),
                                                             backgroundColor: (() => {
                                                                 const statusId = mapStatusLabelToId(appointment.status);
+                                                                const shouldDisable = isReceptionist && statusId >= 2;
+                                                                if (shouldDisable) return '#f5f5f5';
                                                                 const isWaiting = statusId === 1;
                                                                 const isComplete = statusId === 5;
                                                                 const shouldEnable = !isReceptionist || isWaiting || isComplete;
@@ -5037,6 +5227,8 @@ export default function AppointmentTable() {
                                                         className="crm-btn"
                                                         title={(() => {
                                                             const statusId = mapStatusLabelToId(appointment.status);
+                                                            const shouldDisable = isReceptionist && statusId >= 2;
+                                                            if (shouldDisable) return "Visit Details (Disabled - Status >= 2)";
                                                             const isWaiting = statusId === 1;
                                                             const isComplete = statusId === 5;
                                                             const shouldEnable = !isReceptionist || isWaiting || isComplete;
@@ -5045,6 +5237,8 @@ export default function AppointmentTable() {
                                                         })()}
                                                         onClick={() => {
                                                             const statusId = mapStatusLabelToId(appointment.status);
+                                                            const shouldDisable = isReceptionist && statusId >= 2;
+                                                            if (shouldDisable) return; // Disable for reception when statusId >= 2
                                                             const isWaiting = statusId === 1;
                                                             const isComplete = statusId === 5;
                                                             const shouldEnable = !isReceptionist || isWaiting || isComplete;
@@ -5056,6 +5250,8 @@ export default function AppointmentTable() {
                                                         style={{ 
                                                             cursor: (() => {
                                                                 const statusId = mapStatusLabelToId(appointment.status);
+                                                                const shouldDisable = isReceptionist && statusId >= 2;
+                                                                if (shouldDisable) return 'not-allowed';
                                                                 const isWaiting = statusId === 1;
                                                                 const isComplete = statusId === 5;
                                                                 const shouldEnable = !isReceptionist || isWaiting || isComplete;
@@ -5063,6 +5259,8 @@ export default function AppointmentTable() {
                                                             })(),
                                                             backgroundColor: (() => {
                                                                 const statusId = mapStatusLabelToId(appointment.status);
+                                                                const shouldDisable = isReceptionist && statusId >= 2;
+                                                                if (shouldDisable) return '#f5f5f5';
                                                                 const isWaiting = statusId === 1;
                                                                 const isComplete = statusId === 5;
                                                                 const shouldEnable = !isReceptionist || isWaiting || isComplete;
@@ -5073,6 +5271,8 @@ export default function AppointmentTable() {
                                                             padding: '2px',
                                                             opacity: (() => {
                                                                 const statusId = mapStatusLabelToId(appointment.status);
+                                                                const shouldDisable = isReceptionist && statusId >= 2;
+                                                                if (shouldDisable) return 0.5;
                                                                 const isWaiting = statusId === 1;
                                                                 const isComplete = statusId === 5;
                                                                 const shouldEnable = !isReceptionist || isWaiting || isComplete;
@@ -5104,11 +5304,14 @@ export default function AppointmentTable() {
                                                         </span>
                                                     </div>
                                                 </div>
-                                                <div
-                                                    className="crm-btn ms-auto"
-                                                    title={(() => {
+                                                    <div
+                                                        className="crm-btn ms-auto"
+                                                        title={(() => {
                                                             const statusId = mapStatusLabelToId(appointment.status);
                                                             const isCollectible = statusId === 4 || statusId === 6;
+                                                            // Allow statusId 4 and 6 even for reception, otherwise disable for reception when statusId >= 2
+                                                            const shouldDisable = isReceptionist && statusId >= 2 && !isCollectible;
+                                                            if (shouldDisable) return "Collection (Disabled - Status >= 2)";
                                                             const shouldEnable = !isReceptionist || isCollectible;
                                                             if (!shouldEnable) return "Collection (Disabled for Reception)";
                                                             return !isCollectible ? "Collection (Disabled - Status not Complete/Submited)" : "Collection";
@@ -5116,6 +5319,9 @@ export default function AppointmentTable() {
                                                     onClick={() => {
                                                         const statusId = mapStatusLabelToId(appointment.status);
                                                         const isCollectible = statusId === 4 || statusId === 6;
+                                                        // Allow statusId 4 and 6 even for reception, otherwise disable for reception when statusId >= 2
+                                                        const shouldDisable = isReceptionist && statusId >= 2 && !isCollectible;
+                                                        if (shouldDisable) return; // Disable for reception when statusId >= 2 (except statusId 4 and 6)
                                                         const shouldEnable = !isReceptionist || isCollectible;
                                                         if (!shouldEnable) return; // Disable for reception login unless COMPLETE or SUBMITTED
                                                         if (!isCollectible) return;
@@ -5137,6 +5343,9 @@ export default function AppointmentTable() {
                                                     aria-disabled={(() => {
                                                         const statusId = mapStatusLabelToId(appointment.status);
                                                         const isCollectible = statusId === 4 || statusId === 6;
+                                                        // Allow statusId 4 and 6 even for reception, otherwise disable for reception when statusId >= 2
+                                                        const shouldDisable = isReceptionist && statusId >= 2 && !isCollectible;
+                                                        if (shouldDisable) return true;
                                                         const shouldEnable = !isReceptionist || isCollectible;
                                                         return !shouldEnable || !isCollectible;
                                                     })()}
@@ -5144,18 +5353,27 @@ export default function AppointmentTable() {
                                                         opacity: (() => {
                                                             const statusId = mapStatusLabelToId(appointment.status);
                                                             const isCollectible = statusId === 4 || statusId === 6;
+                                                            // Allow statusId 4 and 6 even for reception, otherwise disable for reception when statusId >= 2
+                                                            const shouldDisable = isReceptionist && statusId >= 2 && !isCollectible;
+                                                            if (shouldDisable) return 0.5;
                                                             const shouldEnable = !isReceptionist || isCollectible;
                                                             return (shouldEnable && isCollectible) ? 1 : 0.5;
                                                         })(),
                                                         cursor: (() => {
                                                             const statusId = mapStatusLabelToId(appointment.status);
                                                             const isCollectible = statusId === 4 || statusId === 6;
+                                                            // Allow statusId 4 and 6 even for reception, otherwise disable for reception when statusId >= 2
+                                                            const shouldDisable = isReceptionist && statusId >= 2 && !isCollectible;
+                                                            if (shouldDisable) return 'not-allowed';
                                                             const shouldEnable = !isReceptionist || isCollectible;
                                                             return (shouldEnable && isCollectible) ? 'pointer' : 'not-allowed';
                                                         })(),
                                                         backgroundColor: (() => {
                                                             const statusId = mapStatusLabelToId(appointment.status);
                                                             const isCollectible = statusId === 4 || statusId === 6;
+                                                            // Allow statusId 4 and 6 even for reception, otherwise disable for reception when statusId >= 2
+                                                            const shouldDisable = isReceptionist && statusId >= 2 && !isCollectible;
+                                                            if (shouldDisable) return '#f5f5f5';
                                                             const shouldEnable = !isReceptionist || isCollectible;
                                                             if (!shouldEnable) return '#f5f5f5';
                                                             return !isCollectible ? '#607D8B' : 'transparent';
@@ -5163,6 +5381,9 @@ export default function AppointmentTable() {
                                                         borderColor: (() => {
                                                             const statusId = mapStatusLabelToId(appointment.status);
                                                             const isCollectible = statusId === 4 || statusId === 6;
+                                                            // Allow statusId 4 and 6 even for reception, otherwise disable for reception when statusId >= 2
+                                                            const shouldDisable = isReceptionist && statusId >= 2 && !isCollectible;
+                                                            if (shouldDisable) return '#ddd';
                                                             const shouldEnable = !isReceptionist || isCollectible;
                                                             if (!shouldEnable) return '#ddd';
                                                             return !isCollectible ? '#607D8B' : 'black';
@@ -5173,17 +5394,19 @@ export default function AppointmentTable() {
                                                 </div>
                                                 {/* Treatment Button - Hidden for Reception login */}
                                                 {!isReceptionist && (
-                                                <div
-                                                    className="crm-btn"
-                                                    title={(() => {
-                                                        const normalizedStatus = normalizeStatusLabel(appointment.status);
-                                                        const isEnabled = normalizedStatus === 'COLLECTION';
-                                                        return isEnabled ? "Treatment" : "Treatment (Disabled - Only enabled for Collection status)";
-                                                    })()}
-                                                    onClick={() => {
-                                                        const normalizedStatus = normalizeStatusLabel(appointment.status);
-                                                        const isEnabled = normalizedStatus === 'COLLECTION';
-                                                        if (isEnabled) {
+                                                    <div
+                                                        className="crm-btn"
+                                                        title={(() => {
+                                                            const statusId = mapStatusLabelToId(appointment.status);
+                                                            const normalizedStatus = normalizeStatusLabel(appointment.status);
+                                                            const isEnabled = normalizedStatus === 'COLLECTION' || statusId === 5;
+                                                            return isEnabled ? "Treatment" : "Treatment (Disabled - Only enabled for Collection or Complete status)";
+                                                        })()}
+                                                        onClick={() => {
+                                                            const statusId = mapStatusLabelToId(appointment.status);
+                                                            const normalizedStatus = normalizeStatusLabel(appointment.status);
+                                                            const isEnabled = normalizedStatus === 'COLLECTION' || statusId === 5;
+                                                            if (isEnabled) {
                                                             console.log('Treatment clicked for patient:', appointment.patientId);
                                                             navigate('/treatment', {
                                                                 state: {
@@ -5206,28 +5429,33 @@ export default function AppointmentTable() {
                                                     }}
                                                     style={{
                                                         cursor: (() => {
+                                                            const statusId = mapStatusLabelToId(appointment.status);
                                                             const normalizedStatus = normalizeStatusLabel(appointment.status);
-                                                            const isEnabled = normalizedStatus === 'COLLECTION';
+                                                            const isEnabled = normalizedStatus === 'COLLECTION' || statusId === 5;
                                                             return isEnabled ? 'pointer' : 'not-allowed';
                                                         })(),
                                                         backgroundColor: (() => {
+                                                            const statusId = mapStatusLabelToId(appointment.status);
                                                             const normalizedStatus = normalizeStatusLabel(appointment.status);
-                                                            const isEnabled = normalizedStatus === 'COLLECTION';
+                                                            const isEnabled = normalizedStatus === 'COLLECTION' || statusId === 5;
                                                             return isEnabled ? '#ECEFF1' : '#F5F5F5';
                                                         })(),
                                                         color: (() => {
+                                                            const statusId = mapStatusLabelToId(appointment.status);
                                                             const normalizedStatus = normalizeStatusLabel(appointment.status);
-                                                            const isEnabled = normalizedStatus === 'COLLECTION';
+                                                            const isEnabled = normalizedStatus === 'COLLECTION' || statusId === 5;
                                                             return isEnabled ? '#607D8B' : '#BDBDBD';
                                                         })(),
                                                         border: (() => {
+                                                            const statusId = mapStatusLabelToId(appointment.status);
                                                             const normalizedStatus = normalizeStatusLabel(appointment.status);
-                                                            const isEnabled = normalizedStatus === 'COLLECTION';
+                                                            const isEnabled = normalizedStatus === 'COLLECTION' || statusId === 5;
                                                             return isEnabled ? '1px solid #CFD8DC' : '1px solid #E0E0E0';
                                                         })(),
                                                         opacity: (() => {
+                                                            const statusId = mapStatusLabelToId(appointment.status);
                                                             const normalizedStatus = normalizeStatusLabel(appointment.status);
-                                                            const isEnabled = normalizedStatus === 'COLLECTION';
+                                                            const isEnabled = normalizedStatus === 'COLLECTION' || statusId === 5;
                                                             return isEnabled ? 1 : 0.5;
                                                         })()
                                                     }}
@@ -5239,8 +5467,9 @@ export default function AppointmentTable() {
                                                             width: 16, 
                                                             height: 16, 
                                                             filter: (() => {
+                                                                const statusId = mapStatusLabelToId(appointment.status);
                                                                 const normalizedStatus = normalizeStatusLabel(appointment.status);
-                                                                const isEnabled = normalizedStatus === 'COLLECTION';
+                                                                const isEnabled = normalizedStatus === 'COLLECTION' || statusId === 5;
                                                                 return isEnabled ? 'brightness(0)' : 'grayscale(100%) brightness(0.5)';
                                                             })()
                                                         }} 

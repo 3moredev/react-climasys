@@ -159,6 +159,12 @@ export interface PatientProfileRefDataResponse {
   [key: string]: any;
 }
 
+// Previous service visit dates response (flexible map)
+export interface PreviousServiceVisitDatesResponse {
+  success?: boolean;
+  [key: string]: any;
+}
+
 // Quick registration request interface
 export interface QuickRegistrationRequest {
   doctorId: string;
@@ -684,6 +690,63 @@ export const patientService = {
   }
   ,
 
+  /**
+   * Get previous service visit dates for a patient/doctor/clinic
+   * Mirrors backend @GetMapping("/previous-visit-dates") with optional todaysVisitDate
+   */
+  async getPreviousServiceVisitDates(params: {
+    patientId: string;
+    // doctorId: string;
+    clinicId: string;
+    todaysVisitDate?: string;
+  }): Promise<PreviousServiceVisitDatesResponse> {
+    try {
+      const { patientId, clinicId, todaysVisitDate } = params;
+      console.log('Fetching previous service visit dates:', params);
+      const query = {
+        patientId,
+        // doctorId,
+        clinicId,
+        ...(todaysVisitDate ? { todaysVisitDate } : {})
+      } as Record<string, string>;
+      // Try common mount points
+      try {
+        const resp = await api.get<PreviousServiceVisitDatesResponse>(`/services/previous-visit-dates`, { params: query });
+        console.log('Previous service visit dates (/api/services/previous-visit-dates):', resp.data);
+        return resp.data;
+      } catch (e1: any) {
+        if (e1?.response?.status !== 404) throw e1;
+        try {
+          const resp = await api.get<PreviousServiceVisitDatesResponse>(`/previous-visit-dates`, { params: query });
+          console.log('Previous service visit dates (/previous-visit-dates):', resp.data);
+          return resp.data;
+        } catch (e2: any) {
+          if (e2?.response?.status !== 404) throw e2;
+          const resp = await api.get<PreviousServiceVisitDatesResponse>(`/services/previous-visit-dates`, { params: query });
+          console.log('Previous service visit dates (/api/services/previous-visit-dates):', resp.data);
+          return resp.data;
+        }
+      }
+    } catch (error: any) {
+      console.error('Get previous service visit dates API Error:', error);
+      if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
+        throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
+      }
+      if (error.response?.status === 400) {
+        const msg = error.response?.data?.message || error.response?.data?.error || 'Invalid request.';
+        throw new Error(msg);
+      } else if (error.response?.status === 404) {
+        throw new Error('Previous service visit dates endpoint not found. Please confirm backend route.');
+      } else if (error.response?.status === 500) {
+        throw new Error('Server error occurred while fetching previous service visit dates.');
+      }
+      if (error.response?.data?.error) {
+        throw new Error(error.response.data.error);
+      }
+      throw new Error(error.response?.data?.message || 'Failed to fetch previous service visit dates');
+    }
+  }
+  ,
   /**
    * Submit lab test results
    * Mirrors backend @PostMapping("/submit") under the lab test results controller.

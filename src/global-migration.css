@@ -246,7 +246,7 @@ tr,
 
 tr:hover,
 .MuiTableRow-root:hover {
-  background-color: #f9f9f9 !important;
+  /* background-color: #f9f9f9 !important; */
 }
 
 td,
