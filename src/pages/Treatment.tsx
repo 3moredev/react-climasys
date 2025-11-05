@@ -474,6 +474,7 @@ export default function Treatment() {
     const [existingDocuments, setExistingDocuments] = useState<any[]>([]);
     const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
     const [downloadingDocumentId, setDownloadingDocumentId] = useState<number | null>(null);
+    const [openingDocumentId, setOpeningDocumentId] = useState<number | null>(null);
 
     // Load existing documents for the current patient visit
     const loadExistingDocuments = async (patientId: string, visitNo: number) => {
@@ -524,6 +525,269 @@ export default function Treatment() {
             console.error('Error downloading document', e);
         } finally {
             setDownloadingDocumentId(null);
+        }
+    };
+
+    // Open a document in a new tab
+    const handleOpenDocument = async (doc: any) => {
+        // Support various id field names
+        const docId: number | undefined = doc.documentId || doc.id || doc.document_id || doc.documentID;
+        if (!docId) return;
+        if (openingDocumentId === docId || downloadingDocumentId === docId) return;
+        try {
+            setOpeningDocumentId(docId);
+            const { blob, filename } = await DocumentService.downloadDocumentFile(docId);
+            const objectUrl = window.URL.createObjectURL(blob);
+            window.open(objectUrl, '_blank');
+            // Note: We don't revoke the URL immediately as the new tab needs it
+            // The browser will clean it up when the tab is closed
+        } catch (e) {
+            console.error('Error opening document', e);
+        } finally {
+            setOpeningDocumentId(null);
+        }
+    };
+
+    // Helper function to escape HTML
+    const escapeHtml = (text: string): string => {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    };
+
+    // Print prescription/report
+    const handlePrint = () => {
+        // Get current date and time
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('en-GB', { 
+            day: '2-digit', 
+            month: '2-digit', 
+            year: '2-digit' 
+        });
+        const timeStr = now.toLocaleTimeString('en-US', { 
+            hour: '2-digit', 
+            minute: '2-digit',
+            hour12: true 
+        });
+
+        // Format visit date
+        const visitDate = treatmentData?.visitNumber 
+            ? new Date().toLocaleDateString('en-GB', { 
+                day: '2-digit', 
+                month: 'short', 
+                year: 'numeric' 
+            }).replace(/ /g, '-')
+            : new Date().toLocaleDateString('en-GB', { 
+                day: '2-digit', 
+                month: 'short', 
+                year: 'numeric' 
+            }).replace(/ /g, '-');
+
+        // Get patient info
+        const patientName = escapeHtml(treatmentData?.patientName || '');
+        const gender = escapeHtml(treatmentData?.gender || '');
+        const age = treatmentData?.age ? `${treatmentData.age}` : '';
+        const patientId = escapeHtml(treatmentData?.patientId || '');
+        const contact = escapeHtml(treatmentData?.contact || '-');
+        const weight = escapeHtml(formData.weight || '-');
+        const height = escapeHtml(formData.height || '-');
+        const bmi = escapeHtml(formData.bmi || '-');
+
+        // Get medical details
+        const complaints = complaintsRows.length > 0 
+            ? complaintsRows.map(c => escapeHtml(c.label)).join(', ')
+            : (selectedComplaints.length > 0 
+                ? complaintsOptions.filter(opt => selectedComplaints.includes(opt.value))
+                    .map(opt => escapeHtml(opt.label)).join(', ')
+                : '-');
+        
+        const examinationFindings = escapeHtml(formData.examinationFindings || '-');
+        const diagnosis = diagnosisRows.length > 0 
+            ? diagnosisRows.map(d => escapeHtml(d.diagnosis)).join(', ')
+            : (selectedDiagnoses.length > 0
+                ? diagnosesOptions.filter(opt => selectedDiagnoses.includes(opt.value))
+                    .map(opt => escapeHtml(opt.label)).join(', ')
+                : escapeHtml(selectedDiagnosis || '-'));
+        
+        const pulse = escapeHtml(formData.pulse || '-');
+        const bp = escapeHtml(formData.bp || '-');
+        const sugar = escapeHtml(formData.sugar || '-');
+
+        // Get advice
+        const advice = escapeHtml(formData.visitComments || formData.additionalComments || '');
+
+        // Build prescription table HTML
+        let prescriptionTableHTML = '';
+        if (prescriptionRows.length > 0) {
+            prescriptionTableHTML = `
+                <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+                    <thead>
+                        <tr style="background-color: #f5f5f5;">
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left; font-weight: bold;">Medicines</th>
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: center; font-weight: bold;">Morning<br/>सकाळी</th>
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: center; font-weight: bold;">Afternoon<br/>दुपारी</th>
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: center; font-weight: bold;">Evening<br/>रात्री</th>
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: center; font-weight: bold;">Days</th>
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left; font-weight: bold;">Instruction</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${prescriptionRows.map(row => `
+                            <tr>
+                                <td style="border: 1px solid #ddd; padding: 8px;">${escapeHtml(row.prescription || '-')}</td>
+                                <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${escapeHtml(row.b || '0')}</td>
+                                <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${escapeHtml(row.l || '0')}</td>
+                                <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${escapeHtml(row.d || '0')}</td>
+                                <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${escapeHtml(row.days || '-')}</td>
+                                <td style="border: 1px solid #ddd; padding: 8px;">${escapeHtml(row.instruction || '-')}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        } else {
+            prescriptionTableHTML = '<p style="margin-top: 10px;">No prescriptions found.</p>';
+        }
+
+        // Create print HTML
+        const printHTML = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Prescription - ${patientName}</title>
+                <style>
+                    @media print {
+                        @page {
+                            margin: 20mm;
+                        }
+                        body {
+                            margin: 0;
+                            padding: 0;
+                        }
+                    }
+                    body {
+                        font-family: Arial, sans-serif;
+                        padding: 20px;
+                        max-width: 800px;
+                        margin: 0 auto;
+                    }
+                    .horizontal-line {
+                        border-top: 2px solid #000;
+                        margin: 10px 0;
+                    }
+                    .patient-info-line1 {
+                        font-size: 16px;
+                        font-weight: bold;
+                        margin: 10px 0;
+                        line-height: 1.8;
+                    }
+                    .patient-info-line2 {
+                        font-size: 14px;
+                        margin: 10px 0;
+                        line-height: 1.8;
+                    }
+                    .medical-details {
+                        font-size: 16px;
+                        font-weight: bold;
+                        margin: 10px 0;
+                        line-height: 1.8;
+                    }
+                    .prescription-section {
+                        margin-top: 15px;
+                    }
+                    .prescription-section strong {
+                        font-size: 16px;
+                        font-weight: bold;
+                    }
+                    table {
+                        width: 100%;
+                        border-collapse: collapse;
+                        margin-top: 10px;
+                        font-size: 12px;
+                    }
+                    th, td {
+                        border: 1px solid #ddd;
+                        padding: 8px;
+                    }
+                    th {
+                        background-color: #f5f5f5;
+                        font-weight: bold;
+                        text-align: left;
+                    }
+                    td {
+                        text-align: left;
+                    }
+                    .advice-section {
+                        margin-top: 20px;
+                        position: relative;
+                    }
+                    .advice-line-top {
+                        border-top: 2px solid #000;
+                        margin-bottom: 5px;
+                    }
+                    .advice-line-bottom {
+                        border-top: 2px solid #000;
+                        margin-top: 5px;
+                    }
+                    .advice-text {
+                        font-size: 14px;
+                        font-weight: bold;
+                        text-align: left;
+                        margin: 5px 0;
+                    }
+                    .advice-content {
+                        margin-top: 5px;
+                        white-space: pre-wrap;
+                        font-size: 12px;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="horizontal-line"></div>
+                
+                <div class="patient-info-line1">
+                    Name: ${patientName} ${gender} / ${age} Y Id: ${patientId} Date: ${visitDate}
+                </div>
+                
+                <div class="patient-info-line2">
+                    Contact Number: ${contact}, Weight (Kg): ${weight} Height (Cm): ${height} BMI: ${bmi}
+                </div>
+
+                <div class="horizontal-line"></div>
+
+                <div class="medical-details">
+                    Complaint: ${complaints}<br/>
+                    Examination Finding: ${examinationFindings}<br/>
+                    Diagnosis: ${diagnosis}<br/>
+                    Pulse: ${pulse} BP: ${bp} Sugar: ${sugar}
+                </div>
+
+                <div class="prescription-section">
+                    <strong>Rx:</strong>
+                    ${prescriptionTableHTML}
+                </div>
+
+                <div class="advice-section">
+                    <div class="advice-line-top"></div>
+                    <div class="advice-text">Adv:</div>
+                    ${advice ? `<div class="advice-content">${advice}</div>` : ''}
+                    <div class="advice-line-bottom"></div>
+                </div>
+            </body>
+            </html>
+        `;
+
+        // Open print window
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+            printWindow.document.write(printHTML);
+            printWindow.document.close();
+            
+            // Wait for content to load, then print
+            setTimeout(() => {
+                printWindow.focus();
+                printWindow.print();
+            }, 250);
         }
     };
 
@@ -2758,6 +3022,8 @@ export default function Treatment() {
                                         {existingDocuments.map((doc, index) => {
                                             const docId: number | undefined = doc.documentId || doc.id || doc.document_id || doc.documentID;
                                             const isDownloading = downloadingDocumentId === docId;
+                                            const isOpening = openingDocumentId === docId;
+                                            const isProcessing = isDownloading || isOpening;
                                             return (
                                                 <span key={`existing-${index}`} style={{ 
                                                     display: 'inline-flex',
@@ -2770,8 +3036,28 @@ export default function Treatment() {
                                                     fontFamily: "'Roboto', sans-serif",
                                                     fontWeight: 500,
                                                     color: '#2e7d32',
-                                                    maxWidth: '100%'
-                                                }}>
+                                                    maxWidth: '100%',
+                                                    cursor: docId && !isProcessing ? 'pointer' : 'default',
+                                                    opacity: isProcessing ? 0.7 : 1,
+                                                    transition: 'opacity 0.2s'
+                                                }}
+                                                onClick={() => { 
+                                                    if (docId && !isProcessing) {
+                                                        handleOpenDocument(doc);
+                                                    }
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                    if (docId && !isProcessing) {
+                                                        e.currentTarget.style.backgroundColor = '#d4edda';
+                                                    }
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    if (docId && !isProcessing) {
+                                                        e.currentTarget.style.backgroundColor = '#e8f5e8';
+                                                    }
+                                                }}
+                                                title={isProcessing ? (isOpening ? 'Opening...' : 'Downloading...') : docId ? 'Click to open document' : ''}
+                                                >
                                                     <span style={{ marginRight: '5px' }}>📄</span>
                                                     <span style={{ maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                                         {doc.documentName || `Document ${index + 1}`}
@@ -2799,7 +3085,10 @@ export default function Treatment() {
                                                     )}
                                                     {docId && (
                                                         <span
-                                                            onClick={() => { if (!isDownloading) handleDownloadDocument(doc); }}
+                                                            onClick={(e) => { 
+                                                                e.stopPropagation(); // Prevent triggering the parent onClick
+                                                                if (!isProcessing) handleDownloadDocument(doc); 
+                                                            }}
                                                             style={{
                                                                 marginLeft: '8px',
                                                                 width: '24px',
@@ -2807,10 +3096,10 @@ export default function Treatment() {
                                                                 display: 'inline-flex',
                                                                 alignItems: 'center',
                                                                 justifyContent: 'center',
-                                                                color: isDownloading ? '#9e9e9e' : '#000000',
-                                                                cursor: isDownloading ? 'not-allowed' : 'pointer'
+                                                                color: isProcessing ? '#9e9e9e' : '#000000',
+                                                                cursor: isProcessing ? 'not-allowed' : 'pointer'
                                                             }}
-                                                            title={isDownloading ? 'Downloading...' : 'Download'}
+                                                            title={isProcessing ? (isOpening ? 'Opening...' : 'Downloading...') : 'Download'}
                                                         >
                                                             <DownloadIcon style={{ fontSize: '16px' }} />
                                                         </span>
@@ -5423,6 +5712,7 @@ export default function Treatment() {
                             </button>
                             <button 
                                 type="button" 
+                                onClick={handlePrint}
                                 style={{
                                     backgroundColor: '#1976d2',
                                     color: 'white',
