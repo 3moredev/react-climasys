@@ -2351,6 +2351,24 @@ export default function Treatment() {
                 userId: String(userId),
                 isSubmitPatientVisitDetails: isSubmit, // true for submit, false for save
                 
+                // Complaints rows - map to API format
+                complaintsRows: complaintsRows.map(row => {
+                    // Extract short_description: if value contains "*", take the part before "*"
+                    // Otherwise, use value or label as short_description
+                    let shortDescription = '';
+                    if (row.value && row.value.includes('*')) {
+                        shortDescription = row.value.split('*')[0].trim();
+                    } else {
+                        shortDescription = row.value || row.label || '';
+                    }
+                    
+                    return {
+                        short_description: shortDescription,
+                        complaint_description: row.label || '',
+                        complaint_comment: row.comment || ''
+                    };
+                }),
+                
                 // Diagnosis rows - minimal API shape
                 diagnosisRows: diagnosisRows.map(row => ({
                     short_description: row.value || '',

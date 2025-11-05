@@ -110,6 +110,7 @@ export interface ComprehensiveVisitDataRequest {
   statusId: number;
   userId: string;
   isSubmitPatientVisitDetails: boolean;
+  complaintsRows?: Array<{ short_description?: string; complaint_description?: string; complaint_comment?: string; [key: string]: any }>;
   diagnosisRows?: Array<{ short_description?: string; diagnosis?: string; [key: string]: any }>;
   medicineRows?: Array<{ short_description?: string; medicine?: string; morning?: number; afternoon?: number; night?: number; days?: number | string; instruction?: string; [key: string]: any }>;
   prescriptionRows?: Array<{ prescription?: string; b?: number | string; l?: number | string; d?: number | string; days?: number | string; instruction?: string; [key: string]: any }>;
