@@ -18,11 +18,14 @@ import AddComplaintPopup from "../components/AddComplaintPopup";
 import AddDiagnosisPopup from "../components/AddDiagnosisPopup";
 import AddMedicinePopup, { MedicineData } from "../components/AddMedicinePopup";
 import AddPrescriptionPopup, { PrescriptionData } from "../components/AddPrescriptionPopup";
+import AddBillingPopup from "../components/AddBillingPopup";
 import AddTestLabPopup, { TestLabData } from "../components/AddTestLabPopup";
 import LabTestEntry from "../components/LabTestEntry";
 import InstructionGroupsPopup from "../components/InstructionGroupsPopup";
 import { patientService } from "../services/patientService";
 import PastServicesPopup from "../components/PastServicesPopup";
+import AccountsPopup from "../components/AccountsPopup";
+import LabTrendPopup from "../components/LabTrendPopup";
 
 // Specific styles for Duration/Comment input in table
 const durationCommentStyles = `
@@ -310,6 +313,15 @@ export default function Treatment() {
     const [showAddendumModal, setShowAddendumModal] = useState<boolean>(false);
     const [addendumText, setAddendumText] = useState<string>("");
 
+    // Billing popup state
+    const [showBillingPopup, setShowBillingPopup] = useState<boolean>(false);
+
+    // Accounts popup state
+    const [showAccountsPopup, setShowAccountsPopup] = useState<boolean>(false);
+
+    // Lab Trend popup state
+    const [showLabTrendPopup, setShowLabTrendPopup] = useState<boolean>(false);
+
     // Complaints and diagnosis data
     const [complaintsRows, setComplaintsRows] = useState<ComplaintRow[]>([]);
     
@@ -322,6 +334,7 @@ export default function Treatment() {
     const [complaintsLoading, setComplaintsLoading] = useState(false);
     const [complaintsError, setComplaintsError] = useState<string | null>(null);
     const complaintsRowsBuiltFromApiRef = React.useRef(false);
+    const selectedComplaintsPatchedFromApiRef = React.useRef(false);
     
     const filteredComplaints = React.useMemo(() => {
         const term = complaintSearch.trim().toLowerCase();
@@ -777,18 +790,33 @@ export default function Treatment() {
             </html>
         `;
 
-        // Open print window
-        const printWindow = window.open('', '_blank');
-        if (printWindow) {
-            printWindow.document.write(printHTML);
-            printWindow.document.close();
-            
-            // Wait for content to load, then print
-            setTimeout(() => {
-                printWindow.focus();
-                printWindow.print();
-            }, 250);
-        }
+		// Print within the same tab using a hidden iframe
+		const iframe = document.createElement('iframe');
+		iframe.style.position = 'fixed';
+		iframe.style.right = '0';
+		iframe.style.bottom = '0';
+		iframe.style.width = '0';
+		iframe.style.height = '0';
+		iframe.style.border = '0';
+		// Use srcdoc so we don't navigate away or open a new tab
+		iframe.srcdoc = printHTML;
+		document.body.appendChild(iframe);
+		iframe.onload = () => {
+			try {
+				const win = iframe.contentWindow;
+				if (win) {
+					win.focus();
+					win.print();
+				}
+			} finally {
+				// Give the browser a moment to spawn the print dialog before removal
+				setTimeout(() => {
+					if (iframe.parentNode) {
+						iframe.parentNode.removeChild(iframe);
+					}
+				}, 1000);
+			}
+		};
     };
 
     // Fetch session data on component mount
@@ -2077,6 +2105,7 @@ export default function Treatment() {
                 const parts = normalized.currentComplaint.split(/\*|,/).map((s: string) => s.trim()).filter(Boolean);
                 if (Array.isArray(parts) && parts.length > 0) {
                     const uniqueParts = Array.from(new Set(parts));
+                    selectedComplaintsPatchedFromApiRef.current = true;
                     setSelectedComplaints(uniqueParts);
                     console.log('Patched selectedComplaints from appointment details (deduped):', uniqueParts);
                 }
@@ -2600,6 +2629,8 @@ export default function Treatment() {
         // 3. complaintsRows are empty (meaning we're loading from appointment data)
         // 4. We haven't already built rows from API (to prevent interfering with manual selection)
         if (complaintsOptions.length === 0 || selectedComplaints.length === 0) return;
+        // 5. selectedComplaints must have been patched from API (not from manual user selection)
+        if (!selectedComplaintsPatchedFromApiRef.current) return;
         if (complaintsRows.length > 0) {
             complaintsRowsBuiltFromApiRef.current = true; // Mark as built
             return; // Don't overwrite if rows already exist
@@ -2619,6 +2650,7 @@ export default function Treatment() {
         
         setComplaintsRows(newRows);
         complaintsRowsBuiltFromApiRef.current = true; // Mark as built
+        selectedComplaintsPatchedFromApiRef.current = false; // Reset so manual changes do not auto-build
         console.log('Built complaintsRows from selectedComplaints:', newRows);
     }, [complaintsOptions, selectedComplaints, complaintsRows.length]); // Include complaintsRows.length to detect when it changes
 
@@ -3478,9 +3510,6 @@ export default function Treatment() {
                                 <div style={{ position: 'relative', flex: 1 }}>
                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px', width: '88%', gap: '8px' }}>
                                         <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Complaints</label>
-                                        <span style={{ fontSize: '12px', color: '#666', maxWidth: '60%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 1 }}>
-                                            Complaints are copied from previous visit
-                                        </span>
                                     </div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                         <div ref={complaintsRef} style={{ position: 'relative', flex: 1 }}>
@@ -3939,9 +3968,6 @@ export default function Treatment() {
                         <div style={{ marginBottom: '15px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '5px', width: '88%', gap: '8px' }}>
                                 <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Diagnosis</label>
-                                <span style={{ fontSize: '12px', color: '#666', maxWidth: '60%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 1 }}>
-                                    Diagnosis are copied from previous visit
-                                </span>
                             </div>
                             
                             <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
@@ -4215,9 +4241,6 @@ export default function Treatment() {
                         <div style={{ marginBottom: '15px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '5px', width: '88%', gap: '8px' }}>
                                 <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Medicine</label>
-                                <span style={{ fontSize: '12px', color: '#666', maxWidth: '60%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 1 }}>
-                                    Medicine saved successfully!!
-                                </span>
                             </div>
                             
                             <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
@@ -4614,9 +4637,6 @@ export default function Treatment() {
                         <div style={{ marginBottom: '15px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '5px', width: '88%', gap: '8px' }}>
                                 <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Prescription</label>
-                                <span style={{ fontSize: '12px', color: '#666', maxWidth: '60%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 1 }}>
-                                    Prescription medicine saved successfully!!
-                                </span>
                             </div>
                             
                             <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
@@ -4993,9 +5013,6 @@ export default function Treatment() {
                         <div style={{ marginBottom: '15px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '5px', width: '88%', gap: '8px' }}>
                                 <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Investigation</label>
-                                <span style={{ fontSize: '12px', color: '#666', maxWidth: '60%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 1 }}>
-                                    Investigation saved successfully!!
-                                </span>
                             </div>
 
                             <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
@@ -5237,6 +5254,11 @@ export default function Treatment() {
                                     onMouseLeave={(e) => {
                                         if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1976d2';
                                     }}
+                                    onClick={() => {
+                                        if (!isFormDisabled) {
+                                            setShowLabTrendPopup(true);
+                                        }
+                                    }}
                                 >
                                     <TrendingUp fontSize="small" />
                                 </button>
@@ -5404,193 +5426,7 @@ export default function Treatment() {
                             />
                         </div>
 
-                        {/* Select Billed Charges - Diagnosis */}
-                        <div style={{ marginBottom: '15px' }}>
-                            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                Select Billed charges
-                            </label>
-                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '12px' }}>
-                                <div style={{ flex: 1, position: 'relative' }} ref={billingRef}>
-                                    <div
-                                        style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'space-between',
-                                            height: '32px',
-                                            padding: '4px 8px',
-                                            border: '2px solid #B7B7B7',
-                                            borderRadius: '6px',
-                                            fontSize: '12px',
-                                            fontFamily: "'Roboto', sans-serif",
-                                            fontWeight: 500,
-                                            backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
-                                            cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                            userSelect: 'none',
-                                            opacity: isFormDisabled ? 0.6 : 1
-                                        }}
-                                        onClick={() => !isFormDisabled && setIsBillingOpen(!isBillingOpen)}
-                                        onMouseEnter={(e) => {
-                                            (e.currentTarget as HTMLDivElement).style.borderColor = '#1E88E5';
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            (e.currentTarget as HTMLDivElement).style.borderColor = '#B7B7B7';
-                                        }}
-                                    >
-                                        <span style={{ color: selectedBillingDetailIds.length > 0 ? '#000' : '#9e9e9e' }}>
-                                            {selectedBillingDetailIds.length > 0 
-                                                ? `${selectedBillingDetailIds.length} item(s) selected`
-                                                : 'Select Charges'}
-                                        </span>
-                                        <span style={{ marginLeft: '8px', color: '#666', fontSize: '16px', lineHeight: '1' }}>▾</span>
-                                    </div>
-
-                                    {isBillingOpen && (
-                                        <div style={{
-                                            position: 'absolute',
-                                            bottom: '100%',
-                                            left: 0,
-                                            right: 0,
-                                            backgroundColor: 'white',
-                                            border: '1px solid #B7B7B7',
-                                            borderRadius: '6px',
-                                            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                                            zIndex: 1000,
-                                            marginBottom: '4px',
-                                            maxHeight: '300px',
-                                            overflow: 'hidden'
-                                        }}>
-                                            <div style={{ padding: '6px' }}>
-                                                <input
-                                                    type="text"
-                                                    placeholder="Search charges..."
-                                                    value={billingSearch}
-                                                    onChange={(e) => setBillingSearch(e.target.value)}
-                                                    style={{
-                                                        width: '100%',
-                                                        height: '28px',
-                                                        padding: '4px 8px',
-                                                        border: '1px solid #B7B7B7',
-                                                        borderRadius: '4px',
-                                                        fontSize: '12px',
-                                                        outline: 'none'
-                                                    }}
-                                                    onFocus={(e) => {
-                                                        (e.target as HTMLInputElement).style.borderColor = '#1E88E5';
-                                                    }}
-                                                    onBlur={(e) => {
-                                                        (e.target as HTMLInputElement).style.borderColor = '#B7B7B7';
-                                                    }}
-                                                />
-                                            </div>
-
-                                            <div className="billing-dropdown" style={{ maxHeight: '200px', overflowY: 'auto', padding: '4px 6px', display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', columnGap: '8px', rowGap: '6px' }}>
-                                                {filteredBillingDetails.length === 0 && (
-                                                    <div style={{ padding: '6px', fontSize: '12px', color: '#777', gridColumn: '1 / -1' }}>No charges found</div>
-                                                )}
-                                                {filteredBillingDetails.map((opt, index) => {
-                                                    const checked = selectedBillingDetailIds.includes(opt.id);
-                                                    const isFirstUnselected = !checked && index > 0 && selectedBillingDetailIds.includes(filteredBillingDetails[index - 1].id);
-                                                    return (
-                                                        <React.Fragment key={opt.id}>
-                                                            {isFirstUnselected && (
-                                                                <div style={{ 
-                                                                    gridColumn: '1 / -1', 
-                                                                    height: '1px', 
-                                                                    backgroundColor: '#e0e0e0', 
-                                                                    margin: '4px 0' 
-                                                                }} />
-                                                            )}
-                                                            <label 
-                                                                style={{ 
-                                                                    display: 'flex',
-                                                                    alignItems: 'center',
-                                                                    gap: '4px', 
-                                                                    padding: '4px 2px', 
-                                                                    cursor: 'pointer', 
-                                                                    fontSize: '12px', 
-                                                                    border: 'none',
-                                                                    backgroundColor: 'transparent',
-                                                                    borderRadius: '3px',
-                                                                    fontWeight: 400
-                                                                }}
-                                                            >
-                                                                <input
-                                                                    type="checkbox"
-                                                                    checked={checked}
-                                                                    onChange={(e) => {
-                                                                        setSelectedBillingDetailIds(prev => {
-                                                                            if (e.target.checked) {
-                                                                                if (prev.includes(opt.id)) return prev;
-                                                                                return [...prev, opt.id];
-                                                                            } else {
-                                                                                return prev.filter(v => v !== opt.id);
-                                                                            }
-                                                                        });
-                                                                    }}
-                                                                    style={{ margin: 0 }}
-                                                                />
-                                                                <span style={{ whiteSpace: 'nowrap', display: 'inline-flex', gap: '6px', alignItems: 'center' }}>
-                                                                    <span>
-                                                                        {[
-                                                                            opt.billing_group_name,
-                                                                            opt.billing_subgroup_name,
-                                                                            opt.billing_details
-                                                                        ]
-                                                                            .filter((v) => v !== undefined && v !== null && String(v).trim() !== '')
-                                                                            .map((part, idx, arr) => (
-                                                                                <React.Fragment key={idx}>
-                                                                                    <span>{part}</span>
-                                                                                    {idx < arr.length - 1 && (
-                                                                                        <span style={{ color: '#555', opacity: 0.8, padding: '0 2px' }}>||</span>
-                                                                                    )}
-                                                                                </React.Fragment>
-                                                                            ))}
-                                                                    </span>
-                                                                    {typeof opt.default_fees === 'number' && !isNaN(opt.default_fees) && (
-                                                                        <span style={{ color: '#1976d2' }}>₹{opt.default_fees}</span>
-                                                                    )}
-                                                                </span>
-                                                            </label>
-                                                        </React.Fragment>
-                                                    );
-                                                })}
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                                <button
-                                    type="button"
-                                    disabled={isFormDisabled}
-                                    style={{
-                                        padding: '0 10px',
-                                        height: '32px',
-                                        alignSelf: 'flex-start',
-                                        backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
-                                        color: 'white',
-                                        border: 'none',
-                                        borderRadius: '4px',
-                                        fontSize: '13px',
-                                        cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                        whiteSpace: 'nowrap'
-                                    }}
-                                    onClick={() => {
-                                        const total = billingDetailsOptions
-                                            .filter(opt => selectedBillingDetailIds.includes(opt.id))
-                                            .reduce((sum, opt) => sum + (typeof opt.default_fees === 'number' && !isNaN(opt.default_fees) ? opt.default_fees : Number(opt.default_fees || 0)), 0);
-                                        setBillingData(prev => {
-                                            const discountNum = parseFloat(prev.discount) || 0;
-                                            const newAcBalance = total - discountNum;
-                                            return { ...prev, billed: String(total), acBalance: String(newAcBalance) };
-                                        });
-                                        if (total > 0) {
-                                            setBillingError(null);
-                                        }
-                                    }}
-                                >
-                                    Add
-                                </button>
-                            </div>
-                        </div>
+                        
 
                         {/* Billing Section */}
                         <div style={{ marginBottom: '15px' }}>
@@ -5599,23 +5435,59 @@ export default function Treatment() {
                                     <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
                                         Billed (Rs)
                                     </label>
-                                    <input
-                                        type="text"
-                                        value={billingData.billed}
-                                        onChange={(e) => handleBillingChange('billed', e.target.value)}
-                                        disabled
-                                        placeholder="Billed Amount"
-                                        style={{
-                                            width: '100%',
-                                            padding: '6px 10px',
-                                            border: billingError ? '1px solid red' : '1px solid #ccc',
-                                            borderRadius: '4px',
-                                            fontSize: '13px',
-                                            backgroundColor: '#f5f5f5',
-                                            color: '#666',
-                                            cursor: 'not-allowed'
-                                        }}
-                                    />
+                                    <div style={{ position: 'relative' }}>
+                                        <input
+                                            type="text"
+                                            value={billingData.billed}
+                                            onChange={(e) => handleBillingChange('billed', e.target.value)}
+                                            disabled
+                                            placeholder="Billed Amount"
+                                            style={{
+                                                width: '100%',
+                                                padding: '6px 34px 6px 10px',
+                                                border: billingError ? '1px solid red' : '1px solid #ccc',
+                                                borderRadius: '4px',
+                                                fontSize: '13px',
+                                                backgroundColor: '#f5f5f5',
+                                                color: '#666',
+                                                cursor: 'not-allowed'
+                                            }}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowBillingPopup(true)}
+                                            title="Add billed item"
+                                            className="fixed-icon-btn"
+                                            style={{
+                                                position: 'absolute',
+                                                right: 6,
+                                                top: '20%',                                   
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                width: 22,
+                                                height: 22,
+                                                borderRadius: 4,
+                                                border: 'none',
+                                                backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
+                                                color: '#fff',
+                                                fontWeight: 700,
+                                                lineHeight: '22px',
+                                                cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                                padding: 0,
+                                                boxSizing: 'border-box',
+                                                outline: 'none',
+                                                boxShadow: 'none',
+                                                transition: 'none'
+                                            }}
+                                            disabled={isFormDisabled}
+                                            onMouseDown={(e) => {
+                                                e.preventDefault();
+                                            }}
+                                        >
+                                            +
+                                        </button>
+                                    </div>
                                     {billingError && (
                                         <div style={{ color: 'red', fontSize: '12px', marginTop: '4px' }}>
                                             {billingError}
@@ -5669,7 +5541,16 @@ export default function Treatment() {
                                 <div>
                                     <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
                                         <span>A/C Balance (Rs)</span>
-                                        <span style={{ color: '#1976d2', fontWeight: 'bold' }}>₹</span>
+                                        <span 
+                                            style={{ 
+                                                color: '#1976d2', 
+                                                fontWeight: 'bold',
+                                                cursor: 'pointer',
+                                                userSelect: 'none'
+                                            }}
+                                            onClick={() => setShowAccountsPopup(true)}
+                                            title="View Accounts"
+                                        >₹</span>
                                     </label>
                                     <input
                                         type="text"
@@ -6019,6 +5900,30 @@ export default function Treatment() {
                 </div>
             )}
 
+            <AddBillingPopup
+                open={showBillingPopup}
+                onClose={() => setShowBillingPopup(false)}
+                isFormDisabled={isFormDisabled}
+                onSubmit={(totalAmount) => {
+                    setBillingData(prev => {
+                        const discountNum = parseFloat(prev.discount) || 0;
+                        const billedNum = Number(totalAmount) || 0;
+                        const acBal = Math.max(0, billedNum - discountNum);
+                        return {
+                            ...prev,
+                            billed: billedNum.toFixed(2),
+                            acBalance: acBal.toFixed(2),
+                            dues: acBal.toFixed(2)
+                        };
+                    });
+                }}
+                billingSearch={billingSearch}
+                setBillingSearch={setBillingSearch}
+                filteredBillingDetails={filteredBillingDetails}
+                selectedBillingDetailIds={selectedBillingDetailIds}
+                setSelectedBillingDetailIds={setSelectedBillingDetailIds}
+            />
+
             {showLabTestEntry && selectedPatientForLab && (
                 <LabTestEntry
                     open={true}
@@ -6047,6 +5952,29 @@ export default function Treatment() {
                     patientId: treatmentData.patientId
                 } : null}
                 sessionData={sessionData}
+            />
+
+            {/* Accounts Popup */}
+            <AccountsPopup
+                open={showAccountsPopup}
+                onClose={() => setShowAccountsPopup(false)}
+                patientId={selectedPatientForForm?.patientId || treatmentData?.patientId}
+                patientName={selectedPatientForForm?.name || treatmentData?.patientName}
+            />
+
+            {/* Lab Trend Popup */}
+            <LabTrendPopup
+                open={showLabTrendPopup}
+                onClose={() => setShowLabTrendPopup(false)}
+                patientId={treatmentData?.patientId || ''}
+                patientName={treatmentData?.patientName || ''}
+                gender={treatmentData?.gender || ''}
+                age={treatmentData?.age || 0}
+                doctorId={treatmentData?.doctorId || sessionData?.doctorId}
+                clinicId={treatmentData?.clinicId || sessionData?.clinicId || ''}
+                visitDate={new Date().toISOString().split('T')[0]}
+                shiftId={(sessionData as any)?.shiftId || 1}
+                patientVisitNo={treatmentData?.visitNumber || 0}
             />
 
             {/* Success/Error Snackbar - Always rendered at bottom center */}
