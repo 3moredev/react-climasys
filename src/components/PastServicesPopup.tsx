@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Close } from '@mui/icons-material';
 import { SessionInfo } from '../services/sessionService';
+import { patientService, MasterListsRequest } from '../services/patientService';
 
 interface PastServiceItem {
     sr: number;
@@ -27,17 +28,231 @@ interface PastServicesPopupProps {
 }
 
 const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, date, patientData, sessionData }) => {
-    const [services, setServices] = useState<PastServiceItem[]>([
-        { sr: 1, group: 'Group 1', subGroup: 'Sub-group A', details: 'Service Details 1', selected: false, totalFees: 500 },
-        { sr: 2, group: 'Group 2', subGroup: 'Sub-group B', details: 'Service Details 2', selected: false, totalFees: 750 },
-        { sr: 3, group: 'Group 1', subGroup: 'Sub-group C', details: 'Service Details 3', selected: false, totalFees: 300 },
-    ]);
+    const [services, setServices] = useState<PastServiceItem[]>([]);
+    const [loading, setLoading] = useState<boolean>(false);
+    const [error, setError] = useState<string | null>(null);
+    const [billing, setBilling] = useState({
+        billed: '',
+        discount: '',
+        acBalance: '',
+        dues: '',
+        feesCollected: '',
+        paymentBy: '',
+        paymentRemark: '',
+        receiptNo: '',
+        receiptDate: '',
+        receiptAmount: ''
+    });
+    const [uiFieldsData, setUiFieldsData] = useState<any>(null);
+    const [paymentByOptions, setPaymentByOptions] = useState<Array<{ value: string; label: string }>>([]);
+
+    // Load Payment By reference data
+    useEffect(() => {
+        let cancelled = false;
+        async function loadPaymentByOptions() {
+            try {
+                const ref = await patientService.getAllReferenceData();
+                if (cancelled) return;
+                const preferKeys = ['paymentMethods', 'paymentBy', 'paymentTypes', 'paymentModes', 'payments', 'paymentByList'];
+                let raw: any[] = [];
+                for (const key of preferKeys) {
+                    if (Array.isArray((ref as any)?.[key])) { raw = (ref as any)[key]; break; }
+                }
+                if (raw.length === 0) {
+                    const firstArrayKey = Object.keys(ref || {}).find(k => Array.isArray((ref as any)[k]) && ((ref as any)[k][0] && (('description' in (ref as any)[k][0]) || ('label' in (ref as any)[k][0]) || ('name' in (ref as any)[k][0]))));
+                    if (firstArrayKey) raw = (ref as any)[firstArrayKey];
+                }
+                const toStr = (v: any) => (v === undefined || v === null ? '' : String(v));
+                const options: { value: string; label: string }[] = Array.isArray(raw)
+                    ? raw.map((r: any) => ({
+                        value: toStr(r?.id ?? r?.value ?? r?.code ?? r?.paymentById ?? r?.key ?? r),
+                        label: toStr(r?.paymentDescription ?? r?.description ?? r?.label ?? r?.name ?? r?.paymentBy ?? r)
+                    })).filter(o => o.label)
+                    : [];
+                setPaymentByOptions(options);
+                // If no selection yet, initialize to first
+                setBilling(prev => ({ ...prev, paymentBy: prev.paymentBy || (options[0]?.value || '') }));
+            } catch (_) {
+                // ignore
+            }
+        }
+        loadPaymentByOptions();
+        return () => { cancelled = true; };
+    }, []);
 
     const handleSelectChange = (index: number) => {
         const updatedServices = [...services];
         updatedServices[index].selected = !updatedServices[index].selected;
         setServices(updatedServices);
     };
+
+    // Fetch previous visit items for the selected date
+    useEffect(() => {
+        async function fetchItems() {
+            try {
+                setError(null);
+                setLoading(true);
+                setServices([]);
+                if (!open) return;
+                if (!date) return;
+                const patientId = patientData?.patientId;
+                const doctorId = sessionData?.doctorId as unknown as string | undefined;
+                const clinicId = sessionData?.clinicId as unknown as string | undefined;
+                const shiftFromSession = (sessionData as any)?.shiftId;
+                if (!patientId || !doctorId || !clinicId) return;
+
+                // First, find the visitNo and shiftId for the given date
+                // Primary: fetch detailed visits
+                let visitNo: number | undefined;
+                let shiftId: number | undefined;
+
+                const normalize = (d: any): string => {
+                    if (!d) return '';
+                    const s = String(d);
+                    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s; // YYYY-MM-DD
+                    const parts = s.split(' ');
+                    return parts[0]; // take date portion
+                };
+                const targetDate = normalize(date);
+
+                try {
+                    const visitsResp: any = await patientService.getPatientPreviousVisitsWithDetails(patientId, targetDate);
+                    const visits: any[] = Array.isArray(visitsResp?.visits) ? visitsResp.visits : [];
+                    const match = visits.find(v => normalize(v.visit_date) === targetDate);
+                    visitNo = match?.patient_visit_no ?? match?.visit_number;
+                    shiftId = match?.shift_id as number | undefined;
+                } catch (e: any) {
+                    // Fallback on 404: use previous-visit-dates endpoint
+                    const datesResp: any = await patientService.getPreviousServiceVisitDates({
+                        patientId: String(patientId),
+                        clinicId: String(clinicId),
+                        todaysVisitDate: targetDate
+                    });
+                    const arrs: any[] = [];
+                    if (Array.isArray(datesResp?.visits)) arrs.push(datesResp.visits);
+                    if (Array.isArray(datesResp?.resultSet1)) arrs.push(datesResp.resultSet1);
+                    if (Array.isArray(datesResp)) arrs.push(datesResp);
+                    const first = arrs.find(a => Array.isArray(a)) || [];
+                    const match = first.find((v: any) => normalize(v.visitDate || v.visit_date || v.Visit_Date) === targetDate);
+                    visitNo = match?.patientVisitNo || match?.patient_visit_no || match?.visit_number;
+                    // shiftId may be missing; use session fallback
+                    shiftId = match?.shiftId || match?.shift_id || (typeof shiftFromSession === 'number' ? shiftFromSession : parseInt(String(shiftFromSession || 1), 10));
+                }
+
+                if (!shiftId) {
+                    shiftId = (typeof shiftFromSession === 'number' ? shiftFromSession : parseInt(String(shiftFromSession || 1), 10));
+                }
+                if (!visitNo) {
+                    setError('No matching visit found for selected date.');
+                    return;
+                }
+
+                // Call items API
+                const itemsResp: any = await patientService.getPreviousServiceVisitItems({
+                    patientId: String(patientId),
+                    doctorId: String(doctorId),
+                    clinicId: String(clinicId),
+                    shiftId: Number(shiftId),
+                    visitNo: Number(visitNo),
+                    visitDate: targetDate
+                });
+
+                const items: any[] = Array.isArray(itemsResp?.items) ? itemsResp.items : (Array.isArray(itemsResp) ? itemsResp : []);
+
+                const mapped: PastServiceItem[] = items.map((it, idx) => ({
+                    sr: idx + 1,
+                    group: String(it.group || it.group_description || it.category || it.Group || '—'),
+                    subGroup: String(it.subGroup || it.sub_group || it.sub_category || it.SubGroup || '—'),
+                    details: String(it.details || it.description || it.service_description || it.item || '—'),
+                    selected: false,
+                    totalFees: Number(it.totalFees ?? it.total_fee ?? it.fees ?? it.amount ?? it.rate ?? 0)
+                }));
+
+                setServices(mapped);
+
+                // Fetch master lists to patch payment details for this specific visit
+                try {
+                    const params: MasterListsRequest = {
+                        patientId: String(patientId),
+                        shiftId: Number(shiftId || 1),
+                        clinicId: String(clinicId),
+                        doctorId: String(doctorId),
+                        visitDate: targetDate, // YYYY-MM-DD
+                        patientVisitNo: Number(visitNo || 0)
+                    } as MasterListsRequest;
+
+                    const mlResp: any = await patientService.getMasterLists(params);
+                    const dataRootMl = (mlResp as any)?.data || {};
+                    const uiFields = (dataRootMl as any)?.uiFields || (mlResp as any)?.uiFields || {};
+                    const toStr = (v: any) => (v === undefined || v === null ? '' : String(v));
+
+                    // Store full uiFields payload (normalized) for reference
+                    setUiFieldsData({
+                        bloodPressure: toStr(uiFields?.bloodPressure),
+                        instructions: toStr(uiFields?.instructions),
+                        oedema: toStr(uiFields?.oedema),
+                        billedRs: toStr(uiFields?.billedRs),
+                        inPerson: Boolean(uiFields?.inPerson),
+                        cholestrol: Boolean(uiFields?.cholestrol),
+                        followUp: toStr(uiFields?.followUp),
+                        acBalanceRs: toStr(uiFields?.acBalanceRs),
+                        followUpType: toStr(uiFields?.followUpType),
+                        collectedRs: toStr(uiFields?.collectedRs),
+                        smoking: Boolean(uiFields?.smoking),
+                        tobacco: Boolean(uiFields?.tobacco),
+                        allergyDetails: toStr(uiFields?.allergyDetails),
+                        alcohol: Boolean(uiFields?.alcohol),
+                        discountRs: toStr(uiFields?.discountRs),
+                        ihd: Boolean(uiFields?.ihd),
+                        duesRs: toStr(uiFields?.duesRs),
+                        paymentRemark: toStr(uiFields?.paymentRemark),
+                        heightCm: toStr(uiFields?.heightCm),
+                        asthma: Boolean(uiFields?.asthma),
+                        paymentBy: toStr(uiFields?.paymentBy ?? uiFields?.paymentById),
+                        pulsePerMin: toStr(uiFields?.pulsePerMin),
+                        followUpDate: toStr(uiFields?.followUpDate),
+                        th: Boolean(uiFields?.th),
+                        habitDetails: toStr(uiFields?.habitDetails),
+                        tpr: toStr(uiFields?.tpr),
+                        receiptNo: toStr(uiFields?.receiptNo),
+                        pallor: toStr(uiFields?.pallor),
+                        sugar: toStr(uiFields?.sugar),
+                        hypertension: Boolean(uiFields?.hypertension),
+                        diabetes: Boolean(uiFields?.diabetes),
+                        weightKg: toStr(uiFields?.weightKg)
+                    });
+
+                    // Try to read paymentBy and remark from vitals as priority
+                    const vitals0 = Array.isArray((dataRootMl as any)?.vitals) ? (dataRootMl as any).vitals[0] : undefined;
+                    const paymentByFromVitals = vitals0?.payment_by_id;
+                    const paymentRemarkFromVitals = vitals0?.payment_remark;
+
+                    setBilling(prev => ({
+                        ...prev,
+                        billed: toStr(uiFields?.billedRs ?? uiFields?.BilledRs ?? uiFields?.billed_amount ?? uiFields?.Billed_Amount ?? ''),
+                        discount: toStr(uiFields?.discountRs ?? uiFields?.DiscountRs ?? uiFields?.discount ?? uiFields?.Discount ?? ''),
+                        dues: toStr(uiFields?.duesRs ?? uiFields?.DuesRs ?? uiFields?.dues ?? uiFields?.Dues ?? ''),
+                        acBalance: toStr(uiFields?.acBalanceRs ?? uiFields?.AcBalanceRs ?? uiFields?.ac_balance ?? uiFields?.Ac_Balance ?? ''),
+                        receiptNo: toStr(uiFields?.receiptNo ?? uiFields?.ReceiptNo ?? ''),
+                        feesCollected: toStr(uiFields?.collectedRs ?? uiFields?.feesCollected ?? uiFields?.FeesCollected ?? uiFields?.collected ?? uiFields?.Collected ?? ''),
+                        paymentRemark: toStr(paymentRemarkFromVitals ?? uiFields?.paymentRemark ?? uiFields?.PaymentRemark ?? ''),
+                        paymentBy: toStr(paymentByFromVitals ?? uiFields?.paymentBy ?? uiFields?.paymentById ?? uiFields?.PaymentById ?? ''),
+                        receiptDate: toStr(uiFields?.receiptDate ?? uiFields?.ReceiptDate ?? ''),
+                        receiptAmount: toStr(uiFields?.receiptAmount ?? uiFields?.ReceiptAmount ?? '')
+                    }));
+                } catch (_) {
+                    // Ignore master lists errors in popup; keep items rendered
+                }
+            } catch (e: any) {
+                setError(e?.message || 'Failed to load past service items');
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        fetchItems();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [open, date, patientData?.patientId, sessionData?.doctorId, sessionData?.clinicId]);
 
     if (!open) return null;
 
@@ -198,6 +413,33 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                         overflowY: 'auto',
                         backgroundColor: 'white'
                     }}>
+                        {/* Loading/Error banners */}
+                        {loading && (
+                            <div style={{
+                                marginBottom: '10px',
+                                padding: '10px 12px',
+                                backgroundColor: '#E3F2FD',
+                                border: '1px solid #BBDEFB',
+                                color: '#0D47A1',
+                                fontSize: '12px',
+                                borderRadius: 4
+                            }}>
+                                Loading past service items...
+                            </div>
+                        )}
+                        {!!error && (
+                            <div style={{
+                                marginBottom: '10px',
+                                padding: '10px 12px',
+                                backgroundColor: '#FFEBEE',
+                                border: '1px solid #FFCDD2',
+                                color: '#C62828',
+                                fontSize: '12px',
+                                borderRadius: 4
+                            }}>
+                                {error}
+                            </div>
+                        )}
                         <div style={{ border: '1px solid #ccc', borderRadius: '4px', overflow: 'hidden' }}>
                             <table style={{
                                 width: '100%',
@@ -364,6 +606,8 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                                 </label>
                                 <input
                                     type="text"
+                                    value={billing.billed}
+                                    onChange={(e) => setBilling(b => ({ ...b, billed: e.target.value }))}
                                     style={{
                                         padding: '8px 10px',
                                         border: '1px solid #ccc',
@@ -386,6 +630,8 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                                 </label>
                                 <input
                                     type="text"
+                                    value={billing.discount}
+                                    onChange={(e) => setBilling(b => ({ ...b, discount: e.target.value }))}
                                     style={{
                                         padding: '8px 10px',
                                         border: '1px solid #ccc',
@@ -408,6 +654,8 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                                 </label>
                                 <input
                                     type="text"
+                                    value={billing.acBalance}
+                                    onChange={(e) => setBilling(b => ({ ...b, acBalance: e.target.value }))}
                                     style={{
                                         padding: '8px 10px',
                                         border: '1px solid #ccc',
@@ -432,6 +680,8 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                                 </label>
                                 <input
                                     type="text"
+                                    value={billing.dues}
+                                    onChange={(e) => setBilling(b => ({ ...b, dues: e.target.value }))}
                                     style={{
                                         padding: '8px 10px',
                                         border: '1px solid #ccc',
@@ -454,6 +704,8 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                                 </label>
                                 <input
                                     type="text"
+                                    value={billing.feesCollected}
+                                    onChange={(e) => setBilling(b => ({ ...b, feesCollected: e.target.value }))}
                                     style={{
                                         padding: '8px 10px',
                                         border: '1px solid #ccc',
@@ -476,12 +728,14 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                                 </label>
                                 <input
                                     type="text"
-                                    style={{
-                                        padding: '8px 10px',
-                                        border: '1px solid #ccc',
-                                        borderRadius: '4px',
-                                        fontSize: '13px'
-                                    }}
+                                    // value={billing.reason}
+                                    // onChange={(e) => setBilling(b => ({ ...b, reason: e.target.value }))}
+                                    // style={{
+                                    //     padding: '8px 10px',
+                                    //     border: '1px solid #ccc',
+                                    //     borderRadius: '4px',
+                                    //     fontSize: '13px'
+                                    // }}
                                 />
                             </div>
                             
@@ -498,15 +752,27 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                                 }}>
                                     Payment By
                                 </label>
-                                <input
-                                    type="text"
+                                <select
+                                    disabled
+                                    value={billing.paymentBy}
+                                    onChange={(e) => setBilling(b => ({ ...b, paymentBy: e.target.value }))}
                                     style={{
                                         padding: '8px 10px',
                                         border: '1px solid #ccc',
                                         borderRadius: '4px',
-                                        fontSize: '13px'
+                                        fontSize: '13px',
+                                        background: '#D5D5D8',
+                                        color: '#333'
                                     }}
-                                />
+                                >
+                                    {paymentByOptions.length === 0 ? (
+                                        <option value="">—</option>
+                                    ) : (
+                                        paymentByOptions.map(opt => (
+                                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                        ))
+                                    )}
+                                </select>
                             </div>
                             <div style={{
                                 display: 'flex',
@@ -522,6 +788,8 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                                 </label>
                                 <input
                                     type="text"
+                                    value={billing.paymentRemark}
+                                    onChange={(e) => setBilling(b => ({ ...b, paymentRemark: e.target.value }))}                                
                                     style={{
                                         padding: '8px 10px',
                                         border: '1px solid #ccc',
@@ -544,6 +812,8 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                                 </label>
                                 <input
                                     type="text"
+                                    value={billing.receiptDate}
+                                    onChange={(e) => setBilling(b => ({ ...b, receiptDate: e.target.value }))}
                                     style={{
                                         padding: '8px 10px',
                                         border: '1px solid #ccc',
@@ -568,6 +838,8 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                                 </label>
                                 <input
                                     type="text"
+                                    value={billing.receiptNo}
+                                    onChange={(e) => setBilling(b => ({ ...b, receiptNo: e.target.value }))}
                                     style={{
                                         padding: '8px 10px',
                                         border: '1px solid #ccc',

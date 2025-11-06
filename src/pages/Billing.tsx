@@ -3,7 +3,7 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import { useNavigate, useLocation } from "react-router-dom";
 import { visitService, ComprehensiveVisitDataRequest } from '../services/visitService';
 import { sessionService, SessionInfo } from "../services/sessionService";
-import { Delete, Edit, Add, Info, ExpandMore, ExpandLess } from '@mui/icons-material';
+import { Delete, Edit, Add, Info, ExpandMore, ExpandLess,Download as DownloadIcon } from '@mui/icons-material';
 import { Snackbar } from '@mui/material';
 import { complaintService, ComplaintOption } from "../services/complaintService";
 import { medicineService, MedicineOption } from "../services/medicineService";
@@ -19,6 +19,9 @@ import AddMedicinePopup, { MedicineData } from "../components/AddMedicinePopup";
 import AddPrescriptionPopup, { PrescriptionData } from "../components/AddPrescriptionPopup";
 import AddTestLabPopup, { TestLabData } from "../components/AddTestLabPopup";
 import PastServicesPopup from "../components/PastServicesPopup";
+import { DocumentService } from "../services/documentService";
+import AccountsPopup from "../components/AccountsPopup";
+import AddBillingPopup from "../components/AddBillingPopup";
 
 // Specific styles for Duration/Comment input in table
 const durationCommentStyles = `
@@ -193,6 +196,8 @@ export default function Treatment() {
     const [sessionData, setSessionData] = useState<SessionInfo | null>(null);
     const [treatmentData, setTreatmentData] = useState<TreatmentData | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
+    const [billingError, setBillingError] = useState<string | null>(null);
+    const [isFormDisabled, setIsFormDisabled] = useState<boolean>(false);
     const [showVitalsTrend, setShowVitalsTrend] = useState<boolean>(false);
     const [showInstructionPopup, setShowInstructionPopup] = useState<boolean>(false);
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -290,6 +295,12 @@ export default function Treatment() {
     const [complaintsOptions, setComplaintsOptions] = useState<ComplaintOption[]>([]);
     const [complaintsLoading, setComplaintsLoading] = useState(false);
     const [complaintsError, setComplaintsError] = useState<string | null>(null);
+
+    // Accounts popup state
+    const [showAccountsPopup, setShowAccountsPopup] = useState<boolean>(false);
+
+    // Billing popup state
+    const [showBillingPopup, setShowBillingPopup] = useState<boolean>(false);
     
     const filteredComplaints = React.useMemo(() => {
         const term = complaintSearch.trim().toLowerCase();
@@ -453,6 +464,84 @@ export default function Treatment() {
         { id: '3', name: 'Sachin Patankar.xlsx', type: 'xlsx' }
     ]);
 
+    // Existing documents for current visit (from backend)
+    const [existingDocuments, setExistingDocuments] = useState<any[]>([]);
+    const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
+    const [downloadingDocumentId, setDownloadingDocumentId] = useState<number | null>(null);
+    const [openingDocumentId, setOpeningDocumentId] = useState<number | null>(null);
+
+    // Load existing documents for the current patient visit
+    const loadExistingDocuments = async (patientId: string, visitNo: number) => {
+        if (!patientId || !visitNo) return;
+        setIsLoadingDocuments(true);
+        try {
+            const result = await DocumentService.getDocumentsByVisit(patientId, visitNo);
+            if (result.success && result.documents) {
+                setExistingDocuments(result.documents);
+            } else {
+                setExistingDocuments([]);
+            }
+        } catch (e) {
+            setExistingDocuments([]);
+        } finally {
+            setIsLoadingDocuments(false);
+        }
+    };
+
+    // Whenever treatmentData changes, fetch documents for that visit
+    useEffect(() => {
+        const pid = treatmentData?.patientId;
+        const vno = treatmentData?.visitNumber;
+        if (pid && vno) {
+            loadExistingDocuments(String(pid), Number(vno));
+        }
+    }, [treatmentData?.patientId, treatmentData?.visitNumber]);
+
+    // Download a document by ID
+    const handleDownloadDocument = async (doc: any) => {
+        // Support various id field names
+        const docId: number | undefined = doc.documentId || doc.id || doc.document_id || doc.documentID;
+        if (!docId) return;
+        if (downloadingDocumentId === docId) return;
+        try {
+            setDownloadingDocumentId(docId);
+            const { blob, filename } = await DocumentService.downloadDocumentFile(docId);
+            const objectUrl = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = objectUrl;
+            const safeName = (filename || doc.documentName || `document-${docId}`).toString();
+            link.download = safeName;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(objectUrl);
+        } catch (e) {
+            console.error('Error downloading document', e);
+        } finally {
+            setDownloadingDocumentId(null);
+        }
+    };
+
+    // Open a document in a new tab
+    const handleOpenDocument = async (doc: any) => {
+        // Support various id field names
+        const docId: number | undefined = doc.documentId || doc.id || doc.document_id || doc.documentID;
+        if (!docId) return;
+        if (openingDocumentId === docId || downloadingDocumentId === docId) return;
+        try {
+            setOpeningDocumentId(docId);
+            const { blob, filename } = await DocumentService.downloadDocumentFile(docId);
+            const objectUrl = window.URL.createObjectURL(blob);
+            window.open(objectUrl, '_blank');
+            // Note: We don't revoke the URL immediately as the new tab needs it
+            // The browser will clean it up when the tab is closed
+        } catch (e) {
+            console.error('Error opening document', e);
+        } finally {
+            setOpeningDocumentId(null);
+        }
+    };
+
     // Addendum modal moved to Treatment page
 
     // Fetch session data on component mount
@@ -564,6 +653,10 @@ export default function Treatment() {
                             medicalHistoryText: vitals.habits_comments !== undefined ? String(vitals.habits_comments) : prev.medicalHistoryText,
                             visitComments: vitals.instructions !== undefined ? String(vitals.instructions) : prev.visitComments,
                             medicines: medicinesJoined || prev.medicines,
+                            visitType: {
+                                ...prev.visitType,
+                                inPerson: vitals.in_person !== undefined ? Boolean(vitals.in_person) : prev.visitType.inPerson
+                            },
                             medicalHistory: {
                                 ...prev.medicalHistory,
                                 hypertension: Boolean(vitals.hypertension ?? prev.medicalHistory.hypertension),
@@ -642,9 +735,23 @@ export default function Treatment() {
                         const mlRxArr = Array.isArray(dataRoot?.prescriptions) ? dataRoot.prescriptions : [];
                         setMlPrescriptionsTable(mlRxArr.map((p: any, idx: number) => mapToRxRow(p, idx, 'mlrx')).filter((r: PrescriptionRow) => !!r.prescription));
 
-                        // If specific instruction list not provided, reuse prescriptions as instructions
-                        const mlInstrArr = Array.isArray(dataRoot?.instructions) ? dataRoot.instructions : mlRxArr;
-                        setMlInstructionsTable(mlInstrArr.map((p: any, idx: number) => mapToRxRow(p, idx, 'mlins')).filter((r: PrescriptionRow) => !!r.prescription));
+                        // Build Instructions table ONLY from Instructions arrays
+                        const instrArrRaw = Array.isArray((dataRoot as any)?.instructions)
+                            ? (dataRoot as any).instructions
+                            : (Array.isArray((dataRoot as any)?.Instructions)
+                                ? (dataRoot as any).Instructions
+                                : (Array.isArray((dataRoot as any)?.Instrctions)
+                                    ? (dataRoot as any).Instrctions
+                                    : []));
+
+                        const instructionRows: PrescriptionRow[] = instrArrRaw.map((p: any, idx: number) => {
+                            const groupName = safeToStr(p?.group_description ?? p?.Group_Description ?? '');
+                            const instructionText = safeToStr(p?.instructions_description ?? p?.Instructions_Description ?? p?.instruction ?? p?.Instructions ?? '');
+                            const title = groupName || safeToStr(p?.prescription ?? p?.name ?? '');
+                            return { id: `mlins_${idx}`, prescription: title, b: '', l: '', d: '', days: '', instruction: instructionText };
+                        }).filter((r: PrescriptionRow) => r.prescription || r.instruction);
+
+                        setMlInstructionsTable(instructionRows);
 
                         const testsArr = Array.isArray(dataRoot?.labTestsAsked) ? dataRoot.labTestsAsked : [];
                         setMlTestsTable(testsArr.map((t: any) => safeToStr(t?.id ?? t?.name ?? t?.testName ?? t?.label ?? t)).filter((s: string) => !!s));
@@ -2291,31 +2398,125 @@ export default function Treatment() {
                             }}>
                                 Attachments
                             </div>
-                            <div style={{ padding: '0' }}>
-                                {attachments.map((attachment, index) => (
-                                    <div 
-                                        key={attachment.id}
-                                        style={{
-                                            padding: '10px 15px',
-                                            borderBottom: '1px solid #e0e0e0',
-                                            backgroundColor: 'white',
-                                            cursor: 'pointer',
-                                            fontSize: '13px',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '8px'
-                                        }}
-                                    >
-                                        <div style={{ fontSize: '16px' }}>
-                                            {attachment.type === 'pdf' && '📄'}
-                                            {attachment.type === 'docx' && '📝'}
-                                            {attachment.type === 'xlsx' && '📊'}
-                                        </div>
-                                        <div style={{ fontWeight: '500', color: '#333', flex: 1 }}>
-                                            {attachment.name}
-                                        </div>
+                            <div style={{ padding: '10px', maxWidth: '100%', overflowX: 'hidden', boxSizing: 'border-box' }}>
+                                {isLoadingDocuments && (
+                                    <div style={{ 
+                                        display: 'flex', 
+                                        alignItems: 'center', 
+                                        gap: '8px',
+                                        color: '#2e7d32',
+                                        fontSize: '12px'
+                                    }}>
+                                        <div style={{
+                                            width: '12px',
+                                            height: '12px',
+                                            border: '2px solid #2e7d32',
+                                            borderTop: '2px solid transparent',
+                                            borderRadius: '50%',
+                                            animation: 'spin 1s linear infinite'
+                                        }}></div>
+                                        Loading documents...
                                     </div>
-                                ))}
+                                )}
+
+                                {!isLoadingDocuments && existingDocuments.length === 0 && (
+                                    <div style={{ color: '#666', fontSize: '12px' }}>
+                                        No documents found for this visit
+                                    </div>
+                                )}
+
+                                {!isLoadingDocuments && existingDocuments.length > 0 && (
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', maxWidth: '100%' }}>
+                                        {existingDocuments.map((doc, index) => {
+                                            const docId: number | undefined = doc.documentId || doc.id || doc.document_id || doc.documentID;
+                                            const isDownloading = downloadingDocumentId === docId;
+                                            const isOpening = openingDocumentId === docId;
+                                            const isProcessing = isDownloading || isOpening;
+                                            return (
+                                                <span key={`existing-${index}`} style={{ 
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    padding: '4px 8px',
+                                                    backgroundColor: '#e8f5e8',
+                                                    borderRadius: '6px',
+                                                    border: '1px solid #c8e6c9',
+                                                    fontSize: '12px',
+                                                    fontFamily: "'Roboto', sans-serif",
+                                                    fontWeight: 500,
+                                                    color: '#2e7d32',
+                                                    maxWidth: '100%',
+                                                    cursor: docId && !isProcessing ? 'pointer' : 'default',
+                                                    opacity: isProcessing ? 0.7 : 1,
+                                                    transition: 'opacity 0.2s'
+                                                }}
+                                                onClick={() => { 
+                                                    if (docId && !isProcessing) {
+                                                        handleOpenDocument(doc);
+                                                    }
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                    if (docId && !isProcessing) {
+                                                        e.currentTarget.style.backgroundColor = '#d4edda';
+                                                    }
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    if (docId && !isProcessing) {
+                                                        e.currentTarget.style.backgroundColor = '#e8f5e8';
+                                                    }
+                                                }}
+                                                title={isProcessing ? (isOpening ? 'Opening...' : 'Downloading...') : docId ? 'Click to open document' : ''}
+                                                >
+                                                    <span style={{ marginRight: '5px' }}>📄</span>
+                                                    <span style={{ maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                        {doc.documentName || `Document ${index + 1}`}
+                                                    </span>
+                                                    {doc.fileSize && (
+                                                        <span style={{ 
+                                                            marginLeft: '6px', 
+                                                            fontSize: '11px', 
+                                                            color: '#2e7d32', 
+                                                            fontWeight: 400
+                                                        }}>
+                                                            ({(() => {
+                                                                const size = doc.fileSize;
+                                                                if (size === 0) return '0 B';
+                                                                const units = ['B', 'KB', 'MB', 'GB'];
+                                                                let fileSize = size;
+                                                                let unitIndex = 0;
+                                                                while (fileSize >= 1024 && unitIndex < units.length - 1) {
+                                                                    fileSize /= 1024;
+                                                                    unitIndex++;
+                                                                }
+                                                                return `${fileSize.toFixed(1)} ${units[unitIndex]}`;
+                                                            })()})
+                                                        </span>
+                                                    )}
+                                                    {docId && (
+                                                        <span
+                                                            onClick={(e) => { 
+                                                                e.stopPropagation(); // Prevent triggering the parent onClick
+                                                                if (!isProcessing) handleDownloadDocument(doc); 
+                                                            }}
+                                                            style={{
+                                                                marginLeft: '8px',
+                                                                width: '24px',
+                                                                height: '24px',
+                                                                display: 'inline-flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                color: isProcessing ? '#9e9e9e' : '#000000',
+                                                                cursor: isProcessing ? 'not-allowed' : 'pointer'
+                                                            }}
+                                                            title={isProcessing ? (isOpening ? 'Opening...' : 'Downloading...') : 'Download'}
+                                                        >
+                                                            <DownloadIcon style={{ fontSize: '16px' }} />
+                                                        </span>
+                                                    )}
+                                                </span>
+                                            );
+                                        })}
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -2578,13 +2779,28 @@ export default function Treatment() {
                                 </tbody>
                             </table>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, padding: 12 }}>
-                                <textarea value={display(formData.detailedHistory)} placeholder="Detailed History" disabled style={{ height: 64, width: '100%', border: '1px solid #ddd', padding: 8, fontSize: 12, background: '#D5D5D8' }} />
-                                <textarea value={display(formData.examinationFindings)} placeholder="Examination Findings" disabled style={{ height: 64, width: '100%', border: '1px solid #ddd', padding: 8, fontSize: 12, background: '#D5D5D8' }} />
-                                <textarea value={display(formData.additionalComments)} placeholder="Additional Comments" disabled style={{ height: 64, width: '100%', border: '1px solid #ddd', padding: 8, fontSize: 12, background: '#D5D5D8' }} />
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                    <label>Detailed History</label>
+                                    <textarea value={display(formData.detailedHistory)} placeholder="Detailed History" disabled style={{ height: 64, width: '100%', border: '1px solid #ddd', padding: 8, fontSize: 12, background: '#D5D5D8' }} />
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                    <label>Examination Findings</label>
+                                    <textarea value={display(formData.examinationFindings)} placeholder="Examination Findings" disabled style={{ height: 64, width: '100%', border: '1px solid #ddd', padding: 8, fontSize: 12, background: '#D5D5D8' }} />
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                    <label>Additional Comments</label>
+                                    <textarea value={display(formData.additionalComments)} placeholder="Additional Comments" disabled style={{ height: 64, width: '100%', border: '1px solid #ddd', padding: 8, fontSize: 12, background: '#D5D5D8' }} />
+                                </div>
                             </div>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 160px', gap: 12, padding: 12, alignItems: 'end' }}>
-                                <textarea value={display(formData.procedurePerformed)} placeholder="Procedure Performed" disabled style={{ height: 64, width: '100%', border: '1px solid #ddd', padding: 8, fontSize: 12, background: '#D5D5D8' }} />
-                                <textarea value={display(formData.dressingBodyParts)} placeholder="Dressing (body parts)" disabled style={{ height: 64, width: '100%', border: '1px solid #ddd', padding: 8, fontSize: 12, background: '#D5D5D8' }} />                                
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                    <label>Procedure Performed</label>
+                                    <textarea value={display(formData.procedurePerformed)} placeholder="Procedure Performed" disabled style={{ height: 64, width: '100%', border: '1px solid #ddd', padding: 8, fontSize: 12, background: '#D5D5D8' }} />
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                    <label>Dressing (body parts)</label>
+                                    <textarea value={display(formData.dressingBodyParts)} placeholder="Dressing (body parts)" disabled style={{ height: 64, width: '100%', border: '1px solid #ddd', padding: 8, fontSize: 12, background: '#D5D5D8' }} />                                
+                                </div>
                             </div>
                         </div>
                         )}
@@ -2677,9 +2893,9 @@ export default function Treatment() {
                         </div>
 
                         {/* Instructions Section */}
-                        {/* {mlInstructionsTable.length > 0 && ( */}
+                        {mlInstructionsTable.length > 0 && (
                             <div style={{ marginBottom: 12 }}>
-                                <div style={{
+                                {/* <div style={{
                                     backgroundColor: '#1976d2',
                                     color: 'white',
                                     padding: '12px 16px',
@@ -2688,10 +2904,10 @@ export default function Treatment() {
                                     fontSize: '16px'
                                 }}>
                                     Instructions
-                                </div>
+                                </div> */}
 
                                 {/* First Table: Instructions Summary with B/L/D/Days */}
-                                <div style={{
+                                {/* <div style={{
                                     border: '1px solid #ddd',
                                     borderTop: 'none',
                                     borderRadius: '0',
@@ -2717,47 +2933,7 @@ export default function Treatment() {
                                                     fontWeight: '600',
                                                     color: '#333'
                                                 }}>
-                                                    Instructions
-                                                </th>
-                                                <th style={{
-                                                    padding: '12px',
-                                                    textAlign: 'left',
-                                                    borderBottom: '1px solid #ddd',
-                                                    fontWeight: '600',
-                                                    color: '#333',
-                                                    width: '60px'
-                                                }}>
-                                                    B
-                                                </th>
-                                                <th style={{
-                                                    padding: '12px',
-                                                    textAlign: 'left',
-                                                    borderBottom: '1px solid #ddd',
-                                                    fontWeight: '600',
-                                                    color: '#333',
-                                                    width: '60px'
-                                                }}>
-                                                    L
-                                                </th>
-                                                <th style={{
-                                                    padding: '12px',
-                                                    textAlign: 'left',
-                                                    borderBottom: '1px solid #ddd',
-                                                    fontWeight: '600',
-                                                    color: '#333',
-                                                    width: '60px'
-                                                }}>
-                                                    D
-                                                </th>
-                                                <th style={{
-                                                    padding: '12px',
-                                                    textAlign: 'left',
-                                                    borderBottom: '1px solid #ddd',
-                                                    fontWeight: '600',
-                                                    color: '#333',
-                                                    width: '80px'
-                                                }}>
-                                                    Days
+                                                    Group
                                                 </th>
                                             </tr>
                                         </thead>
@@ -2782,64 +2958,30 @@ export default function Treatment() {
                                                     }}>
                                                         {row.prescription}
                                                     </td>
-                                                    <td style={{
-                                                        padding: '12px',
-                                                        borderBottom: '1px solid #eee',
-                                                        color: '#666',
-                                                        height: '38px',
-                                                        fontSize: '14px'
-                                                    }}>
-                                                        {row.b || '1'}
-                                                    </td>
-                                                    <td style={{
-                                                        padding: '12px',
-                                                        borderBottom: '1px solid #eee',
-                                                        color: '#666',
-                                                        height: '38px',
-                                                        fontSize: '14px'
-                                                    }}>
-                                                        {row.l || '1'}
-                                                    </td>
-                                                    <td style={{
-                                                        padding: '12px',
-                                                        borderBottom: '1px solid #eee',
-                                                        color: '#666',
-                                                        height: '38px',
-                                                        fontSize: '14px'
-                                                    }}>
-                                                        {row.d || '1'}
-                                                    </td>
-                                                    <td style={{
-                                                        padding: '12px',
-                                                        borderBottom: '1px solid #eee',
-                                                        color: '#666',
-                                                        height: '38px',
-                                                        fontSize: '14px'
-                                                    }}>
-                                                        {row.days}
-                                                    </td>
                                                 </tr>
                                             ))}
                                         </tbody>
                                     </table>
-                                </div>
+                                </div> */}
 
                                 {/* Second Table: Detailed Instructions */}
                                 <div style={{
                                     border: '1px solid #ddd',
                                     borderTop: 'none',
                                     borderRadius: '0 0 4px 4px',
-                                    overflow: 'hidden'
+                                    overflow: 'hidden',
+                                    backgroundColor: '#1976d2',
+                                    color: 'white'
                                 }}>
                                     <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
                                         <thead>
-                                            <tr style={{ backgroundColor: '#f5f5f5' }}>
+                                            <tr style={{ backgroundColor: '#1976d2' }}>
                                                 <th style={{
                                                     padding: '12px',
                                                     textAlign: 'left',
                                                     borderBottom: '1px solid #ddd',
                                                     fontWeight: '600',
-                                                    color: '#333',
+                                                    color: 'white',
                                                     width: '60px'
                                                 }}>
                                                     Sr.
@@ -2849,17 +2991,17 @@ export default function Treatment() {
                                                     textAlign: 'left',
                                                     borderBottom: '1px solid #ddd',
                                                     fontWeight: '600',
-                                                    color: '#333',
+                                                    color: 'white',
                                                     width: '200px'
                                                 }}>
-                                                    Instructions
+                                                    Group
                                                 </th>
                                                 <th style={{
                                                     padding: '12px',
                                                     textAlign: 'left',
                                                     borderBottom: '1px solid #ddd',
                                                     fontWeight: '600',
-                                                    color: '#333'
+                                                    color: 'white'
                                                 }}>
                                                     Instruction
                                                 </th>
@@ -2901,7 +3043,7 @@ export default function Treatment() {
                                     </table>
                                 </div>
                             </div>
-                        
+                        )}
 
                         <div style={{ border: '1px solid #e0e0e0', borderRadius: 4, overflow: 'hidden', marginBottom: 12 }}>
                             {/* <div style={{ background: '#1976d2', color: '#fff', padding: '8px 10px', fontWeight: 600, fontSize: 13 }}>Suggested Tests</div> */}
@@ -2974,15 +3116,68 @@ export default function Treatment() {
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, marginBottom: 12 }}>
                             {/* Billed (disabled) */}
                             <div>
-                                <label style={{ display: 'block', marginBottom: 4, fontWeight: 600, fontSize: 12 }}>Billed (Rs)</label>
-                                <input
-                                    type="text"
-                                    disabled
-                                    value={display(billingData.billed)}
-                                    onChange={(e) => handleBillingChange('billed', e.target.value)}
-                                    style={{ width: '100%', border: '1px solid #ddd', padding: '6px 8px', fontSize: 12, background: '#D5D5D8' }}
-                                />
-                            </div>
+                                    <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                                        Billed (Rs)
+                                    </label>
+                                    <div style={{ position: 'relative' }}>
+                                        <input
+                                            type="text"
+                                            value={billingData.billed}
+                                            onChange={(e) => handleBillingChange('billed', e.target.value)}
+                                            disabled
+                                            placeholder="Billed Amount"
+                                            style={{
+                                                width: '100%',
+                                                padding: '6px 34px 6px 10px',
+                                                border: billingError ? '1px solid red' : '1px solid #ccc',
+                                                borderRadius: '4px',
+                                                fontSize: '13px',
+                                                backgroundColor: '#f5f5f5',
+                                                color: '#666',
+                                                cursor: 'not-allowed'
+                                            }}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowBillingPopup(true)}
+                                            title="Add billed item"
+                                            className="fixed-icon-btn"
+                                            style={{
+                                                position: 'absolute',
+                                                right: 6,
+                                                top: '20%',                                   
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                width: 22,
+                                                height: 22,
+                                                borderRadius: 4,
+                                                border: 'none',
+                                                backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
+                                                color: '#fff',
+                                                fontWeight: 700,
+                                                lineHeight: '22px',
+                                                cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                                padding: 0,
+                                                boxSizing: 'border-box',
+                                                outline: 'none',
+                                                boxShadow: 'none',
+                                                transition: 'none'
+                                            }}
+                                            disabled={isFormDisabled}
+                                            onMouseDown={(e) => {
+                                                e.preventDefault();
+                                            }}
+                                        >
+                                            +
+                                        </button>
+                                    </div>
+                                    {billingError && (
+                                        <div style={{ color: 'red', fontSize: '12px', marginTop: '4px' }}>
+                                            {billingError}
+                                        </div>
+                                    )}
+                                </div>
                             {/* Discount (enabled) */}
                             <div>
                                 <label style={{ display: 'block', marginBottom: 4, fontWeight: 600, fontSize: 12 }}>Discount (Rs)</label>
@@ -3006,15 +3201,37 @@ export default function Treatment() {
                             </div>
                             {/* A/C Balance (disabled) */}
                             <div>
-                                <label style={{ display: 'block', marginBottom: 4, fontWeight: 600, fontSize: 12 }}>A/C Balance (Rs)</label>
-                                <input
-                                    type="text"
-                                    disabled
-                                    value={display(billingData.acBalance)}
-                                    onChange={(e) => handleBillingChange('acBalance', e.target.value)}
-                                    style={{ width: '100%', border: '1px solid #ddd', padding: '6px 8px', fontSize: 12, background: '#D5D5D8' }}
-                                />
-                            </div>
+                                    <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                                        <span>A/C Balance (Rs)</span>
+                                        <span 
+                                            style={{ 
+                                                color: '#1976d2', 
+                                                fontWeight: 'bold',
+                                                cursor: 'pointer',
+                                                userSelect: 'none'
+                                            }}
+                                            onClick={() => setShowAccountsPopup(true)}
+                                            title="View Accounts"
+                                        >₹</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={billingData.acBalance}
+                                        onChange={(e) => handleBillingChange('acBalance', e.target.value)}
+                                        disabled
+                                        placeholder="0.00"
+                                        style={{
+                                            width: '100%',
+                                            padding: '6px 10px',
+                                            border: '1px solid #ccc',
+                                            borderRadius: '4px',
+                                            fontSize: '13px',
+                                            backgroundColor: '#f5f5f5',
+                                            color: '#666',
+                                            cursor: 'not-allowed'
+                                        }}
+                                    />
+                                </div>
                             {/* Receipt No (disabled) */}
                             <div>
                                 <label style={{ display: 'block', marginBottom: 4, fontWeight: 600, fontSize: 12 }}>Receipt No</label>
@@ -3241,6 +3458,31 @@ export default function Treatment() {
                     patientId: treatmentData.patientId
                 } : null}
                 sessionData={sessionData}
+            />
+            {/* Accounts Popup */}
+            <AccountsPopup
+                open={showAccountsPopup}
+                onClose={() => setShowAccountsPopup(false)}
+                patientId={selectedPatientForForm?.patientId || treatmentData?.patientId}
+                patientName={selectedPatientForForm?.name || treatmentData?.patientName}
+            />
+             <AddBillingPopup
+                open={showBillingPopup}
+                onClose={() => setShowBillingPopup(false)}
+                isFormDisabled={isFormDisabled}
+                onSubmit={(totalAmount) => {
+                    setBillingData(prev => {
+                        const discountNum = parseFloat(prev.discount) || 0;
+                        const billedNum = Number(totalAmount) || 0;
+                        const acBal = Math.max(0, billedNum - discountNum);
+                        return {
+                            ...prev,
+                            billed: billedNum.toFixed(2),
+                            acBalance: acBal.toFixed(2),
+                            dues: acBal.toFixed(2)
+                        };
+                    });
+                }}
             />
 
         </div>

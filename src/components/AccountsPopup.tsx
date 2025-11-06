@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Close } from '@mui/icons-material';
+import { patientService } from '../services/patientService';
+import { sessionService } from '../services/sessionService';
 
 interface VisitWiseData {
     patientName: string;
@@ -35,6 +37,7 @@ const AccountsPopup: React.FC<AccountsPopupProps> = ({ open, onClose, patientId,
     const [visitWiseData, setVisitWiseData] = useState<VisitWiseData[]>([]);
     const [fyWiseData, setFyWiseData] = useState<FYWiseData[]>([]);
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         if (open && patientId) {
@@ -43,113 +46,139 @@ const AccountsPopup: React.FC<AccountsPopupProps> = ({ open, onClose, patientId,
     }, [open, patientId]);
 
     const fetchAccountsData = async () => {
+        if (!patientId) return;
+        
         setLoading(true);
+        setError(null);
         try {
-            // TODO: Replace with actual API endpoint
-            // const response = await fetch(`/api/accounts?patientId=${patientId}`);
-            // const data = await response.json();
-            
-            // Mock data structure matching the image
-            // Replace this with actual API call
-            const mockVisitWiseData: VisitWiseData[] = [
-                {
-                    patientName: patientName || 'Patient Name',
-                    receiptNo: '',
-                    provider: 'Dr. Tongaonkar',
-                    visitDate: '07-Sep-2021 - 7:11 PM - M',
-                    status: 'Complete',
-                    adhoc: '',
-                    billed: '400.00',
-                    discount: '0.00',
-                    dues: '400.00',
-                    collected: '400.00',
-                    balance: '0.00'
-                },
-                {
-                    patientName: patientName || 'Patient Name',
-                    receiptNo: '',
-                    provider: 'Dr. Tongaonkar',
-                    visitDate: '16-Jul-2021 - 6:46 PM - M',
-                    status: 'Complete',
-                    adhoc: '',
-                    billed: '400.00',
-                    discount: '0.00',
-                    dues: '400.00',
-                    collected: '400.00',
-                    balance: '0.00'
-                },
-                {
-                    patientName: patientName || 'Patient Name',
-                    receiptNo: '',
-                    provider: 'Dr. Tongaonkar',
-                    visitDate: '01-Jul-2021 - 7:08 PM - M',
-                    status: 'Complete',
-                    adhoc: '',
-                    billed: '400.00',
-                    discount: '0.00',
-                    dues: '400.00',
-                    collected: '400.00',
-                    balance: '0.00'
-                },
-                {
-                    patientName: patientName || 'Patient Name',
-                    receiptNo: '',
-                    provider: 'Dr. Tongaonkar',
-                    visitDate: '15-Mar-2021 - 6:20 PM - M',
-                    status: 'Complete',
-                    adhoc: '',
-                    billed: '600.00',
-                    discount: '0.00',
-                    dues: '600.00',
-                    collected: '600.00',
-                    balance: '0.00'
-                },
-                {
-                    patientName: patientName || 'Patient Name',
-                    receiptNo: '',
-                    provider: 'Dr. Tongaonkar',
-                    visitDate: '02-Sep-2019 - 6:34 PM - M',
-                    status: 'Complete',
-                    adhoc: '',
-                    billed: '350.00',
-                    discount: '0.00',
-                    dues: '350.00',
-                    collected: '350.00',
-                    balance: '0.00'
-                }
-            ];
+            // Get session data for clinicId and doctorId
+            const sessionResult = await sessionService.getSessionInfo();
+            const clinicId = sessionResult?.data?.clinicId;
+            const doctorId = sessionResult?.data?.doctorId;
 
-            const mockFyWiseData: FYWiseData[] = [
-                {
-                    financialYear: '2022',
-                    billed: '1200.00',
-                    discount: '0.00',
-                    dues: '1200.00',
-                    collected: '1200.00',
-                    balance: '0.00'
-                },
-                {
-                    financialYear: '2021',
-                    billed: '600.00',
-                    discount: '0.00',
-                    dues: '600.00',
-                    collected: '600.00',
-                    balance: '0.00'
-                },
-                {
-                    financialYear: '2020',
-                    billed: '350.00',
-                    discount: '0.00',
-                    dues: '350.00',
-                    collected: '350.00',
-                    balance: '0.00'
-                }
-            ];
+            if (!clinicId) {
+                throw new Error('Clinic ID not found in session');
+            }
 
-            setVisitWiseData(mockVisitWiseData);
-            setFyWiseData(mockFyWiseData);
-        } catch (error) {
+            // Fetch consolidated family fees (for FY-wise table)
+            const consolidatedFeesPromise = patientService.getConsolidatedFamilyFees({
+                patientId,
+                doctorId, // optional
+                clinicId
+            });
+
+            // Fetch fees details (for visit-wise table)
+            const feesDetailsPromise = patientService.getFeesDetails({
+                patientId,
+                doctorId, // optional
+                clinicId
+            });
+
+            const [consolidatedFeesResp, feesDetailsResp] = await Promise.all([
+                consolidatedFeesPromise,
+                feesDetailsPromise
+            ]);
+
+            // Validate responses
+            if (!consolidatedFeesResp) {
+                console.warn('Consolidated family fees response is null/undefined');
+            }
+            if (!feesDetailsResp) {
+                console.warn('Fees details response is null/undefined');
+            }
+
+            console.log('=== Consolidated family fees response (full):', JSON.stringify(consolidatedFeesResp, null, 2));
+            console.log('=== Fees details response (full):', JSON.stringify(feesDetailsResp, null, 2));
+            console.log('=== Consolidated fees type:', typeof consolidatedFeesResp, consolidatedFeesResp instanceof Array ? '(Array)' : '(Object)');
+            console.log('=== Fees details type:', typeof feesDetailsResp, feesDetailsResp instanceof Array ? '(Array)' : '(Object)');
+            console.log('=== Consolidated fees keys:', consolidatedFeesResp ? Object.keys(consolidatedFeesResp) : 'null/undefined');
+            console.log('=== Fees details keys:', feesDetailsResp ? Object.keys(feesDetailsResp) : 'null/undefined');
+
+            // Map fees details to visit-wise data (Fees Collection table)
+            // Fees details response has rows array with visit data
+            const visitWiseArray: any[] = Array.isArray(feesDetailsResp?.rows) 
+                ? feesDetailsResp.rows 
+                : [];
+
+            console.log('Found visit-wise data from feesDetailsResp.rows:', visitWiseArray.length, 'rows');
+
+            const mappedVisitWise: VisitWiseData[] = visitWiseArray.map((visit: any, idx: number) => {
+                console.log(`Visit ${idx}:`, visit);
+                const toStr = (v: any) => (v === undefined || v === null ? '' : String(v));
+                const toNum = (v: any) => {
+                    const num = parseFloat(v);
+                    return isNaN(num) ? '0.00' : num.toFixed(2);
+                };
+
+                // Format visit date - use LAST_VISIT_DATE if available, otherwise format Visit_Date
+                let formattedDate = '';
+                if (visit?.LAST_VISIT_DATE) {
+                    formattedDate = visit.LAST_VISIT_DATE;
+                } else if (visit?.Visit_Date) {
+                    // Format ISO date string to readable format
+                    try {
+                        const date = new Date(visit.Visit_Date);
+                        formattedDate = date.toLocaleString('en-GB', { 
+                            day: '2-digit', 
+                            month: 'short', 
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: true
+                        });
+                    } catch (e) {
+                        formattedDate = String(visit.Visit_Date);
+                    }
+                }
+
+                return {
+                    patientName: toStr(visit?.Full_Name ?? visit?.patientName ?? visit?.patient_name ?? patientName ?? ''),
+                    receiptNo: toStr(visit?.Receipt_Number ?? visit?.receiptNo ?? visit?.receipt_no ?? visit?.receipt_number ?? ''),
+                    provider: toStr(visit?.DoctorName ?? visit?.provider ?? visit?.doctorName ?? visit?.doctor_name ?? ''),
+                    visitDate: formattedDate || toStr(visit?.Visit_Date ?? visit?.visitDate ?? visit?.visit_date ?? ''),
+                    status: toStr(visit?.Status_Description ?? visit?.status ?? visit?.status_description ?? ''),
+                    adhoc: toStr(visit?.ISadhoc ?? visit?.adhoc ?? visit?.is_adhoc ?? ''),
+                    billed: toNum(visit?.Bill ?? visit?.billed ?? visit?.billed_amount ?? visit?.fees_to_collect ?? 0),
+                    discount: toNum(visit?.Discount ?? visit?.discount ?? visit?.discount_amount ?? 0),
+                    dues: toNum(visit?.Dues ?? visit?.dues ?? visit?.dues_amount ?? 0),
+                    collected: toNum(visit?.Collected ?? visit?.collected ?? visit?.fees_collected ?? visit?.collected_amount ?? 0),
+                    balance: toNum(visit?.Balance ?? visit?.balance ?? visit?.balance_amount ?? 0)
+                };
+            });
+
+            console.log('Mapped visit-wise data:', mappedVisitWise.length, 'rows');
+            setVisitWiseData(mappedVisitWise);
+
+            // Map consolidated family fees to FY-wise data (Fees Collection FY wise table)
+            // Consolidated family fees response has rows array with financial year data
+            const fyWiseArray: any[] = Array.isArray(consolidatedFeesResp?.rows) 
+                ? consolidatedFeesResp.rows 
+                : [];
+
+            console.log('Found FY-wise data from consolidatedFeesResp.rows:', fyWiseArray.length, 'rows');
+
+            const mappedFyWise: FYWiseData[] = fyWiseArray.map((fy: any, idx: number) => {
+                console.log(`FY ${idx}:`, fy);
+                const toNum = (v: any) => {
+                    const num = parseFloat(v);
+                    return isNaN(num) ? '0.00' : num.toFixed(2);
+                };
+
+                return {
+                    financialYear: String(fy?.Financial_Year ?? fy?.financialYear ?? fy?.financial_year ?? fy?.fy ?? fy?.year ?? ''),
+                    billed: toNum(fy?.Billed ?? fy?.billed ?? fy?.billed_amount ?? 0),
+                    discount: toNum(fy?.Discount ?? fy?.discount ?? fy?.discount_amount ?? 0),
+                    dues: toNum(fy?.Dues ?? fy?.dues ?? fy?.dues_amount ?? 0),
+                    collected: toNum(fy?.Collected ?? fy?.collected ?? fy?.fees_collected ?? fy?.collected_amount ?? 0),
+                    balance: toNum(fy?.Balance ?? fy?.balance ?? fy?.balance_amount ?? 0)
+                };
+            });
+
+            console.log('Mapped FY-wise data:', mappedFyWise.length, 'rows');
+            setFyWiseData(mappedFyWise);
+        } catch (error: any) {
             console.error('Error fetching accounts data:', error);
+            setError(error?.message || 'Failed to load accounts data');
         } finally {
             setLoading(false);
         }
@@ -251,6 +280,10 @@ const AccountsPopup: React.FC<AccountsPopupProps> = ({ open, onClose, patientId,
                         <div style={{ textAlign: 'center', padding: '40px' }}>
                             Loading...
                         </div>
+                    ) : error ? (
+                        <div style={{ textAlign: 'center', padding: '40px', color: '#d32f2f' }}>
+                            {error}
+                        </div>
                     ) : (
                         <>
                             {/* Fees Collection Table */}
@@ -282,52 +315,62 @@ const AccountsPopup: React.FC<AccountsPopupProps> = ({ open, onClose, patientId,
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {visitWiseData.map((row, index) => (
-                                                <tr
-                                                    key={index}
-                                                    style={{
-                                                        borderBottom: '1px solid #e0e0e0',
-                                                        backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white'
-                                                    }}
-                                                    onMouseEnter={(e) => { (e.currentTarget as HTMLTableRowElement).style.backgroundColor = '#f5f5f5'; }}
-                                                    onMouseLeave={(e) => { (e.currentTarget as HTMLTableRowElement).style.backgroundColor = index % 2 === 0 ? '#f8f9fa' : 'white'; }}
-                                                >
-                                                    <td style={{ padding: '6px', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>{row.patientName}</td>
-                                                    <td style={{ padding: '6px', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>{row.receiptNo}</td>
-                                                    <td style={{ padding: '6px', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>{row.provider}</td>
-                                                    <td style={{ padding: '6px', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>{row.visitDate}</td>
-                                                    <td style={{ padding: '6px', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>{row.status}</td>
-                                                    <td style={{ padding: '6px', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>{row.adhoc}</td>
-                                                    <td style={{ padding: '6px', textAlign: 'right', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>{row.billed}</td>
-                                                    <td style={{ padding: '6px', textAlign: 'right', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>{row.discount}</td>
-                                                    <td style={{ padding: '6px', textAlign: 'right', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>{row.dues}</td>
-                                                    <td style={{ padding: '6px', textAlign: 'right', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>{row.collected}</td>
-                                                    <td style={{ padding: '6px', textAlign: 'right', color: '#333', fontSize: '12px' }}>{row.balance}</td>
+                                            {visitWiseData.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan={11} style={{ padding: '20px', textAlign: 'center', color: '#666', fontSize: '14px' }}>
+                                                        No visit data available
+                                                    </td>
                                                 </tr>
-                                            ))}
-                                            {/* Total Row */}
-                                            <tr style={{
-                                                backgroundColor: '#e8e8e8',
-                                                fontWeight: 'bold',
-                                                borderTop: '2px solid #ccc'
-                                            }}>
-                                                <td colSpan={6} style={{ padding: '6px', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>Total</td>
-                                                <td style={{ padding: '6px', textAlign: 'right', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>
-                                                    {totals.billed.toFixed(2)}
-                                                </td>
-                                                <td style={{ padding: '6px', textAlign: 'right', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>
-                                                    {totals.discount.toFixed(2)}
-                                                </td>
-                                                <td style={{ padding: '6px', textAlign: 'right', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>
-                                                    {totals.dues.toFixed(2)}
-                                                </td>
-                                                <td style={{ padding: '6px', textAlign: 'right', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>
-                                                    {totals.collected.toFixed(2)}
-                                                </td>
-                                                <td style={{ padding: '6px', textAlign: 'right', color: '#333', fontSize: '12px' }}>
-                                                    {totals.balance.toFixed(2)}
-                                                </td>
-                                            </tr>
+                                            ) : (
+                                                <>
+                                                    {visitWiseData.map((row, index) => (
+                                                        <tr
+                                                            key={index}
+                                                            style={{
+                                                                borderBottom: '1px solid #e0e0e0',
+                                                                backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white'
+                                                            }}
+                                                            onMouseEnter={(e) => { (e.currentTarget as HTMLTableRowElement).style.backgroundColor = '#f5f5f5'; }}
+                                                            onMouseLeave={(e) => { (e.currentTarget as HTMLTableRowElement).style.backgroundColor = index % 2 === 0 ? '#f8f9fa' : 'white'; }}
+                                                        >
+                                                            <td style={{ padding: '6px', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>{row.patientName}</td>
+                                                            <td style={{ padding: '6px', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>{row.receiptNo}</td>
+                                                            <td style={{ padding: '6px', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>{row.provider}</td>
+                                                            <td style={{ padding: '6px', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>{row.visitDate}</td>
+                                                            <td style={{ padding: '6px', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>{row.status}</td>
+                                                            <td style={{ padding: '6px', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>{row.adhoc}</td>
+                                                            <td style={{ padding: '6px', textAlign: 'right', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>{row.billed}</td>
+                                                            <td style={{ padding: '6px', textAlign: 'right', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>{row.discount}</td>
+                                                            <td style={{ padding: '6px', textAlign: 'right', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>{row.dues}</td>
+                                                            <td style={{ padding: '6px', textAlign: 'right', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>{row.collected}</td>
+                                                            <td style={{ padding: '6px', textAlign: 'right', color: '#333', fontSize: '12px' }}>{row.balance}</td>
+                                                        </tr>
+                                                    ))}
+                                                    {/* Total Row */}
+                                                    <tr style={{
+                                                        backgroundColor: '#e8e8e8',
+                                                        fontWeight: 'bold',
+                                                        borderTop: '2px solid #ccc'
+                                                    }}>
+                                                        <td colSpan={6} style={{ padding: '6px', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>Total</td>
+                                                        <td style={{ padding: '6px', textAlign: 'right', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>
+                                                            {totals.billed.toFixed(2)}
+                                                        </td>
+                                                        <td style={{ padding: '6px', textAlign: 'right', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>
+                                                            {totals.discount.toFixed(2)}
+                                                        </td>
+                                                        <td style={{ padding: '6px', textAlign: 'right', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>
+                                                            {totals.dues.toFixed(2)}
+                                                        </td>
+                                                        <td style={{ padding: '6px', textAlign: 'right', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>
+                                                            {totals.collected.toFixed(2)}
+                                                        </td>
+                                                        <td style={{ padding: '6px', textAlign: 'right', color: '#333', fontSize: '12px' }}>
+                                                            {totals.balance.toFixed(2)}
+                                                        </td>
+                                                    </tr>
+                                                </>
+                                            )}
                                         </tbody>
                                     </table>
                                 </div>
@@ -357,24 +400,32 @@ const AccountsPopup: React.FC<AccountsPopupProps> = ({ open, onClose, patientId,
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {fyWiseData.map((row, index) => (
-                                                <tr
-                                                    key={index}
-                                                    style={{
-                                                        borderBottom: '1px solid #e0e0e0',
-                                                        backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white'
-                                                    }}
-                                                    onMouseEnter={(e) => { (e.currentTarget as HTMLTableRowElement).style.backgroundColor = '#f5f5f5'; }}
-                                                    onMouseLeave={(e) => { (e.currentTarget as HTMLTableRowElement).style.backgroundColor = index % 2 === 0 ? '#f8f9fa' : 'white'; }}
-                                                >
-                                                    <td style={{ padding: '6px', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>{row.financialYear}</td>
-                                                    <td style={{ padding: '6px', textAlign: 'right', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>{row.billed}</td>
-                                                    <td style={{ padding: '6px', textAlign: 'right', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>{row.discount}</td>
-                                                    <td style={{ padding: '6px', textAlign: 'right', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>{row.dues}</td>
-                                                    <td style={{ padding: '6px', textAlign: 'right', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>{row.collected}</td>
-                                                    <td style={{ padding: '6px', textAlign: 'right', color: '#333', fontSize: '12px' }}>{row.balance}</td>
+                                            {fyWiseData.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan={6} style={{ padding: '20px', textAlign: 'center', color: '#666', fontSize: '14px' }}>
+                                                        No financial year data available
+                                                    </td>
                                                 </tr>
-                                            ))}
+                                            ) : (
+                                                fyWiseData.map((row, index) => (
+                                                    <tr
+                                                        key={index}
+                                                        style={{
+                                                            borderBottom: '1px solid #e0e0e0',
+                                                            backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white'
+                                                        }}
+                                                        onMouseEnter={(e) => { (e.currentTarget as HTMLTableRowElement).style.backgroundColor = '#f5f5f5'; }}
+                                                        onMouseLeave={(e) => { (e.currentTarget as HTMLTableRowElement).style.backgroundColor = index % 2 === 0 ? '#f8f9fa' : 'white'; }}
+                                                    >
+                                                        <td style={{ padding: '6px', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>{row.financialYear}</td>
+                                                        <td style={{ padding: '6px', textAlign: 'right', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>{row.billed}</td>
+                                                        <td style={{ padding: '6px', textAlign: 'right', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>{row.discount}</td>
+                                                        <td style={{ padding: '6px', textAlign: 'right', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>{row.dues}</td>
+                                                        <td style={{ padding: '6px', textAlign: 'right', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>{row.collected}</td>
+                                                        <td style={{ padding: '6px', textAlign: 'right', color: '#333', fontSize: '12px' }}>{row.balance}</td>
+                                                    </tr>
+                                                ))
+                                            )}
                                         </tbody>
                                     </table>
                                 </div>

@@ -165,6 +165,39 @@ export interface PreviousServiceVisitDatesResponse {
   [key: string]: any;
 }
 
+// Previous service visit items response (flexible map)
+export interface PreviousServiceVisitItemsResponse {
+  success?: boolean;
+  items?: any[];
+  [key: string]: any;
+}
+
+// Consolidated family fees request interface
+export interface ConsolidatedFamilyFeesRequest {
+  patientId: string;
+  doctorId?: string; // optional
+  clinicId: string;
+}
+
+// Consolidated family fees response (flexible map)
+export interface ConsolidatedFamilyFeesResponse {
+  success?: boolean;
+  [key: string]: any;
+}
+
+// Fees details request interface
+export interface FeesDetailsRequest {
+  patientId: string;
+  doctorId?: string; // optional
+  clinicId: string;
+}
+
+// Fees details response (flexible map)
+export interface FeesDetailsResponse {
+  success?: boolean;
+  [key: string]: any;
+}
+
 // Quick registration request interface
 export interface QuickRegistrationRequest {
   doctorId: string;
@@ -744,6 +777,179 @@ export const patientService = {
         throw new Error(error.response.data.error);
       }
       throw new Error(error.response?.data?.message || 'Failed to fetch previous service visit dates');
+    }
+  }
+  ,
+  /**
+   * Get line items for a previous service visit
+   * Mirrors backend @GetMapping("/previous-visit-items") with required params
+   */
+  async getPreviousServiceVisitItems(params: {
+    patientId: string;
+    doctorId: string;
+    clinicId: string;
+    shiftId: number; // Java Short -> number in TS
+    visitNo: number; // Java Integer -> number in TS
+    visitDate: string; // Accepts YYYY-MM-DD or date-time string
+  }): Promise<PreviousServiceVisitItemsResponse> {
+    try {
+      const { patientId, doctorId, clinicId, shiftId, visitNo, visitDate } = params;
+      console.log('Fetching previous service visit items:', params);
+      const query = {
+        patientId,
+        doctorId,
+        clinicId,
+        shiftId: String(shiftId),
+        visitNo: String(visitNo),
+        visitDate
+      } as Record<string, string>;
+      // Try common mount points
+      try {
+        const resp = await api.get<PreviousServiceVisitItemsResponse>(`/services/previous-visit-items`, { params: query });
+        console.log('Previous service visit items (/services/previous-visit-items):', resp.data);
+        return resp.data;
+      } catch (e1: any) {
+        if (e1?.response?.status !== 404) throw e1;
+        try {
+          const resp = await api.get<PreviousServiceVisitItemsResponse>(`/previous-visit-items`, { params: query });
+          console.log('Previous service visit items (/previous-visit-items):', resp.data);
+          return resp.data;
+        } catch (e2: any) {
+          if (e2?.response?.status !== 404) throw e2;
+          const resp = await api.get<PreviousServiceVisitItemsResponse>(`/services/previous-visit-items`, { params: query });
+          console.log('Previous service visit items (retry /services/previous-visit-items):', resp.data);
+          return resp.data;
+        }
+      }
+    } catch (error: any) {
+      console.error('Get previous service visit items API Error:', error);
+      if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
+        throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
+      }
+      if (error.response?.status === 400) {
+        const msg = error.response?.data?.message || error.response?.data?.error || 'Invalid request.';
+        throw new Error(msg);
+      } else if (error.response?.status === 404) {
+        throw new Error('Previous service visit items endpoint not found. Please confirm backend route.');
+      } else if (error.response?.status === 500) {
+        throw new Error('Server error occurred while fetching previous service visit items.');
+      }
+      if (error.response?.data?.error) {
+        throw new Error(error.response.data.error);
+      }
+      throw new Error(error.response?.data?.message || 'Failed to fetch previous service visit items');
+    }
+  }
+  ,
+  /**
+   * Get consolidated family fees for a patient
+   * Mirrors backend @GetMapping("/consolidated-family-fees")
+   */
+  async getConsolidatedFamilyFees(params: ConsolidatedFamilyFeesRequest): Promise<ConsolidatedFamilyFeesResponse> {
+    try {
+      const { patientId, doctorId, clinicId } = params;
+      console.log('Fetching consolidated family fees:', params);
+      
+      // Build query parameters - doctorId is optional
+      const query: Record<string, string> = {
+        patientId,
+        clinicId
+      };
+      if (doctorId) {
+        query.doctorId = doctorId;
+      }
+      
+      // Try common mount points
+      try {
+        const resp = await api.get<ConsolidatedFamilyFeesResponse>(`/fees/consolidated-family-fees`, { params: query });
+        console.log('Consolidated family fees (/fees/consolidated-family-fees):', resp.data);
+        return resp.data;
+      } catch (e1: any) {
+        if (e1?.response?.status !== 404) throw e1;
+        try {
+          const resp = await api.get<ConsolidatedFamilyFeesResponse>(`/consolidated-family-fees`, { params: query });
+          console.log('Consolidated family fees (/consolidated-family-fees):', resp.data);
+          return resp.data;
+        } catch (e2: any) {
+          if (e2?.response?.status !== 404) throw e2;
+          const resp = await api.get<ConsolidatedFamilyFeesResponse>(`/services/consolidated-family-fees`, { params: query });
+          console.log('Consolidated family fees (/services/consolidated-family-fees):', resp.data);
+          return resp.data;
+        }
+      }
+    } catch (error: any) {
+      console.error('Get consolidated family fees API Error:', error);
+      if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
+        throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
+      }
+      if (error.response?.status === 400) {
+        const msg = error.response?.data?.message || error.response?.data?.error || 'Invalid request.';
+        throw new Error(msg);
+      } else if (error.response?.status === 404) {
+        throw new Error('Consolidated family fees endpoint not found. Please confirm backend route.');
+      } else if (error.response?.status === 500) {
+        throw new Error('Server error occurred while fetching consolidated family fees.');
+      }
+      if (error.response?.data?.error) {
+        throw new Error(error.response.data.error);
+      }
+      throw new Error(error.response?.data?.message || 'Failed to fetch consolidated family fees');
+    }
+  }
+  ,
+  /**
+   * Get fees details for a patient
+   * Mirrors backend @GetMapping("/details")
+   */
+  async getFeesDetails(params: FeesDetailsRequest): Promise<FeesDetailsResponse> {
+    try {
+      const { patientId, doctorId, clinicId } = params;
+      console.log('Fetching fees details:', params);
+      
+      // Build query parameters - doctorId is optional
+      const query: Record<string, string> = {
+        patientId,
+        clinicId
+      };
+      if (doctorId) {
+        query.doctorId = doctorId;
+      }
+      
+      // Try common mount points
+      try {
+        const resp = await api.get<FeesDetailsResponse>(`/fees/details`, { params: query });
+        console.log('Fees details (/fees/details):', resp.data);
+        return resp.data;
+      } catch (e1: any) {
+        if (e1?.response?.status !== 404) throw e1;
+        try {
+          const resp = await api.get<FeesDetailsResponse>(`/details`, { params: query });
+          console.log('Fees details (/details):', resp.data);
+          return resp.data;
+        } catch (e2: any) {
+          if (e2?.response?.status !== 404) throw e2;
+          const resp = await api.get<FeesDetailsResponse>(`/services/details`, { params: query });
+          console.log('Fees details (/services/details):', resp.data);
+          return resp.data;
+        }
+      }
+    } catch (error: any) {
+      console.error('Get fees details API Error:', error);
+      if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
+        throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
+      }
+      if (error.response?.status === 400) {
+        const msg = error.response?.data?.message || error.response?.data?.error || 'Invalid request.';
+        throw new Error(msg);
+      } else if (error.response?.status === 404) {
+        throw new Error('Fees details endpoint not found. Please confirm backend route.');
+      } else if (error.response?.status === 500) {
+        throw new Error('Server error occurred while fetching fees details.');
+      }
+      if (error.response?.data?.error) {
+        throw new Error(error.response.data.error);
+      }
+      throw new Error(error.response?.data?.message || 'Failed to fetch fees details');
     }
   }
   ,
