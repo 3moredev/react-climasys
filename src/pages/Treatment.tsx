@@ -22,7 +22,7 @@ import AddPrescriptionPopup, { PrescriptionData } from "../components/AddPrescri
 import AddBillingPopup from "../components/AddBillingPopup";
 import AddTestLabPopup, { TestLabData } from "../components/AddTestLabPopup";
 import LabTestEntry from "../components/LabTestEntry";
-import InstructionGroupsPopup from "../components/InstructionGroupsPopup";
+import InstructionGroupsPopup, { InstructionGroup } from "../components/InstructionGroupsPopup";
 import { patientService } from "../services/patientService";
 import PastServicesPopup from "../components/PastServicesPopup";
 import AccountsPopup from "../components/AccountsPopup";
@@ -481,6 +481,9 @@ export default function Treatment() {
     
     // Dressing multi-select state (mirrors Diagnosis/Investigation)
     const [selectedDressings, setSelectedDressings] = useState<string[]>([]);
+    
+    // Instruction groups state
+    const [selectedInstructionGroups, setSelectedInstructionGroups] = useState<InstructionGroup[]>([]);
     const [dressingSearch, setDressingSearch] = useState('');
     const [isDressingsOpen, setIsDressingsOpen] = useState(false);
     const dressingsRef = React.useRef<HTMLDivElement | null>(null);
@@ -2590,7 +2593,18 @@ export default function Treatment() {
                 // Investigation rows - map to API format
                 investigationRows: investigationRows.map(row => ({
                     investigation: row.investigation || ''
-                }))
+                })),
+                
+                // Instruction groups - map to API format
+                // Backend expects: groupDescription, instructionsDescription, sequenceNo
+                // Table: visit_groups_instructions
+                instructionGroups: selectedInstructionGroups.length > 0
+                    ? selectedInstructionGroups.map((group, index) => ({
+                        groupDescription: group.name || '',
+                        instructionsDescription: group.instructions || '',
+                        sequenceNo: index + 1
+                    }))
+                    : []
             };
 
             console.log(`=== ${actionType}ING TREATMENT DATA TO API ===`);
@@ -2602,6 +2616,10 @@ export default function Treatment() {
             console.log('Doctor ID:', visitData.doctorId);
             console.log('Shift ID:', visitData.shiftId);
             console.log('Patient Visit No:', visitData.patientVisitNo);
+            console.log('Instruction Groups Count:', visitData.instructionGroups?.length || 0);
+            if (visitData.instructionGroups && visitData.instructionGroups.length > 0) {
+                console.log('Instruction Groups:', JSON.stringify(visitData.instructionGroups, null, 2));
+            }
             
             // Check for null/undefined values that might cause validation errors
             const nullFields = [];
@@ -6053,6 +6071,8 @@ export default function Treatment() {
                 patientName={treatmentData?.patientName || ''}
                 patientAge={Number(treatmentData?.age || 0)}
                 patientGender={(treatmentData?.gender || '').toString()}
+                initialSelectedGroups={selectedInstructionGroups}
+                onChange={(groups) => setSelectedInstructionGroups(groups)}
             />
 
             {/* Add Test Lab Popup */}

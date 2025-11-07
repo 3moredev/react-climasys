@@ -115,6 +115,7 @@ export interface ComprehensiveVisitDataRequest {
   medicineRows?: Array<{ short_description?: string; medicine?: string; morning?: number; afternoon?: number; night?: number; days?: number | string; instruction?: string; [key: string]: any }>;
   prescriptionRows?: Array<{ prescription?: string; b?: number | string; l?: number | string; d?: number | string; days?: number | string; instruction?: string; [key: string]: any }>;
   investigationRows?: Array<{ investigation?: string; [key: string]: any }>;
+  instructionGroups?: Array<{ groupDescription?: string; group_description?: string; instructionsDescription?: string; instructions_description?: string; sequenceNo?: number; sequence_no?: number; [key: string]: any }>;
 }
 
 export const visitService = {

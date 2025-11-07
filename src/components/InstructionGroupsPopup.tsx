@@ -3,7 +3,7 @@ import { Delete } from '@mui/icons-material';
 import { patientService } from '../services/patientService';
 import { sessionService } from '../services/sessionService';
 
-interface InstructionGroup {
+export interface InstructionGroup {
   id: string;
   name: string;
   nameHindi: string;
@@ -16,6 +16,8 @@ interface InstructionGroupsPopupProps {
   patientName: string;
   patientAge: number;
   patientGender: string;
+  initialSelectedGroups?: InstructionGroup[];
+  onChange?: (selectedGroups: InstructionGroup[]) => void;
 }
 
 const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
@@ -23,10 +25,12 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
   onClose,
   patientName,
   patientAge,
-  patientGender
+  patientGender,
+  initialSelectedGroups = [],
+  onChange
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedGroups, setSelectedGroups] = useState<InstructionGroup[]>([]);
+  const [selectedGroups, setSelectedGroups] = useState<InstructionGroup[]>(initialSelectedGroups);
   const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]);
   const [isGroupsOpen, setIsGroupsOpen] = useState(false);
   const [showSelectedTable, setShowSelectedTable] = useState(false);
@@ -73,9 +77,8 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
           : [];
         if (!cancelled) {
           setInstructionGroups(mapped);
-          // reset selections when data changes
+          // Don't reset selections when data changes - keep existing selections
           setSelectedGroupIds([]);
-          setSelectedGroups([]);
         }
       } catch (e: any) {
         if (!cancelled) {
@@ -89,6 +92,13 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
     loadGroups();
     return () => { cancelled = true; };
   }, [isOpen]);
+
+  // Sync initialSelectedGroups when popup opens
+  useEffect(() => {
+    if (isOpen && initialSelectedGroups) {
+      setSelectedGroups(initialSelectedGroups);
+    }
+  }, [isOpen, initialSelectedGroups]);
 
   const filteredGroups = instructionGroups.filter(group =>
     group.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -148,13 +158,25 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
       return;
     }
     
-    setSelectedGroups(prev => [...prev, ...newGroups]);
+    const updatedGroups = [...selectedGroups, ...newGroups];
+    setSelectedGroups(updatedGroups);
     setSelectedGroupIds([]);
     setIsGroupsOpen(false);
+    
+    // Notify parent component of the change
+    if (onChange) {
+      onChange(updatedGroups);
+    }
   };
 
   const handleRemoveGroup = (groupId: string) => {
-    setSelectedGroups(selectedGroups.filter(g => g.id !== groupId));
+    const updatedGroups = selectedGroups.filter(g => g.id !== groupId);
+    setSelectedGroups(updatedGroups);
+    
+    // Notify parent component of the change
+    if (onChange) {
+      onChange(updatedGroups);
+    }
   };
 
   if (!isOpen) return null;
