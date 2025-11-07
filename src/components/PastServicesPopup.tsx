@@ -164,7 +164,7 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                     group: String(it.group || it.group_description || it.category || it.Group || '—'),
                     subGroup: String(it.subGroup || it.sub_group || it.sub_category || it.SubGroup || '—'),
                     details: String(it.details || it.description || it.service_description || it.item || '—'),
-                    selected: false,
+                    selected: true, // Check all checkboxes by default
                     totalFees: Number(it.totalFees ?? it.total_fee ?? it.fees ?? it.amount ?? it.rate ?? 0)
                 }));
 
@@ -340,7 +340,7 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                     }}>
                         <div style={{
                             color: '#4caf50',
-                            fontSize: '16px',
+                            fontSize: '18px',
                             fontWeight: '500',
                             display: 'flex',
                             alignItems: 'center',
@@ -354,7 +354,7 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                         </div>
                         <div style={{
                             color: '#666',
-                            fontSize: '14px',
+                            fontSize: '18px',
                             textAlign: 'right'
                         }}>
                             <div>Dr. {sessionData?.doctorName || 'Doctor'}</div>
@@ -370,7 +370,7 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                     overflow: 'hidden'
                 }}>
                     {/* Left Side - Past Services Box */}
-                    <div style={{
+                    {/* <div style={{
                         width: '300px',
                         padding: '20px 20px 20px 20px',
                         overflowY: 'auto',
@@ -404,7 +404,7 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </div> */}
 
                     {/* Right Side - Table */}
                     <div style={{
@@ -562,8 +562,9 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                                                     type="checkbox"
                                                     checked={service.selected}
                                                     onChange={() => handleSelectChange(index)}
+                                                    disabled
                                                     style={{
-                                                        cursor: 'pointer',
+                                                        cursor: 'not-allowed',
                                                         width: '18px',
                                                         height: '18px'
                                                     }}
@@ -608,11 +609,14 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                                     type="text"
                                     value={billing.billed}
                                     onChange={(e) => setBilling(b => ({ ...b, billed: e.target.value }))}
+                                    disabled
                                     style={{
                                         padding: '8px 10px',
                                         border: '1px solid #ccc',
                                         borderRadius: '4px',
-                                        fontSize: '13px'
+                                        fontSize: '13px',
+                                        background: '#D5D5D8',
+                                        cursor: 'not-allowed'
                                     }}
                                 />
                             </div>
@@ -632,11 +636,14 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                                     type="text"
                                     value={billing.discount}
                                     onChange={(e) => setBilling(b => ({ ...b, discount: e.target.value }))}
+                                    disabled
                                     style={{
                                         padding: '8px 10px',
                                         border: '1px solid #ccc',
                                         borderRadius: '4px',
-                                        fontSize: '13px'
+                                        fontSize: '13px',
+                                        background: '#D5D5D8',
+                                        cursor: 'not-allowed'
                                     }}
                                 />
                             </div>
@@ -656,11 +663,14 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                                     type="text"
                                     value={billing.acBalance}
                                     onChange={(e) => setBilling(b => ({ ...b, acBalance: e.target.value }))}
+                                    disabled
                                     style={{
                                         padding: '8px 10px',
                                         border: '1px solid #ccc',
                                         borderRadius: '4px',
-                                        fontSize: '13px'
+                                        fontSize: '13px',
+                                        background: '#D5D5D8',
+                                        cursor: 'not-allowed'
                                     }}
                                 />
                             </div>
@@ -682,11 +692,14 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                                     type="text"
                                     value={billing.dues}
                                     onChange={(e) => setBilling(b => ({ ...b, dues: e.target.value }))}
+                                    disabled
                                     style={{
                                         padding: '8px 10px',
                                         border: '1px solid #ccc',
                                         borderRadius: '4px',
-                                        fontSize: '13px'
+                                        fontSize: '13px',
+                                        background: '#D5D5D8',
+                                        cursor: 'not-allowed'
                                     }}
                                 />
                             </div>
@@ -706,11 +719,14 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                                     type="text"
                                     value={billing.feesCollected}
                                     onChange={(e) => setBilling(b => ({ ...b, feesCollected: e.target.value }))}
+                                    disabled
                                     style={{
                                         padding: '8px 10px',
                                         border: '1px solid #ccc',
                                         borderRadius: '4px',
-                                        fontSize: '13px'
+                                        fontSize: '13px',
+                                        background: '#D5D5D8',
+                                        cursor: 'not-allowed'
                                     }}
                                 />
                             </div>
@@ -728,14 +744,15 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                                 </label>
                                 <input
                                     type="text"
-                                    // value={billing.reason}
-                                    // onChange={(e) => setBilling(b => ({ ...b, reason: e.target.value }))}
-                                    // style={{
-                                    //     padding: '8px 10px',
-                                    //     border: '1px solid #ccc',
-                                    //     borderRadius: '4px',
-                                    //     fontSize: '13px'
-                                    // }}
+                                    disabled
+                                    style={{
+                                        padding: '8px 10px',
+                                        border: '1px solid #ccc',
+                                        borderRadius: '4px',
+                                        fontSize: '13px',
+                                        background: '#D5D5D8',
+                                        cursor: 'not-allowed'
+                                    }}
                                 />
                             </div>
                             
@@ -789,12 +806,15 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                                 <input
                                     type="text"
                                     value={billing.paymentRemark}
-                                    onChange={(e) => setBilling(b => ({ ...b, paymentRemark: e.target.value }))}                                
+                                    onChange={(e) => setBilling(b => ({ ...b, paymentRemark: e.target.value }))}
+                                    disabled
                                     style={{
                                         padding: '8px 10px',
                                         border: '1px solid #ccc',
                                         borderRadius: '4px',
-                                        fontSize: '13px'
+                                        fontSize: '13px',
+                                        background: '#D5D5D8',
+                                        cursor: 'not-allowed'
                                     }}
                                 />
                             </div>
@@ -814,11 +834,14 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                                     type="text"
                                     value={billing.receiptDate}
                                     onChange={(e) => setBilling(b => ({ ...b, receiptDate: e.target.value }))}
+                                    disabled
                                     style={{
                                         padding: '8px 10px',
                                         border: '1px solid #ccc',
                                         borderRadius: '4px',
-                                        fontSize: '13px'
+                                        fontSize: '13px',
+                                        background: '#D5D5D8',
+                                        cursor: 'not-allowed'
                                     }}
                                 />
                             </div>
@@ -840,11 +863,14 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                                     type="text"
                                     value={billing.receiptNo}
                                     onChange={(e) => setBilling(b => ({ ...b, receiptNo: e.target.value }))}
+                                    disabled
                                     style={{
                                         padding: '8px 10px',
                                         border: '1px solid #ccc',
                                         borderRadius: '4px',
-                                        fontSize: '13px'
+                                        fontSize: '13px',
+                                        background: '#D5D5D8',
+                                        cursor: 'not-allowed'
                                     }}
                                 />
                             </div>
@@ -862,11 +888,14 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                                 </label>
                                 <input
                                     type="text"
+                                    disabled
                                     style={{
                                         padding: '8px 10px',
                                         border: '1px solid #ccc',
                                         borderRadius: '4px',
-                                        fontSize: '13px'
+                                        fontSize: '13px',
+                                        background: '#D5D5D8',
+                                        cursor: 'not-allowed'
                                     }}
                                 />
                             </div>
@@ -884,11 +913,14 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                                 </label>
                                 <input
                                     type="text"
+                                    disabled
                                     style={{
                                         padding: '8px 10px',
                                         border: '1px solid #ccc',
                                         borderRadius: '4px',
-                                        fontSize: '13px'
+                                        fontSize: '13px',
+                                        background: '#D5D5D8',
+                                        cursor: 'not-allowed'
                                     }}
                                 />
                             </div>
