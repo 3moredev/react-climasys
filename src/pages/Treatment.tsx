@@ -11,6 +11,7 @@ import { complaintService, ComplaintOption } from "../services/complaintService"
 import { medicineService, MedicineOption } from "../services/medicineService";
 import { diagnosisService, DiagnosisOption } from "../services/diagnosisService";
 import { investigationService, InvestigationOption } from "../services/investigationService";
+import { dressingService, DressingOption } from "../services/dressingService";
 import { appointmentService } from "../services/appointmentService";
 import { getFollowUpTypes, FollowUpTypeItem } from "../services/referenceService";
 import PatientFormTest from "../components/Test/PatientFormTest";
@@ -117,6 +118,22 @@ const durationCommentStyles = `
     border: none !important;
     box-shadow: none !important;
   }
+  /* Dressing dropdown checkboxes */
+  .dressings-dropdown input[type="checkbox"] {
+    width: auto !important;
+    padding: 0 !important;
+    border: none !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    font-size: inherit !important;
+    font-family: inherit !important;
+    margin: 0 !important;
+  }
+  .dressings-dropdown input[type="checkbox"]:focus {
+    outline: none !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
   /* Billing dropdown checkboxes */
   .billing-dropdown input[type="checkbox"] {
     width: auto !important;
@@ -200,6 +217,12 @@ interface InvestigationRow {
     investigation: string;
 }
 
+interface DressingRow {
+    id: string;
+    value?: string;
+    dressing: string;
+}
+
 interface Attachment {
     id: string;
     name: string;
@@ -234,6 +257,7 @@ export default function Treatment() {
     const [submitError, setSubmitError] = useState<string | null>(null);
     const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
     const [billingError, setBillingError] = useState<string | null>(null);
+    const [discountError, setDiscountError] = useState<string | null>(null);
     const [snackbarOpen, setSnackbarOpen] = useState(false);
     const [snackbarMessage, setSnackbarMessage] = useState('');
     
@@ -308,6 +332,9 @@ export default function Treatment() {
     // Past Services popup state
     const [showPastServicesPopup, setShowPastServicesPopup] = useState(false);
     const [selectedPastServiceDate, setSelectedPastServiceDate] = useState<string | null>(null);
+    const [pastServiceDates, setPastServiceDates] = useState<string[]>([]);
+    const [loadingPastServices, setLoadingPastServices] = useState<boolean>(false);
+    const [pastServicesError, setPastServicesError] = useState<string | null>(null);
 
     // Addendum modal state
     const [showAddendumModal, setShowAddendumModal] = useState<boolean>(false);
@@ -451,6 +478,34 @@ export default function Treatment() {
     }, [investigationsOptions, investigationSearch, selectedInvestigations]);
 
     const [investigationRows, setInvestigationRows] = useState<InvestigationRow[]>([]);
+    
+    // Dressing multi-select state (mirrors Diagnosis/Investigation)
+    const [selectedDressings, setSelectedDressings] = useState<string[]>([]);
+    const [dressingSearch, setDressingSearch] = useState('');
+    const [isDressingsOpen, setIsDressingsOpen] = useState(false);
+    const dressingsRef = React.useRef<HTMLDivElement | null>(null);
+    const [dressingsOptions, setDressingsOptions] = useState<DressingOption[]>([]);
+    const [dressingsLoading, setDressingsLoading] = useState(false);
+    const [dressingsError, setDressingsError] = useState<string | null>(null);
+
+    const filteredDressings = React.useMemo(() => {
+        const term = dressingSearch.trim().toLowerCase();
+        if (!term) {
+            const selectedOptions = dressingsOptions.filter(opt => selectedDressings.includes(opt.value));
+            const unselectedOptions = dressingsOptions.filter(opt => !selectedDressings.includes(opt.value));
+            return [...selectedOptions, ...unselectedOptions];
+        } else {
+            const selectedOptions = dressingsOptions.filter(opt => 
+                selectedDressings.includes(opt.value) && opt.label.toLowerCase().includes(term)
+            );
+            const unselectedSearchResults = dressingsOptions.filter(opt => 
+                !selectedDressings.includes(opt.value) && opt.label.toLowerCase().includes(term)
+            );
+            return [...selectedOptions, ...unselectedSearchResults];
+        }
+    }, [dressingsOptions, dressingSearch, selectedDressings]);
+
+    const [dressingRows, setDressingRows] = useState<DressingRow[]>([]);
     
     // Previous visit prescriptions state
     const [showPreviousVisit, setShowPreviousVisit] = useState(false);
@@ -933,6 +988,40 @@ export default function Treatment() {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [isInvestigationsOpen]);
 
+    // Close Dressing dropdown on outside click
+    React.useEffect(() => {
+        if (!isDressingsOpen) return;
+        function handleClickOutside(e: MouseEvent) {
+            if (dressingsRef.current && !dressingsRef.current.contains(e.target as Node)) {
+                setIsDressingsOpen(false);
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [isDressingsOpen]);
+
+    // Load Dressing options based on doctor/clinic
+    React.useEffect(() => {
+        let cancelled = false;
+        async function loadDressings() {
+            if (!treatmentData?.doctorId || !sessionData?.clinicId) return;
+            setDressingsLoading(true);
+            setDressingsError(null);
+            try {
+                const doctorId = treatmentData.doctorId;
+                const clinicId = sessionData.clinicId;
+                const options = await dressingService.getDressingsForDoctorAndClinic(doctorId, clinicId);
+                if (!cancelled) setDressingsOptions(options);
+            } catch (error: any) {
+                if (!cancelled) setDressingsError(error.message || 'Failed to load dressings');
+            } finally {
+                if (!cancelled) setDressingsLoading(false);
+            }
+        }
+        loadDressings();
+        return () => { cancelled = true; };
+    }, [treatmentData?.doctorId, sessionData?.clinicId]);
+
     // Load Investigation options based on doctor/clinic
     React.useEffect(() => {
         let cancelled = false;
@@ -1190,6 +1279,56 @@ export default function Treatment() {
         return () => { cancelled = true; };
     }, [treatmentData?.doctorId, sessionData?.clinicId]);
 
+    // Load Previous Service Visit Dates for sidebar
+    React.useEffect(() => {
+        let cancelled = false;
+        async function loadPastServices() {
+            try {
+                if (!treatmentData?.patientId || !sessionData?.doctorId || !sessionData?.clinicId) return;
+                setLoadingPastServices(true);
+                setPastServicesError(null);
+                const todaysVisitDate = new Date().toISOString().slice(0, 10);
+                const resp: any = await patientService.getPreviousServiceVisitDates({
+                    patientId: String(treatmentData.patientId),
+                    clinicId: String(sessionData.clinicId),
+                    todaysVisitDate
+                });
+                if (cancelled) return;
+                // Extract visitDate from visits array (priority: resp.visits)
+                let dates: string[] = [];
+                if (resp?.success && Array.isArray(resp?.visits)) {
+                    // Parse visits array and extract visitDate
+                    dates = resp.visits
+                        .map((visit: any) => visit?.visitDate || visit?.visit_date || visit?.Visit_Date)
+                        .filter((d: any) => d && String(d).trim() !== '')
+                        .map((d: any) => String(d));
+                } else {
+                    // Fallback to previous parsing logic
+                    const tryArrays: any[] = [];
+                    if (Array.isArray(resp)) tryArrays.push(resp);
+                    if (Array.isArray(resp?.dates)) tryArrays.push(resp.dates);
+                    if (Array.isArray(resp?.resultSet1)) tryArrays.push(resp.resultSet1);
+                    if (Array.isArray(resp?.visits)) tryArrays.push(resp.visits);
+                    const firstArray = tryArrays.find(arr => Array.isArray(arr)) || [];
+                    if (firstArray.length > 0) {
+                        dates = firstArray.map((item: any) => {
+                            if (typeof item === 'string') return item;
+                            const d = item?.visitDate || item?.visit_date || item?.Visit_Date || item?.appointmentDate || item?.appointment_date || item?.serviceDate || item?.date;
+                            return d ? String(d) : '';
+                        }).filter((s: string) => !!s);
+                    }
+                }
+                setPastServiceDates(dates);
+            } catch (e: any) {
+                if (!cancelled) setPastServicesError(e?.message || 'Failed to load past services');
+            } finally {
+                if (!cancelled) setLoadingPastServices(false);
+            }
+        }
+        loadPastServices();
+        return () => { cancelled = true; };
+    }, [treatmentData?.patientId, sessionData?.doctorId, sessionData?.clinicId]);
+
     // Close Billing dropdown on outside click
     React.useEffect(() => {
         if (!isBillingOpen) return;
@@ -1433,6 +1572,22 @@ export default function Treatment() {
     const handlePastServiceDateClick = (date: string) => {
         setSelectedPastServiceDate(date);
         setShowPastServicesPopup(true);
+    };
+
+    // Helper function to format date as dd-mmm-yy for Past Services
+    const formatPastServiceDate = (dateString: string): string => {
+        if (!dateString) return 'N/A';
+        try {
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) return dateString;
+            const day = String(date.getDate()).padStart(2, '0');
+            const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const month = monthNames[date.getMonth()];
+            const year = String(date.getFullYear()).slice(-2);
+            return `${day}-${month}-${year}`;
+        } catch (error) {
+            return dateString;
+        }
     };
 
     // Helper function to format date for display
@@ -2850,6 +3005,44 @@ export default function Treatment() {
         setSelectedInvestigations(prev => prev.filter(v => v !== value));
     };
 
+    // Dressing handlers
+    const handleAddDressings = () => {
+        if (selectedDressings.length === 0) return;
+        setDressingRows(prev => {
+            const existingValues = new Set(prev.map(r => r.value || r.dressing));
+            const newRows: DressingRow[] = [];
+            selectedDressings.forEach(val => {
+                const option = dressingsOptions.find(opt => opt.value === val);
+                if (option && !existingValues.has(val)) {
+                    newRows.push({ id: `dressing_${Date.now()}_${val}`, value: val, dressing: option.label });
+                }
+            });
+            return [...prev, ...newRows];
+        });
+        setSelectedDressings([]);
+    };
+
+    const handleRemoveDressing = (id: string) => {
+        setDressingRows(prev => prev.filter(row => row.id !== id));
+    };
+
+    const handleRemoveDressingFromSelector = (value: string) => {
+        setDressingRows(prev => prev.filter(r => r.value !== value));
+        setSelectedDressings(prev => prev.filter(v => v !== value));
+    };
+
+    const handleAddCustomDressing = () => {
+        // Placeholder for custom dressing - user will integrate later
+        const customDressing = prompt('Enter custom dressing:');
+        if (customDressing && customDressing.trim()) {
+            const newDressing: DressingRow = {
+                id: `dressing_custom_${Date.now()}`,
+                dressing: customDressing.trim()
+            };
+            setDressingRows(prev => [...prev, newDressing]);
+        }
+    };
+
     const handleFollowUpChange = (field: string, value: string) => {
         setFollowUpData(prev => ({
             ...prev,
@@ -2862,14 +3055,24 @@ export default function Treatment() {
             const next = { ...prev, [field]: value };
             const billedNum = parseFloat(next.billed) || 0;
             const discountNum = parseFloat(next.discount) || 0;
+            
+            // Validate discount is not greater than billed amount
+            if (discountNum > billedNum && billedNum > 0) {
+                setDiscountError('Discount cannot be greater than billed amount');
+            } else {
+                setDiscountError(null);
+            }
+            
+            // Calculate remaining amount after discount (Dues)
+            const remainingAmount = Math.max(0, billedNum - discountNum);
             const newAcBalance = billedNum - discountNum;
-            return { ...next, acBalance: String(newAcBalance) };
+            return { ...next, dues: String(remainingAmount), acBalance: String(newAcBalance) };
         });
     };
 
     // Helper style for disabled state (visual only - individual elements have disabled props)
+    // Note: We don't apply opacity here as it affects all children including enabled buttons
     const disabledStyle = isFormDisabled ? {
-        opacity: 0.6,
         cursor: 'not-allowed'
     } : {};
 
@@ -3174,38 +3377,60 @@ export default function Treatment() {
                                 Past Services
                             </div>
                             <div style={{ padding: '0' }}>
-                                <div style={{
-                                    padding: '10px 15px',
-                                    borderBottom: '1px solid #e0e0e0',
-                                    backgroundColor: 'white',
-                                    fontSize: '13px',
-                                    display: 'flex',
-                                    alignItems: 'center'
-                                }}>
-                                    <div style={{ fontWeight: '500', color: '#333' }}>
-                                        <a 
-                                            href="#"
-                                            onClick={(e) => {
-                                                e.preventDefault();
-                                                handlePastServiceDateClick('03-May-19');
-                                            }}
-                                            style={{ 
-                                                textDecoration: 'underline', 
-                                                color: '#1976d2',
-                                                cursor: 'pointer',
-                                                fontWeight: 'bold'
-                                            }}
-                                            onMouseEnter={(e) => {
-                                                e.currentTarget.style.color = '#0d47a1';
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                e.currentTarget.style.color = '#1976d2';
+                                {loadingPastServices ? (
+                                    <div style={{ 
+                                        padding: '10px 15px',
+                                        textAlign: 'center',
+                                        color: '#666',
+                                        fontSize: '12px'
+                                    }}>
+                                        Loading...
+                                    </div>
+                                ) : pastServicesError ? (
+                                    <div style={{ 
+                                        padding: '10px 15px',
+                                        textAlign: 'center',
+                                        color: '#d32f2f',
+                                        fontSize: '12px',
+                                        backgroundColor: '#ffebee',
+                                        border: '1px solid #ffcdd2',
+                                        margin: '8px'
+                                    }}>
+                                        {pastServicesError}
+                                    </div>
+                                ) : pastServiceDates.length === 0 ? (
+                                    <div style={{ 
+                                        padding: '10px 15px',
+                                        textAlign: 'center',
+                                        color: '#666',
+                                        fontSize: '12px'
+                                    }}>
+                                        No past services
+                                    </div>
+                                ) : (
+                                    pastServiceDates.map((dateStr, idx) => (
+                                        <div 
+                                            key={`${dateStr}_${idx}`}
+                                            style={{
+                                                padding: '10px 15px',
+                                                borderBottom: '1px solid #e0e0e0',
+                                                backgroundColor: idx % 2 === 0 ? '#ffffff' : '#f9f9f9',
+                                                fontSize: '13px'
                                             }}
                                         >
-                                            03-May-19
-                                        </a>
-                                    </div>
-                                </div>
+                                            <a
+                                                href="#"
+                                                onClick={(e) => { 
+                                                    e.preventDefault(); 
+                                                    handlePastServiceDateClick(dateStr);
+                                                }}
+                                                style={{ color: '#1976d2', textDecoration: 'underline', cursor: 'pointer' }}
+                                            >
+                                                {formatPastServiceDate(dateStr)}
+                                            </a>
+                                        </div>
+                                    ))
+                                )}
                             </div>
                         </div>
                     </div>
@@ -3360,6 +3585,7 @@ export default function Treatment() {
                                                 <button
                                                     type="button"
                                                     disabled={isFormDisabled}
+                                                    title="Show vitals trend"
                                                     style={{
                                                         position: 'absolute',
                                                         left: 'calc(100% + 13px)',
@@ -3674,6 +3900,7 @@ export default function Treatment() {
                                         </div>
                                         <button
                                             disabled={isFormDisabled}
+                                            title="Add selected complaints"
                                             style={{
                                                 padding: '0 10px',
                                                 backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
@@ -3699,6 +3926,7 @@ export default function Treatment() {
                                         <button
                                             type="button"
                                             disabled={isFormDisabled}
+                                            title="Add custom complaint"
                                             style={{
                                                 backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
                                                 color: 'white',
@@ -3928,6 +4156,7 @@ export default function Treatment() {
                                     <button
                                         type="button"
                                         disabled={isFormDisabled}
+                                        title="Record lab test results"
                                         style={{
                                             width: '100%',
                                             height: '40px',
@@ -4136,6 +4365,7 @@ export default function Treatment() {
                                 </div>
                                 <button
                                     disabled={isFormDisabled}
+                                    title="Add selected diagnoses"
                                     style={{
                                         padding: '0 10px',
                                         backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
@@ -4160,6 +4390,7 @@ export default function Treatment() {
                                 <button
                                     type="button"
                                     disabled={isFormDisabled}
+                                    title="Add custom diagnosis"
                                     style={{
                                         backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
                                         color: 'white',
@@ -4409,6 +4640,7 @@ export default function Treatment() {
                                     type="button"
                                     onClick={handleAddMedicine}
                                     disabled={isFormDisabled}
+                                    title="Add selected medicines"
                                     style={{
                                         backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
                                         color: 'white',
@@ -4424,6 +4656,7 @@ export default function Treatment() {
                                 <button
                                     type="button"
                                     disabled={isFormDisabled}
+                                    title="Add custom medicine"
                                     style={{
                                         backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
                                         color: 'white',
@@ -4661,6 +4894,7 @@ export default function Treatment() {
                                     type="button"
                                     onClick={handleAddPrescription}
                                     disabled={isFormDisabled}
+                                    title="Add prescription"
                                     style={{
                                         backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
                                         color: 'white',
@@ -4676,6 +4910,7 @@ export default function Treatment() {
                                 <button
                                     type="button"
                                     disabled={isFormDisabled}
+                                    title="Add custom prescription"
                                     style={{
                                         backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
                                         color: 'white',
@@ -4705,6 +4940,7 @@ export default function Treatment() {
                                     type="button"
                                     onClick={() => setShowInstructionPopup(true)}
                                     disabled={isFormDisabled}
+                                    title="Show instruction groups"
                                     style={{
                                         backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
                                         color: 'white',
@@ -4937,6 +5173,7 @@ export default function Treatment() {
                                 <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Prescriptions suggested in previous visit</label>
                                 <div
                                     onClick={() => setShowPreviousVisit(!showPreviousVisit)}
+                                    title={showPreviousVisit ? 'Hide previous visit prescriptions' : 'Show previous visit prescriptions'}
                                     style={{
                                         cursor: 'pointer',
                                         fontSize: '13px',
@@ -5180,6 +5417,7 @@ export default function Treatment() {
                                 </div>
                                 <button
                                     disabled={isFormDisabled}
+                                    title="Add selected investigations"
                                     style={{
                                         padding: '0 10px',
                                         backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
@@ -5204,6 +5442,7 @@ export default function Treatment() {
                                 <button
                                     type="button"
                                     disabled={isFormDisabled}
+                                    title="Add custom investigation"
                                     style={{
                                         backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
                                         color: 'white',
@@ -5232,6 +5471,7 @@ export default function Treatment() {
                                 <button
                                     type="button"
                                     disabled={isFormDisabled}
+                                    title="Show lab trends"
                                     style={{
                                         backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
                                         color: 'white',
@@ -5507,7 +5747,7 @@ export default function Treatment() {
                                         style={{
                                             width: '100%',
                                             padding: '6px 10px',
-                                            border: '1px solid #ccc',
+                                            border: discountError ? '1px solid red' : '1px solid #ccc',
                                             borderRadius: '4px',
                                             fontSize: '13px',
                                             backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
@@ -5515,6 +5755,11 @@ export default function Treatment() {
                                             cursor: isFormDisabled ? 'not-allowed' : 'text'
                                         }}
                                     />
+                                    {discountError && (
+                                        <div style={{ color: 'red', fontSize: '12px', marginTop: '4px' }}>
+                                            {discountError}
+                                        </div>
+                                    )}
                                 </div>
                                 <div>
                                     <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
@@ -5574,11 +5819,23 @@ export default function Treatment() {
                         </div>
 
                         {/* Action Buttons */}
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '20px', marginBottom: '40px', flexWrap: 'wrap', pointerEvents: 'auto', opacity: 1 }}>
+                        <div style={{ 
+                            display: 'flex', 
+                            justifyContent: 'flex-end', 
+                            gap: '8px', 
+                            marginTop: '20px', 
+                            marginBottom: '40px', 
+                            flexWrap: 'wrap', 
+                            pointerEvents: 'auto', 
+                            opacity: 1,
+                            position: 'relative',
+                            zIndex: 10
+                        }}>
                             <button 
                                 type="button" 
                                 onClick={() => isAddendumEnabled && setShowAddendumModal(true)}
                                 disabled={!isAddendumEnabled}
+                                title="Add an addendum to this visit"
                                 style={{
                                     backgroundColor: isAddendumEnabled ? '#1976d2' : '#ccc',
                                     color: 'white',
@@ -5588,11 +5845,12 @@ export default function Treatment() {
                                     cursor: isAddendumEnabled ? 'pointer' : 'not-allowed',
                                     fontSize: '12px',
                                     pointerEvents: 'auto',
-                                    opacity: isAddendumEnabled ? 1 : 0.6,
-                                    zIndex: 10,
+                                    opacity: 1,
+                                    zIndex: 11,
                                     position: 'relative',
                                     fontWeight: 'bold',
-                                    boxShadow: isAddendumEnabled ? '0 2px 4px rgba(0,0,0,0.2)' : 'none'
+                                    boxShadow: isAddendumEnabled ? '0 2px 4px rgba(0,0,0,0.2)' : 'none',
+                                    transition: 'background-color 0.2s, box-shadow 0.2s'
                                 }}
                                 onMouseEnter={(e) => {
                                     if (isAddendumEnabled) {
@@ -5612,6 +5870,7 @@ export default function Treatment() {
                             <button 
                                 type="button" 
                                 onClick={handlePrint}
+                                title="Print prescription/report"
                                 style={{
                                     backgroundColor: '#1976d2',
                                     color: 'white',
@@ -5619,7 +5878,21 @@ export default function Treatment() {
                                     padding: '8px 12px',
                                     borderRadius: '4px',
                                     cursor: 'pointer',
-                                    fontSize: '12px'
+                                    fontSize: '12px',
+                                    opacity: 1,
+                                    zIndex: 11,
+                                    position: 'relative',
+                                    fontWeight: 'bold',
+                                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                                    transition: 'background-color 0.2s, box-shadow 0.2s'
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.backgroundColor = '#1565c0';
+                                    e.currentTarget.style.boxShadow = '0 3px 6px rgba(0,0,0,0.3)';
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.backgroundColor = '#1976d2';
+                                    e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
                                 }}
                             >
                                 Print
@@ -5628,6 +5901,7 @@ export default function Treatment() {
                                 type="button" 
                                 onClick={handleBackToAppointments}
                                 disabled={isFormDisabled}
+                                title="Cancel and go back to appointments"
                                 style={{
                                     backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
                                     color: 'white',
@@ -5644,6 +5918,7 @@ export default function Treatment() {
                                 type="button" 
                                 onClick={handleTreatmentSave}
                                 disabled={isSubmitting || isFormDisabled}
+                                title="Save treatment"
                                 style={{
                                     backgroundColor: (isSubmitting || isFormDisabled) ? '#ccc' : '#1976d2',
                                     color: 'white',
@@ -5660,6 +5935,7 @@ export default function Treatment() {
                                 type="button" 
                                 onClick={handleTreatmentSubmit}
                                 disabled={isSubmitting || isFormDisabled}
+                                title="Submit treatment"
                                 style={{
                                     backgroundColor: (isSubmitting || isFormDisabled) ? '#ccc' : '#1976d2',
                                     color: 'white',
@@ -5876,6 +6152,7 @@ export default function Treatment() {
                                             setSnackbarOpen(true);
                                         }
                                     }}
+                                    title="Submit addendum"
                                     style={{ backgroundColor: '#1976d2', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
                                 >
                                     Submit
@@ -5883,6 +6160,7 @@ export default function Treatment() {
                                 <button
                                     type="button"
                                     onClick={() => setAddendumText('')}
+                                    title="Clear addendum"
                                     style={{ backgroundColor: 'rgb(25, 118, 210)', color: '#000', border: 'none', padding: '6px 12px', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
                                 >
                                     Clear
@@ -5890,6 +6168,7 @@ export default function Treatment() {
                                 <button
                                     type="button"
                                     onClick={() => setShowAddendumModal(false)}
+                                    title="Close addendum"
                                     style={{ backgroundColor: 'rgb(24, 120, 215)', color: '#000', border: '1px solid #cfd8dc', padding: '6px 12px', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
                                 >
                                     Close

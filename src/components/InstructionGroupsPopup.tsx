@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Close, Search, Delete, Add } from '@mui/icons-material';
+import { Delete } from '@mui/icons-material';
 import { patientService } from '../services/patientService';
 import { sessionService } from '../services/sessionService';
 
@@ -31,6 +31,7 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
   const [isGroupsOpen, setIsGroupsOpen] = useState(false);
   const [showSelectedTable, setShowSelectedTable] = useState(false);
   const groupsRef = useRef<HTMLDivElement | null>(null);
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
 
   // Dynamic instruction groups fetched from backend
   const [instructionGroups, setInstructionGroups] = useState<InstructionGroup[]>([]);
@@ -97,16 +98,32 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
   // Selected options for chip-like preview inside dropdown
   const selectedOptions = instructionGroups.filter(group => selectedGroupIds.includes(group.id));
 
-  // Close dropdown on outside click
+  // Close dropdown on outside click (but not on scroll)
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
       if (!isGroupsOpen) return;
-      if (groupsRef.current && !groupsRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      // Close if click is outside the groups container (which includes both trigger and dropdown)
+      if (groupsRef.current && !groupsRef.current.contains(target)) {
         setIsGroupsOpen(false);
       }
     };
+    
+    const onWheel = (e: WheelEvent) => {
+      // Prevent closing dropdown when scrolling inside it
+      if (!isGroupsOpen) return;
+      const target = e.target as Node;
+      if (dropdownRef.current && dropdownRef.current.contains(target)) {
+        e.stopPropagation();
+      }
+    };
+    
     document.addEventListener('mousedown', onClick);
-    return () => document.removeEventListener('mousedown', onClick);
+    document.addEventListener('wheel', onWheel, true);
+    return () => {
+      document.removeEventListener('mousedown', onClick);
+      document.removeEventListener('wheel', onWheel, true);
+    };
   }, [isGroupsOpen]);
 
   const handleGroupSelect = (group: InstructionGroup) => {
@@ -143,78 +160,83 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 1000,
-      fontFamily: 'Arial, sans-serif'
-    }}>
-      <div style={{
-        backgroundColor: '#FFFFFF',
-        borderRadius: '8px',
-        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
-        width: '90%',
-        maxWidth: '800px',
-        maxHeight: '90vh',
-        overflow: 'hidden',
+    <div
+      role="dialog"
+      aria-modal="true"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
         display: 'flex',
-        flexDirection: 'column'
-      }}>
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 100000
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          backgroundColor: '#FFFFFF',
+          borderRadius: '8px',
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
+          width: '95%',
+          maxWidth: '800px',
+          maxHeight: '92vh',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+          fontFamily: "'Roboto', sans-serif",
+          position: 'relative'
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div style={{
+          background: 'white',
+          padding: '12px 20px 8px 20px',
+          borderTopLeftRadius: '8px',
+          borderTopRightRadius: '8px',
           display: 'flex',
           justifyContent: 'space-between',
-          alignItems: 'center',
-          padding: '20px 24px',
-          borderBottom: '1px solid #F5F5F5'
+          alignItems: 'center'
         }}>
-          <div>
-            <h2 style={{
-              margin: 0,
-              fontSize: '20px',
-              fontWeight: '600',
-              color: '#333333',
-              marginBottom: '4px'
-            }}>
-              {patientName} / {patientGender} / {patientAge} Y
-            </h2>
+          <div style={{ color: '#000000', fontWeight: 700, fontSize: '18px', fontFamily: "'Roboto', sans-serif" }}>
+            {patientName} / {patientGender} / {patientAge} Y
           </div>
           <button
+            type="button"
+            aria-label="Close"
             onClick={onClose}
             style={{
-              backgroundColor: '#1976D2',
-              color: 'white',
+              background: 'rgb(25, 118, 210)',
               border: 'none',
+              cursor: 'pointer',
+              padding: '2px',
               borderRadius: '4px',
-              width: '32px',
-              height: '32px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              cursor: 'pointer',
+              color: '#fff',
+              fontSize: '18px',
+              width: '36px',
+              height: '36px',
               transition: 'background-color 0.2s'
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#1565c0';
+              (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgb(25, 118, 210)';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = '#1976D2';
+              (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgb(25, 118, 210)';
             }}
           >
-            <Close fontSize="small" />
+            ×
           </button>
         </div>
 
         {/* Content */}
         <div style={{
           padding: '24px',
+          paddingBottom: '60px',
           flex: 1,
           overflow: 'auto'
         }}>
@@ -229,7 +251,7 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
               Instruction Groups
             </h3>
             
-            <div style={{ display: 'flex', gap: '10px', alignItems: 'end' }}>
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'end', marginBottom: '50px' }}>
               <div ref={groupsRef} style={{ position: 'relative', flex: 1 }}>
                 <div
                   onClick={() => setIsGroupsOpen(prev => !prev)}
@@ -256,18 +278,26 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
                 </div>
 
                 {isGroupsOpen && (
-                  <div style={{
-                    position: 'absolute',
-                    top: '100%',
-                    left: 0,
-                    right: 0,
-                    backgroundColor: 'white',
-                    border: '1px solid #B7B7B7',
-                    borderRadius: '6px',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                    zIndex: 1000,
-                    marginTop: '4px'
-                  }}>
+                  <div 
+                    ref={dropdownRef}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    style={{
+                      position: 'absolute',
+                      top: '100%',
+                      left: 0,
+                      right: 0,
+                      backgroundColor: 'white',
+                      border: '1px solid #B7B7B7',
+                      borderRadius: '6px',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                      zIndex: 1000,
+                      marginTop: '4px',
+                      maxHeight: '350px',
+                      overflow: 'hidden',
+                      display: 'flex',
+                      flexDirection: 'column'
+                    }}
+                  >
                     <div style={{ padding: '6px' }}>
                       <input
                         type="text"
@@ -287,7 +317,7 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
                     </div>
                     {/* Selected groups chips (preview) */}
                     {selectedOptions.length > 0 && (
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', padding: '6px', paddingTop: 0 }}>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', padding: '6px', paddingTop: 0, maxHeight: '100px', overflowY: 'auto' }}>
                         {selectedOptions.map((group) => (
                           <label key={`chip-${group.id}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 10px', backgroundColor: '#e3f2fd', borderRadius: '6px', fontSize: '12px', border: '1px solid #bbdefb' }}>
                             <input
@@ -303,7 +333,7 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
                         ))}
                       </div>
                     )}
-            <div style={{ maxHeight: '240px', overflowY: 'auto', padding: '4px 6px', display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', columnGap: '8px', rowGap: '6px' }}>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '4px 6px', display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', columnGap: '8px', rowGap: '6px' }}>
               {loading && (
                 <div style={{ padding: '6px', fontSize: '12px', color: '#777', gridColumn: '1 / -1', textAlign: 'center' }}>
                   Loading instruction groups...
@@ -376,7 +406,7 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
 
             {/* Selected groups summary table */}
             {selectedGroups.length > 0 && (
-              <div style={{ marginTop: '20px' }}>
+              <div style={{ marginTop: '40px' }}>
                 {/* <div style={{
                   backgroundColor: '#1976d2',
                   color: 'white',
@@ -388,41 +418,38 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
                   Selected Groups
                 </div> */}
 
-                <div style={{
-                  border: '1px solid #ddd',
-                  borderTop: 'none',
-                  borderRadius: '0 0 4px 4px',
-                  overflow: 'hidden'
-                }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+                <div style={{ border: '1px solid #ccc', borderRadius: '4px', overflow: 'hidden' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
-                      <tr style={{ backgroundColor: '#f5f5f5' }}>
+                      <tr style={{ backgroundColor: '#1976d2', color: 'white', fontWeight: 'bold', fontSize: '11px' }}>
                         <th style={{
-                          padding: '12px',
+                          padding: '6px',
                           textAlign: 'left',
-                          borderBottom: '1px solid #ddd',
-                          fontWeight: '600',
-                          color: '#333',
-                          width: '60px'
+                          fontWeight: 'bold',
+                          backgroundColor: '#1976d2',
+                          color: 'white',
+                          borderRight: '1px solid rgba(255,255,255,0.2)',
+                          width: 40
                         }}>
                           Sr.
                         </th>
                         <th style={{
-                          padding: '12px',
+                          padding: '6px',
                           textAlign: 'left',
-                          borderBottom: '1px solid #ddd',
-                          fontWeight: '600',
-                          color: '#333'
+                          fontWeight: 'bold',
+                          backgroundColor: '#1976d2',
+                          color: 'white',
+                          borderRight: '1px solid rgba(255,255,255,0.2)'
                         }}>
                           Group
                         </th>
                         <th style={{
-                          padding: '12px',
+                          padding: '6px',
                           textAlign: 'center',
-                          borderBottom: '1px solid #ddd',
-                          fontWeight: '600',
-                          color: '#333',
-                          width: '80px'
+                          fontWeight: 'bold',
+                          backgroundColor: '#1976d2',
+                          color: 'white',
+                          width: 80
                         }}>
                           Action
                         </th>
@@ -430,53 +457,61 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
                     </thead>
                     <tbody>
                       {selectedGroups.map((group, index) => (
-                        <tr key={group.id}>
+                        <tr
+                          key={group.id}
+                          style={{
+                            borderBottom: '1px solid #e0e0e0',
+                            backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white'
+                          }}
+                          onMouseEnter={(e) => {
+                            (e.currentTarget as HTMLTableRowElement).style.backgroundColor = '#f5f5f5';
+                          }}
+                          onMouseLeave={(e) => {
+                            (e.currentTarget as HTMLTableRowElement).style.backgroundColor = index % 2 === 0 ? '#f8f9fa' : 'white';
+                          }}
+                        >
                           <td style={{
-                            padding: '12px',
-                            borderBottom: '1px solid #eee',
-                            color: '#666',
-                            height: '38px',
-                            fontSize: '14px'
+                            padding: '6px',
+                            color: '#333',
+                            fontSize: '12px',
+                            borderRight: '1px solid #e0e0e0'
                           }}>
                             {index + 1}
                           </td>
                           <td style={{
-                            padding: '12px',
-                            borderBottom: '1px solid #eee',
-                            color: '#666',
-                            height: '38px',
-                            fontSize: '14px'
+                            padding: '6px',
+                            color: '#333',
+                            fontSize: '12px',
+                            borderRight: '1px solid #e0e0e0'
                           }}>
                             {group.name}
                           </td>
                           <td style={{
-                            padding: '12px',
-                            borderBottom: '1px solid #eee',
-                            textAlign: 'center',
-                            height: '38px'
+                            padding: '6px',
+                            textAlign: 'center'
                           }}>
-                            <button
+                            <div
                               onClick={() => handleRemoveGroup(group.id)}
+                              title="Remove"
                               style={{
-                                background: 'none',
-                                border: 'none',
-                                cursor: 'pointer',
-                                color: '#f44336',
-                                padding: '6px',
-                                borderRadius: '4px',
-                                display: 'flex',
+                                display: 'inline-flex',
                                 alignItems: 'center',
-                                justifyContent: 'center'
+                                justifyContent: 'center',
+                                width: '24px',
+                                height: '24px',
+                                cursor: 'pointer',
+                                color: '#000000',
+                                backgroundColor: 'transparent'
                               }}
                               onMouseEnter={(e) => {
-                                e.currentTarget.style.backgroundColor = '#ffebee';
+                                (e.currentTarget as HTMLDivElement).style.color = '#EF5350';
                               }}
                               onMouseLeave={(e) => {
-                                e.currentTarget.style.backgroundColor = 'transparent';
+                                (e.currentTarget as HTMLDivElement).style.color = '#000000';
                               }}
                             >
-                              <Delete fontSize="small" style={{ color: 'black' }} />
-                            </button>
+                              <Delete fontSize="small" />
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -488,7 +523,7 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
 
             {/* Detailed instructions table */}
             {selectedGroups.length > 0 && (
-              <div style={{ marginTop: '20px' }}>
+              <div style={{ marginTop: '40px', marginBottom: '40px' }}>
                 {/* <div style={{
                   backgroundColor: '#1976d2',
                   color: 'white',
@@ -500,115 +535,81 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
                   Instructions
                 </div> */}
 
-                <div style={{
-                  border: '1px solid #ddd',
-                  borderTop: 'none',
-                  borderRadius: '0 0 4px 4px',
-                  overflow: 'hidden'
-                }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+                <div style={{ border: '1px solid #ccc', borderRadius: '4px', overflow: 'hidden' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
-                      <tr style={{ backgroundColor: '#f5f5f5' }}>
+                      <tr style={{ backgroundColor: '#1976d2', color: 'white', fontWeight: 'bold', fontSize: '11px' }}>
                         <th style={{
-                          padding: '12px',
+                          padding: '6px',
                           textAlign: 'left',
-                          borderBottom: '1px solid #ddd',
-                          fontWeight: '600',
-                          color: '#333',
-                          width: '60px'
+                          fontWeight: 'bold',
+                          backgroundColor: '#1976d2',
+                          color: 'white',
+                          borderRight: '1px solid rgba(255,255,255,0.2)',
+                          width: 40
                         }}>
                           Sr.
                         </th>
                         <th style={{
-                          padding: '12px',
+                          padding: '6px',
                           textAlign: 'left',
-                          borderBottom: '1px solid #ddd',
-                          fontWeight: '600',
-                          color: '#333',
-                          width: '200px'
+                          fontWeight: 'bold',
+                          backgroundColor: '#1976d2',
+                          color: 'white',
+                          borderRight: '1px solid rgba(255,255,255,0.2)',
+                          width: 200
                         }}>
                           Group
                         </th>
                         <th style={{
-                          padding: '12px',
+                          padding: '6px',
                           textAlign: 'left',
-                          borderBottom: '1px solid #ddd',
-                          fontWeight: '600',
-                          color: '#333'
+                          fontWeight: 'bold',
+                          backgroundColor: '#1976d2',
+                          color: 'white'
                         }}>
                           Instructions
                         </th>
-                        {/* <th style={{
-                          padding: '12px',
-                          textAlign: 'center',
-                          borderBottom: '1px solid #ddd',
-                          fontWeight: '600',
-                          color: '#333',
-                          width: '80px'
-                        }}>
-                          Action
-                        </th> */}
                       </tr>
                     </thead>
                     <tbody>
                       {selectedGroups.map((group, index) => (
-                        <tr key={group.id}>
+                        <tr
+                          key={group.id}
+                          style={{
+                            borderBottom: '1px solid #e0e0e0',
+                            backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white'
+                          }}
+                          onMouseEnter={(e) => {
+                            (e.currentTarget as HTMLTableRowElement).style.backgroundColor = '#f5f5f5';
+                          }}
+                          onMouseLeave={(e) => {
+                            (e.currentTarget as HTMLTableRowElement).style.backgroundColor = index % 2 === 0 ? '#f8f9fa' : 'white';
+                          }}
+                        >
                           <td style={{
-                            padding: '12px',
-                            borderBottom: '1px solid #eee',
-                            color: '#666',
-                            height: '38px',
-                            fontSize: '14px'
+                            padding: '6px',
+                            color: '#333',
+                            fontSize: '12px',
+                            borderRight: '1px solid #e0e0e0'
                           }}>
                             {index + 1}
                           </td>
                           <td style={{
-                            padding: '12px',
-                            borderBottom: '1px solid #eee',
-                            color: '#666',
-                            height: '38px',
-                            fontSize: '14px'
+                            padding: '6px',
+                            color: '#333',
+                            fontSize: '12px',
+                            borderRight: '1px solid #e0e0e0'
                           }}>
                             {group.name}
                           </td>
                           <td style={{
-                            padding: '12px',
-                            borderBottom: '1px solid #eee',
-                            color: '#666',
-                            height: '38px',
-                            fontSize: '14px'
+                            padding: '6px',
+                            color: '#333',
+                            fontSize: '12px'
                           }}>
                             {group.instructions}
                           </td>
-                          {/* <td style={{
-                            padding: '12px',
-                            borderBottom: '1px solid #eee',
-                            textAlign: 'center',
-                            height: '38px'
-                          }}>
-                            <button
-                              onClick={() => handleRemoveGroup(group.id)}
-                              style={{
-                                background: 'none',
-                                border: 'none',
-                                cursor: 'pointer',
-                                color: '#f44336',
-                                padding: '6px',
-                                borderRadius: '4px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center'
-                              }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.backgroundColor = '#ffebee';
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.backgroundColor = 'transparent';
-                              }}
-                            >
-                              <Delete fontSize="small" style={{ color: 'black' }} />
-                            </button>
-                          </td> */}
                         </tr>
                       ))}
                     </tbody>
@@ -627,23 +628,24 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
           justifyContent: 'flex-end'
         }}>
           <button
+            type="button"
             onClick={onClose}
             style={{
-              backgroundColor: '#1976D2',
-              color: 'white',
+              backgroundColor: '#1976d2',
+              color: '#fff',
               border: 'none',
+              padding: '8px 16px',
               borderRadius: '4px',
-              padding: '12px 24px',
               cursor: 'pointer',
               fontSize: '14px',
               fontWeight: '500',
               transition: 'background-color 0.2s'
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#1565c0';
+              (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#1565c0';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = '#1976D2';
+              (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#1976d2';
             }}
           >
             Close

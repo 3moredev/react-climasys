@@ -22,6 +22,13 @@ interface AddBillingPopupProps {
     // Optional inputs to fetch internally (when filteredBillingDetails not provided)
     doctorId?: string;
     clinicId?: string;
+    // Required context for submit to backend
+    userId?: string;
+    patientId?: string;
+    visitDate?: string; // yyyy-MM-dd or yyyy-MM-ddTHH:mm:ss
+    patientVisitNo?: number;
+    shiftId?: number; // or short
+    useOverwrite?: boolean;
 }
 
 export default function AddBillingPopup({
@@ -36,11 +43,18 @@ export default function AddBillingPopup({
     setSelectedBillingDetailIds,
     doctorId,
     clinicId,
+    userId,
+    patientId,
+    visitDate,
+    patientVisitNo,
+    shiftId,
+    useOverwrite,
 }: AddBillingPopupProps) {
     // Local state fallbacks when parent does not control
     const [localSearch, setLocalSearch] = React.useState<string>('');
     const [options, setOptions] = React.useState<BillingDetailOption[]>([]);
     const [localSelectedIds, setLocalSelectedIds] = React.useState<string[]>([]);
+    const [submitting, setSubmitting] = React.useState<boolean>(false);
     // Preserve original order of options to ensure rows never jump when selected
     const initialOrderRef = React.useRef<Map<string, number>>(new Map());
 
@@ -49,16 +63,41 @@ export default function AddBillingPopup({
         let cancelled = false;
         async function loadBillingDetails() {
             if (filteredBillingDetails && filteredBillingDetails.length > 0) return;
+            // Require basic context to call the visit master-lists API
             if (!doctorId || !clinicId) return;
+
+            // Prefer visits master-lists to also hydrate preselected values for patch flows
+            const params = new URLSearchParams();
+            if (patientId) params.set('patientId', String(patientId));
+            if (shiftId != null) params.set('shiftId', String(shiftId));
+            if (clinicId) params.set('clinicId', String(clinicId));
+            if (doctorId) params.set('doctorId', String(doctorId));
+            if (visitDate) params.set('visitDate', String(visitDate));
+            if (patientVisitNo != null) params.set('patientVisitNo', String(patientVisitNo));
+
+            const canUseVisitApi = params.has('patientId') && params.has('shiftId') && params.has('clinicId') && params.has('doctorId') && params.has('visitDate') && params.has('patientVisitNo');
+
             try {
-                const resp = await fetch(`/api/refdata/symptom-data?doctorId=${encodeURIComponent(doctorId)}&clinicId=${encodeURIComponent(clinicId)}`);
-                if (!resp.ok) throw new Error(`Failed to load billing details (${resp.status})`);
-                const data = await resp.json();
+                let data: any = null;
+                if (canUseVisitApi) {
+                    const resp = await fetch(`/api/visits/master-lists?${params.toString()}`);
+                    if (!resp.ok) throw new Error(`Failed to load visit master-lists (${resp.status})`);
+                    data = await resp.json();
+                } else {
+                    // Fallback to legacy refdata endpoint when not enough context for visit API
+                    const resp = await fetch(`/api/refdata/symptom-data?doctorId=${encodeURIComponent(doctorId)}&clinicId=${encodeURIComponent(clinicId)}`);
+                    if (!resp.ok) throw new Error(`Failed to load billing details (${resp.status})`);
+                    data = await resp.json();
+                }
+
                 const items = Array.isArray(data?.billingDetails)
                     ? data.billingDetails
                     : Array.isArray(data)
                         ? data
-                        : [];
+                        : Array.isArray(data?.data?.billingDetails)
+                            ? data.data.billingDetails
+                            : [];
+
                 const mapped: BillingDetailOption[] = items.map((item: any, idx: number) => ({
                     id: String(item.id ?? item._id ?? idx),
                     billing_group_name: item.billing_group_name ?? item.group_name ?? item.group,
@@ -67,6 +106,22 @@ export default function AddBillingPopup({
                     default_fees: typeof item.default_fees === 'number' ? item.default_fees : Number(item.default_fees ?? item.fee ?? 0)
                 }));
                 if (!cancelled) setOptions(mapped);
+
+                // Attempt to hydrate pre-selected IDs when provided by visit API
+                const preIds: string[] = (() => {
+                    const fromA = data?.selectedBillingDetailIds;
+                    if (Array.isArray(fromA)) return fromA.map((v: any) => String(v));
+                    const fromB = data?.preSelectedBillingIds;
+                    if (Array.isArray(fromB)) return fromB.map((v: any) => String(v));
+                    const fromC = data?.data?.selectedBillingDetailIds;
+                    if (Array.isArray(fromC)) return fromC.map((v: any) => String(v));
+                    return [];
+                })();
+
+                if (!cancelled && preIds.length > 0) {
+                    // Initialize selections only if not already set by parent/local
+                    setEffectiveSelectedIds(prev => (prev && prev.length > 0 ? prev : [...preIds]));
+                }
             } catch (e) {
                 console.error('Error loading billing details:', e);
                 if (!cancelled) setOptions([]);
@@ -74,7 +129,7 @@ export default function AddBillingPopup({
         }
         loadBillingDetails();
         return () => { cancelled = true; };
-    }, [doctorId, clinicId, filteredBillingDetails]);
+    }, [doctorId, clinicId, patientId, visitDate, patientVisitNo, shiftId, filteredBillingDetails]);
 
     const effectiveOptions = filteredBillingDetails ?? options;
 
@@ -327,17 +382,73 @@ export default function AddBillingPopup({
                             }}
                             onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#1565c0'; }}
                             onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#1976d2'; }}
-                            onClick={() => {
+                            disabled={isFormDisabled || submitting}
+                            onClick={async () => {
+                                if (isFormDisabled || submitting) return;
+                                setSubmitting(true);
                                 try {
+                                    // Build payload for backend API
+                                    const idSet = new Set(effectiveSelectedIds);
+                                    const selectedItems = effectiveOptions.filter(o => idSet.has(o.id));
+                                    const billingData = selectedItems.map((o) => {
+                                        const fee = typeof o.default_fees === 'number' ? o.default_fees : Number(o.default_fees);
+                                        return {
+                                            billingGroupName: o.billing_group_name || '',
+                                            billingSubgroupName: o.billing_subgroup_name || '',
+                                            billingDetails: o.billing_details || '',
+                                            defaultFees: isNaN(fee) ? 0 : Number(fee),
+                                            collectedFees: isNaN(fee) ? 0 : Number(fee)
+                                        };
+                                    });
+
+                                    const payload: Record<string, any> = {
+                                        userId,
+                                        doctorId,
+                                        shiftId,
+                                        patientId,
+                                        clinicId,
+                                        visitDate,
+                                        patientVisitNo,
+                                        billingData,
+                                    };
+                                    if (typeof useOverwrite === 'boolean') payload.useOverwrite = useOverwrite;
+
+                                    // Basic validation of required fields
+                                    const missing: string[] = [];
+                                    if (!payload.userId) missing.push('userId');
+                                    if (!payload.doctorId) missing.push('doctorId');
+                                    if (payload.shiftId == null) missing.push('shiftId');
+                                    if (!payload.patientId) missing.push('patientId');
+                                    if (!payload.clinicId) missing.push('clinicId');
+                                    if (!payload.visitDate) missing.push('visitDate');
+                                    if (payload.patientVisitNo == null) missing.push('patientVisitNo');
+                                    if (!Array.isArray(billingData) || billingData.length === 0) missing.push('billingData');
+                                    if (missing.length > 0) {
+                                        console.error('Missing required fields for submit:', missing);
+                                    } else {
+                                        const resp = await fetch('/api/billing/breakup/submit', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify(payload)
+                                        });
+                                        const data = await resp.json().catch(() => ({}));
+                                        if (!resp.ok) {
+                                            console.error('Failed to submit billing breakup:', data);
+                                        }
+                                    }
+
                                     if (typeof onSubmit === 'function') {
                                         onSubmit(Number(totalSelectedFees.toFixed(2)), [...effectiveSelectedIds]);
                                     }
+                                } catch (e) {
+                                    console.error('Submit error:', e);
                                 } finally {
+                                    setSubmitting(false);
                                     onClose();
                                 }
                             }}
                         >
-                            Submit
+                            {submitting ? 'Submitting…' : 'Submit'}
                         </button>
                     </div>
                 </div>
