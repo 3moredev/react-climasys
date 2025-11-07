@@ -41,7 +41,9 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
         paymentRemark: '',
         receiptNo: '',
         receiptDate: '',
-        receiptAmount: ''
+        receiptAmount: '',
+        reason: '',
+        referredBy: ''
     });
     const [uiFieldsData, setUiFieldsData] = useState<any>(null);
     const [paymentByOptions, setPaymentByOptions] = useState<Array<{ value: string; label: string }>>([]);
@@ -96,10 +98,10 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                 if (!open) return;
                 if (!date) return;
                 const patientId = patientData?.patientId;
-                const doctorId = sessionData?.doctorId as unknown as string | undefined;
+                // const doctorId = sessionData?.doctorId as unknown as string | undefined;
                 const clinicId = sessionData?.clinicId as unknown as string | undefined;
                 const shiftFromSession = (sessionData as any)?.shiftId;
-                if (!patientId || !doctorId || !clinicId) return;
+                if (!patientId ||  !clinicId) return;
 
                 // First, find the visitNo and shiftId for the given date
                 // Primary: fetch detailed visits
@@ -150,7 +152,7 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                 // Call items API
                 const itemsResp: any = await patientService.getPreviousServiceVisitItems({
                     patientId: String(patientId),
-                    doctorId: String(doctorId),
+                    doctorId: 'DR-00C10',
                     clinicId: String(clinicId),
                     shiftId: Number(shiftId),
                     visitNo: Number(visitNo),
@@ -170,77 +172,59 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
 
                 setServices(mapped);
 
-                // Fetch master lists to patch payment details for this specific visit
+                // Fetch master lists for services to patch payment details for this specific visit
                 try {
                     const params: MasterListsRequest = {
                         patientId: String(patientId),
                         shiftId: Number(shiftId || 1),
                         clinicId: String(clinicId),
-                        doctorId: String(doctorId),
+                        // doctorId: String(doctorId),
                         visitDate: targetDate, // YYYY-MM-DD
                         patientVisitNo: Number(visitNo || 0)
                     } as MasterListsRequest;
 
-                    const mlResp: any = await patientService.getMasterLists(params);
+                    console.log('Calling getMasterListsForServices with params:', params);
+                    const mlResp: any = await patientService.getMasterListsForServices(params);
+                    console.log('getMasterListsForServices response:', mlResp);
                     const dataRootMl = (mlResp as any)?.data || {};
+                    
+                    // Get billingFields from response (priority) or fallback to uiFields
+                    const billingFields = (dataRootMl as any)?.billingFields || (mlResp as any)?.billingFields || {};
                     const uiFields = (dataRootMl as any)?.uiFields || (mlResp as any)?.uiFields || {};
+                    
                     const toStr = (v: any) => (v === undefined || v === null ? '' : String(v));
+                    const toNumStr = (v: any) => {
+                        if (v === undefined || v === null || v === '') return '0';
+                        const num = parseFloat(String(v));
+                        return isNaN(num) ? '0' : num.toFixed(2);
+                    };
 
-                    // Store full uiFields payload (normalized) for reference
-                    setUiFieldsData({
-                        bloodPressure: toStr(uiFields?.bloodPressure),
-                        instructions: toStr(uiFields?.instructions),
-                        oedema: toStr(uiFields?.oedema),
-                        billedRs: toStr(uiFields?.billedRs),
-                        inPerson: Boolean(uiFields?.inPerson),
-                        cholestrol: Boolean(uiFields?.cholestrol),
-                        followUp: toStr(uiFields?.followUp),
-                        acBalanceRs: toStr(uiFields?.acBalanceRs),
-                        followUpType: toStr(uiFields?.followUpType),
-                        collectedRs: toStr(uiFields?.collectedRs),
-                        smoking: Boolean(uiFields?.smoking),
-                        tobacco: Boolean(uiFields?.tobacco),
-                        allergyDetails: toStr(uiFields?.allergyDetails),
-                        alcohol: Boolean(uiFields?.alcohol),
-                        discountRs: toStr(uiFields?.discountRs),
-                        ihd: Boolean(uiFields?.ihd),
-                        duesRs: toStr(uiFields?.duesRs),
-                        paymentRemark: toStr(uiFields?.paymentRemark),
-                        heightCm: toStr(uiFields?.heightCm),
-                        asthma: Boolean(uiFields?.asthma),
-                        paymentBy: toStr(uiFields?.paymentBy ?? uiFields?.paymentById),
-                        pulsePerMin: toStr(uiFields?.pulsePerMin),
-                        followUpDate: toStr(uiFields?.followUpDate),
-                        th: Boolean(uiFields?.th),
-                        habitDetails: toStr(uiFields?.habitDetails),
-                        tpr: toStr(uiFields?.tpr),
-                        receiptNo: toStr(uiFields?.receiptNo),
-                        pallor: toStr(uiFields?.pallor),
-                        sugar: toStr(uiFields?.sugar),
-                        hypertension: Boolean(uiFields?.hypertension),
-                        diabetes: Boolean(uiFields?.diabetes),
-                        weightKg: toStr(uiFields?.weightKg)
-                    });
+                    console.log('billingFields from response:', billingFields);
+                    console.log('uiFields from response:', uiFields);
 
                     // Try to read paymentBy and remark from vitals as priority
                     const vitals0 = Array.isArray((dataRootMl as any)?.vitals) ? (dataRootMl as any).vitals[0] : undefined;
                     const paymentByFromVitals = vitals0?.payment_by_id;
                     const paymentRemarkFromVitals = vitals0?.payment_remark;
 
+                    // Patch billing state with all fields from billingFields (priority) or uiFields (fallback)
                     setBilling(prev => ({
                         ...prev,
-                        billed: toStr(uiFields?.billedRs ?? uiFields?.BilledRs ?? uiFields?.billed_amount ?? uiFields?.Billed_Amount ?? ''),
-                        discount: toStr(uiFields?.discountRs ?? uiFields?.DiscountRs ?? uiFields?.discount ?? uiFields?.Discount ?? ''),
-                        dues: toStr(uiFields?.duesRs ?? uiFields?.DuesRs ?? uiFields?.dues ?? uiFields?.Dues ?? ''),
-                        acBalance: toStr(uiFields?.acBalanceRs ?? uiFields?.AcBalanceRs ?? uiFields?.ac_balance ?? uiFields?.Ac_Balance ?? ''),
-                        receiptNo: toStr(uiFields?.receiptNo ?? uiFields?.ReceiptNo ?? ''),
-                        feesCollected: toStr(uiFields?.collectedRs ?? uiFields?.feesCollected ?? uiFields?.FeesCollected ?? uiFields?.collected ?? uiFields?.Collected ?? ''),
-                        paymentRemark: toStr(paymentRemarkFromVitals ?? uiFields?.paymentRemark ?? uiFields?.PaymentRemark ?? ''),
-                        paymentBy: toStr(paymentByFromVitals ?? uiFields?.paymentBy ?? uiFields?.paymentById ?? uiFields?.PaymentById ?? ''),
-                        receiptDate: toStr(uiFields?.receiptDate ?? uiFields?.ReceiptDate ?? ''),
-                        receiptAmount: toStr(uiFields?.receiptAmount ?? uiFields?.ReceiptAmount ?? '')
+                        billed: toNumStr(billingFields?.billedRs ?? uiFields?.billedRs ?? uiFields?.BilledRs ?? uiFields?.billed_amount ?? uiFields?.Billed_Amount ?? prev.billed),
+                        discount: toNumStr(billingFields?.discountRs ?? uiFields?.discountRs ?? uiFields?.DiscountRs ?? uiFields?.discount ?? uiFields?.Discount ?? prev.discount),
+                        dues: toNumStr(billingFields?.duesRs ?? uiFields?.duesRs ?? uiFields?.DuesRs ?? uiFields?.dues ?? uiFields?.Dues ?? prev.dues),
+                        acBalance: toNumStr(billingFields?.acBalanceRs ?? uiFields?.acBalanceRs ?? uiFields?.AcBalanceRs ?? uiFields?.ac_balance ?? uiFields?.Ac_Balance ?? prev.acBalance),
+                        receiptNo: toStr(billingFields?.receiptNo ?? uiFields?.receiptNo ?? uiFields?.ReceiptNo ?? prev.receiptNo),
+                        feesCollected: toNumStr(billingFields?.collectedRs ?? uiFields?.collectedRs ?? uiFields?.feesCollected ?? uiFields?.FeesCollected ?? uiFields?.collected ?? uiFields?.Collected ?? prev.feesCollected),
+                        paymentRemark: toStr(paymentRemarkFromVitals ?? billingFields?.paymentRemark ?? uiFields?.paymentRemark ?? uiFields?.PaymentRemark ?? prev.paymentRemark),
+                        paymentBy: toStr(paymentByFromVitals ?? billingFields?.paymentById ?? billingFields?.paymentBy ?? uiFields?.paymentById ?? uiFields?.paymentBy ?? uiFields?.PaymentById ?? prev.paymentBy),
+                        receiptDate: toStr(billingFields?.receiptDate ?? uiFields?.receiptDate ?? uiFields?.ReceiptDate ?? prev.receiptDate),
+                        receiptAmount: toNumStr(billingFields?.receiptAmount ?? uiFields?.receiptAmount ?? uiFields?.ReceiptAmount ?? prev.receiptAmount),
+                        reason: toStr(billingFields?.reason ?? uiFields?.reason ?? prev.reason),
+                        referredBy: toStr(billingFields?.referredBy ?? uiFields?.referredBy ?? uiFields?.referred_by ?? prev.referredBy)
                     }));
-                } catch (_) {
+                } catch (e: any) {
+                    console.error('Error fetching master lists for services:', e);
                     // Ignore master lists errors in popup; keep items rendered
                 }
             } catch (e: any) {
@@ -577,7 +561,7 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                                                 fontWeight: '500',
                                                 fontSize: '12px'
                                             }}>
-                                                ₹{service.totalFees.toFixed(2)}
+                                                ₹{service.details}
                                             </td>
                                         </tr>
                                     ))}
@@ -744,6 +728,7 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                                 </label>
                                 <input
                                     type="text"
+                                    value={billing.reason}
                                     disabled
                                     style={{
                                         padding: '8px 10px',
@@ -832,8 +817,7 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                                 </label>
                                 <input
                                     type="text"
-                                    value={billing.receiptDate}
-                                    onChange={(e) => setBilling(b => ({ ...b, receiptDate: e.target.value }))}
+                                    value={billing.referredBy}
                                     disabled
                                     style={{
                                         padding: '8px 10px',
@@ -888,6 +872,7 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                                 </label>
                                 <input
                                     type="text"
+                                    value={billing.receiptDate}
                                     disabled
                                     style={{
                                         padding: '8px 10px',
@@ -913,6 +898,7 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                                 </label>
                                 <input
                                     type="text"
+                                    value={billing.receiptAmount}
                                     disabled
                                     style={{
                                         padding: '8px 10px',

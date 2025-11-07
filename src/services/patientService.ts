@@ -618,6 +618,52 @@ export const patientService = {
   },
 
   /**
+   * Get master lists for services
+   * Mirrors backend @GetMapping("/master-lists") under services controller which calls getMasterListsForServices
+   */
+  async getMasterListsForServices(params: MasterListsRequest): Promise<MasterListsResponse> {
+    try {
+      console.log('Fetching master lists for services with params:', params);
+      // Primary endpoint as specified - services-specific master lists
+      try {
+        const resp = await api.get<MasterListsResponse>(`/services/master-lists`, { params });
+        console.log('Master lists for services response ("/services/master-lists"):', resp.data);
+        return resp.data;
+      } catch (e1: any) {
+        if (e1?.response?.status !== 404) throw e1;
+        // Fallback to alternative mount points
+        try {
+          const resp = await api.get<MasterListsResponse>(`/master-lists`, { params });
+          console.log('Master lists for services response ("/master-lists"):', resp.data);
+          return resp.data;
+        } catch (e2: any) {
+          if (e2?.response?.status !== 404) throw e2;
+          const resp = await api.get<MasterListsResponse>(`/services/visits/master-lists`, { params });
+          console.log('Master lists for services response ("/services/visits/master-lists"):', resp.data);
+          return resp.data;
+        }
+      }
+    } catch (error: any) {
+      console.error('Get master lists for services API Error:', error);
+      if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
+        throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
+      }
+      if (error.response?.status === 400) {
+        const msg = error.response?.data?.message || error.response?.data?.error || 'Invalid request parameters.';
+        throw new Error(msg);
+      } else if (error.response?.status === 404) {
+        throw new Error('Master lists for services endpoint not found. Please confirm backend route.');
+      } else if (error.response?.status === 500) {
+        throw new Error('Server error occurred while fetching master lists for services.');
+      }
+      if (error.response?.data?.error) {
+        throw new Error(error.response.data.error);
+      }
+      throw new Error(error.response?.data?.message || 'Failed to fetch master lists for services');
+    }
+  },
+
+  /**
    * Get lab tests available for a given doctor and clinic
    * @param doctorId - Doctor ID (e.g., DR-00001)
    * @param clinicId - Clinic ID (e.g., CLINIC001)
@@ -793,11 +839,10 @@ export const patientService = {
     visitDate: string; // Accepts YYYY-MM-DD or date-time string
   }): Promise<PreviousServiceVisitItemsResponse> {
     try {
-      const { patientId, doctorId, clinicId, shiftId, visitNo, visitDate } = params;
+      const { patientId, clinicId, shiftId, visitNo, visitDate } = params;
       console.log('Fetching previous service visit items:', params);
       const query = {
         patientId,
-        doctorId,
         clinicId,
         shiftId: String(shiftId),
         visitNo: String(visitNo),

@@ -190,6 +190,19 @@ interface Attachment {
     type: 'pdf' | 'docx' | 'xlsx';
 }
 
+interface BillingDetailOption {
+    id: string; // synthesized key
+    billing_details: string;
+    billing_group_name?: string;
+    billing_subgroup_name?: string;
+    default_fees?: number;
+    visit_type?: string;
+    visit_type_description?: string;
+    visit_type_id?: string;
+    isdefault?: boolean;
+    sequence_no?: number;
+}
+
 export default function Treatment() {
     const navigate = useNavigate();
     const location = useLocation();
@@ -606,6 +619,67 @@ export default function Treatment() {
 
     const [paymentByOptions, setPaymentByOptions] = useState<Array<{ value: string; label: string }>>([]);
 
+        // Billing details (from symptom-data API)
+        const [billingDetailsOptions, setBillingDetailsOptions] = useState<BillingDetailOption[]>([]);
+        const [selectedBillingDetailIds, setSelectedBillingDetailIds] = useState<string[]>([]);
+        const [isBillingOpen, setIsBillingOpen] = useState(false);
+        const [billingSearch, setBillingSearch] = useState('');
+        const billingRef = React.useRef<HTMLDivElement | null>(null);
+    
+        const filteredBillingDetails = React.useMemo(() => {
+            const term = billingSearch.trim().toLowerCase();
+            if (!term) {
+                const selectedOptions = billingDetailsOptions.filter(opt => selectedBillingDetailIds.includes(opt.id));
+                const unselectedOptions = billingDetailsOptions.filter(opt => !selectedBillingDetailIds.includes(opt.id));
+                return [...selectedOptions, ...unselectedOptions];
+            }
+            const matches = (opt: BillingDetailOption) =>
+                (opt.billing_details || '').toLowerCase().includes(term) ||
+                (opt.billing_group_name || '').toLowerCase().includes(term) ||
+                (opt.billing_subgroup_name || '').toLowerCase().includes(term);
+    
+            const selectedFiltered = billingDetailsOptions.filter(opt => selectedBillingDetailIds.includes(opt.id) && matches(opt));
+            const unselectedFiltered = billingDetailsOptions.filter(opt => !selectedBillingDetailIds.includes(opt.id) && matches(opt));
+            return [...selectedFiltered, ...unselectedFiltered];
+        }, [billingDetailsOptions, billingSearch, selectedBillingDetailIds]);
+    
+        useEffect(() => {
+            let cancelled = false;
+            async function loadBillingDetails() {
+                if (!treatmentData?.doctorId || !sessionData?.clinicId) return;
+                try {
+                    const doctorId = encodeURIComponent(treatmentData.doctorId);
+                    const clinicId = encodeURIComponent(sessionData.clinicId);
+                    const resp = await fetch(`/api/refdata/symptom-data?doctorId=${doctorId}&clinicId=${clinicId}`);
+                    if (!resp.ok) throw new Error(`Failed to load billing details (${resp.status})`);
+                    const data = await resp.json();
+                    const raw: any[] = Array.isArray(data?.billingDetails)
+                        ? data.billingDetails
+                        : Array.isArray(data?.resultSet2)
+                            ? data.resultSet2
+                            : [];
+                    const mapped: BillingDetailOption[] = raw.map((item: any, idx: number) => ({
+                        id: String(item.id ?? item.sequence_no ?? idx),
+                        billing_details: String(item.billing_details ?? item.billing_group_name ?? 'Unknown'),
+                        billing_group_name: item.billing_group_name,
+                        billing_subgroup_name: item.billing_subgroup_name,
+                        default_fees: typeof item.default_fees === 'number' ? item.default_fees : Number(item.default_fees ?? 0),
+                        visit_type: item.visit_type,
+                        visit_type_description: item.visit_type_description,
+                        visit_type_id: item.visit_type_id,
+                        isdefault: Boolean(item.isdefault),
+                        sequence_no: typeof item.sequence_no === 'number' ? item.sequence_no : Number(item.sequence_no ?? idx)
+                    }));
+                    if (!cancelled) setBillingDetailsOptions(mapped);
+                } catch (e) {
+                    console.error('Error loading billing details:', e);
+                    if (!cancelled) setBillingDetailsOptions([]);
+                }
+            }
+            loadBillingDetails();
+            return () => { cancelled = true; };
+        }, [treatmentData?.doctorId, sessionData?.clinicId]);
+
     // Load master lists for the current visit context
     useEffect(() => {
         const fetchMasterLists = async () => {
@@ -682,18 +756,24 @@ export default function Treatment() {
                                 followUpDate: fuDate ? String(fuDate) : prev.followUpDate
                             }));
 
-                            // Patch billing fields from master lists (uiFields)
-                            setBillingData(prev => ({
-                                ...prev,
-                                billed: uiFields?.billedRs !== undefined && uiFields?.billedRs !== null ? String(uiFields.billedRs) : prev.billed,
-                                discount: uiFields?.discountRs !== undefined && uiFields?.discountRs !== null ? String(uiFields.discountRs) : prev.discount,
-                                dues: uiFields?.duesRs !== undefined && uiFields?.duesRs !== null ? String(uiFields.duesRs) : prev.dues,
-                                acBalance: uiFields?.acBalanceRs !== undefined && uiFields?.acBalanceRs !== null ? String(uiFields.acBalanceRs) : prev.acBalance,
-                                receiptNo: uiFields?.receiptNo !== undefined && uiFields?.receiptNo !== null ? String(uiFields.receiptNo) : prev.receiptNo,
-                                feesCollected: uiFields?.feesCollected !== undefined && uiFields?.feesCollected !== null ? String(uiFields.feesCollected) : prev.feesCollected,
-                                paymentRemark: uiFields?.paymentRemark !== undefined && uiFields?.paymentRemark !== null ? String(uiFields.paymentRemark) : prev.paymentRemark,
-                                paymentBy: uiFields?.paymentById !== undefined && uiFields?.paymentById !== null ? String(uiFields.paymentById) : prev.paymentBy
-                            }));
+                            // Patch billing fields from master lists (uiFields and vitals)
+                            setBillingData(prev => {
+                                // Check for billed value from multiple sources: uiFields.billedRs, vitals.fees_to_collect, or vitals.Fees_To_Collect
+                                const billedValue = uiFields?.billedRs ?? vitals?.fees_to_collect ?? vitals?.Fees_To_Collect ?? prev.billed;
+                                const billedStr = billedValue !== undefined && billedValue !== null ? String(billedValue) : prev.billed;
+                                
+                                return {
+                                    ...prev,
+                                    billed: billedStr,
+                                    discount: uiFields?.discountRs !== undefined && uiFields?.discountRs !== null ? String(uiFields.discountRs) : prev.discount,
+                                    dues: uiFields?.duesRs !== undefined && uiFields?.duesRs !== null ? String(uiFields.duesRs) : prev.dues,
+                                    acBalance: uiFields?.acBalanceRs !== undefined && uiFields?.acBalanceRs !== null ? String(uiFields.acBalanceRs) : prev.acBalance,
+                                    receiptNo: uiFields?.receiptNo !== undefined && uiFields?.receiptNo !== null ? String(uiFields.receiptNo) : prev.receiptNo,
+                                    feesCollected: uiFields?.feesCollected !== undefined && uiFields?.feesCollected !== null ? String(uiFields.feesCollected) : prev.feesCollected,
+                                    paymentRemark: uiFields?.paymentRemark !== undefined && uiFields?.paymentRemark !== null ? String(uiFields.paymentRemark) : prev.paymentRemark,
+                                    paymentBy: uiFields?.paymentById !== undefined && uiFields?.paymentById !== null ? String(uiFields.paymentById) : prev.paymentBy
+                                };
+                            });
                         } catch (_) {
                             // ignore mapping errors
                         }
@@ -1105,10 +1185,34 @@ export default function Treatment() {
                         return 'Unknown Doctor';
                     };
 
+                    // Determine visit type from PLR field only
+                    const getVisitType = (visit: any): string => {
+                        // Check PLR field (PLR = Prescription/Lab/Radiology indicators)
+                        const plr = String(visit.PLR || visit.plr || visit.plr_indicators || '').toUpperCase();
+                        
+                        if (plr) {
+                            // If PLR contains 'L', it's a Lab visit
+                            if (plr.includes('L')) {
+                                return 'L';
+                            }
+                            // If PLR contains 'P' but not 'L', it's a Prescription/Physical visit
+                            if (plr.includes('P')) {
+                                return 'P';
+                            }
+                            // If PLR contains 'R' (Radiology), treat as Lab for now
+                            if (plr.includes('R')) {
+                                return 'L';
+                            }
+                        }
+                        
+                        // Default to 'P' if PLR is empty or not found
+                        return '';
+                    };
+
                     return {
                         id: String(visit.id || index),
                         date: visit.visit_date || visit.Visit_Date || visit.appointmentDate || visit.appointment_date || '',
-                        type: visit.visit_type === 1 ? 'P' : 'L', // Assuming 1 = Physical, 2 = Lab
+                        type: getVisitType(visit),
                         patientName: treatmentData?.patientName || '',
                         doctorName: getDoctorName(visit),
                         isActive: index === sortedVisits.length - 1 // Make the latest visit active
@@ -3466,7 +3570,7 @@ export default function Treatment() {
                 patientId={selectedPatientForForm?.patientId || treatmentData?.patientId}
                 patientName={selectedPatientForForm?.name || treatmentData?.patientName}
             />
-             <AddBillingPopup
+          <AddBillingPopup
                 open={showBillingPopup}
                 onClose={() => setShowBillingPopup(false)}
                 isFormDisabled={isFormDisabled}
@@ -3483,6 +3587,11 @@ export default function Treatment() {
                         };
                     });
                 }}
+                billingSearch={billingSearch}
+                setBillingSearch={setBillingSearch}
+                filteredBillingDetails={filteredBillingDetails}
+                selectedBillingDetailIds={selectedBillingDetailIds}
+                setSelectedBillingDetailIds={setSelectedBillingDetailIds}
             />
 
         </div>
