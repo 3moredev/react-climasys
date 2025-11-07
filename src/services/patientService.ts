@@ -396,7 +396,7 @@ export const patientService = {
    * @param id - Patient ID
    * @returns Promise<Patient>
    */
-  async getPatient(id: number): Promise<Patient> {
+  async getPatient(id: number | string): Promise<Patient> {
     try {
       console.log(`Fetching patient with ID: ${id}`);
       const response = await api.get(`/patients/${id}`);

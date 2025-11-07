@@ -2648,7 +2648,7 @@ export default function AppointmentTable() {
                                             return (
                                                 <tr key={i} style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 500 }}>
                                                     <td className="sr-col">{a.sr}</td>
-                                                    <td className="name-col"><a href={`/patients/${a.patientId}`} style={{ textDecoration: "underline", color: "#1E88E5" }}>{a.patient}</a></td>
+                                                    <td className="name-col"><a href="#" onClick={(e) => { e.preventDefault(); navigate(`/quick-registration?patientId=${a.patientId}`); }} style={{ textDecoration: "underline", color: "#1E88E5", cursor: "pointer" }}>{a.patient}</a></td>
                                                     <td className="gender-col">{a.gender}</td>
                                                     <td className="age-col">{a.age}</td>
                                                     <td className="contact-col">{(a.contact || '').toString().slice(0, 12)}</td>
@@ -2934,7 +2934,7 @@ export default function AppointmentTable() {
                                                 <div className="card-header">
                                                     <div className="d-flex align-items-center" style={{ gap: '8px' }}>
                                                         <span className={`d-inline-block rounded-circle ${((appointment as any).statusColorPending || appointment.statusColor) === 'bg-orange-custom' ? '' : ((appointment as any).statusColorPending || appointment.statusColor)}`} style={{ width: '10px', height: '10px', backgroundColor: ((appointment as any).statusColorPending || appointment.statusColor) === 'bg-orange-custom' ? '#FF9800' : undefined }}></span>
-                                                        <a href={`/patients/${appointment.patientId}`} className="patient-name" style={{ textDecoration: 'underline', color: '#1E88E5' }}>{appointment.patient}</a>
+                                                        <a href="#" onClick={(e) => { e.preventDefault(); navigate(`/quick-registration?patientId=${appointment.patientId}`); }} className="patient-name" style={{ textDecoration: 'underline', color: '#1E88E5', cursor: 'pointer' }}>{appointment.patient}</a>
                                                     </div>
                                                     <div
                                                         onClick={(e) => {
@@ -3937,7 +3937,7 @@ export default function AppointmentTable() {
                                         return (
                                             <tr key={i} style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 500 }}>
                                                 <td className="sr-col">{a.sr}</td>
-                                                <td className="name-col"><a href={`/patients/${a.patientId}`} style={{ textDecoration: "underline", color: "#1E88E5" }}>{a.patient}</a></td>
+                                                <td className="name-col"><a href="#" onClick={(e) => { e.preventDefault(); navigate(`/quick-registration?patientId=${a.patientId}`); }} style={{ textDecoration: "underline", color: "#1E88E5", cursor: "pointer" }}>{a.patient}</a></td>
                                                 <td className="gender-col">{a.gender}</td>
                                                 <td className="age-col">{a.age}</td>
                                                 <td className="contact-col">{(a.contact || '').toString().slice(0, 12)}</td>
@@ -4811,7 +4811,7 @@ export default function AppointmentTable() {
                                             <div className="card-header">
                                                 <div className="d-flex align-items-center" style={{ gap: '8px' }}>
                                                     <span className={`d-inline-block rounded-circle ${appointment.statusColor === 'bg-orange-custom' ? '' : appointment.statusColor}`} style={{ width: '10px', height: '10px', backgroundColor: appointment.statusColor === 'bg-orange-custom' ? '#FF9800' : undefined }}></span>
-                                                    <a href={`/patients/${appointment.patientId}`} className="patient-name" style={{ textDecoration: 'underline', color: '#1E88E5' }}>{appointment.patient}</a>
+                                                    <a href="#" onClick={(e) => { e.preventDefault(); navigate(`/quick-registration?patientId=${appointment.patientId}`); }} className="patient-name" style={{ textDecoration: 'underline', color: '#1E88E5', cursor: 'pointer' }}>{appointment.patient}</a>
                                                 </div>
                                                 <div
                                                     onClick={(e) => {

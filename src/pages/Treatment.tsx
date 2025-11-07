@@ -2599,11 +2599,20 @@ export default function Treatment() {
                 // Backend expects: groupDescription, instructionsDescription, sequenceNo
                 // Table: visit_groups_instructions
                 instructionGroups: selectedInstructionGroups.length > 0
-                    ? selectedInstructionGroups.map((group, index) => ({
-                        groupDescription: group.name || '',
-                        instructionsDescription: group.instructions || '',
-                        sequenceNo: index + 1
-                    }))
+                    ? selectedInstructionGroups.map((group, index) => {
+                        const mapped = {
+                            groupDescription: group.name || '',
+                            instructionsDescription: group.instructions || '',
+                            sequenceNo: index + 1
+                        };
+                        console.log(`Instruction Group ${index + 1} mapped:`, {
+                            original: group,
+                            mapped: mapped,
+                            hasName: !!group.name,
+                            hasInstructions: !!group.instructions
+                        });
+                        return mapped;
+                    })
                     : []
             };
 
@@ -2616,9 +2625,22 @@ export default function Treatment() {
             console.log('Doctor ID:', visitData.doctorId);
             console.log('Shift ID:', visitData.shiftId);
             console.log('Patient Visit No:', visitData.patientVisitNo);
-            console.log('Instruction Groups Count:', visitData.instructionGroups?.length || 0);
+            console.log('=== INSTRUCTION GROUPS DEBUG ===');
+            console.log('selectedInstructionGroups state:', selectedInstructionGroups);
+            console.log('selectedInstructionGroups length:', selectedInstructionGroups.length);
+            console.log('Instruction Groups Count in visitData:', visitData.instructionGroups?.length || 0);
             if (visitData.instructionGroups && visitData.instructionGroups.length > 0) {
-                console.log('Instruction Groups:', JSON.stringify(visitData.instructionGroups, null, 2));
+                console.log('Instruction Groups in request:', JSON.stringify(visitData.instructionGroups, null, 2));
+                visitData.instructionGroups.forEach((ig, idx) => {
+                    console.log(`Instruction Group ${idx + 1}:`, {
+                        groupDescription: ig.groupDescription,
+                        instructionsDescription: ig.instructionsDescription,
+                        sequenceNo: ig.sequenceNo,
+                        isEmpty: !ig.groupDescription && !ig.instructionsDescription
+                    });
+                });
+            } else {
+                console.warn('⚠️ NO INSTRUCTION GROUPS IN REQUEST! selectedInstructionGroups:', selectedInstructionGroups);
             }
             
             // Check for null/undefined values that might cause validation errors

@@ -37,9 +37,11 @@ interface AddPatientPageProps {
   onSave?: (patientData: any) => void
   doctorId?: string
   clinicId?: string
+  patientId?: string
+  readOnly?: boolean
 }
 
-export default function AddPatientPage({ open, onClose, onSave, doctorId, clinicId }: AddPatientPageProps) {
+export default function AddPatientPage({ open, onClose, onSave, doctorId, clinicId, patientId, readOnly = false }: AddPatientPageProps) {
   const [formData, setFormData] = useState({
     lastName: '',
     firstName: '',
@@ -106,6 +108,41 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
       console.log('Clinic ID from props:', clinicId)
     }
   }, [doctorId, clinicId])
+
+  // Fetch patient data when patientId is provided
+  useEffect(() => {
+    if (patientId && open) {
+      const fetchPatientData = async () => {
+        try {
+          setLoading(true)
+          // The backend accepts both id (number) and folder_no (string) formats
+          // Pass the patientId as-is (could be folder_no like "02-12-2019-050248" or numeric id)
+          const patient = await patientService.getPatient(patientId)
+          
+          // Map patient data to form fields
+          setFormData(prev => ({
+            ...prev,
+            patientId: patient.folder_no || patientId,
+            firstName: patient.first_name || '',
+            middleName: patient.middle_name || '',
+            lastName: patient.last_name || '',
+            mobileNumber: patient.mobile_1 || '',
+            age: patient.age_given?.toString() || '',
+            dateOfBirth: patient.date_of_birth || '',
+            gender: patient.gender_id?.toString() || '',
+            // Note: Additional fields like address, email, etc. may need to be fetched from a more detailed patient endpoint
+          }))
+        } catch (error: any) {
+          console.error('Error fetching patient data:', error)
+          setSnackbarMessage(error.message || 'Failed to load patient data')
+          setSnackbarOpen(true)
+        } finally {
+          setLoading(false)
+        }
+      }
+      fetchPatientData()
+    }
+  }, [patientId, open])
 
   // Function to map form data to API request format
   const mapFormDataToApiRequest = (): QuickRegistrationRequest => {
@@ -771,7 +808,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     fullWidth
                     placeholder="Patient ID"
                     value={formData.patientId}
-                    disabled={true}
+                    disabled={true || readOnly}
                     sx={{ 
                       '& .MuiInputBase-input': { 
                         backgroundColor: '#f5f5f5' 
@@ -792,7 +829,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     onChange={(e) => handleInputChange('firstName', e.target.value)}
                     error={!!errors.firstName}
                     helperText={errors.firstName}
-                    disabled={loading}
+                    disabled={loading || readOnly}
                   />
                 </Box>
               </Grid>
@@ -806,7 +843,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     placeholder="Middle Name"
                     value={formData.middleName}
                     onChange={(e) => handleInputChange('middleName', e.target.value)}
-                    disabled={loading}
+                    disabled={loading || readOnly}
                   />
                 </Box>
               </Grid>
@@ -822,7 +859,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     onChange={(e) => handleInputChange('lastName', e.target.value)}
                     error={!!errors.lastName}
                     helperText={errors.lastName}
-                    disabled={loading}
+                    disabled={loading || readOnly}
                   />
                 </Box>
               </Grid>
@@ -844,7 +881,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     onChange={(e) => handleInputChange('mobileNumber', e.target.value)}
                     error={!!errors.mobileNumber}
                     helperText={errors.mobileNumber}
-                    disabled={loading}
+                    disabled={loading || readOnly}
                   />
                 </Box>
               </Grid>
@@ -889,7 +926,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                               }))
                             }
                           }}
-                          disabled={loading}
+                          disabled={loading || readOnly}
                           format="DD/MM/YYYY"
                         />
                       </LocalizationProvider>
@@ -904,14 +941,14 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                           placeholder="NN"
                           value={formData.field1 || ''}
                           onChange={(e) => handleInputChange('field1', e.target.value)}
-                          disabled={loading}
+                          disabled={loading || readOnly}
                         />
                         <FormControl sx={{ width: '50%' }}>
                           <Select
                             value={formData.field2 || 'Years'}
                             onChange={(e) => handleInputChange('field2', e.target.value)}
                             displayEmpty
-                            disabled={loading}
+                            disabled={loading || readOnly}
                             renderValue={(selected) => {
                               if (selected === '' || selected === null || selected === undefined) {
                                 return <span style={{ color: 'rgba(0, 0, 0, 0.6)' }}>Years</span>
@@ -950,7 +987,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     <Select
                       value={formData.gender}
                       onChange={(e) => handleInputChange('gender', e.target.value)}
-                      disabled={loading}
+                      disabled={loading || readOnly}
                       displayEmpty
                       renderValue={(selected) => {
                         if (selected === '' || selected === null || selected === undefined) {
@@ -980,6 +1017,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                   <Autocomplete
                     options={areaOptions}
                     loading={areaLoading}
+                    disabled={loading || readOnly}
                     getOptionLabel={(opt) => opt.name}
                     value={areaOptions.find(o => o.name === formData.area) || null}
                     onChange={(_, newValue) => {
@@ -995,7 +1033,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         placeholder="Search Area"
                         error={!!errors.area}
                         helperText={errors.area}
-                        disabled={loading}
+                        disabled={loading || readOnly}
                         InputProps={{
                           ...params.InputProps,
                           endAdornment: (
@@ -1024,6 +1062,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                   <Autocomplete
                     options={cityOptions}
                     loading={cityLoading}
+                    disabled={loading || readOnly}
                     getOptionLabel={(opt) => opt.name}
                     value={cityOptions.find(o => o.name === formData.city) || null}
                     onChange={(_, newValue) => {
@@ -1037,7 +1076,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         {...params}
                         fullWidth
                         placeholder="Search City"
-                        disabled={loading}
+                        disabled={loading || readOnly}
                         InputProps={{
                           ...params.InputProps,
                           endAdornment: (
@@ -1059,7 +1098,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                   <TextField
                     fullWidth
                     value={formData.state}
-                    disabled={true}
+                    disabled={true || readOnly}
                     sx={{ 
                       '& .MuiInputBase-input': { 
                         backgroundColor: '#f5f5f5' 
@@ -1077,7 +1116,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     <Select
                       value={formData.maritalStatus}
                       onChange={(e) => handleInputChange('maritalStatus', e.target.value)}
-                      disabled={loading}
+                      disabled={loading || readOnly}
                       displayEmpty
                       renderValue={(selected) => {
                         if (selected === '' || selected === null || selected === undefined) {
@@ -1103,7 +1142,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     <Select
                       value={formData.occupation}
                       onChange={(e) => handleInputChange('occupation', e.target.value)}
-                      disabled={loading}
+                      disabled={loading || readOnly}
                       displayEmpty
                       renderValue={(selected) => {
                         if (selected === '' || selected === null || selected === undefined) {
@@ -1136,7 +1175,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     placeholder="Address"
                     value={formData.address}
                     onChange={(e) => handleInputChange('address', e.target.value)}
-                    disabled={loading}
+                    disabled={loading || readOnly}
                   />
                 </Box>
               </Grid>
@@ -1152,7 +1191,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     onChange={(e) => handleInputChange('email', e.target.value)}
                     error={!!errors.email}
                     helperText={errors.email}
-                    disabled={loading}
+                    disabled={loading || readOnly}
                   />
                 </Box>
               </Grid>
@@ -1165,7 +1204,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     <Select
                       value={formData.referredBy}
                       onChange={(e) => handleInputChange('referredBy', e.target.value)}
-                      disabled={loading}
+                      disabled={loading || readOnly}
                       displayEmpty
                       renderValue={(selected) => {
                         if (selected === '' || selected === null || selected === undefined) {
@@ -1195,7 +1234,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         placeholder="Search Doctor Name"
                         value={referralNameSearch}
                         onChange={(e) => handleReferralNameSearch(e.target.value)}
-                        disabled={loading}
+                        disabled={loading || readOnly}
                         InputProps={{
                           endAdornment: (
                             <InputAdornment position="end">
@@ -1283,7 +1322,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                       placeholder="Referral Name"
                       value={formData.referralName}
                       onChange={(e) => handleInputChange('referralName', e.target.value)}
-                      disabled={loading}
+                      disabled={loading || readOnly}
                     />
                   )}
                 </Box>
@@ -1304,7 +1343,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     placeholder="Referral Number(10 Digits)"
                     value={formData.referralContact}
                     onChange={(e) => handleInputChange('referralContact', e.target.value)}
-                    disabled={loading || selectedDoctor !== null}
+                    disabled={loading || readOnly || selectedDoctor !== null}
                     sx={{
                       '& .MuiInputBase-input': {
                         backgroundColor: selectedDoctor !== null ? '#f5f5f5' : 'white',
@@ -1324,7 +1363,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     placeholder="Referral Email"
                     value={formData.referralEmail}
                     onChange={(e) => handleInputChange('referralEmail', e.target.value)}
-                    disabled={loading || selectedDoctor !== null}
+                    disabled={loading || readOnly || selectedDoctor !== null}
                     sx={{
                       '& .MuiInputBase-input': {
                         backgroundColor: selectedDoctor !== null ? '#f5f5f5' : 'white',
@@ -1344,7 +1383,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     placeholder="Referral Address"
                     value={formData.referralAddress}
                     onChange={(e) => handleInputChange('referralAddress', e.target.value)}
-                    disabled={loading || selectedDoctor !== null}
+                    disabled={loading || readOnly || selectedDoctor !== null}
                     sx={{
                       '& .MuiInputBase-input': {
                         backgroundColor: selectedDoctor !== null ? '#f5f5f5' : 'white',
@@ -1365,7 +1404,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         <Switch
                           checked={formData.addToTodaysAppointment}
                           onChange={(e) => handleInputChange('addToTodaysAppointment', e.target.checked as any)}
-                          disabled={loading}
+                          disabled={loading || readOnly}
                           color="primary"
                         />
                       }
@@ -1417,7 +1456,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
               setShowReferralPopup(false)
             }}
             variant="contained"
-            disabled={loading}
+            disabled={loading || readOnly}
             sx={{
               backgroundColor: '#1976d2',
               '&:hover': { backgroundColor: '#1565c0' }
@@ -1428,7 +1467,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
           <Button
             onClick={handleSave}
             variant="contained"
-            disabled={loading}
+            disabled={loading || readOnly}
             sx={{
               backgroundColor: '#1976d2',
               '&:hover': { backgroundColor: '#1565c0' }
