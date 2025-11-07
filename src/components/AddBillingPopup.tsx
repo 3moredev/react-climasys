@@ -29,6 +29,7 @@ interface AddBillingPopupProps {
     patientVisitNo?: number;
     shiftId?: number; // or short
     useOverwrite?: boolean;
+    followUp?: boolean; // Follow-up visit type flag
 }
 
 export default function AddBillingPopup({
@@ -49,12 +50,13 @@ export default function AddBillingPopup({
     patientVisitNo,
     shiftId,
     useOverwrite,
+    followUp,
 }: AddBillingPopupProps) {
     // Local state fallbacks when parent does not control
     const [localSearch, setLocalSearch] = React.useState<string>('');
     const [options, setOptions] = React.useState<BillingDetailOption[]>([]);
     const [localSelectedIds, setLocalSelectedIds] = React.useState<string[]>([]);
-    const [submitting, setSubmitting] = React.useState<boolean>(false);
+    const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
     // Preserve original order of options to ensure rows never jump when selected
     const initialOrderRef = React.useRef<Map<string, number>>(new Map());
 
@@ -189,6 +191,70 @@ export default function AddBillingPopup({
         return total;
     }, [effectiveOptions, effectiveSelectedIds]);
 
+    // Auto-select Professional Fees based on followUp status
+    React.useEffect(() => {
+        if (effectiveOptions.length === 0) return;
+        if (followUp === undefined) return; // Only act when followUp is explicitly provided
+
+        // Find Professional Fees items
+        const professionalFeesItems = effectiveOptions.filter(opt => {
+            const groupName = (opt.billing_group_name || '').trim();
+            const details = (opt.billing_details || '').trim();
+            return groupName === 'Professional Fees' && details === 'Professional Fees';
+        });
+
+        if (professionalFeesItems.length === 0) return;
+
+        // Determine which subgroup to select
+        const targetSubgroup = followUp ? 'Follow-up' : 'New';
+        
+        // Find the matching item
+        const targetItem = professionalFeesItems.find(opt => {
+            const subgroupName = (opt.billing_subgroup_name || '').trim();
+            return subgroupName === targetSubgroup;
+        });
+
+        if (!targetItem) return;
+
+        // Check if we need to update selections
+        const currentSelectedIds = effectiveSelectedIds;
+        const hasTargetItem = currentSelectedIds.includes(targetItem.id);
+        
+        // Check if any other Professional Fees items are selected
+        const hasOtherProfessionalFees = currentSelectedIds.some(id => {
+            const opt = effectiveOptions.find(o => o.id === id);
+            if (!opt) return false;
+            const groupName = (opt.billing_group_name || '').trim();
+            return groupName === 'Professional Fees' && opt.id !== targetItem.id;
+        });
+
+        // Only update if selection doesn't match what we want
+        if (!hasTargetItem || hasOtherProfessionalFees) {
+            setEffectiveSelectedIds(prev => {
+                // Remove all Professional Fees items first
+                const withoutProfessionalFees = prev.filter(id => {
+                    const opt = effectiveOptions.find(o => o.id === id);
+                    if (!opt) return true;
+                    const groupName = (opt.billing_group_name || '').trim();
+                    return groupName !== 'Professional Fees';
+                });
+
+                // Add the target item if not already present
+                if (!withoutProfessionalFees.includes(targetItem.id)) {
+                    return [...withoutProfessionalFees, targetItem.id];
+                }
+                return withoutProfessionalFees;
+            });
+        }
+    }, [followUp, effectiveOptions, effectiveSelectedIds]);
+
+    // Clear error message when popup closes
+    React.useEffect(() => {
+        if (!open) {
+            setErrorMessage(null);
+        }
+    }, [open]);
+
     if (!open) return null;
 
     return (
@@ -273,6 +339,25 @@ export default function AddBillingPopup({
                 </div>
 
                 <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    
+                    {/* Error message display */}
+                    {errorMessage && (
+                        <div style={{
+                            padding: '12px 16px',
+                            backgroundColor: '#ffebee',
+                            border: '1px solid #f44336',
+                            borderRadius: '4px',
+                            color: '#c62828',
+                            fontSize: '14px',
+                            fontWeight: '500',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px'
+                        }}>
+                            <span style={{ fontSize: '18px' }}>⚠</span>
+                            <span>{errorMessage}</span>
+                        </div>
+                    )}
                     
                     <div
                         style={{
@@ -382,73 +467,26 @@ export default function AddBillingPopup({
                             }}
                             onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#1565c0'; }}
                             onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#1976d2'; }}
-                            disabled={isFormDisabled || submitting}
-                            onClick={async () => {
-                                if (isFormDisabled || submitting) return;
-                                setSubmitting(true);
-                                try {
-                                    // Build payload for backend API
-                                    const idSet = new Set(effectiveSelectedIds);
-                                    const selectedItems = effectiveOptions.filter(o => idSet.has(o.id));
-                                    const billingData = selectedItems.map((o) => {
-                                        const fee = typeof o.default_fees === 'number' ? o.default_fees : Number(o.default_fees);
-                                        return {
-                                            billingGroupName: o.billing_group_name || '',
-                                            billingSubgroupName: o.billing_subgroup_name || '',
-                                            billingDetails: o.billing_details || '',
-                                            defaultFees: isNaN(fee) ? 0 : Number(fee),
-                                            collectedFees: isNaN(fee) ? 0 : Number(fee)
-                                        };
-                                    });
-
-                                    const payload: Record<string, any> = {
-                                        userId,
-                                        doctorId,
-                                        shiftId,
-                                        patientId,
-                                        clinicId,
-                                        visitDate,
-                                        patientVisitNo,
-                                        billingData,
-                                    };
-                                    if (typeof useOverwrite === 'boolean') payload.useOverwrite = useOverwrite;
-
-                                    // Basic validation of required fields
-                                    const missing: string[] = [];
-                                    if (!payload.userId) missing.push('userId');
-                                    if (!payload.doctorId) missing.push('doctorId');
-                                    if (payload.shiftId == null) missing.push('shiftId');
-                                    if (!payload.patientId) missing.push('patientId');
-                                    if (!payload.clinicId) missing.push('clinicId');
-                                    if (!payload.visitDate) missing.push('visitDate');
-                                    if (payload.patientVisitNo == null) missing.push('patientVisitNo');
-                                    if (!Array.isArray(billingData) || billingData.length === 0) missing.push('billingData');
-                                    if (missing.length > 0) {
-                                        console.error('Missing required fields for submit:', missing);
-                                    } else {
-                                        const resp = await fetch('/api/billing/breakup/submit', {
-                                            method: 'POST',
-                                            headers: { 'Content-Type': 'application/json' },
-                                            body: JSON.stringify(payload)
-                                        });
-                                        const data = await resp.json().catch(() => ({}));
-                                        if (!resp.ok) {
-                                            console.error('Failed to submit billing breakup:', data);
-                                        }
-                                    }
-
-                                    if (typeof onSubmit === 'function') {
-                                        onSubmit(Number(totalSelectedFees.toFixed(2)), [...effectiveSelectedIds]);
-                                    }
-                                } catch (e) {
-                                    console.error('Submit error:', e);
-                                } finally {
-                                    setSubmitting(false);
-                                    onClose();
+                            disabled={isFormDisabled}
+                            onClick={() => {
+                                if (isFormDisabled) return;
+                                
+                                // Validate that at least one item is selected
+                                if (effectiveSelectedIds.length === 0) {
+                                    setErrorMessage('Please select at least one billing item.');
+                                    return;
                                 }
+                                
+                                // Call onSubmit callback with selected data
+                                if (typeof onSubmit === 'function') {
+                                    onSubmit(Number(totalSelectedFees.toFixed(2)), [...effectiveSelectedIds]);
+                                }
+                                
+                                // Close popup
+                                onClose();
                             }}
                         >
-                            {submitting ? 'Submitting…' : 'Submit'}
+                            Submit
                         </button>
                     </div>
                 </div>
