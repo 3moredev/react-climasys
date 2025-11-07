@@ -445,6 +445,8 @@ export default function Treatment() {
         remarkComments: '',
         planAdv: ''
     });
+    // Store followUpDescription for later matching when options load
+    const [storedFollowUpDescription, setStoredFollowUpDescription] = useState<string>('');
 
     // Follow-up types data
     const [followUpTypesOptions, setFollowUpTypesOptions] = useState<FollowUpTypeItem[]>([]);
@@ -746,12 +748,34 @@ export default function Treatment() {
                         }));
                         try {
                             const uiFields = (dataRoot as any)?.uiFields || {};
-                            const fuType = (uiFields?.followUpType ?? vitals.follow_up_type ?? '') as any;
+                            // Get followUpDescription from response and find matching ID
+                            const followUpDesc = (uiFields?.followUpDescription ?? vitals?.follow_up_description ?? vitals?.followUpDescription ?? '') as string;
+                            
+                            // Store the description for later matching when options load
+                            if (followUpDesc) {
+                                setStoredFollowUpDescription(followUpDesc);
+                            }
+                            
+                            let fuTypeId = '';
+                            if (followUpDesc && followUpTypesOptions.length > 0) {
+                                // Find the follow-up type by description
+                                const matchedOption = followUpTypesOptions.find(
+                                    opt => opt.followUpDescription?.toLowerCase() === followUpDesc.toLowerCase() ||
+                                           opt.followUpDescription === followUpDesc
+                                );
+                                if (matchedOption) {
+                                    fuTypeId = matchedOption.id;
+                                }
+                            }
+                            // Fallback to direct followUpType if no description match found
+                            if (!fuTypeId) {
+                                fuTypeId = (uiFields?.followUpType ?? vitals.follow_up_type ?? '') as any;
+                            }
                             const fu = (uiFields?.followUp ?? vitals.follow_up ?? '') as any;
                             const fuDate = (uiFields?.followUpDate ?? vitals.follow_up_date ?? '') as any;
                             setFollowUpData(prev => ({
                                 ...prev,
-                                followUpType: fuType ? String(fuType) : prev.followUpType,
+                                followUpType: fuTypeId ? String(fuTypeId) : prev.followUpType,
                                 followUp: fu ? String(fu) : prev.followUp,
                                 followUpDate: fuDate ? String(fuDate) : prev.followUpDate
                             }));
@@ -1059,6 +1083,28 @@ export default function Treatment() {
         loadFollowUpTypes();
         return () => { cancelled = true; };
     }, []);
+
+    // Re-patch follow-up type when options become available and we have a stored description
+    React.useEffect(() => {
+        if (storedFollowUpDescription && followUpTypesOptions.length > 0) {
+            const matchedOption = followUpTypesOptions.find(
+                opt => opt.followUpDescription?.toLowerCase() === storedFollowUpDescription.toLowerCase() ||
+                       opt.followUpDescription === storedFollowUpDescription
+            );
+            if (matchedOption) {
+                setFollowUpData(prev => {
+                    // Only update if the ID is different to avoid unnecessary re-renders
+                    if (prev.followUpType !== matchedOption.id) {
+                        return {
+                            ...prev,
+                            followUpType: matchedOption.id
+                        };
+                    }
+                    return prev;
+                });
+            }
+        }
+    }, [followUpTypesOptions, storedFollowUpDescription]);
 
     // Load Previous Service Visit Dates for sidebar
     React.useEffect(() => {
@@ -3183,9 +3229,11 @@ export default function Treatment() {
                                         style={{ border: '1px solid #ddd', padding: '6px 8px', fontSize: 12, background: '#D5D5D8' }}
                                     >
                                         <option value="">—</option>
-                                        {followUpData.followUpType && (
-                                            <option value={followUpData.followUpType}>{followUpData.followUpType}</option>
-                                        )}
+                                        {followUpTypesOptions.map(opt => (
+                                            <option key={opt.id} value={opt.id}>
+                                                {opt.followUpDescription}
+                                            </option>
+                                        ))}
                                     </select>
                                 </div>
 
