@@ -31,6 +31,10 @@ import LoginTest from './components/Test/LoginTest'
 import EmergencyTest from './EmergencyTest'
 import DiagnosticTest from './DiagnosticTest'
 import SimpleDashboardTest from './SimpleDashboardTest'
+import ManageAdmissionCard from './pages/ManageAdmissionCard'
+import ManageAdvanceCollection from './pages/ManageAdvanceCollection'
+import ManageDischargeCard from './pages/ManageDischargeCard'
+import ManageHospitalBill from './pages/ManageHospitalBill'
 // Import dev helpers for console access
 import './utils/devHelpers'
 const theme = createTheme({
@@ -150,6 +154,34 @@ function App() {
               <AuthGuard>
                 <MainLayout>
                   <ExampleTemplatePage />
+                </MainLayout>
+              </AuthGuard>
+            } />
+            <Route path="/manage-admission-card" element={
+              <AuthGuard>
+                <MainLayout>
+                  <ManageAdmissionCard />
+                </MainLayout>
+              </AuthGuard>
+            } />
+            <Route path="/manage-advance-collection" element={
+              <AuthGuard>
+                <MainLayout>
+                  <ManageAdvanceCollection />
+                </MainLayout>
+              </AuthGuard>
+            } />
+            <Route path="/manage-discharge-card" element={
+              <AuthGuard>
+                <MainLayout>
+                  <ManageDischargeCard />
+                </MainLayout>
+              </AuthGuard>
+            } />
+            <Route path="/manage-hospital-bill" element={
+              <AuthGuard>
+                <MainLayout>
+                  <ManageHospitalBill />
                 </MainLayout>
               </AuthGuard>
             } />

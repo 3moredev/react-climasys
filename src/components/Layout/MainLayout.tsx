@@ -103,10 +103,10 @@ const subMenus: Record<string, Array<SubMenuItem>> = {
     ],},
   ],
   'IPD': [
-    { label: 'Manage Admission Card', path: '/settings?t=treatment' },
-    { label: 'Manage Advance Collection', path: '/settings?t=prescription' },
-    { label: 'Manage Discharge Card', path: '/billing' },
-    { label: 'Manage Hospital Bill', path: '/billing' },
+    { label: 'Manage Admission Card', path: '/manage-admission-card' },
+    { label: 'Manage Advance Collection', path: '/manage-advance-collection' },
+    { label: 'Manage Discharge Card', path: '/manage-discharge-card' },
+    { label: 'Manage Hospital Bill', path: '/manage-hospital-bill' },
   ],
   'IPD Report': [
     { label: 'IPD Collection Statement', path: '/settings?t=treatment' },
@@ -247,14 +247,48 @@ export default function MainLayout({ children }: MainLayoutProps) {
     navigate(path)
   }
 
-  // Get current tab index based on pathname
+  // Get current tab index based on pathname and query parameters
   const getCurrentTabIndex = () => {
     const currentPath = location.pathname
+    const searchParams = new URLSearchParams(location.search)
+    const tParam = searchParams.get('t')
+    const contextParam = searchParams.get('context')
+    
+    // Dashboard (index 0)
     if (currentPath === '/') return 0
-    if (currentPath.startsWith('/appointment')) return 1
+    
+    // OPD (index 1)
+    if (currentPath.startsWith('/appointment') || 
+        currentPath.startsWith('/quick-registration') ||
+        currentPath.startsWith('/registration') ||
+        (currentPath === '/billing' && contextParam === 'opd-dues')) return 1
+    
+    // OPD Reports (index 2)
     if (currentPath.startsWith('/reports')) return 2
-    if (['/patients','/visits','/lab','/pharmacy','/billing'].includes(currentPath)) return 3
-    if (currentPath.startsWith('/settings')) return 4
+    
+    // OPD Master (index 3)
+    // Check if settings path with OPD master query params (but not IPD master params)
+    if (currentPath.startsWith('/settings')) {
+      // IPD Report specific params
+      if (tParam === 'treatment' || tParam === 'prescription') return 5
+      // IPD Master specific params
+      if (tParam === 'charges' || tParam === 'insurance' || 
+          tParam === 'attach-treatment' || tParam === 'attach-prescription') return 6
+      // Default to OPD Master for other settings paths
+      return 3
+    }
+    
+    // IPD (index 4)
+    if (currentPath.startsWith('/manage-admission-card') || 
+        currentPath.startsWith('/manage-advance-collection') || 
+        currentPath.startsWith('/manage-discharge-card') || 
+        currentPath.startsWith('/manage-hospital-bill')) return 4
+    
+    // IPD Report (index 5) - handled above in settings check
+    
+    // IPD Master (index 6) - handled above in settings check
+    
+    // Default fallback to OPD
     return 1
   }
 

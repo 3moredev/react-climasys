@@ -3624,8 +3624,10 @@ export default function Treatment() {
                 isFormDisabled={isFormDisabled}
                 onSubmit={(totalAmount) => {
                     setBillingData(prev => {
+                        const existingBilled = parseFloat(prev.billed) || 0;
+                        const newAmount = Number(totalAmount) || 0;
+                        const billedNum = existingBilled + newAmount; // Add to existing billed amount
                         const discountNum = parseFloat(prev.discount) || 0;
-                        const billedNum = Number(totalAmount) || 0;
                         const acBal = Math.max(0, billedNum - discountNum);
                         return {
                             ...prev,
