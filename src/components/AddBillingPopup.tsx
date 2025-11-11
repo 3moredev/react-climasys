@@ -57,6 +57,7 @@ export default function AddBillingPopup({
     const [options, setOptions] = React.useState<BillingDetailOption[]>([]);
     const [localSelectedIds, setLocalSelectedIds] = React.useState<string[]>([]);
     const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
+    const [isSubmitting, setIsSubmitting] = React.useState<boolean>(false);
     // Preserve original order of options to ensure rows never jump when selected
     const initialOrderRef = React.useRef<Map<string, number>>(new Map());
 
@@ -109,7 +110,46 @@ export default function AddBillingPopup({
                 }));
                 if (!cancelled) setOptions(mapped);
 
-                // Attempt to hydrate pre-selected IDs when provided by visit API
+                // Extract billing data from master-lists API response (data.data.billing)
+                const billingArray = data?.data?.billing || [];
+                let matchedIds: string[] = [];
+                
+                // Match billing items from API response to loaded options and pre-select them
+                if (!cancelled && Array.isArray(billingArray) && billingArray.length > 0 && mapped.length > 0) {
+                    billingArray.forEach((billingItem: any) => {
+                        // Find matching option by comparing billing fields (case-insensitive, trimmed)
+                        const match = mapped.find(opt => {
+                            const optGroup = (opt.billing_group_name || '').trim().toLowerCase();
+                            const optSubgroup = (opt.billing_subgroup_name || '').trim().toLowerCase();
+                            const optDetails = (opt.billing_details || '').trim().toLowerCase();
+                            
+                            const itemGroup = (billingItem.billing_group_name || '').trim().toLowerCase();
+                            const itemSubgroup = (billingItem.billing_subgroup_name || '').trim().toLowerCase();
+                            const itemDetails = (billingItem.billing_details || '').trim().toLowerCase();
+                            
+                            return optGroup === itemGroup && optSubgroup === itemSubgroup && optDetails === itemDetails;
+                        });
+
+                        if (match) {
+                            matchedIds.push(match.id);
+                            console.log('✓ Matched billing item:', billingItem.billing_details, '→ ID:', match.id);
+                        } else {
+                            console.warn('✗ Could not match billing item:', billingItem.billing_details);
+                        }
+                    });
+
+                    // Pre-select matched items (merge with existing selections)
+                    if (matchedIds.length > 0) {
+                        setEffectiveSelectedIds(prev => {
+                            // Merge with existing, avoiding duplicates
+                            const combined = [...new Set([...prev, ...matchedIds])];
+                            console.log('Pre-selected billing IDs from load:', combined);
+                            return combined;
+                        });
+                    }
+                }
+
+                // Attempt to hydrate pre-selected IDs when provided by visit API (fallback)
                 const preIds: string[] = (() => {
                     const fromA = data?.selectedBillingDetailIds;
                     if (Array.isArray(fromA)) return fromA.map((v: any) => String(v));
@@ -120,8 +160,8 @@ export default function AddBillingPopup({
                     return [];
                 })();
 
-                if (!cancelled && preIds.length > 0) {
-                    // Initialize selections only if not already set by parent/local
+                if (!cancelled && preIds.length > 0 && matchedIds.length === 0) {
+                    // Only use preIds if we didn't match from billing array
                     setEffectiveSelectedIds(prev => (prev && prev.length > 0 ? prev : [...preIds]));
                 }
             } catch (e) {
@@ -134,6 +174,98 @@ export default function AddBillingPopup({
     }, [doctorId, clinicId, patientId, visitDate, patientVisitNo, shiftId, filteredBillingDetails]);
 
     const effectiveOptions = filteredBillingDetails ?? options;
+
+    // Fetch billing array from master-lists API when popup opens and match with available options
+    // This runs when filteredBillingDetails is provided (popup doesn't load its own data)
+    React.useEffect(() => {
+        let cancelled = false;
+        async function matchBillingFromMasterLists() {
+            // Only run when popup is open
+            if (!open) return;
+            
+            // Only run if parent provided filteredBillingDetails (popup didn't load its own data)
+            // If filteredBillingDetails is not provided, loadBillingDetails will handle matching
+            if (!filteredBillingDetails || filteredBillingDetails.length === 0) return;
+            
+            // Need options to match against
+            if (!effectiveOptions || effectiveOptions.length === 0) return;
+            
+            // Need context to call master-lists API
+            if (!patientId || !doctorId || !clinicId || shiftId == null || !visitDate || patientVisitNo == null) return;
+
+            try {
+                const params = new URLSearchParams();
+                params.set('patientId', String(patientId));
+                params.set('shiftId', String(shiftId));
+                params.set('clinicId', String(clinicId));
+                params.set('doctorId', String(doctorId));
+                params.set('visitDate', String(visitDate));
+                params.set('patientVisitNo', String(patientVisitNo));
+
+                const resp = await fetch(`/api/visits/master-lists?${params.toString()}`);
+                if (!resp.ok) {
+                    console.warn('Failed to load master-lists for billing matching:', resp.status);
+                    return;
+                }
+
+                const data = await resp.json();
+                if (cancelled) return;
+
+                // Extract billing array from response
+                const billingArray = data?.data?.billing || [];
+                
+                // If billing array is empty, don't do anything (show popup as normal)
+                if (!Array.isArray(billingArray) || billingArray.length === 0) {
+                    console.log('No billing data in master-lists, showing popup as normal');
+                    return;
+                }
+
+                // Match billing items from API response to available options
+                const matchedIds: string[] = [];
+                
+                billingArray.forEach((billingItem: any) => {
+                    // Find matching option by comparing billing fields (case-insensitive, trimmed)
+                    const match = effectiveOptions.find(opt => {
+                        const optGroup = (opt.billing_group_name || '').trim().toLowerCase();
+                        const optSubgroup = (opt.billing_subgroup_name || '').trim().toLowerCase();
+                        const optDetails = (opt.billing_details || '').trim().toLowerCase();
+                        
+                        const itemGroup = (billingItem.billing_group_name || '').trim().toLowerCase();
+                        const itemSubgroup = (billingItem.billing_subgroup_name || '').trim().toLowerCase();
+                        const itemDetails = (billingItem.billing_details || '').trim().toLowerCase();
+                        
+                        return optGroup === itemGroup && optSubgroup === itemSubgroup && optDetails === itemDetails;
+                    });
+
+                    if (match) {
+                        matchedIds.push(match.id);
+                        console.log('✓ Matched billing item in popup:', billingItem.billing_details, '→ ID:', match.id);
+                    } else {
+                        console.warn('✗ Could not match billing item in popup:', billingItem.billing_details);
+                    }
+                });
+
+                // Pre-select matched items (merge with existing selections)
+                if (!cancelled && matchedIds.length > 0) {
+                    setEffectiveSelectedIds(prev => {
+                        // Merge with existing, avoiding duplicates
+                        const combined = [...new Set([...prev, ...matchedIds])];
+                        console.log('Pre-selected billing IDs in popup:', combined);
+                        return combined;
+                    });
+                }
+            } catch (e) {
+                console.error('Error matching billing from master-lists in popup:', e);
+            }
+        }
+
+        // Only run when popup opens
+        if (open) {
+            matchBillingFromMasterLists();
+        }
+        
+        return () => { cancelled = true; };
+    }, [open, filteredBillingDetails, effectiveOptions, patientId, doctorId, clinicId, shiftId, visitDate, patientVisitNo]);
 
     // Capture initial order only once per id to keep row positions stable
     React.useEffect(() => {
@@ -252,8 +384,97 @@ export default function AddBillingPopup({
     React.useEffect(() => {
         if (!open) {
             setErrorMessage(null);
+            setIsSubmitting(false);
         }
     }, [open]);
+
+    // Function to submit billing breakup data to API
+    const handleSubmitBillingBreakup = async () => {
+        // Validate required fields
+        if (!userId || !doctorId || !patientId || !clinicId || !visitDate || patientVisitNo == null || shiftId == null) {
+            setErrorMessage('Missing required fields: userId, doctorId, patientId, clinicId, visitDate, patientVisitNo, shiftId');
+            return;
+        }
+
+        // Validate that at least one item is selected
+        if (effectiveSelectedIds.length === 0) {
+            setErrorMessage('Please select at least one billing item.');
+            return;
+        }
+
+        // Map selected items to billingData format
+        const billingData = effectiveSelectedIds
+            .map(id => {
+                const item = effectiveOptions.find(opt => opt.id === id);
+                if (!item) return null;
+                
+                const defaultFees = typeof item.default_fees === 'number' 
+                    ? item.default_fees 
+                    : Number(item.default_fees || 0);
+                
+                return {
+                    billingGroupName: item.billing_group_name || '',
+                    billingSubgroupName: item.billing_subgroup_name || '',
+                    billingDetails: item.billing_details || '',
+                    defaultFees: defaultFees,
+                    collectedFees: defaultFees // Using defaultFees as collectedFees initially
+                };
+            })
+            .filter(item => item !== null);
+
+        if (billingData.length === 0) {
+            setErrorMessage('No valid billing items selected.');
+            return;
+        }
+
+        // Prepare request payload
+        const requestPayload = {
+            userId: userId,
+            doctorId: doctorId,
+            shiftId: shiftId,
+            patientId: patientId,
+            clinicId: clinicId,
+            visitDate: visitDate,
+            patientVisitNo: patientVisitNo,
+            billingData: billingData,
+            ...(useOverwrite !== undefined && { useOverwrite: useOverwrite })
+        };
+
+        setIsSubmitting(true);
+        setErrorMessage(null);
+
+        try {
+            const response = await fetch('/api/billing/breakup/submit', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json; charset=UTF-8',
+                },
+                body: JSON.stringify(requestPayload)
+            });
+
+            const result = await response.json();
+
+            if (!response.ok || !result.success) {
+                const errorMsg = result.error || result.message || 'Failed to submit billing breakup data';
+                setErrorMessage(errorMsg);
+                setIsSubmitting(false);
+                return;
+            }
+
+            // Success - call onSubmit callback if provided (for backward compatibility)
+            if (typeof onSubmit === 'function') {
+                onSubmit(Number(totalSelectedFees.toFixed(2)), [...effectiveSelectedIds]);
+            }
+
+            // Close popup on success
+            onClose();
+        } catch (error) {
+            console.error('Error submitting billing breakup:', error);
+            const errorMsg = error instanceof Error ? error.message : 'An unexpected error occurred';
+            setErrorMessage(`Failed to submit: ${errorMsg}`);
+            setIsSubmitting(false);
+        }
+    };
 
     if (!open) return null;
 
@@ -455,38 +676,31 @@ export default function AddBillingPopup({
                         <button
                             type="button"
                             style={{ 
-                                backgroundColor: '#1976d2', 
+                                backgroundColor: isSubmitting || isFormDisabled ? '#9e9e9e' : '#1976d2', 
                                 color: '#fff', 
                                 border: 'none', 
                                 padding: '8px 16px', 
                                 borderRadius: '4px', 
-                                cursor: 'pointer', 
+                                cursor: (isSubmitting || isFormDisabled) ? 'not-allowed' : 'pointer', 
                                 fontSize: '14px',
                                 fontWeight: '500',
-                                transition: 'background-color 0.2s'
+                                transition: 'background-color 0.2s',
+                                minWidth: '100px'
                             }}
-                            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#1565c0'; }}
-                            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#1976d2'; }}
-                            disabled={isFormDisabled}
-                            onClick={() => {
-                                if (isFormDisabled) return;
-                                
-                                // Validate that at least one item is selected
-                                if (effectiveSelectedIds.length === 0) {
-                                    setErrorMessage('Please select at least one billing item.');
-                                    return;
+                            onMouseEnter={(e) => { 
+                                if (!isSubmitting && !isFormDisabled) {
+                                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#1565c0';
                                 }
-                                
-                                // Call onSubmit callback with selected data
-                                if (typeof onSubmit === 'function') {
-                                    onSubmit(Number(totalSelectedFees.toFixed(2)), [...effectiveSelectedIds]);
-                                }
-                                
-                                // Close popup
-                                onClose();
                             }}
+                            onMouseLeave={(e) => { 
+                                if (!isSubmitting && !isFormDisabled) {
+                                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#1976d2';
+                                }
+                            }}
+                            disabled={isSubmitting || isFormDisabled}
+                            onClick={handleSubmitBillingBreakup}
                         >
-                            Submit
+                            {isSubmitting ? 'Submitting...' : 'Submit'}
                         </button>
                     </div>
                 </div>

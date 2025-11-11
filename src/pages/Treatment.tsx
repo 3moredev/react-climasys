@@ -1282,6 +1282,144 @@ export default function Treatment() {
         return () => { cancelled = true; };
     }, [treatmentData?.doctorId, sessionData?.clinicId]);
 
+    // Store master-lists billing data in a ref to use after billing options load
+    const masterListsBillingRef = React.useRef<any[]>([]);
+
+    // Load billing data from master-lists API
+    React.useEffect(() => {
+        let cancelled = false;
+        async function loadBillingFromMasterLists() {
+            // Only load if we have all required parameters
+            if (!treatmentData?.patientId || !treatmentData?.doctorId || !sessionData?.clinicId || 
+                !treatmentData?.visitNumber || !(sessionData as any)?.shiftId) {
+                return;
+            }
+
+            try {
+                // Use today's date for visitDate
+                const visitDate = toYyyyMmDd(new Date());
+                
+                const params = new URLSearchParams();
+                params.set('patientId', String(treatmentData.patientId));
+                params.set('shiftId', String((sessionData as any)?.shiftId || 1));
+                params.set('clinicId', String(sessionData.clinicId));
+                params.set('doctorId', String(treatmentData.doctorId));
+                params.set('visitDate', visitDate);
+                params.set('patientVisitNo', String(treatmentData.visitNumber));
+
+                const resp = await fetch(`/api/visits/master-lists?${params.toString()}`);
+                if (!resp.ok) {
+                    console.warn('Failed to load master-lists billing data:', resp.status);
+                    return;
+                }
+
+                const data = await resp.json();
+                if (cancelled) return;
+
+                // Extract billing array from response
+                const billingArray = data?.data?.billing || [];
+                
+                // Store in ref for later matching
+                if (Array.isArray(billingArray) && billingArray.length > 0) {
+                    masterListsBillingRef.current = billingArray;
+                    console.log('Stored billing data from master-lists:', billingArray);
+                } else {
+                    masterListsBillingRef.current = [];
+                }
+
+                // Extract and map instructions array from response
+                const instructionsArray = data?.data?.instructions || [];
+                if (Array.isArray(instructionsArray) && instructionsArray.length > 0) {
+                    const mappedInstructionGroups: InstructionGroup[] = instructionsArray.map((instr: any, idx: number) => {
+                        const groupDesc = instr?.group_description ?? instr?.Group_Description ?? '';
+                        const instrDesc = instr?.instructions_description ?? instr?.Instructions_Description ?? '';
+                        const seqNo = instr?.sequence_no ?? instr?.Sequence_No ?? idx + 1;
+                        
+                        return {
+                            id: String(seqNo),
+                            name: String(groupDesc).toUpperCase(),
+                            nameHindi: '', // Not provided in API response
+                            instructions: String(instrDesc)
+                        };
+                    });
+                    
+                    if (!cancelled) {
+                        setSelectedInstructionGroups(mappedInstructionGroups);
+                        console.log('Loaded instruction groups from master-lists:', mappedInstructionGroups);
+                    }
+                } else {
+                    if (!cancelled) {
+                        setSelectedInstructionGroups([]);
+                    }
+                }
+
+            } catch (e) {
+                console.error('Error loading billing from master-lists:', e);
+                masterListsBillingRef.current = [];
+            }
+        }
+        loadBillingFromMasterLists();
+        return () => { cancelled = true; };
+    }, [treatmentData?.patientId, treatmentData?.doctorId, treatmentData?.visitNumber, 
+        sessionData?.clinicId, (sessionData as any)?.shiftId]);
+
+    // Match and pre-select billing items after billing options are loaded
+    React.useEffect(() => {
+        // Only proceed if we have both billing options and master-lists billing data
+        if (billingDetailsOptions.length === 0 || masterListsBillingRef.current.length === 0) {
+            return;
+        }
+
+        const billingArray = masterListsBillingRef.current;
+        console.log('Matching billing items. Options:', billingDetailsOptions.length, 'Master-lists:', billingArray.length);
+
+        // Match billing items from master-lists to existing billing options by fields
+        const matchedIds: string[] = [];
+        
+        billingArray.forEach((billingItem: any) => {
+            // Find matching option by comparing billing fields (case-insensitive, trimmed)
+            const match = billingDetailsOptions.find(opt => {
+                const optGroup = (opt.billing_group_name || '').trim().toLowerCase();
+                const optSubgroup = (opt.billing_subgroup_name || '').trim().toLowerCase();
+                const optDetails = (opt.billing_details || '').trim().toLowerCase();
+                
+                const itemGroup = (billingItem.billing_group_name || '').trim().toLowerCase();
+                const itemSubgroup = (billingItem.billing_subgroup_name || '').trim().toLowerCase();
+                const itemDetails = (billingItem.billing_details || '').trim().toLowerCase();
+                
+                return optGroup === itemGroup && optSubgroup === itemSubgroup && optDetails === itemDetails;
+            });
+
+            if (match) {
+                matchedIds.push(match.id);
+                console.log('✓ Matched:', billingItem.billing_details, '→ ID:', match.id);
+            } else {
+                console.warn('✗ Could not match:', billingItem.billing_details, 
+                    'Group:', billingItem.billing_group_name, 
+                    'Subgroup:', billingItem.billing_subgroup_name);
+            }
+        });
+
+        // Pre-select the matched billing items (only if we have matches and not already selected)
+        if (matchedIds.length > 0) {
+            setSelectedBillingDetailIds(prev => {
+                // Check if we already have these selected
+                const allAlreadySelected = matchedIds.every(id => prev.includes(id));
+                if (allAlreadySelected) {
+                    console.log('Billing items already selected');
+                    return prev;
+                }
+                
+                // Merge with existing selections, avoiding duplicates
+                const combined = [...new Set([...prev, ...matchedIds])];
+                console.log('Pre-selected billing IDs:', combined);
+                return combined;
+            });
+        } else {
+            console.warn('No billing items matched for pre-selection');
+        }
+    }, [billingDetailsOptions]);
+
     // Load Previous Service Visit Dates for sidebar
     React.useEffect(() => {
         let cancelled = false;
@@ -1420,10 +1558,29 @@ export default function Treatment() {
                         return 'Unknown Doctor';
                     };
 
+                    // Determine visit type using PLR indicators (Prescription/Lab/Radiology)
+                    const getVisitType = (visit: any): string => {
+                        const plr = String(visit.PLR || visit.plr || visit.plr_indicators || '').toUpperCase();
+
+                        if (plr) {
+                            if (plr.includes('L')) {
+                                return 'L';
+                            }
+                            if (plr.includes('P')) {
+                                return 'P';
+                            }
+                            if (plr.includes('R')) {
+                                return 'L';
+                            }
+                        }
+
+                        return '';
+                    };
+
                     return {
                         id: String(visit.id || index),
                         date: visit.visit_date || visit.Visit_Date || visit.appointmentDate || visit.appointment_date || '',
-                        type: visit.visit_type === 1 ? 'P' : 'L', // Assuming 1 = Physical, 2 = Lab
+                        type: getVisitType(visit),
                         patientName: treatmentData?.patientName || '',
                         doctorName: getDoctorName(visit),
                         isActive: index === sortedVisits.length - 1 // Make the latest visit active
@@ -6319,6 +6476,14 @@ export default function Treatment() {
                 selectedBillingDetailIds={selectedBillingDetailIds}
                 setSelectedBillingDetailIds={setSelectedBillingDetailIds}
                 followUp={formData.visitType.followUp}
+                userId={sessionData?.userId ? String(sessionData.userId) : undefined}
+                doctorId={treatmentData?.doctorId || sessionData?.doctorId}
+                patientId={treatmentData?.patientId}
+                clinicId={sessionData?.clinicId || treatmentData?.clinicId}
+                visitDate={toYyyyMmDd(new Date())}
+                patientVisitNo={treatmentData?.visitNumber}
+                shiftId={(sessionData as any)?.shiftId || 1}
+                useOverwrite={false}
             />
 
             {showLabTestEntry && selectedPatientForLab && (

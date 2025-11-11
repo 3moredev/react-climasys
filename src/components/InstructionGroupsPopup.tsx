@@ -97,6 +97,9 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
   useEffect(() => {
     if (isOpen && initialSelectedGroups) {
       setSelectedGroups(initialSelectedGroups);
+      // Also sync selectedGroupIds by matching IDs or names
+      const ids = initialSelectedGroups.map(g => g.id);
+      setSelectedGroupIds(ids);
     }
   }, [isOpen, initialSelectedGroups]);
 
