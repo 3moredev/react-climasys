@@ -42,6 +42,8 @@ interface AddPatientPageProps {
 }
 
 export default function AddPatientPage({ open, onClose, onSave, doctorId, clinicId, patientId, readOnly = false }: AddPatientPageProps) {
+  console.log('AddPatientPage rendered with props:', { open, patientId, readOnly, doctorId, clinicId });
+  
   const [formData, setFormData] = useState({
     lastName: '',
     firstName: '',
@@ -109,6 +111,11 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
     }
   }, [doctorId, clinicId])
 
+  // Log when open prop changes
+  useEffect(() => {
+    console.log('AddPatientPage - open prop changed:', open, 'patientId:', patientId, 'readOnly:', readOnly);
+  }, [open, patientId, readOnly]);
+
   // Fetch patient data when patientId is provided
   useEffect(() => {
     if (patientId && open) {
@@ -120,9 +127,10 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
           const patient = await patientService.getPatient(patientId)
           
           // Map patient data to form fields
+          // Use the patientId from URL (format "01-06-2019-021099") - this is the actual patient ID, not folder_no
           setFormData(prev => ({
             ...prev,
-            patientId: patient.folder_no || patientId,
+            patientId: patientId, // Use the patientId from URL parameter, not folder_no
             firstName: patient.first_name || '',
             middleName: patient.middle_name || '',
             lastName: patient.last_name || '',
@@ -649,18 +657,30 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
     }
   }
 
-  return (<>
+  console.log('AddPatientPage render - Dialog should be:', open ? 'OPEN' : 'CLOSED');
+  
+  return (<> 
     <Dialog
       open={open}
       onClose={handleClose}
       maxWidth="xl"
       fullWidth
+      disableEscapeKeyDown={false}
       PaperProps={{
         sx: {
           borderRadius: '12px',
           maxHeight: '98vh',
           minHeight: '96vh',
-          width: '90vw'
+          width: '90vw',
+          zIndex: 11000
+        }
+      }}
+      sx={{
+        zIndex: 11000
+      }}
+      BackdropProps={{
+        sx: {
+          zIndex: 10999
         }
       }}
     >
@@ -674,7 +694,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
       }}>
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
           <Typography variant="h6" sx={{ fontWeight: 'bold', m: 0 }}>
-            Add Patient
+            Patient Details
           </Typography>
         </Box>
         <IconButton 

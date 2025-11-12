@@ -75,6 +75,8 @@ export default function AppointmentTable() {
     const [filterSize, setFilterSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
     const [showVisitDetails, setShowVisitDetails] = useState<boolean>(false);
     const [selectedPatientForVisit, setSelectedPatientForVisit] = useState<AppointmentRow | null>(null);
+    const [showQuickRegistration, setShowQuickRegistration] = useState<boolean>(false);
+    const [selectedPatientForQuickReg, setSelectedPatientForQuickReg] = useState<AppointmentRow | null>(null);
     const [submittedVisitDetails, setSubmittedVisitDetails] = useState<Set<string>>(new Set());
     const [formPatientData, setFormPatientData] = useState<any | null>(null);
     const [visitDates, setVisitDates] = useState<string[]>([]);
@@ -374,7 +376,11 @@ export default function AppointmentTable() {
                 displayTime = formattedTime;
             }
 
-            const finalPatientId = String(patientIdRaw || '');
+            const finalPatientId = String(patientIdRaw || '').trim();
+            // Log for debugging patient ID issues
+            if (!finalPatientId) {
+                console.warn('No patient ID found in appointment row:', row);
+            }
             const rowDoctorId = toStringSafe(getField(row, ['doctor_id', 'doctorId'], ''));
 
             return {
@@ -2648,7 +2654,19 @@ export default function AppointmentTable() {
                                             return (
                                                 <tr key={i} style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 500 }}>
                                                     <td className="sr-col">{a.sr}</td>
-                                                    <td className="name-col"><a href="#" onClick={(e) => { e.preventDefault(); navigate(`/quick-registration?patientId=${a.patientId}`); }} style={{ textDecoration: "underline", color: "#1E88E5", cursor: "pointer" }}>{a.patient}</a></td>
+                                                    <td className="name-col">
+                                                        <a 
+                                                            href="#" 
+                                                            onClick={(e) => { 
+                                                                e.preventDefault(); 
+                                                                setSelectedPatientForQuickReg(a);
+                                                                setShowQuickRegistration(true);
+                                                            }} 
+                                                            style={{ textDecoration: "underline", color: "#1E88E5", cursor: "pointer" }}
+                                                        >
+                                                            {a.patient}
+                                                        </a>
+                                                    </td>
                                                     <td className="gender-col">{a.gender}</td>
                                                     <td className="age-col">{a.age}</td>
                                                     <td className="contact-col">{(a.contact || '').toString().slice(0, 12)}</td>
@@ -2934,7 +2952,18 @@ export default function AppointmentTable() {
                                                 <div className="card-header">
                                                     <div className="d-flex align-items-center" style={{ gap: '8px' }}>
                                                         <span className={`d-inline-block rounded-circle ${((appointment as any).statusColorPending || appointment.statusColor) === 'bg-orange-custom' ? '' : ((appointment as any).statusColorPending || appointment.statusColor)}`} style={{ width: '10px', height: '10px', backgroundColor: ((appointment as any).statusColorPending || appointment.statusColor) === 'bg-orange-custom' ? '#FF9800' : undefined }}></span>
-                                                        <a href="#" onClick={(e) => { e.preventDefault(); navigate(`/quick-registration?patientId=${appointment.patientId}`); }} className="patient-name" style={{ textDecoration: 'underline', color: '#1E88E5', cursor: 'pointer' }}>{appointment.patient}</a>
+                                                        <a 
+                                                            href="#" 
+                                                            onClick={(e) => { 
+                                                                e.preventDefault(); 
+                                                                setSelectedPatientForQuickReg(appointment);
+                                                                setShowQuickRegistration(true);
+                                                            }} 
+                                                            className="patient-name" 
+                                                            style={{ textDecoration: 'underline', color: '#1E88E5', cursor: 'pointer' }}
+                                                        >
+                                                            {appointment.patient}
+                                                        </a>
                                                     </div>
                                                     <div
                                                         onClick={(e) => {
@@ -3214,16 +3243,18 @@ export default function AppointmentTable() {
                     </>
                 )}
 
-                {/* Patient Visit Details Popup (Doctor screen) */}
-                {showVisitDetails && selectedPatientForVisit && (
-                    <PatientVisitDetails
-                        open={true}
+                {/* Quick Registration Form Modal (Doctor screen) */}
+                {showQuickRegistration && selectedPatientForQuickReg && (
+                    <AddPatientPage
+                        open={showQuickRegistration}
                         onClose={() => {
-                            setShowVisitDetails(false);
-                            setSelectedPatientForVisit(null);
+                            setShowQuickRegistration(false);
+                            setSelectedPatientForQuickReg(null);
                         }}
-                        patientData={selectedPatientForVisit as any}
-                        onVisitDetailsSubmitted={handleVisitDetailsSubmitted}
+                        patientId={selectedPatientForQuickReg.patientId}
+                        readOnly={true}
+                        doctorId={doctorId}
+                        clinicId={clinicId}
                     />
                 )}
 
@@ -3269,6 +3300,9 @@ export default function AppointmentTable() {
                                 visitDates={visitDates}
                                 currentVisitIndex={currentVisitIndex}
                                 onVisitDateChange={handleVisitDateChange}
+                                patientId={selectedPatientForForm?.id}
+                                doctorId={doctorId}
+                                clinicId={clinicId}
                             />
                         </div>
                     </div>
@@ -3937,7 +3971,19 @@ export default function AppointmentTable() {
                                         return (
                                             <tr key={i} style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 500 }}>
                                                 <td className="sr-col">{a.sr}</td>
-                                                <td className="name-col"><a href="#" onClick={(e) => { e.preventDefault(); navigate(`/quick-registration?patientId=${a.patientId}`); }} style={{ textDecoration: "underline", color: "#1E88E5", cursor: "pointer" }}>{a.patient}</a></td>
+                                                <td className="name-col">
+                                                    <a 
+                                                        href="#" 
+                                                        onClick={(e) => { 
+                                                            e.preventDefault(); 
+                                                            setSelectedPatientForQuickReg(a);
+                                                            setShowQuickRegistration(true);
+                                                        }} 
+                                                        style={{ textDecoration: "underline", color: "#1E88E5", cursor: "pointer" }}
+                                                    >
+                                                        {a.patient}
+                                                    </a>
+                                                </td>
                                                 <td className="gender-col">{a.gender}</td>
                                                 <td className="age-col">{a.age}</td>
                                                 <td className="contact-col">{(a.contact || '').toString().slice(0, 12)}</td>
@@ -4811,7 +4857,18 @@ export default function AppointmentTable() {
                                             <div className="card-header">
                                                 <div className="d-flex align-items-center" style={{ gap: '8px' }}>
                                                     <span className={`d-inline-block rounded-circle ${appointment.statusColor === 'bg-orange-custom' ? '' : appointment.statusColor}`} style={{ width: '10px', height: '10px', backgroundColor: appointment.statusColor === 'bg-orange-custom' ? '#FF9800' : undefined }}></span>
-                                                    <a href="#" onClick={(e) => { e.preventDefault(); navigate(`/quick-registration?patientId=${appointment.patientId}`); }} className="patient-name" style={{ textDecoration: 'underline', color: '#1E88E5', cursor: 'pointer' }}>{appointment.patient}</a>
+                                                    <a 
+                                                        href="#" 
+                                                        onClick={(e) => { 
+                                                            e.preventDefault(); 
+                                                            setSelectedPatientForQuickReg(appointment);
+                                                            setShowQuickRegistration(true);
+                                                        }} 
+                                                        className="patient-name" 
+                                                        style={{ textDecoration: 'underline', color: '#1E88E5', cursor: 'pointer' }}
+                                                    >
+                                                        {appointment.patient}
+                                                    </a>
                                                 </div>
                                                 <div
                                                     onClick={(e) => {
@@ -5625,21 +5682,26 @@ export default function AppointmentTable() {
                             visitDates={visitDates}
                             currentVisitIndex={currentVisitIndex}
                             onVisitDateChange={handleVisitDateChange}
+                            patientId={selectedPatientForForm?.id}
+                            doctorId={doctorId}
+                            clinicId={clinicId}
                         />
                     </div>
                 </div>
             )}
 
-            {/* Patient Visit Details Popup */}
-            {showVisitDetails && selectedPatientForVisit && (
-                <PatientVisitDetails
-                    open={true}
+            {/* Quick Registration Form Modal */}
+            {showQuickRegistration && selectedPatientForQuickReg && (
+                <AddPatientPage
+                    open={showQuickRegistration}
                     onClose={() => {
-                        setShowVisitDetails(false);
-                        setSelectedPatientForVisit(null);
+                        setShowQuickRegistration(false);
+                        setSelectedPatientForQuickReg(null);
                     }}
-                    patientData={selectedPatientForVisit as any}
-                    onVisitDetailsSubmitted={handleVisitDetailsSubmitted}
+                    patientId={selectedPatientForQuickReg.patientId}
+                    readOnly={true}
+                    doctorId={doctorId}
+                    clinicId={clinicId}
                 />
             )}
 
@@ -5656,6 +5718,20 @@ export default function AppointmentTable() {
                     sessionData={sessionData}
                 />
             )}
+
+            {/* Visit Details Popup */}
+            {showVisitDetails && selectedPatientForVisit && (
+                <PatientVisitDetails
+                    open={showVisitDetails}
+                    onClose={() => {
+                        setShowVisitDetails(false);
+                        setSelectedPatientForVisit(null);
+                    }}
+                    patientData={selectedPatientForVisit}
+                    onVisitDetailsSubmitted={handleVisitDetailsSubmitted}
+                />
+            )}
+
             <Snackbar
                 open={showBookedSnackbar}
                 autoHideDuration={3000}

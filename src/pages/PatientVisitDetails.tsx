@@ -6,6 +6,7 @@ import { complaintService, ComplaintOption } from '../services/complaintService'
 import { DocumentService, DocumentUploadRequest } from '../services/documentService';
 import { sessionService } from '../services/sessionService';
 import AddReferralPopup, { ReferralData } from '../components/AddReferralPopup';
+import AddPatientPage from './AddPatientPage';
 
 interface AppointmentRow {
     reports_received: any;
@@ -31,9 +32,15 @@ interface PatientVisitDetailsProps {
     onClose: () => void;
     patientData: AppointmentRow | null;
     onVisitDetailsSubmitted?: (isSubmitFlag: boolean) => void;
+    readOnly?: boolean;
 }
 
-const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose, patientData, onVisitDetailsSubmitted }) => {
+const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose, patientData, onVisitDetailsSubmitted, readOnly = false }) => {
+    // Debug: Log readOnly prop
+    React.useEffect(() => {
+        console.log('PatientVisitDetails - readOnly prop:', readOnly);
+    }, [readOnly]);
+    
     const [formData, setFormData] = useState({
         referralBy: 'Self',
         referralName: '',
@@ -88,6 +95,8 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
     const [complaintsOptions, setComplaintsOptions] = useState<ComplaintOption[]>([]);
     const [complaintsLoading, setComplaintsLoading] = useState(false);
     const [complaintsError, setComplaintsError] = useState<string | null>(null);
+    const [showQuickRegistration, setShowQuickRegistration] = useState(false);
+    const [sessionDataForQuickReg, setSessionDataForQuickReg] = useState<any>(null);
     
     const filteredComplaints = React.useMemo(() => {
         const term = complaintSearch.trim().toLowerCase();
@@ -277,6 +286,23 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
     React.useEffect(() => {
         setFormData(prev => ({ ...prev, selectedComplaint: selectedComplaints.join(',') }));
     }, [selectedComplaints]);
+
+    // Load session data when Quick Registration modal opens
+    React.useEffect(() => {
+        if (showQuickRegistration && !sessionDataForQuickReg) {
+            const loadSessionData = async () => {
+                try {
+                    const sessionResult = await sessionService.getSessionInfo();
+                    if (sessionResult.success && sessionResult.data) {
+                        setSessionDataForQuickReg(sessionResult.data);
+                    }
+                } catch (error) {
+                    console.error('Error getting session data for Quick Registration:', error);
+                }
+            };
+            loadSessionData();
+        }
+    }, [showQuickRegistration, sessionDataForQuickReg]);
 
     // Close complaints dropdown on outside click
     React.useEffect(() => {
@@ -1230,7 +1256,21 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                     
                     {/* Patient Info, Doctor Info and Visit Type Row */}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
-                        <div style={{ color: '#2e7d32', fontSize: '14px', fontWeight: '500' }}>
+                        <div 
+                            onClick={() => {
+                                if (patientData?.patientId) {
+                                    setShowQuickRegistration(true);
+                                }
+                            }}
+                            style={{ 
+                                color: '#2e7d32', 
+                                fontSize: '14px', 
+                                fontWeight: '500',
+                                cursor: patientData?.patientId ? 'pointer' : 'default',
+                                textDecoration: patientData?.patientId ? 'underline' : 'none'
+                            }}
+                            title={patientData?.patientId ? 'Click to view patient details' : ''}
+                        >
                             {patientData.patient} / {(patientData as any).gender_description || 'N/A'} / {patientData.age === 0 ? 'Unknown' : patientData.age} Y / {patientData.contact || 'N/A'}
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
@@ -1244,6 +1284,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                         type="checkbox"
                                         checked={visitType.inPerson}
                                         onChange={(e) => setVisitType(prev => ({ ...prev, inPerson: e.target.checked }))}
+                                        disabled={readOnly}
                                     />
                                 </label>
                                 <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', whiteSpace: 'nowrap' }}>
@@ -1252,6 +1293,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                         type="checkbox"
                                         checked={visitType.followUp}
                                         onChange={(e) => setVisitType(prev => ({ ...prev, followUp: e.target.checked }))}
+                                        disabled={readOnly}
                                     />
                                 </label>
                                 <span style={{ fontSize: '12px' }}>
@@ -1378,6 +1420,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                 <select
                                     value={formData.referralBy}
                                     onChange={(e) => handleInputChange('referralBy', e.target.value)}
+                                    disabled={readOnly}
                                     style={{
                                         width: '100%',
                                         height: '32px',
@@ -1387,16 +1430,21 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                         fontSize: '0.9rem',
                                         fontFamily: "'Roboto', sans-serif",
                                         fontWeight: '500',
-                                        backgroundColor: 'white',
+                                        backgroundColor: readOnly ? '#f5f5f5' : 'white',
                                         outline: 'none',
-                                        transition: 'border-color 0.2s'
+                                        transition: 'border-color 0.2s',
+                                        cursor: readOnly ? 'not-allowed' : 'default'
                                     }}
                                     onFocus={(e) => {
-                                        e.target.style.borderColor = '#1E88E5';
-                                        e.target.style.boxShadow = 'none';
+                                        if (!readOnly) {
+                                            e.target.style.borderColor = '#1E88E5';
+                                            e.target.style.boxShadow = 'none';
+                                        }
                                     }}
                                     onBlur={(e) => {
-                                        e.target.style.borderColor = '#B7B7B7';
+                                        if (!readOnly) {
+                                            e.target.style.borderColor = '#B7B7B7';
+                                        }
                                     }}
                                 >
                             {/* Removed placeholder option to avoid reverting selection */}
@@ -1417,6 +1465,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                             placeholder="Search Doctor Name"
                                             value={referralNameSearch}
                                             onChange={(e) => handleReferralNameSearch(e.target.value)}
+                                            disabled={readOnly}
                                             style={{
                                                 width: '100%',
                                                 height: '32px',
@@ -1427,30 +1476,36 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                 fontSize: '0.9rem',
                                                 fontFamily: "'Roboto', sans-serif",
                                                 fontWeight: '500',
-                                                backgroundColor: 'white',
+                                                backgroundColor: readOnly ? '#f5f5f5' : 'white',
                                                 outline: 'none',
-                                                transition: 'border-color 0.2s'
+                                                transition: 'border-color 0.2s',
+                                                cursor: readOnly ? 'not-allowed' : 'text'
                                             }}
                                             onFocus={(e) => {
-                                                e.target.style.borderColor = '#1E88E5';
-                                                e.target.style.boxShadow = 'none';
+                                                if (!readOnly) {
+                                                    e.target.style.borderColor = '#1E88E5';
+                                                    e.target.style.boxShadow = 'none';
+                                                }
                                             }}
                                             onBlur={(e) => {
-                                                e.target.style.borderColor = '#B7B7B7';
+                                                if (!readOnly) {
+                                                    e.target.style.borderColor = '#B7B7B7';
+                                                }
                                             }}
                                         />
                                         <button
                                             type="button"
                                             className="referral-add-icon"
-                                            onClick={() => setShowReferralPopup(true)}
+                                            onClick={() => !readOnly && setShowReferralPopup(true)}
+                                            disabled={readOnly}
                                             style={{
                                                 position: 'absolute',
                                                 right: '4px',
                                                 top: '50%',
                                                 transform: 'translateY(-50%)',
-                                                backgroundColor: '#1976d2',
+                                                backgroundColor: readOnly ? '#9e9e9e' : '#1976d2',
                                                 border: 'none',
-                                                cursor: 'pointer',
+                                                cursor: readOnly ? 'not-allowed' : 'pointer',
                                                 padding: '2px',
                                                 borderRadius: '3px',
                                                 color: 'white',
@@ -1458,14 +1513,19 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                 alignItems: 'center',
                                                 justifyContent: 'center',
                                                 width: '16px',
+                                                opacity: readOnly ? 0.6 : 1,
                                                 height: '20px',
                                                 transition: 'background-color 0.2s'
                                             }}
                                             onMouseEnter={(e) => {
-                                                e.currentTarget.style.backgroundColor = '#1565c0';
+                                                if (!readOnly) {
+                                                    e.currentTarget.style.backgroundColor = '#1565c0';
+                                                }
                                             }}
                                             onMouseLeave={(e) => {
-                                                e.currentTarget.style.backgroundColor = '#1976d2';
+                                                if (!readOnly) {
+                                                    e.currentTarget.style.backgroundColor = '#1976d2';
+                                                }
                                             }}
                                         >
                                             <Add style={{ fontSize: '12px' }} />
@@ -1541,6 +1601,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                         placeholder="Referral Name"
                                         value={formData.referralName}
                                         onChange={(e) => handleInputChange('referralName', e.target.value)}
+                                        disabled={readOnly}
                                         style={{
                                             width: '100%',
                                             height: '32px',
@@ -1550,16 +1611,21 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                             fontSize: '0.9rem',
                                             fontFamily: "'Roboto', sans-serif",
                                             fontWeight: '500',
-                                            backgroundColor: 'white',
+                                            backgroundColor: readOnly ? '#f5f5f5' : 'white',
                                             outline: 'none',
-                                            transition: 'border-color 0.2s'
+                                            transition: 'border-color 0.2s',
+                                            cursor: readOnly ? 'not-allowed' : 'text'
                                         }}
                                         onFocus={(e) => {
-                                            e.target.style.borderColor = '#1E88E5';
-                                            e.target.style.boxShadow = 'none';
+                                            if (!readOnly) {
+                                                e.target.style.borderColor = '#1E88E5';
+                                                e.target.style.boxShadow = 'none';
+                                            }
                                         }}
                                         onBlur={(e) => {
-                                            e.target.style.borderColor = '#B7B7B7';
+                                            if (!readOnly) {
+                                                e.target.style.borderColor = '#B7B7B7';
+                                            }
                                         }}
                                     />
                                 )}
@@ -1573,7 +1639,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     placeholder="Contact"
                                     value={formData.referralContact}
                                     onChange={(e) => handleInputChange('referralContact', e.target.value)}
-                                    disabled={selectedDoctor !== null}
+                                    disabled={readOnly || selectedDoctor !== null}
                                     style={{
                                         width: '100%',
                                         height: '32px',
@@ -1583,7 +1649,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                         fontSize: '0.9rem',
                                         fontFamily: "'Roboto', sans-serif",
                                         fontWeight: '500',
-                                        backgroundColor: selectedDoctor !== null ? '#f5f5f5' : 'white',
+                                        backgroundColor: (readOnly || selectedDoctor !== null) ? '#f5f5f5' : 'white',
                                         outline: 'none',
                                         transition: 'border-color 0.2s',
                                         cursor: selectedDoctor !== null ? 'not-allowed' : 'text'
@@ -1608,7 +1674,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     placeholder="Email"
                                     value={formData.referralEmail}
                                     onChange={(e) => handleInputChange('referralEmail', e.target.value)}
-                                    disabled={selectedDoctor !== null}
+                                    disabled={readOnly || selectedDoctor !== null}
                                     style={{
                                         width: '100%',
                                         height: '32px',
@@ -1618,7 +1684,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                         fontSize: '0.9rem',
                                         fontFamily: "'Roboto', sans-serif",
                                         fontWeight: '500',
-                                        backgroundColor: selectedDoctor !== null ? '#f5f5f5' : 'white',
+                                        backgroundColor: (readOnly || selectedDoctor !== null) ? '#f5f5f5' : 'white',
                                         outline: 'none',
                                         transition: 'border-color 0.2s',
                                         cursor: selectedDoctor !== null ? 'not-allowed' : 'text'
@@ -1643,7 +1709,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     placeholder="Address"
                                     value={formData.referralAddress}
                                     onChange={(e) => handleInputChange('referralAddress', e.target.value)}
-                                    disabled={selectedDoctor !== null}
+                                    disabled={readOnly || selectedDoctor !== null}
                                     style={{
                                         width: '100%',
                                         height: '32px',
@@ -1653,7 +1719,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                         fontSize: '0.9rem',
                                         fontFamily: "'Roboto', sans-serif",
                                         fontWeight: '500',
-                                        backgroundColor: selectedDoctor !== null ? '#f5f5f5' : 'white',
+                                        backgroundColor: (readOnly || selectedDoctor !== null) ? '#f5f5f5' : 'white',
                                         outline: 'none',
                                         transition: 'border-color 0.2s',
                                         cursor: selectedDoctor !== null ? 'not-allowed' : 'text'
@@ -1678,6 +1744,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     placeholder="Pulse"
                                     value={formData.pulse}
                                     onChange={(e) => handleInputChange('pulse', e.target.value)}
+                                    disabled={readOnly}
                                     style={{
                                         width: '100%',
                                         height: '32px',
@@ -1687,16 +1754,21 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                         fontSize: '0.9rem',
                                         fontFamily: "'Roboto', sans-serif",
                                         fontWeight: '500',
-                                        backgroundColor: 'white',
+                                        backgroundColor: readOnly ? '#f5f5f5' : 'white',
                                         outline: 'none',
-                                        transition: 'border-color 0.2s'
+                                        transition: 'border-color 0.2s',
+                                        cursor: readOnly ? 'not-allowed' : 'text'
                                     }}
                                     onFocus={(e) => {
-                                        e.target.style.borderColor = '#1E88E5';
-                                        e.target.style.boxShadow = 'none';
+                                        if (!readOnly) {
+                                            e.target.style.borderColor = '#1E88E5';
+                                            e.target.style.boxShadow = 'none';
+                                        }
                                     }}
                                     onBlur={(e) => {
-                                        e.target.style.borderColor = '#B7B7B7';
+                                        if (!readOnly) {
+                                            e.target.style.borderColor = '#B7B7B7';
+                                        }
                                     }}
                                 />
                             </div>
@@ -1716,6 +1788,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     placeholder="Height"
                                     value={formData.height}
                                     onChange={(e) => handleInputChange('height', e.target.value)}
+                                    disabled={readOnly}
                                     style={{
                                         width: '100%',
                                         height: '32px',
@@ -1725,16 +1798,21 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                         fontSize: '0.9rem',
                                         fontFamily: "'Roboto', sans-serif",
                                         fontWeight: '500',
-                                        backgroundColor: 'white',
+                                        backgroundColor: readOnly ? '#f5f5f5' : 'white',
                                         outline: 'none',
-                                        transition: 'border-color 0.2s'
+                                        transition: 'border-color 0.2s',
+                                        cursor: readOnly ? 'not-allowed' : 'text'
                                     }}
                                     onFocus={(e) => {
-                                        e.target.style.borderColor = '#1E88E5';
-                                        e.target.style.boxShadow = 'none';
+                                        if (!readOnly) {
+                                            e.target.style.borderColor = '#1E88E5';
+                                            e.target.style.boxShadow = 'none';
+                                        }
                                     }}
                                     onBlur={(e) => {
-                                        e.target.style.borderColor = '#B7B7B7';
+                                        if (!readOnly) {
+                                            e.target.style.borderColor = '#B7B7B7';
+                                        }
                                     }}
                                 />
                             </div>
@@ -1747,6 +1825,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     placeholder="Weight"
                                     value={formData.weight}
                                     onChange={(e) => handleInputChange('weight', e.target.value)}
+                                    disabled={readOnly}
                                     style={{
                                         width: '100%',
                                         height: '32px',
@@ -1756,16 +1835,21 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                         fontSize: '0.9rem',
                                         fontFamily: "'Roboto', sans-serif",
                                         fontWeight: '500',
-                                        backgroundColor: 'white',
+                                        backgroundColor: readOnly ? '#f5f5f5' : 'white',
                                         outline: 'none',
-                                        transition: 'border-color 0.2s'
+                                        transition: 'border-color 0.2s',
+                                        cursor: readOnly ? 'not-allowed' : 'text'
                                     }}
                                     onFocus={(e) => {
-                                        e.target.style.borderColor = '#1E88E5';
-                                        e.target.style.boxShadow = 'none';
+                                        if (!readOnly) {
+                                            e.target.style.borderColor = '#1E88E5';
+                                            e.target.style.boxShadow = 'none';
+                                        }
                                     }}
                                     onBlur={(e) => {
-                                        e.target.style.borderColor = '#B7B7B7';
+                                        if (!readOnly) {
+                                            e.target.style.borderColor = '#B7B7B7';
+                                        }
                                     }}
                                 />
                             </div>
@@ -1777,7 +1861,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     type="number"
                                     placeholder="BMI"
                                     value={formData.bmi}
-                                    disabled={true}
+                                    disabled={readOnly || true}
                                     style={{
                                         width: '100%',
                                         height: '32px',
@@ -1802,6 +1886,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     placeholder="BP"
                                     value={formData.bp}
                                     onChange={(e) => handleInputChange('bp', e.target.value)}
+                                    disabled={readOnly}
                                     style={{
                                         width: '100%',
                                         height: '32px',
@@ -1811,16 +1896,21 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                         fontSize: '0.9rem',
                                         fontFamily: "'Roboto', sans-serif",
                                         fontWeight: '500',
-                                        backgroundColor: 'white',
+                                        backgroundColor: readOnly ? '#f5f5f5' : 'white',
                                         outline: 'none',
-                                        transition: 'border-color 0.2s'
+                                        transition: 'border-color 0.2s',
+                                        cursor: readOnly ? 'not-allowed' : 'text'
                                     }}
                                     onFocus={(e) => {
-                                        e.target.style.borderColor = '#1E88E5';
-                                        e.target.style.boxShadow = 'none';
+                                        if (!readOnly) {
+                                            e.target.style.borderColor = '#1E88E5';
+                                            e.target.style.boxShadow = 'none';
+                                        }
                                     }}
                                     onBlur={(e) => {
-                                        e.target.style.borderColor = '#B7B7B7';
+                                        if (!readOnly) {
+                                            e.target.style.borderColor = '#B7B7B7';
+                                        }
                                     }}
                                 />
                             </div>
@@ -1833,6 +1923,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     placeholder="Sugar"
                                     value={formData.sugar}
                                     onChange={(e) => handleInputChange('sugar', e.target.value)}
+                                    disabled={readOnly}
                                     style={{
                                         width: '100%',
                                         height: '32px',
@@ -1842,16 +1933,21 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                         fontSize: '0.9rem',
                                         fontFamily: "'Roboto', sans-serif",
                                         fontWeight: '500',
-                                        backgroundColor: 'white',
+                                        backgroundColor: readOnly ? '#f5f5f5' : 'white',
                                         outline: 'none',
-                                        transition: 'border-color 0.2s'
+                                        transition: 'border-color 0.2s',
+                                        cursor: readOnly ? 'not-allowed' : 'text'
                                     }}
                                     onFocus={(e) => {
-                                        e.target.style.borderColor = '#1E88E5';
-                                        e.target.style.boxShadow = 'none';
+                                        if (!readOnly) {
+                                            e.target.style.borderColor = '#1E88E5';
+                                            e.target.style.boxShadow = 'none';
+                                        }
                                     }}
                                     onBlur={(e) => {
-                                        e.target.style.borderColor = '#B7B7B7';
+                                        if (!readOnly) {
+                                            e.target.style.borderColor = '#B7B7B7';
+                                        }
                                     }}
                                 />
                             </div>
@@ -1864,6 +1960,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     placeholder="TFT"
                                     value={formData.tft}
                                     onChange={(e) => handleInputChange('tft', e.target.value)}
+                                    disabled={readOnly}
                                     style={{
                                         width: '100%',
                                         height: '32px',
@@ -1873,16 +1970,21 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                         fontSize: '0.9rem',
                                         fontFamily: "'Roboto', sans-serif",
                                         fontWeight: '500',
-                                        backgroundColor: 'white',
+                                        backgroundColor: readOnly ? '#f5f5f5' : 'white',
                                         outline: 'none',
-                                        transition: 'border-color 0.2s'
+                                        transition: 'border-color 0.2s',
+                                        cursor: readOnly ? 'not-allowed' : 'text'
                                     }}
                                     onFocus={(e) => {
-                                        e.target.style.borderColor = '#1E88E5';
-                                        e.target.style.boxShadow = 'none';
+                                        if (!readOnly) {
+                                            e.target.style.borderColor = '#1E88E5';
+                                            e.target.style.boxShadow = 'none';
+                                        }
                                     }}
                                     onBlur={(e) => {
-                                        e.target.style.borderColor = '#B7B7B7';
+                                        if (!readOnly) {
+                                            e.target.style.borderColor = '#B7B7B7';
+                                        }
                                     }}
                                 />
                             </div>
@@ -1899,6 +2001,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                 <textarea
                                     value={formData.pastSurgicalHistory}
                                     onChange={(e) => handleInputChange('pastSurgicalHistory', e.target.value)}
+                                    disabled={readOnly}
                                     rows={2}
                                     style={{
                                         width: '100%',
@@ -1908,17 +2011,22 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                         fontSize: '0.9rem',
                                         fontFamily: "'Roboto', sans-serif",
                                         fontWeight: '500',
-                                        backgroundColor: 'white',
+                                        backgroundColor: readOnly ? '#f5f5f5' : 'white',
                                         outline: 'none',
                                         resize: 'vertical',
-                                        transition: 'border-color 0.2s'
+                                        transition: 'border-color 0.2s',
+                                        cursor: readOnly ? 'not-allowed' : 'text'
                                     }}
                                     onFocus={(e) => {
-                                        e.target.style.borderColor = '#1E88E5';
-                                        e.target.style.boxShadow = 'none';
+                                        if (!readOnly) {
+                                            e.target.style.borderColor = '#1E88E5';
+                                            e.target.style.boxShadow = 'none';
+                                        }
                                     }}
                                     onBlur={(e) => {
-                                        e.target.style.borderColor = '#B7B7B7';
+                                        if (!readOnly) {
+                                            e.target.style.borderColor = '#B7B7B7';
+                                        }
                                     }}
                                 />
                             </div>
@@ -1928,7 +2036,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                             </label>
                                 <textarea
                                     value={formData.previousVisitPlan}
-                                    disabled={true}
+                                    disabled={readOnly || true}
                                     rows={2}
                                     style={{
                                         width: '100%',
@@ -1951,7 +2059,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                 </label>
                                 <textarea
                                     value={formData.chiefComplaint}
-                                    disabled={true}
+                                    disabled={readOnly || true}
                                     rows={2}
                                     style={{
                                         width: '100%',
@@ -1977,7 +2085,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                 <div style={{ display: 'flex', gap: '10px', alignItems: 'end' }}>
                                     <div ref={complaintsRef} style={{ position: 'relative', flex: 1 }}>
                                         <div
-                                        onClick={() => setIsComplaintsOpen(prev => !prev)}
+                                        onClick={() => !readOnly && setIsComplaintsOpen(prev => !prev)}
                                         style={{
                                             display: 'flex',
                                             alignItems: 'center',
@@ -1989,15 +2097,21 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                             fontSize: '12px',
                                             fontFamily: "'Roboto', sans-serif",
                                             fontWeight: 500,
-                                            backgroundColor: 'white',
-                                            cursor: 'pointer',
-                                            userSelect: 'none'
+                                            backgroundColor: readOnly ? '#f5f5f5' : 'white',
+                                            cursor: readOnly ? 'not-allowed' : 'pointer',
+                                            userSelect: 'none',
+                                            pointerEvents: readOnly ? 'none' : 'auto',
+                                            opacity: readOnly ? 0.6 : 1
                                         }}
                                         onMouseEnter={(e) => {
-                                            (e.currentTarget as HTMLDivElement).style.borderColor = '#1E88E5';
+                                            if (!readOnly) {
+                                                (e.currentTarget as HTMLDivElement).style.borderColor = '#1E88E5';
+                                            }
                                         }}
                                         onMouseLeave={(e) => {
-                                            (e.currentTarget as HTMLDivElement).style.borderColor = '#B7B7B7';
+                                            if (!readOnly) {
+                                                (e.currentTarget as HTMLDivElement).style.borderColor = '#B7B7B7';
+                                            }
                                         }}
                                         >
                                             <span style={{ color: selectedComplaints.length ? '#000' : '#9e9e9e' }}>
@@ -2027,6 +2141,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                     type="text"
                                                     value={complaintSearch}
                                                     onChange={(e) => setComplaintSearch(e.target.value)}
+                                                    disabled={readOnly}
                                                     placeholder="Search complaints"
                                                     style={{
                                                         width: '100%',
@@ -2057,6 +2172,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                         {complaintsError}
                                                         <button 
                                                             onClick={() => {
+                                                                if (readOnly) return;
                                                                 setComplaintsError(null);
                                                                 // Trigger reload by updating a dependency
                                                                 const doctorId = patientData?.provider || '1';
@@ -2064,15 +2180,16 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                                     .then(setComplaintsOptions)
                                                                     .catch(e => setComplaintsError(e.message));
                                                             }}
+                                                            disabled={readOnly}
                                                             style={{ 
                                                                 marginLeft: '8px', 
                                                                 padding: '2px 6px', 
                                                                 fontSize: '10px', 
-                                                                backgroundColor: '#1976d2', 
+                                                                backgroundColor: readOnly ? '#9e9e9e' : '#1976d2', 
                                                                 color: 'white', 
                                                                 border: 'none', 
                                                                 borderRadius: '3px', 
-                                                                cursor: 'pointer' 
+                                                                cursor: readOnly ? 'not-allowed' : 'pointer' 
                                                             }}
                                                         >
                                                             Retry
@@ -2102,18 +2219,21 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                                     alignItems: 'center', 
                                                                     gap: '4px', 
                                                                     padding: '4px 2px', 
-                                                                    cursor: 'pointer', 
+                                                                    cursor: readOnly ? 'not-allowed' : 'pointer', 
                                                                     fontSize: '12px', 
                                                                     border: 'none',
                                                                     backgroundColor: checked ? '#e3f2fd' : 'transparent',
                                                                     borderRadius: '3px',
-                                                                    fontWeight: checked ? '600' : '400'
+                                                                    fontWeight: checked ? '600' : '400',
+                                                                    opacity: readOnly ? 0.6 : 1,
+                                                                    pointerEvents: readOnly ? 'none' : 'auto'
                                                                 }}
                                                             >
                                                             <input
                                                                 type="checkbox"
                                                                 checked={checked}
                                                                 onChange={(e) => {
+                                                                    if (readOnly) return;
                                                                     setSelectedComplaints(prev => {
                                                                         if (e.target.checked) {
                                                                             if (prev.includes(opt.value)) return prev;
@@ -2123,6 +2243,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                                         }
                                                                     });
                                                                 }}
+                                                                disabled={readOnly}
                                                                 style={{ margin: 0 }}
                                                             />
                                                             <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{opt.label}</span>
@@ -2137,23 +2258,29 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     <button
                                         style={{
                                             padding: '0 10px',
-                                            backgroundColor: '#1976d2',
+                                            backgroundColor: readOnly ? '#9e9e9e' : '#1976d2',
                                             color: 'white',
                                             border: 'none',
                                             borderRadius: '6px',
-                                            cursor: 'pointer',
+                                            cursor: readOnly ? 'not-allowed' : 'pointer',
                                             fontSize: '12px',
                                             fontWeight: '500',
                                             height: '32px',
-                                            transition: 'background-color 0.2s'
+                                            transition: 'background-color 0.2s',
+                                            opacity: readOnly ? 0.6 : 1
                                         }}
                                         onMouseEnter={(e) => {
-                                            e.currentTarget.style.backgroundColor = '#1565c0';
+                                            if (!readOnly) {
+                                                e.currentTarget.style.backgroundColor = '#1565c0';
+                                            }
                                         }}
                                         onMouseLeave={(e) => {
-                                            e.currentTarget.style.backgroundColor = '#1976d2';
+                                            if (!readOnly) {
+                                                e.currentTarget.style.backgroundColor = '#1976d2';
+                                            }
                                         }}
                                         onClick={handleAddComplaints}
+                                        disabled={readOnly}
                                     >
                                         Add
                                     </button>
@@ -2193,6 +2320,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                             value={row.comment}
                                                             placeholder="Enter duration/comment"
                                                             onChange={(e) => handleComplaintCommentChange(row.value, e.target.value)}
+                                                            disabled={readOnly}
                                                             className="duration-comment-input"
                                                             style={{
                                                                 width: '100%',
@@ -2211,7 +2339,8 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                     </div>
                                                     <div style={{ padding: '8px 10px', borderTop: '1px solid #e0e0e0' }}>
                                                         <div
-                                                            onClick={() => handleRemoveComplaint(row.value)}
+                                                            onClick={() => !readOnly && handleRemoveComplaint(row.value)}
+                                                            disabled={readOnly}
                                                             title="Remove"
                                                             style={{
                                                                 display: 'inline-flex',
@@ -2242,6 +2371,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                 <textarea
                                     value={formData.visitComments}
                                     onChange={(e) => handleInputChange('visitComments', e.target.value)}
+                                    disabled={readOnly}
                                     rows={2}
                                     style={{
                                         width: '100%',
@@ -2251,17 +2381,22 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                         fontSize: '0.9rem',
                                         fontFamily: "'Roboto', sans-serif",
                                         fontWeight: '500',
-                                        backgroundColor: 'white',
+                                        backgroundColor: readOnly ? '#f5f5f5' : 'white',
                                         outline: 'none',
                                         resize: 'vertical',
-                                        transition: 'border-color 0.2s'
+                                        transition: 'border-color 0.2s',
+                                        cursor: readOnly ? 'not-allowed' : 'text'
                                     }}
                                     onFocus={(e) => {
-                                        e.target.style.borderColor = '#1E88E5';
-                                        e.target.style.boxShadow = 'none';
+                                        if (!readOnly) {
+                                            e.target.style.borderColor = '#1E88E5';
+                                            e.target.style.boxShadow = 'none';
+                                        }
                                     }}
                                     onBlur={(e) => {
-                                        e.target.style.borderColor = '#B7B7B7';
+                                        if (!readOnly) {
+                                            e.target.style.borderColor = '#B7B7B7';
+                                        }
                                     }}
                                 />
                             </div>
@@ -2272,6 +2407,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                 <textarea
                                     value={formData.currentMedicines}
                                     onChange={(e) => handleInputChange('currentMedicines', e.target.value)}
+                                    disabled={readOnly}
                                     rows={2}
                                     style={{
                                         width: '100%',
@@ -2281,17 +2417,22 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                         fontSize: '0.9rem',
                                         fontFamily: "'Roboto', sans-serif",
                                         fontWeight: '500',
-                                        backgroundColor: 'white',
+                                        backgroundColor: readOnly ? '#f5f5f5' : 'white',
                                         outline: 'none',
                                         resize: 'vertical',
-                                        transition: 'border-color 0.2s'
+                                        transition: 'border-color 0.2s',
+                                        cursor: readOnly ? 'not-allowed' : 'text'
                                     }}
                                     onFocus={(e) => {
-                                        e.target.style.borderColor = '#1E88E5';
-                                        e.target.style.boxShadow = 'none';
+                                        if (!readOnly) {
+                                            e.target.style.borderColor = '#1E88E5';
+                                            e.target.style.boxShadow = 'none';
+                                        }
                                     }}
                                     onBlur={(e) => {
-                                        e.target.style.borderColor = '#B7B7B7';
+                                        if (!readOnly) {
+                                            e.target.style.borderColor = '#B7B7B7';
+                                        }
                                     }}
                                 />
                             </div>
@@ -2310,23 +2451,29 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
                                 <button
                                     type="button"
-                                    onClick={() => document.getElementById('fileInput')?.click()}
+                                    onClick={() => !readOnly && document.getElementById('fileInput')?.click()}
+                                    disabled={readOnly}
                                     style={{
                                         padding: '8px 16px',
-                                        backgroundColor: '#1976d2',
+                                        backgroundColor: readOnly ? '#9e9e9e' : '#1976d2',
                                         color: 'white',
                                         border: 'none',
                                         borderRadius: '6px',
-                                        cursor: 'pointer',
+                                        cursor: readOnly ? 'not-allowed' : 'pointer',
                                         fontSize: '12px',
                                         fontWeight: '500',
-                                        transition: 'background-color 0.2s'
+                                        transition: 'background-color 0.2s',
+                                        opacity: readOnly ? 0.6 : 1
                                     }}
                                     onMouseEnter={(e) => {
-                                        e.currentTarget.style.backgroundColor = '#1565c0';
+                                        if (!readOnly) {
+                                            e.currentTarget.style.backgroundColor = '#1565c0';
+                                        }
                                     }}
                                     onMouseLeave={(e) => {
-                                        e.currentTarget.style.backgroundColor = '#1976d2';
+                                        if (!readOnly) {
+                                            e.currentTarget.style.backgroundColor = '#1976d2';
+                                        }
                                     }}
                                 >
                                     Choose Files
@@ -2436,7 +2583,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                     )}
                                                     <span
                                                         onClick={async () => {
-                                                            if (deletingDocumentId === docId) return; // Prevent multiple clicks
+                                                            if (readOnly || deletingDocumentId === docId) return; // Prevent multiple clicks and disable in readOnly
                                                             
                                                             try {
                                                                 // Call backend API to delete the document
@@ -2492,8 +2639,8 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                             }
                                                         }}
                                                         style={{
-                                                            color: deletingDocumentId === docId ? '#9e9e9e' : '#d32f2f',
-                                                            cursor: deletingDocumentId === docId ? 'not-allowed' : 'pointer',
+                                                            color: (readOnly || deletingDocumentId === docId) ? '#9e9e9e' : '#d32f2f',
+                                                            cursor: (readOnly || deletingDocumentId === docId) ? 'not-allowed' : 'pointer',
                                                             fontSize: '14px',
                                                             padding: '0',
                                                             marginLeft: '5px',
@@ -2504,21 +2651,22 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                             width: '16px',
                                                             height: '16px',
                                                             borderRadius: '50%',
-                                                            backgroundColor: deletingDocumentId === docId ? 'rgba(158, 158, 158, 0.1)' : 'rgba(211, 47, 47, 0.1)',
+                                                            backgroundColor: (readOnly || deletingDocumentId === docId) ? 'rgba(158, 158, 158, 0.1)' : 'rgba(211, 47, 47, 0.1)',
                                                             transition: 'background-color 0.2s',
-                                                            opacity: deletingDocumentId === docId ? 0.6 : 1
+                                                            opacity: (readOnly || deletingDocumentId === docId) ? 0.6 : 1,
+                                                            pointerEvents: readOnly ? 'none' : 'auto'
                                                         }}
                                                         onMouseEnter={(e) => {
-                                                            if (deletingDocumentId !== docId) {
+                                                            if (!readOnly && deletingDocumentId !== docId) {
                                                                 e.currentTarget.style.backgroundColor = 'rgba(211, 47, 47, 0.2)';
                                                             }
                                                         }}
                                                         onMouseLeave={(e) => {
-                                                            if (deletingDocumentId !== docId) {
+                                                            if (!readOnly && deletingDocumentId !== docId) {
                                                                 e.currentTarget.style.backgroundColor = 'rgba(211, 47, 47, 0.1)';
                                                             }
                                                         }}
-                                                        title={deletingDocumentId === docId ? "Deleting..." : "Remove document"}
+                                                        title={readOnly ? "Read-only mode" : (deletingDocumentId === docId ? "Deleting..." : "Remove document")}
                                                     >
                                                         ×
                                                     </span>
@@ -2568,16 +2716,18 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                         })()})
                                                     </span>
                                                     <span
-                                                        onClick={() => removeFile(index)}
+                                                        onClick={() => !readOnly && removeFile(index)}
                                                         style={{
-                                                            color: 'black',
-                                                            cursor: 'pointer',
+                                                            color: readOnly ? '#9e9e9e' : 'black',
+                                                            cursor: readOnly ? 'not-allowed' : 'pointer',
                                                             fontSize: '14px',
                                                             padding: '0',
                                                             marginLeft: '5px',
-                                                            fontWeight: 'bold'
+                                                            fontWeight: 'bold',
+                                                            opacity: readOnly ? 0.5 : 1,
+                                                            pointerEvents: readOnly ? 'none' : 'auto'
                                                         }}
-                                                        title="Remove file"
+                                                        title={readOnly ? "Read-only mode" : "Remove file"}
                                                     >
                                                         ×
                                                     </span>
@@ -2647,49 +2797,55 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                 }}>
                     <button
                         onClick={handleReset}
+                        disabled={readOnly}
                         style={{
                             padding: '10px 20px',
-                            backgroundColor: '#1976d2',
+                            backgroundColor: readOnly ? '#9e9e9e' : '#1976d2',
                             color: 'white',
                             border: 'none',
                             borderRadius: '4px',
-                            cursor: 'pointer',
+                            cursor: readOnly ? 'not-allowed' : 'pointer',
                             fontSize: '14px',
                             fontWeight: '500',
-                            transition: 'background-color 0.2s'
+                            transition: 'background-color 0.2s',
+                            opacity: readOnly ? 0.6 : 1
                         }}
                         onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = '#1565c0';
+                            if (!readOnly) {
+                                e.currentTarget.style.backgroundColor = '#1565c0';
+                            }
                         }}
                         onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = '#1976d2';
+                            if (!readOnly) {
+                                e.currentTarget.style.backgroundColor = '#1976d2';
+                            }
                         }}
                     >
                         Reset
                     </button>
                     <button
                         onClick={handleSubmit}
-                        disabled={isLoading}
+                        disabled={readOnly || isLoading}
                         style={{
                             padding: '10px 20px',
-                            backgroundColor: isLoading ? '#9e9e9e' : '#1976d2',
+                            backgroundColor: (readOnly || isLoading) ? '#9e9e9e' : '#1976d2',
                             color: 'white',
                             border: 'none',
                             borderRadius: '4px',
-                            cursor: isLoading ? 'not-allowed' : 'pointer',
+                            cursor: (readOnly || isLoading) ? 'not-allowed' : 'pointer',
                             fontSize: '14px',
                             fontWeight: '500',
                             transition: 'background-color 0.2s',
-                            opacity: isLoading ? 0.7 : 1
+                            opacity: (readOnly || isLoading) ? 0.6 : 1
                         }}
                         onMouseEnter={(e) => {
-                            if (!isLoading) {
-                            e.currentTarget.style.backgroundColor = '#1565c0';
+                            if (!readOnly && !isLoading) {
+                                e.currentTarget.style.backgroundColor = '#1565c0';
                             }
                         }}
                         onMouseLeave={(e) => {
-                            if (!isLoading) {
-                            e.currentTarget.style.backgroundColor = '#1976d2';
+                            if (!readOnly && !isLoading) {
+                                e.currentTarget.style.backgroundColor = '#1976d2';
                             }
                         }}
                     >
@@ -2731,6 +2887,21 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                 // Example: await referralService.createReferral(referralData);
             }}
         />
+
+        {/* Quick Registration Modal - appears on top of Patient Visit Details window */}
+        {showQuickRegistration && patientData?.patientId && (
+            <AddPatientPage
+                open={showQuickRegistration}
+                onClose={() => {
+                    setShowQuickRegistration(false);
+                    setSessionDataForQuickReg(null);
+                }}
+                patientId={String(patientData.patientId)}
+                readOnly={true}
+                doctorId={(patientData as any)?.doctorId || sessionDataForQuickReg?.doctorId}
+                clinicId={(patientData as any)?.clinicId || sessionDataForQuickReg?.clinicId}
+            />
+        )}
         </>
     );
 };

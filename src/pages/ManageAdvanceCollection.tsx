@@ -3,10 +3,13 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import { Edit, Close } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { patientService, Patient } from "../services/patientService";
+import AddPatientPage from "./AddPatientPage";
+import { sessionService } from "../services/sessionService";
 
 type AdvanceCollection = {
     sr: number;
     patientName: string;
+    patientId?: string;
     admissionIpdNo: string;
     admissionDate: string;
     reasonOfAdmission: string;
@@ -26,6 +29,9 @@ export default function ManageAdvanceCollection() {
     const [showEmptyTable, setShowEmptyTable] = useState<boolean>(false);
     const searchInputRef = useRef<HTMLInputElement>(null);
     const searchRef = useRef<HTMLDivElement>(null);
+    const [showQuickRegistration, setShowQuickRegistration] = useState(false);
+    const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
+    const [sessionData, setSessionData] = useState<any>(null);
 
     // Sample data matching the image
     const [advanceCollections, setAdvanceCollections] = useState<AdvanceCollection[]>([
@@ -250,6 +256,60 @@ export default function ManageAdvanceCollection() {
     const handleEdit = (collection: AdvanceCollection) => {
         console.log("Editing:", collection);
     };
+
+    const handlePatientNameClick = async (collection: AdvanceCollection) => {
+        // If patientId is already available, use it directly
+        if (collection.patientId) {
+            setSelectedPatientId(collection.patientId);
+            setShowQuickRegistration(true);
+            return;
+        }
+
+        // Otherwise, search for patient by name to get the ID
+        try {
+            const response = await patientService.searchPatients({
+                query: collection.patientName,
+                status: 'all',
+                page: 0,
+                size: 10
+            });
+
+            const patients = response.patients || [];
+            // Try to find exact match by name
+            const matchedPatient = patients.find((p: any) => {
+                const fullName = `${p.first_name || ''} ${p.middle_name || ''} ${p.last_name || ''}`.trim();
+                return fullName.toLowerCase() === collection.patientName.toLowerCase();
+            });
+
+            if (matchedPatient && matchedPatient.id) {
+                setSelectedPatientId(String(matchedPatient.id));
+                setShowQuickRegistration(true);
+            } else if (patients.length > 0 && patients[0].id) {
+                // Use first result if exact match not found
+                setSelectedPatientId(String(patients[0].id));
+                setShowQuickRegistration(true);
+            } else {
+                console.warn('Patient not found for:', collection.patientName);
+            }
+        } catch (error) {
+            console.error('Error searching for patient:', error);
+        }
+    };
+
+    // Load session data on component mount
+    useEffect(() => {
+        const loadSessionData = async () => {
+            try {
+                const sessionResult = await sessionService.getSessionInfo();
+                if (sessionResult.success && sessionResult.data) {
+                    setSessionData(sessionResult.data);
+                }
+            } catch (error) {
+                console.error('Error getting session data:', error);
+            }
+        };
+        loadSessionData();
+    }, []);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -498,7 +558,18 @@ export default function ManageAdvanceCollection() {
                             {advanceCollections.map((collection) => (
                                 <tr key={collection.sr}>
                                     <td className="sr-col">{collection.sr}</td>
-                                    <td className="patient-name-col">{collection.patientName}</td>
+                                    <td 
+                                        className="patient-name-col"
+                                        onClick={() => handlePatientNameClick(collection)}
+                                        style={{
+                                            cursor: 'pointer',
+                                            textDecoration: 'underline',
+                                            color: '#1E88E5'
+                                        }}
+                                        title="Click to view patient details"
+                                    >
+                                        {collection.patientName}
+                                    </td>
                                     <td className="admission-ipd-col">{collection.admissionIpdNo}</td>
                                     <td className="admission-date-col">{collection.admissionDate}</td>
                                     <td className="reason-col">{collection.reasonOfAdmission}</td>
@@ -529,6 +600,21 @@ export default function ManageAdvanceCollection() {
                     </table>
                 </div>
             </div>
+
+            {/* Quick Registration Modal */}
+            {showQuickRegistration && selectedPatientId && (
+                <AddPatientPage
+                    open={showQuickRegistration}
+                    onClose={() => {
+                        setShowQuickRegistration(false);
+                        setSelectedPatientId(null);
+                    }}
+                    patientId={selectedPatientId}
+                    readOnly={true}
+                    doctorId={sessionData?.doctorId}
+                    clinicId={sessionData?.clinicId}
+                />
+            )}
         </div>
     );
 }

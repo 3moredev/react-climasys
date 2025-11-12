@@ -22,6 +22,7 @@ interface LoginFormData {
 }
 
 export default function LoginPage() {
+  console.log('LoginPage: Component rendering')
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
   const location = useLocation()
@@ -38,8 +39,8 @@ export default function LoginPage() {
   })
 
   useEffect(() => {
-    console.log('Login useEffect - isAuthenticated:', isAuthenticated)
-    if (isAuthenticated) {
+    console.log('Login useEffect - isAuthenticated:', isAuthenticated, 'location:', location.pathname)
+    if (isAuthenticated && location.pathname === '/login') {
       // Redirect to appointments screen after successful login
       const from = (location.state as any)?.from?.pathname || '/appointment'
       console.log('Navigating to:', from)

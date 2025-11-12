@@ -4,6 +4,7 @@ import { Snackbar } from '@mui/material';
 import { Calendar } from 'lucide-react';
 import { patientService } from '../services/patientService';
 import { SessionInfo } from '../services/sessionService';
+import AddPatientPage from '../pages/AddPatientPage';
 
 interface AppointmentRow {
     reports_received: any;
@@ -74,6 +75,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
     const [labTestsRows, setLabTestsRows] = useState<Array<{ value: string; label: string }>>([]);
     const labTestsRef = useRef<HTMLDivElement | null>(null);
     const [showSelectedTable, setShowSelectedTable] = useState(false);
+    const [showQuickRegistration, setShowQuickRegistration] = useState(false);
 
     // Resolve provider/doctor name for display (fallbacks in priority order)
     const formatProviderLabel = (name?: string): string => {
@@ -718,14 +720,24 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                             zIndex: 1000
                         }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                                <div style={{
-                                    color: '#4caf50',
-                                    fontSize: '16px',
-                                    fontWeight: '500',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '8px'
-                                }}>
+                                <div 
+                                    onClick={() => {
+                                        if (patientData?.patientId) {
+                                            setShowQuickRegistration(true);
+                                        }
+                                    }}
+                                    style={{
+                                        color: '#4caf50',
+                                        fontSize: '16px',
+                                        fontWeight: '500',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '8px',
+                                        cursor: patientData?.patientId ? 'pointer' : 'default',
+                                        textDecoration: patientData?.patientId ? 'underline' : 'none'
+                                    }}
+                                    title={patientData?.patientId ? 'Click to view patient details' : ''}
+                                >
                                     <span>{patientData.patient}</span>
                                     <span>/</span>
                                     <span>{patientData.gender}</span>
@@ -1383,6 +1395,20 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                 message={snackbarMessage}
                 anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
             />
+
+            {/* Quick Registration Modal - appears on top of Lab Test Entry window */}
+            {showQuickRegistration && patientData?.patientId && (
+                <AddPatientPage
+                    open={showQuickRegistration}
+                    onClose={() => {
+                        setShowQuickRegistration(false);
+                    }}
+                    patientId={patientData.patientId}
+                    readOnly={true}
+                    doctorId={patientData?.doctorId || sessionData?.doctorId}
+                    clinicId={patientData?.clinicId || sessionData?.clinicId}
+                />
+            )}
         </>
     );
 };

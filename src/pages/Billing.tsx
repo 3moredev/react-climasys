@@ -22,6 +22,7 @@ import PastServicesPopup from "../components/PastServicesPopup";
 import { DocumentService } from "../services/documentService";
 import AccountsPopup from "../components/AccountsPopup";
 import AddBillingPopup from "../components/AddBillingPopup";
+import AddPatientPage from "./AddPatientPage";
 
 // Specific styles for Duration/Comment input in table
 const durationCommentStyles = `
@@ -263,6 +264,7 @@ export default function Treatment() {
     // Previous visits data - now will be populated from API
     const [previousVisits, setPreviousVisits] = useState<PreviousVisit[]>([]);
     const [loadingPreviousVisits, setLoadingPreviousVisits] = useState(false);
+    const [showQuickRegistration, setShowQuickRegistration] = useState(false);
     const [showPatientFormDialog, setShowPatientFormDialog] = useState(false);
     const [formPatientData, setFormPatientData] = useState<any>(null);
     const [selectedPatientForForm, setSelectedPatientForForm] = useState<any>(null);
@@ -2755,7 +2757,21 @@ export default function Treatment() {
                                 justifyContent: 'space-between', 
                                 alignItems: 'center'
                             }}>
-                                <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#2e7d32' }}>
+                                <div 
+                                    onClick={() => {
+                                        if (treatmentData?.patientId) {
+                                            setShowQuickRegistration(true);
+                                        }
+                                    }}
+                                    style={{ 
+                                        fontSize: '16px', 
+                                        fontWeight: 'bold', 
+                                        color: '#2e7d32',
+                                        cursor: treatmentData?.patientId ? 'pointer' : 'default',
+                                        textDecoration: treatmentData?.patientId ? 'underline' : 'none'
+                                    }}
+                                    title={treatmentData?.patientId ? 'Click to view patient details' : ''}
+                                >
                                     {treatmentData?.patientName || 'Amit Kalamkar'} / {treatmentData?.gender || 'Male'} / {treatmentData?.age || 48} Y / {treatmentData?.contact || 'N/A'}
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
@@ -3643,6 +3659,20 @@ export default function Treatment() {
                 selectedBillingDetailIds={selectedBillingDetailIds}
                 setSelectedBillingDetailIds={setSelectedBillingDetailIds}
             />
+
+            {/* Quick Registration Modal - appears on top of Collections screen */}
+            {showQuickRegistration && treatmentData?.patientId && (
+                <AddPatientPage
+                    open={showQuickRegistration}
+                    onClose={() => {
+                        setShowQuickRegistration(false);
+                    }}
+                    patientId={String(treatmentData.patientId)}
+                    readOnly={true}
+                    doctorId={treatmentData?.doctorId || sessionData?.doctorId}
+                    clinicId={treatmentData?.clinicId || sessionData?.clinicId}
+                />
+            )}
 
         </div>
     );
