@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Close } from "@mui/icons-material";
 import "bootstrap/dist/css/bootstrap.min.css";
+import AddPatientPage from "../pages/AddPatientPage";
+import { sessionService } from "../services/sessionService";
 
 interface AdmissionCardDialogProps {
   open: boolean;
@@ -49,6 +51,8 @@ export default function AdmissionCardDialog({
     lastAdvanceDate: admissionData?.lastAdvanceDate || "",
     dateOfDischarge: admissionData?.dateOfDischarge || "",
   });
+  const [showQuickRegistration, setShowQuickRegistration] = useState(false);
+  const [sessionData, setSessionData] = useState<any>(null);
 
   useEffect(() => {
     if (admissionData) {
@@ -80,6 +84,23 @@ export default function AdmissionCardDialog({
     }
   }, [admissionData]);
 
+  // Load session data on component mount
+  useEffect(() => {
+    const loadSessionData = async () => {
+      try {
+        const sessionResult = await sessionService.getSessionInfo();
+        if (sessionResult.success && sessionResult.data) {
+          setSessionData(sessionResult.data);
+        }
+      } catch (error) {
+        console.error('Error getting session data:', error);
+      }
+    };
+    if (open) {
+      loadSessionData();
+    }
+  }, [open]);
+
   const handleInputChange = (field: string, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
@@ -98,6 +119,13 @@ export default function AdmissionCardDialog({
 
   if (!open) return null;
 
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    // Only close if clicking directly on the backdrop, not on any child elements
+    if (e.target === e.currentTarget && !showQuickRegistration) {
+      onClose();
+    }
+  };
+
   return (
     <div
       style={{
@@ -109,7 +137,7 @@ export default function AdmissionCardDialog({
         alignItems: "center",
         zIndex: 10000,
       }}
-      onClick={onClose}
+      onClick={handleBackdropClick}
     >
       <div
         className="bg-white p-4 rounded shadow-lg"
@@ -131,7 +159,20 @@ export default function AdmissionCardDialog({
             <Close />
           </button>
         </div>
-        <div className="text-primary mb-3" style={{ fontSize: "14px" }}>
+        <div 
+          onClick={() => {
+            if (displayPatientData.id) {
+              setShowQuickRegistration(true);
+            }
+          }}
+          className="text-primary mb-3" 
+          style={{ 
+            fontSize: "14px",
+            cursor: displayPatientData.id ? 'pointer' : 'default',
+            textDecoration: displayPatientData.id ? 'underline' : 'none'
+          }}
+          title={displayPatientData.id ? 'Click to view patient details' : ''}
+        >
           {displayPatientData.name} / Id: ({displayPatientData.id}) /{" "}
           {displayPatientData.gender} / {displayPatientData.age} Yr
         </div>
@@ -299,6 +340,20 @@ export default function AdmissionCardDialog({
           </button>
         </div>
       </div>
+
+      {/* Quick Registration Modal - appears on top of Admission Card window */}
+      {showQuickRegistration && displayPatientData.id && (
+        <AddPatientPage
+          open={showQuickRegistration}
+          onClose={() => {
+            setShowQuickRegistration(false);
+          }}
+          patientId={displayPatientData.id}
+          readOnly={true}
+          doctorId={sessionData?.doctorId}
+          clinicId={sessionData?.clinicId}
+        />
+      )}
     </div>
   );
 }
