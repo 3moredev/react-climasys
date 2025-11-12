@@ -670,7 +670,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
         sx: {
           borderRadius: '12px',
           maxHeight: '98vh',
-          minHeight: '96vh',
+          minHeight: '60vh',
           width: '90vw',
           zIndex: 11000
         }

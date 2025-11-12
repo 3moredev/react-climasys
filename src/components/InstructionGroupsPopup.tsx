@@ -29,6 +29,28 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
   initialSelectedGroups = [],
   onChange
 }) => {
+  // Debug: Log received props
+  console.log('=== INSTRUCTION GROUPS POPUP: Received Props ===');
+  console.log('isOpen:', isOpen);
+  console.log('initialSelectedGroups prop:', initialSelectedGroups);
+  console.log('initialSelectedGroups length:', initialSelectedGroups?.length || 0);
+  console.log('initialSelectedGroups is array:', Array.isArray(initialSelectedGroups));
+  if (initialSelectedGroups && initialSelectedGroups.length > 0) {
+    console.log('initialSelectedGroups content:', JSON.stringify(initialSelectedGroups, null, 2));
+    initialSelectedGroups.forEach((group, idx) => {
+      console.log(`Received Group ${idx + 1}:`, {
+        id: group.id,
+        name: group.name,
+        nameHindi: group.nameHindi,
+        instructions: group.instructions,
+        hasName: !!group.name,
+        hasInstructions: !!group.instructions
+      });
+    });
+  } else {
+    console.warn('⚠️ initialSelectedGroups prop is EMPTY or UNDEFINED!');
+  }
+
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedGroups, setSelectedGroups] = useState<InstructionGroup[]>(initialSelectedGroups);
   const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]);
@@ -76,9 +98,29 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
             })
           : [];
         if (!cancelled) {
+          const normalize = (value: string) => value.trim().toUpperCase();
+          console.log('Instruction groups mapped for dropdown:', mapped);
           setInstructionGroups(mapped);
-          // Don't reset selections when data changes - keep existing selections
-          setSelectedGroupIds([]);
+          if (initialSelectedGroups && initialSelectedGroups.length > 0) {
+            const matchedIds = mapped
+              .filter(group => {
+                const normalizedGroupName = normalize(group.name || '');
+                return initialSelectedGroups.some(selected =>
+                  normalize(selected.name || '') === normalizedGroupName
+                );
+              })
+              .map(group => group.id);
+            if (matchedIds.length > 0) {
+              console.log('Matched dropdown IDs for initial selections:', matchedIds);
+              setSelectedGroupIds(matchedIds);
+            } else {
+              console.log('No dropdown matches found for initial selections');
+              setSelectedGroupIds([]);
+            }
+          } else {
+            // Don't reset selections when we already have user selections
+            setSelectedGroupIds([]);
+          }
         }
       } catch (e: any) {
         if (!cancelled) {
@@ -91,17 +133,52 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
     }
     loadGroups();
     return () => { cancelled = true; };
-  }, [isOpen]);
-
-  // Sync initialSelectedGroups when popup opens
-  useEffect(() => {
-    if (isOpen && initialSelectedGroups) {
-      setSelectedGroups(initialSelectedGroups);
-      // Also sync selectedGroupIds by matching IDs or names
-      const ids = initialSelectedGroups.map(g => g.id);
-      setSelectedGroupIds(ids);
-    }
   }, [isOpen, initialSelectedGroups]);
+
+  // Sync initialSelectedGroups when popup opens (these are saved instructions from master-lists API)
+  useEffect(() => {
+    console.log('=== POPUP: Sync useEffect triggered ===');
+    console.log('isOpen:', isOpen);
+    console.log('initialSelectedGroups:', initialSelectedGroups);
+    console.log('initialSelectedGroups length:', initialSelectedGroups?.length || 0);
+    console.log('instructionGroups length:', instructionGroups.length);
+    console.log('Current selectedGroups state:', selectedGroups);
+    
+    if (isOpen) {
+      if (initialSelectedGroups && initialSelectedGroups.length > 0) {
+        // Display saved instructions from master-lists API in the tables
+        console.log('✅ POPUP: Setting selectedGroups from initialSelectedGroups');
+        console.log('initialSelectedGroups to set:', JSON.stringify(initialSelectedGroups, null, 2));
+        setSelectedGroups(initialSelectedGroups);
+        console.log('✅ POPUP: selectedGroups state has been SET');
+        
+        // Sync dropdown selection with loaded instruction groups if possible
+        const normalize = (value: string) => value.trim().toUpperCase();
+        const matchedIds = instructionGroups
+          .filter(group => {
+            const normalizedGroupName = normalize(group.name || '');
+            return initialSelectedGroups.some(selected =>
+              normalize(selected.name || '') === normalizedGroupName
+            );
+          })
+          .map(group => group.id);
+        console.log('Matched dropdown IDs:', matchedIds);
+        if (matchedIds.length > 0) {
+          console.log('✅ POPUP: Set selectedGroupIds to matched IDs');
+          setSelectedGroupIds(matchedIds);
+        } else {
+          // Fallback: clear dropdown selection
+          console.log('⚠️ POPUP: No matching dropdown groups found, cleared selectedGroupIds');
+          setSelectedGroupIds([]);
+        }
+      } else {
+        // No saved instructions, clear everything
+        console.warn('⚠️ POPUP: initialSelectedGroups is empty, clearing selectedGroups');
+        setSelectedGroups([]);
+        setSelectedGroupIds([]);
+      }
+    }
+  }, [isOpen, initialSelectedGroups, instructionGroups]);
 
   const filteredGroups = instructionGroups.filter(group =>
     group.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -141,9 +218,11 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
 
   const handleGroupSelect = (group: InstructionGroup) => {
     if (selectedGroupIds.includes(group.id)) {
+      console.log('Deselecting group from dropdown:', group);
       setSelectedGroupIds(selectedGroupIds.filter(id => id !== group.id));
       setSelectedGroups(selectedGroups.filter(g => g.id !== group.id));
     } else {
+      console.log('Selecting group from dropdown:', group);
       setSelectedGroupIds([...selectedGroupIds, group.id]);
       setSelectedGroups([...selectedGroups, group]);
     }
@@ -158,10 +237,12 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
     );
     
     if (newGroups.length === 0) {
+      console.log('No new groups to add from dropdown selection.');
       return;
     }
     
     const updatedGroups = [...selectedGroups, ...newGroups];
+    console.log('Adding groups from dropdown to tables:', newGroups);
     setSelectedGroups(updatedGroups);
     setSelectedGroupIds([]);
     setIsGroupsOpen(false);

@@ -296,6 +296,7 @@ export default function Treatment() {
         pallorHb: '',
         detailedHistory: '',
         examinationFindings: '',
+        importantFindings: '',
         additionalComments: '',
         procedurePerformed: '',
         dressingBodyParts: ''
@@ -486,6 +487,11 @@ export default function Treatment() {
     
     // Instruction groups state
     const [selectedInstructionGroups, setSelectedInstructionGroups] = useState<InstructionGroup[]>([]);
+    React.useEffect(() => {
+        console.log('*** selectedInstructionGroups state updated ***');
+        console.log('New selectedInstructionGroups:', selectedInstructionGroups);
+        console.log('selectedInstructionGroups length:', selectedInstructionGroups?.length || 0);
+    }, [selectedInstructionGroups]);
     const [dressingSearch, setDressingSearch] = useState('');
     const [isDressingsOpen, setIsDressingsOpen] = useState(false);
     const dressingsRef = React.useRef<HTMLDivElement | null>(null);
@@ -1293,11 +1299,19 @@ export default function Treatment() {
         async function loadBillingFromMasterLists() {
             // Only load if we have all required parameters
             if (!treatmentData?.patientId || !treatmentData?.doctorId || !sessionData?.clinicId || 
-                !treatmentData?.visitNumber || !(sessionData as any)?.shiftId) {
+                !treatmentData?.visitNumber) {
+                console.log('⏳ Skipping master-lists load: missing context', {
+                    hasPatientId: !!treatmentData?.patientId,
+                    hasDoctorId: !!treatmentData?.doctorId,
+                    hasClinicId: !!sessionData?.clinicId,
+                    hasVisitNumber: !!treatmentData?.visitNumber,
+                    shiftId: (sessionData as any)?.shiftId
+                });
                 return;
             }
 
             try {
+                console.log('🔄 Fetching master-lists data for instruction groups...');
                 // Use today's date for visitDate
                 const visitDate = toYyyyMmDd(new Date());
                 
@@ -1329,28 +1343,65 @@ export default function Treatment() {
                     masterListsBillingRef.current = [];
                 }
 
-                // Extract and map instructions array from response
+                // Extract instructionGroups array from response (this contains the selected groups)
+                const instructionGroupsArray = data?.data?.instructionGroups || [];
                 const instructionsArray = data?.data?.instructions || [];
-                if (Array.isArray(instructionsArray) && instructionsArray.length > 0) {
-                    const mappedInstructionGroups: InstructionGroup[] = instructionsArray.map((instr: any, idx: number) => {
-                        const groupDesc = instr?.group_description ?? instr?.Group_Description ?? '';
-                        const instrDesc = instr?.instructions_description ?? instr?.Instructions_Description ?? '';
-                        const seqNo = instr?.sequence_no ?? instr?.Sequence_No ?? idx + 1;
+                
+                if (Array.isArray(instructionGroupsArray) && instructionGroupsArray.length > 0) {
+                    // Map instructionGroups to InstructionGroup format
+                    // Match with instructions array to get full instruction text
+                    const normalize = (value: any) => String(value ?? '').trim().toUpperCase();
+                    const mappedInstructionGroups: InstructionGroup[] = instructionGroupsArray.map((group: any, idx: number) => {
+                        const groupDescRaw = group?.group_description ?? group?.Group_Description ?? group?.groupName ?? group?.name ?? '';
+                        const groupNameUpper = normalize(groupDescRaw);
+                        
+                        // Find matching instruction text from instructions array
+                        const matchingInstruction = Array.isArray(instructionsArray) 
+                            ? instructionsArray.find((instr: any) => {
+                                const instrGroupDesc = instr?.group_description ?? instr?.Group_Description ?? instr?.groupDescription ?? instr?.GroupDescription ?? '';
+                                return normalize(instrGroupDesc) === groupNameUpper;
+                            })
+                            : null;
+                        
+                        const instrDesc = matchingInstruction 
+                            ? (matchingInstruction?.instructions_description ?? matchingInstruction?.Instructions_Description ?? matchingInstruction?.instructionText ?? '')
+                            : '';
+                        const trimmedInstructions = String(instrDesc ?? '').trim();
+                        const sequenceNo = matchingInstruction?.sequence_no ?? matchingInstruction?.Sequence_No ?? group?.sequence_no ?? group?.Sequence_No ?? idx + 1;
                         
                         return {
-                            id: String(seqNo),
-                            name: String(groupDesc).toUpperCase(),
+                            id: String(sequenceNo),
+                            name: groupNameUpper,
                             nameHindi: '', // Not provided in API response
-                            instructions: String(instrDesc)
+                            instructions: trimmedInstructions
                         };
                     });
                     
                     if (!cancelled) {
+                        console.log('=== TREATMENT SCREEN: Setting selectedInstructionGroups from master-lists API ===');
+                        console.log('Raw instructionGroupsArray from API:', instructionGroupsArray);
+                        console.log('Raw instructionsArray from API:', instructionsArray);
+                        console.log('Mapped instruction groups:', mappedInstructionGroups);
+                        console.log('Mapped groups count:', mappedInstructionGroups.length);
+                        mappedInstructionGroups.forEach((group, idx) => {
+                            console.log(`Mapped Group ${idx + 1}:`, {
+                                id: group.id,
+                                name: group.name,
+                                nameHindi: group.nameHindi,
+                                instructions: group.instructions,
+                                hasName: !!group.name,
+                                hasInstructions: !!group.instructions
+                            });
+                        });
                         setSelectedInstructionGroups(mappedInstructionGroups);
-                        console.log('Loaded instruction groups from master-lists:', mappedInstructionGroups);
+                        console.log('✅ selectedInstructionGroups state has been SET');
                     }
                 } else {
                     if (!cancelled) {
+                        console.log('=== TREATMENT SCREEN: instructionGroupsArray is EMPTY ===');
+                        console.log('instructionGroupsArray:', instructionGroupsArray);
+                        console.log('instructionsArray:', instructionsArray);
+                        console.warn('⚠️ No instruction groups found in API response, clearing selectedInstructionGroups');
                         setSelectedInstructionGroups([]);
                     }
                 }
@@ -2244,18 +2295,31 @@ export default function Treatment() {
         clinicId: string;
         patientVisitNo: number;
         languageId?: number;
-    }) => {
+    }, opts?: { retries?: number; delayMs?: number }) => {
         try {
             console.log('=== FETCHING APPOINTMENT DETAILS AFTER SAVE ===');
             console.log('Request params:', params);
-            const result: any = await visitService.getAppointmentDetails({
-                patientId: String(params.patientId),
-                doctorId: String(params.doctorId),
-                shiftId: Number(params.shiftId),
-                clinicId: String(params.clinicId),
-                patientVisitNo: Number(params.patientVisitNo),
-                languageId: params.languageId ?? 1
-            });
+            // Add retry loop to tolerate eventual consistency after save
+            const retries = Math.max(0, opts?.retries ?? 0);
+            const delayMs = Math.max(0, opts?.delayMs ?? 0);
+            let result: any = null;
+            for (let attempt = 0; attempt <= retries; attempt++) {
+                result = await visitService.getAppointmentDetails({
+                    patientId: String(params.patientId),
+                    doctorId: String(params.doctorId),
+                    shiftId: Number(params.shiftId),
+                    clinicId: String(params.clinicId),
+                    patientVisitNo: Number(params.patientVisitNo),
+                    languageId: params.languageId ?? 1
+                });
+                if (result && result.found && result.mainData && result.mainData.length > 0) {
+                    break;
+                }
+                if (attempt < retries && delayMs > 0) {
+                    console.log(`Appointment details not ready yet, retrying... (${attempt + 1}/${retries})`);
+                    await new Promise(res => setTimeout(res, delayMs));
+                }
+            }
             console.log('Raw appointment-details API result:', result);
             if (!result || !result.found || !result.mainData || result.mainData.length === 0) {
                 console.log('No appointment details found to patch.');
@@ -2280,7 +2344,7 @@ export default function Treatment() {
                 allergyDetails: appointmentData.allergyDetails ?? appointmentData.allergy ?? '',
                 inPerson: appointmentData.inPerson,
                 followUpFlag: appointmentData.followUpFlag,
-                followUpType: appointmentData.followUp,
+                followUpType: appointmentData.followUpType ?? appointmentData.followUp,
                 billed: appointmentData.feesToCollect ?? appointmentData.fees ?? '',
                 discount: appointmentData.discount ?? appointmentData.originalDiscount ?? '',
                 feesPaid: appointmentData.feesPaid ?? 0,
@@ -2298,9 +2362,11 @@ export default function Treatment() {
                 pallorHb: appointmentData.pallor ?? '',
                 detailedHistory: appointmentData.symptomComment ?? '',
                 examinationFindings: appointmentData.observation ?? appointmentData.importantFindings ?? '',
+                importantFindings: appointmentData.importantFindings ?? '',
                 additionalComments: appointmentData.additionalComments ?? appointmentData.impression ?? '',
                 habitDetails: appointmentData.habitDetails ?? '',
-                procedurePerformed: appointmentData.observation ?? ''
+                procedurePerformed: appointmentData.observation ?? '',
+                followUpComment: appointmentData.followUpComment ?? ''
             };
             console.log('Normalized appointment fields:', normalized);
 
@@ -2328,6 +2394,7 @@ export default function Treatment() {
                 maybeSet('pallorHb', normalized.pallorHb);
                 maybeSet('detailedHistory', normalized.detailedHistory);
                 maybeSet('examinationFindings', normalized.examinationFindings);
+                maybeSet('importantFindings', normalized.importantFindings);
                 maybeSet('additionalComments', normalized.additionalComments);
                 maybeSet('medicalHistoryText', normalized.habitDetails);
                 maybeSet('procedurePerformed', normalized.procedurePerformed);
@@ -2368,11 +2435,23 @@ export default function Treatment() {
                 }
 
                 // Patch visitType flags if present
-                if (typeof normalized.inPerson === 'boolean' || typeof normalized.followUpFlag === 'boolean' || typeof normalized.followUpType === 'string') {
+                if (typeof normalized.inPerson === 'boolean' || typeof normalized.followUpFlag === 'boolean' || normalized.followUpFlag !== undefined || typeof normalized.followUpType === 'string') {
+                    // Handle followUpFlag: convert to boolean if needed (handles true, "true", 1, etc.)
+                    let followUpValue = false;
+                    if (normalized.followUpFlag !== undefined && normalized.followUpFlag !== null) {
+                        if (typeof normalized.followUpFlag === 'boolean') {
+                            followUpValue = normalized.followUpFlag;
+                        } else if (typeof normalized.followUpFlag === 'string') {
+                            followUpValue = normalized.followUpFlag.toLowerCase() === 'true' || normalized.followUpFlag === '1';
+                        } else if (typeof normalized.followUpFlag === 'number') {
+                            followUpValue = normalized.followUpFlag === 1;
+                        }
+                    }
+                    
                     next.visitType = {
                         ...(next.visitType || {}),
                         inPerson: typeof normalized.inPerson === 'boolean' ? normalized.inPerson : (next.visitType?.inPerson ?? true),
-                        followUp: typeof normalized.followUpFlag === 'boolean' ? normalized.followUpFlag : (next.visitType?.followUp ?? false)
+                        followUp: normalized.followUpFlag !== undefined ? followUpValue : (next.visitType?.followUp ?? false)
                     };
                 }
                 console.log('Patched Treatment formData with appointment details:', next);
@@ -2395,6 +2474,37 @@ export default function Treatment() {
                 console.log('Patched billingData from appointment details:', { billed: billedNum, discount: discountNum, feesPaid: paidNum, dues: duesNum });
             } catch (billingPatchError) {
                 console.warn('Could not patch billing data from appointment details:', billingPatchError);
+            }
+
+            // Patch followUpData with followUpComment from API
+            if (normalized.followUpComment && normalized.followUpComment !== '') {
+                setFollowUpData(prev => ({
+                    ...prev,
+                    followUp: String(normalized.followUpComment)
+                }));
+                console.log('Patched followUpData.followUp from appointment details:', normalized.followUpComment);
+            }
+
+            // Patch followUpData.followUpType from API (should be 1 for "New" or 2 for "Follow-up")
+            if (normalized.followUpType !== undefined && normalized.followUpType !== null && normalized.followUpType !== '') {
+                const followUpTypeValue = String(normalized.followUpType).trim();
+                // Map API value to dropdown ID: 1 -> "1" (New), 2 -> "2" (Follow-up)
+                // Also handle string representations like "N" for New, "F" for Follow-up
+                let followUpTypeId = '';
+                const numValue = parseInt(followUpTypeValue, 10);
+                if (numValue === 1 || followUpTypeValue.toUpperCase() === 'N' || followUpTypeValue === 'New') {
+                    followUpTypeId = '1';
+                } else if (numValue === 2 || followUpTypeValue.toUpperCase() === 'F' || followUpTypeValue === 'Follow-up' || followUpTypeValue === 'Followup') {
+                    followUpTypeId = '2';
+                }
+                
+                if (followUpTypeId) {
+                    setFollowUpData(prev => ({
+                        ...prev,
+                        followUpType: followUpTypeId
+                    }));
+                    console.log('Patched followUpData.followUpType from appointment details:', followUpTypeId, '(original:', normalized.followUpType, ')');
+                }
             }
 
             // Load complaints rows from API response (support multiple shapes)
@@ -2888,12 +2998,12 @@ export default function Treatment() {
                     const apptParams = {
                         patientId: String(treatmentData?.patientId || ''),
                         doctorId: String(doctorId),
-                        shiftId: parseInt(String(shiftId || clinicId)) || 1,
+                        shiftId: Number(shiftId) || 1,
                         clinicId: String(clinicId),
                         patientVisitNo: Number(patientVisitNo) || 0,
                         languageId: 1
                     };
-                    await fetchAndPatchAppointmentDetails(apptParams);
+                    await fetchAndPatchAppointmentDetails(apptParams, { retries: 3, delayMs: 500 });
                 } catch (e) {
                     console.warn('Could not patch appointment details after save:', e);
                 }
@@ -2922,12 +3032,12 @@ export default function Treatment() {
                     const apptParams = {
                         patientId: String(treatmentData?.patientId || ''),
                         doctorId: String(doctorId),
-                        shiftId: parseInt(String(shiftId || clinicId)) || 1,
+                        shiftId: Number(shiftId) || 1,
                         clinicId: String(clinicId),
                         patientVisitNo: Number(patientVisitNo) || 0,
                         languageId: 1
                     };
-                    await fetchAndPatchAppointmentDetails(apptParams);
+                    await fetchAndPatchAppointmentDetails(apptParams, { retries: 3, delayMs: 500 });
                 } catch (e) {
                     console.warn('Could not patch appointment details after failed save:', e);
                 }
@@ -4288,8 +4398,8 @@ export default function Treatment() {
                                         Examination Findings
                                     </label>
                                     <textarea
-                                        value={formData.examinationFindings}
-                                        onChange={(e) => handleInputChange('examinationFindings', e.target.value)}
+                                        value={formData.importantFindings}
+                                        onChange={(e) => handleInputChange('importantFindings', e.target.value)}
                                         disabled={isFormDisabled}
                                         rows={3}
                                         style={{
@@ -6344,6 +6454,29 @@ export default function Treatment() {
                 initialSelectedGroups={selectedInstructionGroups}
                 onChange={(groups) => setSelectedInstructionGroups(groups)}
             />
+            {/* Debug: Log when popup opens */}
+            {showInstructionPopup && (() => {
+                console.log('=== TREATMENT SCREEN: Passing data to InstructionGroupsPopup ===');
+                console.log('selectedInstructionGroups state:', selectedInstructionGroups);
+                console.log('selectedInstructionGroups length:', selectedInstructionGroups?.length || 0);
+                console.log('selectedInstructionGroups is array:', Array.isArray(selectedInstructionGroups));
+                if (selectedInstructionGroups && selectedInstructionGroups.length > 0) {
+                    console.log('selectedInstructionGroups content:', JSON.stringify(selectedInstructionGroups, null, 2));
+                    selectedInstructionGroups.forEach((group, idx) => {
+                        console.log(`Group ${idx + 1}:`, {
+                            id: group.id,
+                            name: group.name,
+                            nameHindi: group.nameHindi,
+                            instructions: group.instructions,
+                            hasName: !!group.name,
+                            hasInstructions: !!group.instructions
+                        });
+                    });
+                } else {
+                    console.warn('⚠️ selectedInstructionGroups is EMPTY or UNDEFINED!');
+                }
+                return null;
+            })()}
 
             {/* Add Test Lab Popup */}
             <AddTestLabPopup
