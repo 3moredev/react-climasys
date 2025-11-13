@@ -5,6 +5,9 @@ import { useNavigate } from "react-router-dom";
 import { patientService, Patient } from "../services/patientService";
 import AddPatientPage from "./AddPatientPage";
 import { sessionService } from "../services/sessionService";
+import { admissionService, AdmissionCardDTO, AdmissionCardsRequest } from "../services/admissionService";
+import { advanceCollectionService, AdvanceCollectionSearchRequest, AdvanceCollectionSearchResultDTO } from "../services/advanceCollectionService";
+import { useSession } from "../store/hooks/useSession";
 
 type AdvanceCollection = {
     sr: number;
@@ -26,71 +29,23 @@ export default function ManageAdvanceCollection() {
     const [showDropdown, setShowDropdown] = useState<boolean>(false);
     const [loading, setLoading] = useState<boolean>(false);
     const [searchError, setSearchError] = useState<string>("");
+    const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+    const [searchingAdvanceCards, setSearchingAdvanceCards] = useState<boolean>(false);
     const [showEmptyTable, setShowEmptyTable] = useState<boolean>(false);
     const searchInputRef = useRef<HTMLInputElement>(null);
     const searchRef = useRef<HTMLDivElement>(null);
     const [showQuickRegistration, setShowQuickRegistration] = useState(false);
     const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
     const [sessionData, setSessionData] = useState<any>(null);
+    const { clinicId, doctorId } = useSession();
+    const [loadingAdvanceCollections, setLoadingAdvanceCollections] = useState<boolean>(false);
 
-    // Sample data matching the image
-    const [advanceCollections, setAdvanceCollections] = useState<AdvanceCollection[]>([
-        {
-            sr: 1,
-            patientName: "OMKAR JADHAV",
-            admissionIpdNo: "IPD-2020-05-0174",
-            admissionDate: "28-May-2019",
-            reasonOfAdmission: "SPINAL INJURY",
-            insurance: "No",
-            dateOfAdvance: "--",
-            receiptNo: "--",
-            advance: 0.00
-        },
-        {
-            sr: 2,
-            patientName: "AISHWARYA RANDIVE",
-            admissionIpdNo: "IPD-2020-07-0319",
-            admissionDate: "14-Jul-2020",
-            reasonOfAdmission: "--",
-            insurance: "No",
-            dateOfAdvance: "23-Jul-2019",
-            receiptNo: "--",
-            advance: 10000.00
-        },
-        {
-            sr: 3,
-            patientName: "CHANDRA GWEKAR",
-            admissionIpdNo: "IPD-2020-07-0318",
-            admissionDate: "23-Jul-2019",
-            reasonOfAdmission: "--",
-            insurance: "No",
-            dateOfAdvance: "--",
-            receiptNo: "--",
-            advance: 10000.00
-        },
-        {
-            sr: 4,
-            patientName: "ANMOL RAI",
-            admissionIpdNo: "IPD-2020-07-0317",
-            admissionDate: "30-Jul-2019",
-            reasonOfAdmission: "--",
-            insurance: "No",
-            dateOfAdvance: "07-Aug-2019",
-            receiptNo: "--",
-            advance: 0.00
-        },
-        {
-            sr: 5,
-            patientName: "RONAK NAGAR",
-            admissionIpdNo: "IPD-2020-07-0316",
-            admissionDate: "23-Jul-2019",
-            reasonOfAdmission: "--",
-            insurance: "No",
-            dateOfAdvance: "--",
-            receiptNo: "--",
-            advance: 0.00
-        }
-    ]);
+    // Dynamic data from API
+    const [advanceCollections, setAdvanceCollections] = useState<AdvanceCollection[]>([]);
+    
+    // Pagination state
+    const [currentPage, setCurrentPage] = useState<number>(1);
+    const [pageSize, setPageSize] = useState<number>(10);
 
     const searchPatients = async (query: string) => {
         if (!query.trim()) {
@@ -224,6 +179,10 @@ export default function ManageAdvanceCollection() {
 
     const handleSearchChange = (value: string) => {
         setSearchTerm(value);
+        
+        // Clear selected patient when user types
+        setSelectedPatient(null);
+        
         const search = value.trim().toLowerCase();
         if (!search) {
             setSearchResults([]);
@@ -234,14 +193,69 @@ export default function ManageAdvanceCollection() {
     };
 
     const handlePatientSelect = (patient: Patient) => {
-        setSearchTerm("");
+        // Set the search term to the patient's full name
+        const patientFullName = `${patient.first_name} ${patient.middle_name || ''} ${patient.last_name}`.replace(/\s+/g, ' ').trim();
+        setSearchTerm(patientFullName);
         setSearchResults([]);
         setShowDropdown(false);
+        
+        // Store selected patient
+        setSelectedPatient(patient);
+        
         console.log("Selected patient:", patient);
     };
 
-    const handleSearch = () => {
-        console.log("Searching for:", searchTerm);
+    const handleSearch = async () => {
+        if (!searchTerm.trim()) {
+            console.log("Search term is empty");
+            return;
+        }
+
+        try {
+            setSearchingAdvanceCards(true);
+            setSearchError("");
+            
+            // Use the search API endpoint for patients with advance cards
+            // Not passing doctorId or clinicId as per user requirement
+            const searchParams: AdvanceCollectionSearchRequest = {
+                searchStr: searchTerm.trim()
+            };
+
+            const response = await advanceCollectionService.searchPatientsWithAdvanceCard(searchParams);
+            
+            console.log('Search advance cards response:', response);
+            
+            if (response.success && response.data && response.data.length > 0) {
+                // Map the search results to AdvanceCollection format
+                const mappedCollections: AdvanceCollection[] = response.data.map((result: AdvanceCollectionSearchResultDTO, index: number) => ({
+                    sr: index + 1,
+                    patientName: result.patientName || '--',
+                    patientId: result.patientId,
+                    admissionIpdNo: result.ipdRefNo || '--',
+                    admissionDate: result.admissionDate || '--',
+                    reasonOfAdmission: '--', // Not available in search response
+                    insurance: '--', // Not available in search response
+                    dateOfAdvance: '--', // Not available in search response
+                    receiptNo: '--', // Not available in search response
+                    advance: 0.00 // Not available in search response
+                }));
+                
+                // Update the advance collections list with search results
+                setAdvanceCollections(mappedCollections);
+                setCurrentPage(1); // Reset to first page
+                
+                console.log(`Found ${response.data.length} patients with advance cards`);
+            } else {
+                console.log("No patients with advance cards found for:", searchTerm);
+                setAdvanceCollections([]);
+            }
+        } catch (error: any) {
+            console.error("Error searching advance cards:", error);
+            setSearchError(error.message || "Failed to search advance cards");
+            setAdvanceCollections([]);
+        } finally {
+            setSearchingAdvanceCards(false);
+        }
     };
 
     const handleNewAdvanceCollection = () => {
@@ -256,6 +270,27 @@ export default function ManageAdvanceCollection() {
     const handleEdit = (collection: AdvanceCollection) => {
         console.log("Editing:", collection);
     };
+
+    // Pagination handlers
+    const handlePageChange = (page: number) => {
+        setCurrentPage(page);
+    };
+
+    const handlePageSizeChange = (newPageSize: number) => {
+        setPageSize(newPageSize);
+        setCurrentPage(1); // Reset to first page when changing page size
+    };
+
+    // Pagination calculations
+    const totalPages = Math.ceil(advanceCollections.length / pageSize);
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    const currentAdvanceCollections = advanceCollections.slice(startIndex, endIndex);
+
+    // Reset pagination when advanceCollections changes
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [advanceCollections.length]);
 
     const handlePatientNameClick = async (collection: AdvanceCollection) => {
         // If patientId is already available, use it directly
@@ -310,6 +345,55 @@ export default function ManageAdvanceCollection() {
         };
         loadSessionData();
     }, []);
+
+    // Fetch advance collections (admission cards) on component mount
+    useEffect(() => {
+        const fetchAdvanceCollections = async () => {
+            if (!clinicId) {
+                console.warn('ClinicId not available, skipping advance collections fetch');
+                return;
+            }
+
+            try {
+                setLoadingAdvanceCollections(true);
+                const params: AdmissionCardsRequest = {
+                    clinicId: clinicId
+                };
+
+                const response = await admissionService.getAdmissionCards(params);
+                
+                console.log('Advance Collections API Response:', response);
+                
+                if (response.success && response.data) {
+                    // Map the API response to AdvanceCollection format
+                    const mappedCollections: AdvanceCollection[] = response.data.map((card: AdmissionCardDTO, index: number) => ({
+                        sr: index + 1,
+                        patientName: card.patientName || '--',
+                        patientId: undefined, // Not available in API response
+                        admissionIpdNo: card.admissionIpdNo || '--',
+                        admissionDate: card.admissionDate || '--',
+                        reasonOfAdmission: card.reasonOfAdmission || '--',
+                        insurance: card.insurance || '--',
+                        dateOfAdvance: '--', // Not available in API response
+                        receiptNo: '--', // Not available in API response
+                        advance: card.advanceRs || 0.00
+                    }));
+                    
+                    setAdvanceCollections(mappedCollections);
+                } else {
+                    console.error('Failed to fetch advance collections:', response.error);
+                    setAdvanceCollections([]);
+                }
+            } catch (error: any) {
+                console.error('Error fetching advance collections:', error);
+                setAdvanceCollections([]);
+            } finally {
+                setLoadingAdvanceCollections(false);
+            }
+        };
+
+        fetchAdvanceCollections();
+    }, [clinicId]);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -382,6 +466,77 @@ export default function ManageAdvanceCollection() {
                     border-style: dashed !important;
                     border-color: #dee2e6 !important;
                     color: #6c757d;
+                }
+                
+                /* Pagination styles */
+                .pagination-container {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-top: 20px;
+                    padding: 15px 0;
+                    border-top: 1px solid #e0e0e0;
+                }
+                .pagination-info {
+                    display: flex;
+                    align-items: center;
+                    gap: 15px;
+                    font-size: 0.9rem;
+                    color: #666;
+                }
+                .page-size-selector {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    white-space: nowrap;
+                }
+                .pagination-controls {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+                .page-btn {
+                    padding: 6px 12px;
+                    border: 1px solid #ddd;
+                    background: rgba(0, 0, 0, 0.35);
+                    color: #333;
+                    cursor: pointer;
+                    border-radius: 4px;
+                    font-size: 0.9rem;
+                    transition: all 0.2s ease;
+                }
+                .page-btn:hover:not(:disabled) {
+                    border-color: #999;
+                }
+                .page-btn.active {
+                    background: #1E88E5;
+                    color: white;
+                    border-color: #1E88E5;
+                }
+                .page-btn:disabled {
+                    opacity: 0.5;
+                    cursor: not-allowed;
+                }
+                /* Prev/Next buttons */
+                .nav-btn {
+                    background: #1E88E5;
+                    color: #fff;
+                    border-color: #000;
+                }
+                .nav-btn:hover:not(:disabled) {
+                    color: #fff;
+                    border-color: #000;
+                }
+                .nav-btn:disabled {
+                    background: #000;
+                    color: #fff;
+                    opacity: 0.35;
+                }
+                .page-size-select {
+                    padding: 4px 8px;
+                    border: 1px solid #ddd;
+                    border-radius: 4px;
+                    font-size: 0.9rem;
                 }
             `}</style>
 
@@ -467,10 +622,15 @@ export default function ManageAdvanceCollection() {
 
                 <button
                     className="btn"
-                    style={buttonStyle}
+                    style={{
+                        ...buttonStyle,
+                        opacity: searchingAdvanceCards ? 0.7 : 1,
+                        cursor: searchingAdvanceCards ? 'not-allowed' : 'pointer'
+                    }}
                     onClick={handleSearch}
+                    disabled={searchingAdvanceCards}
                 >
-                    Search
+                    {searchingAdvanceCards ? 'Searching...' : 'Search'}
                 </button>
 
                 <button
@@ -555,50 +715,136 @@ export default function ManageAdvanceCollection() {
                             </tr>
                         </thead>
                         <tbody>
-                            {advanceCollections.map((collection) => (
-                                <tr key={collection.sr}>
-                                    <td className="sr-col">{collection.sr}</td>
-                                    <td 
-                                        className="patient-name-col"
-                                        onClick={() => handlePatientNameClick(collection)}
-                                        style={{
-                                            cursor: 'pointer',
-                                            textDecoration: 'underline',
-                                            color: '#1E88E5'
-                                        }}
-                                        title="Click to view patient details"
-                                    >
-                                        {collection.patientName}
-                                    </td>
-                                    <td className="admission-ipd-col">{collection.admissionIpdNo}</td>
-                                    <td className="admission-date-col">{collection.admissionDate}</td>
-                                    <td className="reason-col">{collection.reasonOfAdmission}</td>
-                                    <td className="insurance-col">{collection.insurance}</td>
-                                    <td className="date-advance-col">{collection.dateOfAdvance}</td>
-                                    <td className="receipt-col">{collection.receiptNo}</td>
-                                    <td className="advance-col">{collection.advance.toFixed(2)}</td>
-                                    <td className="action-col">
-                                        <button
-                                            onClick={() => handleEdit(collection)}
-                                            style={{
-                                                background: 'transparent',
-                                                border: 'none',
-                                                cursor: 'pointer',
-                                                padding: '4px',
-                                                display: 'inline-flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center'
-                                            }}
-                                            title="Edit"
-                                        >
-                                            <Edit style={{ fontSize: '18px', color: '#007bff' }} />
-                                        </button>
+                            {loadingAdvanceCollections ? (
+                                <tr>
+                                    <td colSpan={10} className="text-center p-4">
+                                        <div className="spinner-border spinner-border-sm text-primary" role="status">
+                                            <span className="visually-hidden">Loading...</span>
+                                        </div>
+                                        <span className="ms-2">Loading advance collections...</span>
                                     </td>
                                 </tr>
-                            ))}
+                            ) : advanceCollections.length > 0 ? (
+                                currentAdvanceCollections.map((collection, index) => (
+                                    <tr key={collection.sr}>
+                                        <td className="sr-col">{startIndex + index + 1}</td>
+                                        <td 
+                                            className="patient-name-col"
+                                            onClick={() => handlePatientNameClick(collection)}
+                                            style={{
+                                                cursor: 'pointer',
+                                                textDecoration: 'underline',
+                                                color: '#1E88E5'
+                                            }}
+                                            title="Click to view patient details"
+                                        >
+                                            {collection.patientName}
+                                        </td>
+                                        <td className="admission-ipd-col">{collection.admissionIpdNo}</td>
+                                        <td className="admission-date-col">{collection.admissionDate}</td>
+                                        <td className="reason-col">{collection.reasonOfAdmission}</td>
+                                        <td className="insurance-col">{collection.insurance}</td>
+                                        <td className="date-advance-col">{collection.dateOfAdvance}</td>
+                                        <td className="receipt-col">{collection.receiptNo}</td>
+                                        <td className="advance-col">{collection.advance.toFixed(2)}</td>
+                                        <td className="action-col">
+                                            <button
+                                                onClick={() => handleEdit(collection)}
+                                                style={{
+                                                    background: 'transparent',
+                                                    border: 'none',
+                                                    cursor: 'pointer',
+                                                    padding: '4px',
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center'
+                                                }}
+                                                title="Edit"
+                                            >
+                                                <Edit style={{ fontSize: '18px', color: '#007bff' }} />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan={10} className="text-center p-4 text-muted">
+                                        No advance collections found
+                                    </td>
+                                </tr>
+                            )}
                         </tbody>
                     </table>
                 </div>
+
+                {/* Pagination */}
+                {advanceCollections.length > 0 && (
+                    <div className="pagination-container">
+                        <div className="pagination-info">
+                            <span>
+                                Showing {startIndex + 1} to {Math.min(endIndex, advanceCollections.length)} of {advanceCollections.length} advance collections
+                            </span>
+                            <div className="page-size-selector">
+                                <span>Show:</span>
+                                <select
+                                    className="page-size-select"
+                                    value={pageSize}
+                                    onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                                >
+                                    <option value={5}>5</option>
+                                    <option value={10}>10</option>
+                                    <option value={20}>20</option>
+                                    <option value={50}>50</option>
+                                </select>
+                                <span style={{ whiteSpace: 'nowrap' }}>per page</span>
+                            </div>
+                        </div>
+
+                        <div className="pagination-controls">
+                            <button
+                                className="page-btn nav-btn"
+                                onClick={() => handlePageChange(currentPage - 1)}
+                                disabled={currentPage === 1}
+                            >
+                                Previous
+                            </button>
+
+                            {/* Page numbers */}
+                            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                                // Show first page, last page, current page, and pages around current page
+                                if (
+                                    page === 1 ||
+                                    page === totalPages ||
+                                    (page >= currentPage - 1 && page <= currentPage + 1)
+                                ) {
+                                    return (
+                                        <button
+                                            key={page}
+                                            className={`page-btn ${currentPage === page ? 'active' : ''}`}
+                                            onClick={() => handlePageChange(page)}
+                                        >
+                                            {page}
+                                        </button>
+                                    );
+                                } else if (
+                                    page === currentPage - 2 ||
+                                    page === currentPage + 2
+                                ) {
+                                    return <span key={page} className="page-btn" style={{ border: 'none', background: 'none' }}>...</span>;
+                                }
+                                return null;
+                            })}
+
+                            <button
+                                className="page-btn nav-btn"
+                                onClick={() => handlePageChange(currentPage + 1)}
+                                disabled={currentPage === totalPages}
+                            >
+                                Next
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Quick Registration Modal */}

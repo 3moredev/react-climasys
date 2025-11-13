@@ -380,7 +380,7 @@ export default function ManageAdmissionCard() {
                         dischargeDate: card.dischargeDate || '--',
                         insurance: card.insurance || '--',
                         company: card.company || '--',
-                        advance: card.advance || 0.00
+                        advance: card.advanceRs || 0.00
                     }));
                     
                     setAdmittedPatients(mappedCards);
@@ -695,6 +695,7 @@ export default function ManageAdmissionCard() {
                                     <td className="discharge-date-col">{selectedAdmissionCard.dischargeDate}</td>
                                     <td className="insurance-col">{selectedAdmissionCard.insurance}</td>
                                     <td className="company-col">{selectedAdmissionCard.company}</td>
+                                    {/* <td className="advance-col">{selectedAdmissionCard.advanceRs.toFixed(2)}</td> */}
                                     <td className="advance-col">{selectedAdmissionCard.advance.toFixed(2)}</td>
                                     <td className="action-col">
                                     </td>

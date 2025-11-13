@@ -3,6 +3,8 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import { Edit, Close } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { patientService, Patient } from "../services/patientService";
+import { admissionService, AdmissionCardDTO, AdmissionCardsRequest } from "../services/admissionService";
+import { useSession } from "../store/hooks/useSession";
 
 type DischargeCard = {
     sr: number;
@@ -25,60 +27,15 @@ export default function ManageDischargeCard() {
     const [showEmptyTable, setShowEmptyTable] = useState<boolean>(false);
     const searchInputRef = useRef<HTMLInputElement>(null);
     const searchRef = useRef<HTMLDivElement>(null);
+    const { clinicId, doctorId } = useSession();
+    const [loadingDischargeCards, setLoadingDischargeCards] = useState<boolean>(false);
 
-    // Sample data matching the image
-    const [dischargeCards, setDischargeCards] = useState<DischargeCard[]>([
-        {
-            sr: 1,
-            patientName: "OMKAR JADHAV",
-            ipdNo: "IPD-2020-05-0174",
-            ipdFileNo: "149",
-            admissionDate: "28-May-2019 13:15:00",
-            dischargeDate: "--",
-            keywordOperation: "--",
-            advance: 0.00
-        },
-        {
-            sr: 2,
-            patientName: "AISHWARYA RANDIVE",
-            ipdNo: "IPD-2020-07-0319",
-            ipdFileNo: "263",
-            admissionDate: "22-Jul-2019 11:30:00",
-            dischargeDate: "--",
-            keywordOperation: "--",
-            advance: 10000.00
-        },
-        {
-            sr: 3,
-            patientName: "ANMOL RAI",
-            ipdNo: "IPD-2020-07-0318",
-            ipdFileNo: "294",
-            admissionDate: "23-Jul-2019 14:30:00",
-            dischargeDate: "--",
-            keywordOperation: "--",
-            advance: 0.00
-        },
-        {
-            sr: 4,
-            patientName: "SHEKHAR DENGWEKAR",
-            ipdNo: "IPD-2020-07-0317",
-            ipdFileNo: "293",
-            admissionDate: "30-Jul-2019 16:00:00",
-            dischargeDate: "--",
-            keywordOperation: "--",
-            advance: 10000.00
-        },
-        {
-            sr: 5,
-            patientName: "RONAK NAGAR",
-            ipdNo: "IPD-2020-07-0316",
-            ipdFileNo: "292",
-            admissionDate: "08-Aug-2019 14:00:00",
-            dischargeDate: "--",
-            keywordOperation: "--",
-            advance: 0.00
-        }
-    ]);
+    // Dynamic data from API
+    const [dischargeCards, setDischargeCards] = useState<DischargeCard[]>([]);
+    
+    // Pagination state
+    const [currentPage, setCurrentPage] = useState<number>(1);
+    const [pageSize, setPageSize] = useState<number>(10);
 
     const searchPatients = async (query: string) => {
         if (!query.trim()) {
@@ -246,6 +203,74 @@ export default function ManageDischargeCard() {
         console.log("Editing:", card);
     };
 
+    // Pagination handlers
+    const handlePageChange = (page: number) => {
+        setCurrentPage(page);
+    };
+
+    const handlePageSizeChange = (newPageSize: number) => {
+        setPageSize(newPageSize);
+        setCurrentPage(1); // Reset to first page when changing page size
+    };
+
+    // Pagination calculations
+    const totalPages = Math.ceil(dischargeCards.length / pageSize);
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    const currentDischargeCards = dischargeCards.slice(startIndex, endIndex);
+
+    // Reset pagination when dischargeCards changes
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [dischargeCards.length]);
+
+    // Fetch discharge cards (admission cards) on component mount
+    useEffect(() => {
+        const fetchDischargeCards = async () => {
+            if (!clinicId) {
+                console.warn('ClinicId not available, skipping discharge cards fetch');
+                return;
+            }
+
+            try {
+                setLoadingDischargeCards(true);
+                const params: AdmissionCardsRequest = {
+                    clinicId: clinicId
+                };
+
+                const response = await admissionService.getAdmissionCards(params);
+                
+                console.log('Discharge Cards API Response:', response);
+                
+                if (response.success && response.data) {
+                    // Map the API response to DischargeCard format
+                    const mappedCards: DischargeCard[] = response.data.map((card: AdmissionCardDTO, index: number) => ({
+                        sr: index + 1,
+                        patientName: card.patientName || '--',
+                        ipdNo: card.admissionIpdNo || '--',
+                        ipdFileNo: card.ipdFileNo || '--',
+                        admissionDate: card.admissionDate || '--',
+                        dischargeDate: card.dischargeDate || '--',
+                        keywordOperation: '--', // Not available in API response
+                        advance: card.advanceRs || 0.00
+                    }));
+                    
+                    setDischargeCards(mappedCards);
+                } else {
+                    console.error('Failed to fetch discharge cards:', response.error);
+                    setDischargeCards([]);
+                }
+            } catch (error: any) {
+                console.error('Error fetching discharge cards:', error);
+                setDischargeCards([]);
+            } finally {
+                setLoadingDischargeCards(false);
+            }
+        };
+
+        fetchDischargeCards();
+    }, [clinicId]);
+
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
@@ -321,6 +346,77 @@ export default function ManageDischargeCard() {
                     border-style: dashed !important;
                     border-color: #dee2e6 !important;
                     color: #6c757d;
+                }
+                
+                /* Pagination styles */
+                .pagination-container {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-top: 20px;
+                    padding: 15px 0;
+                    border-top: 1px solid #e0e0e0;
+                }
+                .pagination-info {
+                    display: flex;
+                    align-items: center;
+                    gap: 15px;
+                    font-size: 0.9rem;
+                    color: #666;
+                }
+                .page-size-selector {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    white-space: nowrap;
+                }
+                .pagination-controls {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+                .page-btn {
+                    padding: 6px 12px;
+                    border: 1px solid #ddd;
+                    background: rgba(0, 0, 0, 0.35);
+                    color: #333;
+                    cursor: pointer;
+                    border-radius: 4px;
+                    font-size: 0.9rem;
+                    transition: all 0.2s ease;
+                }
+                .page-btn:hover:not(:disabled) {
+                    border-color: #999;
+                }
+                .page-btn.active {
+                    background: #1E88E5;
+                    color: white;
+                    border-color: #1E88E5;
+                }
+                .page-btn:disabled {
+                    opacity: 0.5;
+                    cursor: not-allowed;
+                }
+                /* Prev/Next buttons */
+                .nav-btn {
+                    background: #1E88E5;
+                    color: #fff;
+                    border-color: #000;
+                }
+                .nav-btn:hover:not(:disabled) {
+                    color: #fff;
+                    border-color: #000;
+                }
+                .nav-btn:disabled {
+                    background: #000;
+                    color: #fff;
+                    opacity: 0.35;
+                }
+                .page-size-select {
+                    padding: 4px 8px;
+                    border: 1px solid #ddd;
+                    border-radius: 4px;
+                    font-size: 0.9rem;
                 }
             `}</style>
 
@@ -493,38 +589,124 @@ export default function ManageDischargeCard() {
                             </tr>
                         </thead>
                         <tbody>
-                            {dischargeCards.map((card) => (
-                                <tr key={card.sr}>
-                                    <td className="sr-col">{card.sr}</td>
-                                    <td className="patient-name-col">{card.patientName}</td>
-                                    <td className="ipd-no-col">{card.ipdNo}</td>
-                                    <td className="ipd-file-col">{card.ipdFileNo}</td>
-                                    <td className="admission-date-col">{card.admissionDate}</td>
-                                    <td className="discharge-date-col">{card.dischargeDate}</td>
-                                    <td className="keyword-col">{card.keywordOperation}</td>
-                                    <td className="advance-col">{card.advance.toFixed(2)}</td>
-                                    <td className="action-col">
-                                        <button
-                                            onClick={() => handleEdit(card)}
-                                            style={{
-                                                background: 'transparent',
-                                                border: 'none',
-                                                cursor: 'pointer',
-                                                padding: '4px',
-                                                display: 'inline-flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center'
-                                            }}
-                                            title="Edit"
-                                        >
-                                            <Edit style={{ fontSize: '18px', color: '#007bff' }} />
-                                        </button>
+                            {loadingDischargeCards ? (
+                                <tr>
+                                    <td colSpan={9} className="text-center p-4">
+                                        <div className="spinner-border spinner-border-sm text-primary" role="status">
+                                            <span className="visually-hidden">Loading...</span>
+                                        </div>
+                                        <span className="ms-2">Loading discharge cards...</span>
                                     </td>
                                 </tr>
-                            ))}
+                            ) : dischargeCards.length > 0 ? (
+                                currentDischargeCards.map((card, index) => (
+                                    <tr key={card.sr}>
+                                        <td className="sr-col">{startIndex + index + 1}</td>
+                                        <td className="patient-name-col">{card.patientName}</td>
+                                        <td className="ipd-no-col">{card.ipdNo}</td>
+                                        <td className="ipd-file-col">{card.ipdFileNo}</td>
+                                        <td className="admission-date-col">{card.admissionDate}</td>
+                                        <td className="discharge-date-col">{card.dischargeDate}</td>
+                                        <td className="keyword-col">{card.keywordOperation}</td>
+                                        <td className="advance-col">{card.advance.toFixed(2)}</td>
+                                        <td className="action-col">
+                                            <button
+                                                onClick={() => handleEdit(card)}
+                                                style={{
+                                                    background: 'transparent',
+                                                    border: 'none',
+                                                    cursor: 'pointer',
+                                                    padding: '4px',
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center'
+                                                }}
+                                                title="Edit"
+                                            >
+                                                <Edit style={{ fontSize: '18px', color: '#007bff' }} />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan={9} className="text-center p-4 text-muted">
+                                        No discharge cards found
+                                    </td>
+                                </tr>
+                            )}
                         </tbody>
                     </table>
                 </div>
+
+                {/* Pagination */}
+                {dischargeCards.length > 0 && (
+                    <div className="pagination-container">
+                        <div className="pagination-info">
+                            <span>
+                                Showing {startIndex + 1} to {Math.min(endIndex, dischargeCards.length)} of {dischargeCards.length} discharge cards
+                            </span>
+                            <div className="page-size-selector">
+                                <span>Show:</span>
+                                <select
+                                    className="page-size-select"
+                                    value={pageSize}
+                                    onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                                >
+                                    <option value={5}>5</option>
+                                    <option value={10}>10</option>
+                                    <option value={20}>20</option>
+                                    <option value={50}>50</option>
+                                </select>
+                                <span style={{ whiteSpace: 'nowrap' }}>per page</span>
+                            </div>
+                        </div>
+
+                        <div className="pagination-controls">
+                            <button
+                                className="page-btn nav-btn"
+                                onClick={() => handlePageChange(currentPage - 1)}
+                                disabled={currentPage === 1}
+                            >
+                                Previous
+                            </button>
+
+                            {/* Page numbers */}
+                            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                                // Show first page, last page, current page, and pages around current page
+                                if (
+                                    page === 1 ||
+                                    page === totalPages ||
+                                    (page >= currentPage - 1 && page <= currentPage + 1)
+                                ) {
+                                    return (
+                                        <button
+                                            key={page}
+                                            className={`page-btn ${currentPage === page ? 'active' : ''}`}
+                                            onClick={() => handlePageChange(page)}
+                                        >
+                                            {page}
+                                        </button>
+                                    );
+                                } else if (
+                                    page === currentPage - 2 ||
+                                    page === currentPage + 2
+                                ) {
+                                    return <span key={page} className="page-btn" style={{ border: 'none', background: 'none' }}>...</span>;
+                                }
+                                return null;
+                            })}
+
+                            <button
+                                className="page-btn nav-btn"
+                                onClick={() => handlePageChange(currentPage + 1)}
+                                disabled={currentPage === totalPages}
+                            >
+                                Next
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

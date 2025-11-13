@@ -10,7 +10,7 @@ export interface AdmissionCardDTO {
   dischargeDate: string;
   insurance: string;
   company: string;
-  advance: number;
+  advanceRs: number;
 }
 
 // Admission Cards request parameters
@@ -129,7 +129,7 @@ export const admissionService = {
       
       // Call the backend endpoint /api/admission/cards/search
       // Note: baseURL already includes /api, so we use /admission/cards/search
-      const resp = await api.get<SearchAdmissionCardsResponse>(`/admission/cards/search`, { params: query });
+      const resp = await api.get<SearchAdmissionCardsResponse>(`/cards/search`, { params: query });
       console.log('Search admission cards response:', resp.data);
       return resp.data;
     } catch (error: any) {
