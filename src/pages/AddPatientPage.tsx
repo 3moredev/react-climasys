@@ -50,7 +50,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
     middleName: '',
     age: '',
     dateOfBirth: '',
-    dobDate: null as Date | null,
+    dobDate: null as any, // dayjs object for DateField
     field1: '',
     field2: 'Years',
     gender: '',
@@ -78,6 +78,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
   const [areaOptions, setAreaOptions] = useState<{ id: string; name: string }[]>([])
   const [areaInput, setAreaInput] = useState('')
   const [areaLoading, setAreaLoading] = useState(false)
+  const [areaOpen, setAreaOpen] = useState(false)
   const [cityOptions, setCityOptions] = useState<{ id: string; name: string }[]>([])
   const [cityInput, setCityInput] = useState('')
   const [cityLoading, setCityLoading] = useState(false)
@@ -122,26 +123,157 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
       const fetchPatientData = async () => {
         try {
           setLoading(true)
+          console.log('📥 Fetching patient data for ID:', patientId)
           // The backend accepts both id (number) and folder_no (string) formats
-          // Pass the patientId as-is (could be folder_no like "02-12-2019-050248" or numeric id)
           const patient = await patientService.getPatient(patientId)
+          console.log('📦 Patient data received:', patient)
           
+          // Convert date_of_birth to dayjs object for DateField
+          let dobDate = null
+          if (patient.date_of_birth) {
+            try {
+              const parsedDate = dayjs(patient.date_of_birth)
+              if (parsedDate.isValid()) {
+                // DateField component expects dayjs object, not Date object
+                dobDate = parsedDate as any // Keep as dayjs object
+                console.log('📅 Parsed DOB:', parsedDate.format('DD/MM/YYYY'), 'from:', patient.date_of_birth)
+              } else {
+                console.warn('⚠️ Invalid date format:', patient.date_of_birth)
+              }
+            } catch (e) {
+              console.error('Error parsing date_of_birth:', e)
+            }
+          }
+
+          // Fetch area name if area_id exists
+          let areaName = ''
+          if (patient.area_id) {
+            try {
+              console.log('🔍 Searching for area with ID:', patient.area_id)
+              const { searchAreas } = await import('../services/referenceService')
+              // Try searching with common terms to find the area
+              const searchTerms = ['pune', 'mumbai', 'delhi', 'a']
+              let matchingArea = null
+              
+              for (const term of searchTerms) {
+                try {
+                  const searchResults = await searchAreas(term)
+                  matchingArea = searchResults.find(a => {
+                    const areaIdNum = parseInt(a.id)
+                    return areaIdNum === patient.area_id || areaIdNum === parseInt(String(patient.area_id))
+                  })
+                  if (matchingArea) {
+                    console.log(`✅ Found area with term "${term}":`, matchingArea.name)
+                    break
+                  }
+                } catch (e) {
+                  console.warn(`Search failed for term "${term}":`, e)
+                }
+              }
+              
+              if (matchingArea) {
+                areaName = matchingArea.name
+                setAreaInput(areaName)
+                setAreaOptions(prev => {
+                  if (!prev.find(o => o.id === matchingArea.id)) {
+                    return [...prev, matchingArea]
+                  }
+                  return prev
+                })
+              } else {
+                console.warn('⚠️ Could not find area with ID:', patient.area_id, '- will try to fetch later when user searches')
+              }
+            } catch (e) {
+              console.error('Error fetching area:', e)
+            }
+          }
+
+          // Fetch city name if city_id exists
+          let cityName = ''
+          if (patient.city_id) {
+            try {
+              console.log('🔍 Searching for city with ID:', patient.city_id)
+              const { searchCities } = await import('../services/referenceService')
+              // Try multiple search terms - city IDs are usually short codes like "PU", "MU", etc.
+              const searchTerms = ['pune', 'mumbai', 'delhi', 'a']
+              let matchingCity = null
+              
+              for (const term of searchTerms) {
+                try {
+                  const searchResults = await searchCities(term)
+                  matchingCity = searchResults.find(c => {
+                    // City ID might be case-sensitive, so check both
+                    return c.id === patient.city_id || 
+                           c.id?.toUpperCase() === String(patient.city_id).toUpperCase() ||
+                           c.id === String(patient.city_id)
+                  })
+                  if (matchingCity) {
+                    console.log(`✅ Found city with term "${term}":`, matchingCity.name)
+                    break
+                  }
+                } catch (e) {
+                  console.warn(`Search failed for term "${term}":`, e)
+                }
+              }
+              
+              if (matchingCity) {
+                cityName = matchingCity.name
+                setCityInput(cityName)
+                setCityOptions(prev => {
+                  if (!prev.find(o => o.id === matchingCity.id)) {
+                    return [...prev, matchingCity]
+                  }
+                  return prev
+                })
+              } else {
+                console.warn('⚠️ Could not find city with ID:', patient.city_id, '- will try to fetch later when user searches')
+                // Set city_id as fallback if we can't find the name
+                if (patient.city_id) {
+                  setCityInput(String(patient.city_id))
+                }
+              }
+            } catch (e) {
+              console.error('Error fetching city:', e)
+            }
+          }
+
           // Map patient data to form fields
-          // Use the patientId from URL (format "01-06-2019-021099") - this is the actual patient ID, not folder_no
-          setFormData(prev => ({
-            ...prev,
-            patientId: patientId, // Use the patientId from URL parameter, not folder_no
-            firstName: patient.first_name || '',
-            middleName: patient.middle_name || '',
-            lastName: patient.last_name || '',
-            mobileNumber: patient.mobile_1 || '',
-            age: patient.age_given?.toString() || '',
-            dateOfBirth: patient.date_of_birth || '',
-            gender: patient.gender_id?.toString() || '',
-            // Note: Additional fields like address, email, etc. may need to be fetched from a more detailed patient endpoint
-          }))
+          try {
+            const addressParts = []
+            if (patient.address_1) addressParts.push(patient.address_1)
+            if (patient.address_2) addressParts.push(patient.address_2)
+            const fullAddress = addressParts.join(', ') || ''
+            
+            setFormData(prev => ({
+              ...prev,
+              patientId: patientId,
+              firstName: patient.first_name || '',
+              middleName: patient.middle_name || '',
+              lastName: patient.last_name || '',
+              mobileNumber: patient.mobile_1 || '',
+              age: patient.age_given?.toString() || '',
+              dateOfBirth: patient.date_of_birth || '',
+              dobDate: dobDate,
+              field1: patient.age_given?.toString() || '',
+              field2: 'Years', // Default to Years
+              gender: patient.gender_id ? String(patient.gender_id) : '',
+              area: areaName || prev.area,
+              city: cityName || prev.city,
+              state: patient.state_id || prev.state || 'Maharashtra',
+              address: fullAddress,
+              email: patient.email_id || '',
+              occupation: patient.occupation_id ? String(patient.occupation_id) : '',
+              maritalStatus: patient.marital_status_id ? String(patient.marital_status_id) : '',
+              // Referral fields might not be in basic patient data
+            }))
+            
+            console.log('✅ Patient data mapped to form successfully')
+          } catch (mappingError) {
+            console.error('❌ Error mapping patient data:', mappingError)
+            throw mappingError
+          }
         } catch (error: any) {
-          console.error('Error fetching patient data:', error)
+          console.error('❌ Error fetching patient data:', error)
           setSnackbarMessage(error.message || 'Failed to load patient data')
           setSnackbarOpen(true)
         } finally {
@@ -253,29 +385,61 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
     }
   }, [])
 
+  // Sync areaInput with formData.area when dialog opens or formData.area is set externally
+  useEffect(() => {
+    if (open && formData.area && formData.area !== 'pune') {
+      // Only sync if areaInput is empty or doesn't match formData.area
+      if (!areaInput || areaInput !== formData.area) {
+        setAreaInput(formData.area)
+      }
+    }
+  }, [open, formData.area])
+
   useEffect(() => {
     let active = true
     const fetchAreas = async () => {
       try {
         setAreaLoading(true)
+        console.log('🔍 Searching areas with query:', areaInput)
         const { searchAreas } = await import('../services/referenceService')
         const results = await searchAreas(areaInput)
-        if (active) setAreaOptions(results)
+        console.log('✅ Area search results:', results)
+        if (active) {
+          setAreaOptions(results)
+          // Open dropdown if we have results
+          if (results.length > 0) {
+            setAreaOpen(true)
+          }
+        }
       } catch (e) {
-        console.error('Failed to search areas', e)
+        console.error('❌ Failed to search areas', e)
+        if (active) setAreaOptions([])
       } finally {
         if (active) setAreaLoading(false)
       }
     }
 
-    // Debounce user input
-    const handle = setTimeout(() => {
-      fetchAreas()
-    }, 300)
+    // Only search if there's input (at least 1 character)
+    const trimmedInput = areaInput?.trim() || ''
+    if (trimmedInput.length > 0) {
+      // Debounce user input
+      const handle = setTimeout(() => {
+        fetchAreas()
+      }, 300)
 
-    return () => {
-      active = false
-      clearTimeout(handle)
+      return () => {
+        active = false
+        clearTimeout(handle)
+      }
+    } else {
+      // Clear options when input is empty
+      if (active) {
+        setAreaOptions([])
+        console.log('🧹 Cleared area options (empty input)')
+      }
+      return () => {
+        active = false
+      }
     }
   }, [areaInput])
 
@@ -289,18 +453,29 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
         if (active) setCityOptions(results)
       } catch (e) {
         console.error('Failed to search cities', e)
+        if (active) setCityOptions([])
       } finally {
         if (active) setCityLoading(false)
       }
     }
 
-    const handle = setTimeout(() => {
-      fetchCities()
-    }, 300)
+    // Only search if there's input (at least 1 character)
+    if (cityInput && cityInput.trim().length > 0) {
+      // Debounce user input
+      const handle = setTimeout(() => {
+        fetchCities()
+      }, 300)
 
-    return () => {
-      active = false
-      clearTimeout(handle)
+      return () => {
+        active = false
+        clearTimeout(handle)
+      }
+    } else {
+      // Clear options when input is empty
+      if (active) setCityOptions([])
+      return () => {
+        active = false
+      }
     }
   }, [cityInput])
 
@@ -984,8 +1159,12 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                               PaperProps: {
                                 style: {
                                   maxHeight: 200,
-                                  overflow: 'auto'
+                                  overflow: 'auto',
+                                  zIndex: 11001
                                 }
+                              },
+                              style: {
+                                zIndex: 11001
                               }
                             }}
                           >
@@ -1016,6 +1195,16 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         const option = genderOptions.find(opt => opt.id === selected)
                         return option ? option.name : String(selected ?? '')
                       }}
+                      MenuProps={{
+                        PaperProps: {
+                          style: {
+                            zIndex: 11001
+                          }
+                        },
+                        style: {
+                          zIndex: 11001
+                        }
+                      }}
                     >
                       {genderOptions.map(opt => (
                         <MenuItem key={opt.id} value={opt.id}>{opt.name}</MenuItem>
@@ -1035,16 +1224,74 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     Area <span style={{ color: 'red' }}>*</span>
                   </Typography>
                   <Autocomplete
+                    freeSolo
                     options={areaOptions}
                     loading={areaLoading}
                     disabled={loading || readOnly}
-                    getOptionLabel={(opt) => opt.name}
-                    value={areaOptions.find(o => o.name === formData.area) || null}
-                    onChange={(_, newValue) => {
-                      handleInputChange('area', newValue?.name || '')
+                    getOptionLabel={(opt) => {
+                      if (typeof opt === 'string') return opt
+                      return opt.name || ''
                     }}
-                    onInputChange={(_, newInput) => {
-                      setAreaInput(newInput)
+                    value={formData.area ? (areaOptions.find(o => o.name === formData.area) || null) : null}
+                    inputValue={areaInput || ''}
+                    onInputChange={(event, newInput, reason) => {
+                      console.log('📝 Area input changed:', { newInput, reason, event: event?.type })
+                      setAreaInput(newInput || '')
+                      // Clear formData.area when user clears the input
+                      if (reason === 'clear' || !newInput) {
+                        handleInputChange('area', '')
+                        setAreaOpen(false)
+                      } else if (newInput && newInput.trim().length > 0) {
+                        // Keep dropdown open when typing (it will be controlled by open prop)
+                        // Don't setAreaOpen(true) here, let the useEffect handle it when results arrive
+                      }
+                    }}
+                    onChange={(event, newValue, reason) => {
+                      console.log('✅ Area value changed:', { newValue, reason })
+                      if (typeof newValue === 'string') {
+                        handleInputChange('area', newValue)
+                        setAreaInput(newValue)
+                      } else if (newValue) {
+                        handleInputChange('area', newValue.name)
+                        setAreaInput(newValue.name)
+                      } else if (reason === 'clear') {
+                        handleInputChange('area', '')
+                        setAreaInput('')
+                      }
+                    }}
+                    filterOptions={(options) => options}
+                    open={areaOpen && areaOptions.length > 0 && !areaLoading}
+                    onOpen={() => {
+                      console.log('🔓 Area autocomplete opened, options:', areaOptions.length)
+                      setAreaOpen(true)
+                    }}
+                    onClose={(event, reason) => {
+                      console.log('🔒 Area autocomplete closed:', reason)
+                      setAreaOpen(false)
+                    }}
+                    ListboxProps={{
+                      style: {
+                        maxHeight: '300px'
+                      }
+                    }}
+                    PopperProps={{
+                      style: {
+                        zIndex: 11001
+                      },
+                      placement: 'bottom-start'
+                    }}
+                    slotProps={{
+                      popper: {
+                        style: {
+                          zIndex: 11001
+                        }
+                      },
+                      paper: {
+                        style: {
+                          zIndex: 11001,
+                          maxHeight: '300px'
+                        }
+                      }
                     }}
                     renderInput={(params) => (
                       <TextField
@@ -1083,13 +1330,28 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     options={cityOptions}
                     loading={cityLoading}
                     disabled={loading || readOnly}
-                    getOptionLabel={(opt) => opt.name}
+                    getOptionLabel={(opt) => opt.name || ''}
                     value={cityOptions.find(o => o.name === formData.city) || null}
+                    inputValue={cityInput}
+                    onInputChange={(_, newInput, reason) => {
+                      setCityInput(newInput)
+                      // Clear formData.city when user clears the input
+                      if (reason === 'clear' || !newInput) {
+                        handleInputChange('city', '')
+                      }
+                    }}
                     onChange={(_, newValue) => {
                       handleInputChange('city', newValue?.name || '')
+                      // Update input to show selected value
+                      if (newValue) {
+                        setCityInput(newValue.name)
+                      }
                     }}
-                    onInputChange={(_, newInput) => {
-                      setCityInput(newInput)
+                    filterOptions={(options) => options}
+                    PopperProps={{
+                      style: {
+                        zIndex: 11001
+                      }
                     }}
                     renderInput={(params) => (
                       <TextField
@@ -1145,6 +1407,16 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         const option = maritalStatusOptions.find(opt => opt.id === selected)
                         return option ? option.name : String(selected ?? '')
                       }}
+                      MenuProps={{
+                        PaperProps: {
+                          style: {
+                            zIndex: 11001
+                          }
+                        },
+                        style: {
+                          zIndex: 11001
+                        }
+                      }}
                     >
                       {maritalStatusOptions.map(opt => (
                         <MenuItem key={opt.id} value={opt.id}>{opt.name}</MenuItem>
@@ -1170,6 +1442,16 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         }
                         const option = occupationOptions.find(opt => opt.id === selected)
                         return option ? option.name : String(selected ?? '')
+                      }}
+                      MenuProps={{
+                        PaperProps: {
+                          style: {
+                            zIndex: 11001
+                          }
+                        },
+                        style: {
+                          zIndex: 11001
+                        }
                       }}
                     >
                       {occupationOptions.map(opt => (
@@ -1233,6 +1515,16 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         const option = referByOptions.find(opt => opt.id === selected)
                         return option ? option.name : String(selected ?? '')
                       }}
+                      MenuProps={{
+                        PaperProps: {
+                          style: {
+                            zIndex: 11001
+                          }
+                        },
+                        style: {
+                          zIndex: 11001
+                        }
+                      }}
                     >
                       {/** Dynamically render from API-loaded options */}
                       {referByOptions.map(opt => (
@@ -1288,7 +1580,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                           border: '1px solid #B7B7B7',
                           borderRadius: '6px',
                           boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                          zIndex: 1000,
+                          zIndex: 11001,
                           maxHeight: '200px',
                           overflowY: 'auto'
                         }}>
