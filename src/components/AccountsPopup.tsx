@@ -40,13 +40,40 @@ const AccountsPopup: React.FC<AccountsPopupProps> = ({ open, onClose, patientId,
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        if (open && patientId) {
+        console.log('=== AccountsPopup useEffect ===');
+        console.log('open:', open);
+        console.log('patientId prop:', patientId);
+        console.log('patientId type:', typeof patientId);
+        console.log('patientId truthy:', !!patientId);
+        console.log('patientId trimmed:', patientId ? String(patientId).trim() : 'N/A');
+        
+        // Check if patientId is valid (not null, undefined, or empty string)
+        const isValidPatientId = patientId && String(patientId).trim() !== '';
+        
+        if (open && isValidPatientId) {
+            console.log('✅ Conditions met, calling fetchAccountsData');
             fetchAccountsData();
+        } else {
+            console.log('❌ Skipping fetchAccountsData - open:', open, 'isValidPatientId:', isValidPatientId, 'patientId:', patientId);
         }
     }, [open, patientId]);
 
     const fetchAccountsData = async () => {
-        if (!patientId) return;
+        console.log('=== fetchAccountsData START ===');
+        console.log('patientId received:', patientId);
+        console.log('patientId type:', typeof patientId);
+        console.log('patientId value:', JSON.stringify(patientId));
+        
+        // Validate patientId - must be non-empty string
+        const patientIdStr = patientId ? String(patientId).trim() : '';
+        if (!patientIdStr) {
+            console.error('❌ No valid patientId provided, aborting fetch. patientId:', patientId);
+            setError('Patient ID is required');
+            setLoading(false);
+            return;
+        }
+        
+        console.log('✅ Valid patientId:', patientIdStr);
         
         setLoading(true);
         setError(null);
@@ -56,23 +83,34 @@ const AccountsPopup: React.FC<AccountsPopupProps> = ({ open, onClose, patientId,
             const clinicId = sessionResult?.data?.clinicId;
             const doctorId = sessionResult?.data?.doctorId;
 
+            console.log('Session data:', {
+                clinicId,
+                doctorId,
+                fullSession: sessionResult?.data
+            });
+
             if (!clinicId) {
                 throw new Error('Clinic ID not found in session');
             }
 
-            // Fetch consolidated family fees (for FY-wise table)
-            const consolidatedFeesPromise = patientService.getConsolidatedFamilyFees({
-                patientId,
-                doctorId, // optional
+            // For accounts/payment history, we want ALL records for the patient, not filtered by doctor
+            // So we pass undefined for doctorId to get all doctors' data for this patient
+            const apiParams = {
+                patientId: patientIdStr, // Use validated string
+                doctorId: undefined, // Don't filter by doctor - show all payment history
                 clinicId
-            });
+            };
+
+            console.log('=== API CALL PARAMETERS ===');
+            console.log('Consolidated Family Fees params:', apiParams);
+            console.log('Fees Details params:', apiParams);
+            console.log('Note: doctorId is undefined to show ALL payment history for patient');
+
+            // Fetch consolidated family fees (for FY-wise table)
+            const consolidatedFeesPromise = patientService.getConsolidatedFamilyFees(apiParams);
 
             // Fetch fees details (for visit-wise table)
-            const feesDetailsPromise = patientService.getFeesDetails({
-                patientId,
-                doctorId, // optional
-                clinicId
-            });
+            const feesDetailsPromise = patientService.getFeesDetails(apiParams);
 
             const [consolidatedFeesResp, feesDetailsResp] = await Promise.all([
                 consolidatedFeesPromise,

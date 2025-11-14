@@ -38,6 +38,8 @@ interface LabTestEntryProps {
     // Newly added optional props to receive context
     appointment?: AppointmentRow | null;
     sessionData?: SessionInfo | null;
+    // Callback to pass lab test results data back to parent
+    onLabTestResultsFetched?: (results: any[] | null) => void;
 }
 
 interface LabTestResult {
@@ -47,7 +49,7 @@ interface LabTestResult {
     value: string;
 }
 
-const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData, appointment, sessionData }) => {
+const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData, appointment, sessionData, onLabTestResultsFetched }) => {
     const [formData, setFormData] = useState({
         labName: '',
         labDoctorName: '',
@@ -76,6 +78,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
     const labTestsRef = useRef<HTMLDivElement | null>(null);
     const [showSelectedTable, setShowSelectedTable] = useState(false);
     const [showQuickRegistration, setShowQuickRegistration] = useState(false);
+    const lastFetchParamsRef = useRef<string | null>(null);
 
     // Resolve provider/doctor name for display (fallbacks in priority order)
     const formatProviderLabel = (name?: string): string => {
@@ -151,6 +154,12 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
             return [];
         }
     };
+
+    useEffect(() => {
+        if (!open) {
+            lastFetchParamsRef.current = null;
+        }
+    }, [open]);
 
     // Fetch lab tests with parameters when modal opens or doctor changes
     useEffect(() => {
@@ -232,6 +241,13 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
         }
         
         console.log('Fetching existing lab test results for visit:', { patientId, patientVisitNo, doctorId, clinicId, shiftId, visitDate });
+
+        const fetchKey = JSON.stringify({ patientId, patientVisitNo, doctorId, clinicId, shiftId, visitDate });
+        if (lastFetchParamsRef.current === fetchKey) {
+            console.log('Skipping lab test results fetch; parameters unchanged.');
+            return;
+        }
+        lastFetchParamsRef.current = fetchKey;
         
         // Fetch existing lab test results
         patientService.getLabTestResultsForVisit({
@@ -269,18 +285,34 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                 }
                 
                 console.log('Loaded', mappedResults.length, 'existing lab test results');
+                
+                // Pass data to parent component if callback exists
+                if (onLabTestResultsFetched) {
+                    onLabTestResultsFetched(results);
+                }
             } else {
                 console.log('No existing lab test results found for this visit');
                 // Reset form when no results found
                 setLabTestResults([]);
+                
+                // Don't pass anything to parent if results are empty
+                if (onLabTestResultsFetched) {
+                    onLabTestResultsFetched(null);
+                }
             }
         })
         .catch((e: any) => {
             console.error('Failed to fetch lab test results:', e);
             // Don't show error to user, just log it - it's okay if no results exist
             setLabTestResults([]);
+            lastFetchParamsRef.current = null;
+            
+            // Don't pass anything to parent on error
+            if (onLabTestResultsFetched) {
+                onLabTestResultsFetched(null);
+            }
         });
-    }, [open, patientData, sessionData]);
+    }, [open, patientData, sessionData, onLabTestResultsFetched]);
 
     // Filtered options by search
     const filteredLabTests = useMemo(() => {
@@ -655,6 +687,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
         setLabTestsRows([]);
         setLabTestSearch('');
         setIsLabTestsOpen(false);
+        lastFetchParamsRef.current = null;
     };
 
     const handleClose = () => {

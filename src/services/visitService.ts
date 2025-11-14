@@ -72,6 +72,7 @@ export interface ComprehensiveVisitDataRequest {
   habitDetails: string;
   allergyDetails: string;
   observation: string;
+  dressingBodyParts?: string;
   inPerson: boolean;
   symptomComment: string;
   reason: string;

@@ -4616,8 +4616,8 @@ export default function AppointmentTable() {
                                                         <div
                                                             title={(() => {
                                                                 const statusId = mapStatusLabelToId(a.status);
-                                                                const isCollectible = statusId === 4 || statusId === 6;
-                                                                // Allow statusId 4 and 6 even for reception, otherwise disable for reception when statusId >= 2
+                                                                const isCollectible = statusId === 4 || statusId === 5 || statusId === 6;
+                                                                // Allow statusId 4, 5 (Complete), and 6 even for reception, otherwise disable for reception when statusId >= 2
                                                                 const shouldDisable = isReceptionist && statusId >= 2 && !isCollectible;
                                                                 if (shouldDisable) return "Collection (Disabled - Status >= 2)";
                                                                 const shouldEnable = !isReceptionist || isCollectible;
@@ -4626,10 +4626,10 @@ export default function AppointmentTable() {
                                                             })()}
                                                             onClick={() => {
                                                                 const statusId = mapStatusLabelToId(a.status);
-                                                                const isCollectible = statusId === 4 || statusId === 6;
-                                                                // Allow statusId 4 and 6 even for reception, otherwise disable for reception when statusId >= 2
+                                                                const isCollectible = statusId === 4 || statusId === 5 || statusId === 6;
+                                                                // Allow statusId 4, 5 (Complete), and 6 even for reception, otherwise disable for reception when statusId >= 2
                                                                 const shouldDisable = isReceptionist && statusId >= 2 && !isCollectible;
-                                                                if (shouldDisable) return; // Disable for reception when statusId >= 2 (except statusId 4 and 6)
+                                                                if (shouldDisable) return; // Disable for reception when statusId >= 2 (except statusId 4, 5, and 6)
                                                                 const shouldEnable = !isReceptionist || isCollectible;
                                                                 if (!shouldEnable) return; // Disable for reception login unless COMPLETE or SUBMITTED
                                                                 if (!isCollectible) return;
@@ -4650,8 +4650,8 @@ export default function AppointmentTable() {
                                                             }}
                                                             aria-disabled={(() => {
                                                                 const statusId = mapStatusLabelToId(a.status);
-                                                                const isCollectible = statusId === 4 || statusId === 6;
-                                                                // Allow statusId 4 and 6 even for reception, otherwise disable for reception when statusId >= 2
+                                                                const isCollectible = statusId === 4 || statusId === 5 || statusId === 6;
+                                                                // Allow statusId 4, 5 (Complete), and 6 even for reception, otherwise disable for reception when statusId >= 2
                                                                 const shouldDisable = isReceptionist && statusId >= 2 && !isCollectible;
                                                                 if (shouldDisable) return true;
                                                                 const shouldEnable = !isReceptionist || isCollectible;
@@ -4665,8 +4665,8 @@ export default function AppointmentTable() {
                                                                 height: '28px',
                                                                 cursor: (() => {
                                                                     const statusId = mapStatusLabelToId(a.status);
-                                                                    const isCollectible = statusId === 4 || statusId === 6;
-                                                                    // Allow statusId 4 and 6 even for reception, otherwise disable for reception when statusId >= 2
+                                                                    const isCollectible = statusId === 4 || statusId === 5 || statusId === 6;
+                                                                    // Allow statusId 4, 5 (Complete), and 6 even for reception, otherwise disable for reception when statusId >= 2
                                                                     const shouldDisable = isReceptionist && statusId >= 2 && !isCollectible;
                                                                     if (shouldDisable) return 'not-allowed';
                                                                     const shouldEnable = !isReceptionist || isCollectible;
@@ -4675,8 +4675,8 @@ export default function AppointmentTable() {
                                                                 color: '#607D8B',
                                                                 backgroundColor: (() => {
                                                                     const statusId = mapStatusLabelToId(a.status);
-                                                                    const isCollectible = statusId === 4 || statusId === 6;
-                                                                    // Allow statusId 4 and 6 even for reception, otherwise disable for reception when statusId >= 2
+                                                                    const isCollectible = statusId === 4 || statusId === 5 || statusId === 6;
+                                                                    // Allow statusId 4, 5 (Complete), and 6 even for reception, otherwise disable for reception when statusId >= 2
                                                                     const shouldDisable = isReceptionist && statusId >= 2 && !isCollectible;
                                                                     if (shouldDisable) return '#f5f5f5';
                                                                     const shouldEnable = !isReceptionist || isCollectible;
@@ -4686,8 +4686,8 @@ export default function AppointmentTable() {
                                                                 borderRadius: '4px',
                                                                 border: (() => {
                                                                     const statusId = mapStatusLabelToId(a.status);
-                                                                    const isCollectible = statusId === 4 || statusId === 6;
-                                                                    // Allow statusId 4 and 6 even for reception, otherwise disable for reception when statusId >= 2
+                                                                    const isCollectible = statusId === 4 || statusId === 5 || statusId === 6;
+                                                                    // Allow statusId 4, 5 (Complete), and 6 even for reception, otherwise disable for reception when statusId >= 2
                                                                     const shouldDisable = isReceptionist && statusId >= 2 && !isCollectible;
                                                                     if (shouldDisable) return '1px solid #ddd';
                                                                     const shouldEnable = !isReceptionist || isCollectible;
@@ -4696,8 +4696,8 @@ export default function AppointmentTable() {
                                                                 })(),
                                                                 opacity: (() => {
                                                                     const statusId = mapStatusLabelToId(a.status);
-                                                                    const isCollectible = statusId === 4 || statusId === 6;
-                                                                    // Allow statusId 4 and 6 even for reception, otherwise disable for reception when statusId >= 2
+                                                                    const isCollectible = statusId === 4 || statusId === 5 || statusId === 6;
+                                                                    // Allow statusId 4, 5 (Complete), and 6 even for reception, otherwise disable for reception when statusId >= 2
                                                                     const shouldDisable = isReceptionist && statusId >= 2 && !isCollectible;
                                                                     if (shouldDisable) return 0.5;
                                                                     const shouldEnable = !isReceptionist || isCollectible;
@@ -4706,8 +4706,8 @@ export default function AppointmentTable() {
                                                             }}
                                                             onMouseEnter={(e) => {
                                                                 const statusId = mapStatusLabelToId(a.status);
-                                                                const isCollectible = statusId === 4 || statusId === 6;
-                                                                // Allow statusId 4 and 6 even for reception, otherwise disable for reception when statusId >= 2
+                                                                const isCollectible = statusId === 4 || statusId === 5 || statusId === 6;
+                                                                // Allow statusId 4, 5 (Complete), and 6 even for reception, otherwise disable for reception when statusId >= 2
                                                                 const shouldDisable = isReceptionist && statusId >= 2 && !isCollectible;
                                                                 if (shouldDisable) return;
                                                                 const shouldEnable = !isReceptionist || isCollectible;
@@ -4717,8 +4717,8 @@ export default function AppointmentTable() {
                                                             }}
                                                             onMouseLeave={(e) => {
                                                                 const statusId = mapStatusLabelToId(a.status);
-                                                                const isCollectible = statusId === 4 || statusId === 6;
-                                                                // Allow statusId 4 and 6 even for reception, otherwise disable for reception when statusId >= 2
+                                                                const isCollectible = statusId === 4 || statusId === 5 || statusId === 6;
+                                                                // Allow statusId 4, 5 (Complete), and 6 even for reception, otherwise disable for reception when statusId >= 2
                                                                 const shouldDisable = isReceptionist && statusId >= 2 && !isCollectible;
                                                                 if (shouldDisable) return;
                                                                 const shouldEnable = !isReceptionist || isCollectible;
@@ -5365,8 +5365,8 @@ export default function AppointmentTable() {
                                                         className="crm-btn ms-auto"
                                                         title={(() => {
                                                             const statusId = mapStatusLabelToId(appointment.status);
-                                                            const isCollectible = statusId === 4 || statusId === 6;
-                                                            // Allow statusId 4 and 6 even for reception, otherwise disable for reception when statusId >= 2
+                                                            const isCollectible = statusId === 4 || statusId === 5 || statusId === 6;
+                                                            // Allow statusId 4, 5 (Complete), and 6 even for reception, otherwise disable for reception when statusId >= 2
                                                             const shouldDisable = isReceptionist && statusId >= 2 && !isCollectible;
                                                             if (shouldDisable) return "Collection (Disabled - Status >= 2)";
                                                             const shouldEnable = !isReceptionist || isCollectible;
@@ -5375,10 +5375,10 @@ export default function AppointmentTable() {
                                                     })()}
                                                     onClick={() => {
                                                         const statusId = mapStatusLabelToId(appointment.status);
-                                                        const isCollectible = statusId === 4 || statusId === 6;
-                                                        // Allow statusId 4 and 6 even for reception, otherwise disable for reception when statusId >= 2
+                                                        const isCollectible = statusId === 4 || statusId === 5 || statusId === 6;
+                                                        // Allow statusId 4, 5 (Complete), and 6 even for reception, otherwise disable for reception when statusId >= 2
                                                         const shouldDisable = isReceptionist && statusId >= 2 && !isCollectible;
-                                                        if (shouldDisable) return; // Disable for reception when statusId >= 2 (except statusId 4 and 6)
+                                                        if (shouldDisable) return; // Disable for reception when statusId >= 2 (except statusId 4, 5, and 6)
                                                         const shouldEnable = !isReceptionist || isCollectible;
                                                         if (!shouldEnable) return; // Disable for reception login unless COMPLETE or SUBMITTED
                                                         if (!isCollectible) return;
@@ -5399,8 +5399,8 @@ export default function AppointmentTable() {
                                                     }}
                                                     aria-disabled={(() => {
                                                         const statusId = mapStatusLabelToId(appointment.status);
-                                                        const isCollectible = statusId === 4 || statusId === 6;
-                                                        // Allow statusId 4 and 6 even for reception, otherwise disable for reception when statusId >= 2
+                                                        const isCollectible = statusId === 4 || statusId === 5 || statusId === 6;
+                                                        // Allow statusId 4, 5 (Complete), and 6 even for reception, otherwise disable for reception when statusId >= 2
                                                         const shouldDisable = isReceptionist && statusId >= 2 && !isCollectible;
                                                         if (shouldDisable) return true;
                                                         const shouldEnable = !isReceptionist || isCollectible;
@@ -5409,8 +5409,8 @@ export default function AppointmentTable() {
                                                     style={{
                                                         opacity: (() => {
                                                             const statusId = mapStatusLabelToId(appointment.status);
-                                                            const isCollectible = statusId === 4 || statusId === 6;
-                                                            // Allow statusId 4 and 6 even for reception, otherwise disable for reception when statusId >= 2
+                                                            const isCollectible = statusId === 4 || statusId === 5 || statusId === 6;
+                                                            // Allow statusId 4, 5 (Complete), and 6 even for reception, otherwise disable for reception when statusId >= 2
                                                             const shouldDisable = isReceptionist && statusId >= 2 && !isCollectible;
                                                             if (shouldDisable) return 0.5;
                                                             const shouldEnable = !isReceptionist || isCollectible;
@@ -5418,8 +5418,8 @@ export default function AppointmentTable() {
                                                         })(),
                                                         cursor: (() => {
                                                             const statusId = mapStatusLabelToId(appointment.status);
-                                                            const isCollectible = statusId === 4 || statusId === 6;
-                                                            // Allow statusId 4 and 6 even for reception, otherwise disable for reception when statusId >= 2
+                                                            const isCollectible = statusId === 4 || statusId === 5 || statusId === 6;
+                                                            // Allow statusId 4, 5 (Complete), and 6 even for reception, otherwise disable for reception when statusId >= 2
                                                             const shouldDisable = isReceptionist && statusId >= 2 && !isCollectible;
                                                             if (shouldDisable) return 'not-allowed';
                                                             const shouldEnable = !isReceptionist || isCollectible;
@@ -5427,8 +5427,8 @@ export default function AppointmentTable() {
                                                         })(),
                                                         backgroundColor: (() => {
                                                             const statusId = mapStatusLabelToId(appointment.status);
-                                                            const isCollectible = statusId === 4 || statusId === 6;
-                                                            // Allow statusId 4 and 6 even for reception, otherwise disable for reception when statusId >= 2
+                                                            const isCollectible = statusId === 4 || statusId === 5 || statusId === 6;
+                                                            // Allow statusId 4, 5 (Complete), and 6 even for reception, otherwise disable for reception when statusId >= 2
                                                             const shouldDisable = isReceptionist && statusId >= 2 && !isCollectible;
                                                             if (shouldDisable) return '#f5f5f5';
                                                             const shouldEnable = !isReceptionist || isCollectible;
@@ -5437,8 +5437,8 @@ export default function AppointmentTable() {
                                                         })(),
                                                         borderColor: (() => {
                                                             const statusId = mapStatusLabelToId(appointment.status);
-                                                            const isCollectible = statusId === 4 || statusId === 6;
-                                                            // Allow statusId 4 and 6 even for reception, otherwise disable for reception when statusId >= 2
+                                                            const isCollectible = statusId === 4 || statusId === 5 || statusId === 6;
+                                                            // Allow statusId 4, 5 (Complete), and 6 even for reception, otherwise disable for reception when statusId >= 2
                                                             const shouldDisable = isReceptionist && statusId >= 2 && !isCollectible;
                                                             if (shouldDisable) return '#ddd';
                                                             const shouldEnable = !isReceptionist || isCollectible;

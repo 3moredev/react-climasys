@@ -222,6 +222,11 @@ export default function Treatment() {
     const [hasSubmittedSuccessfully, setHasSubmittedSuccessfully] = useState<boolean>(false);
     const [statusId, setStatusId] = useState<number>(9);
     
+    // Update isFormDisabled based on statusId (5 = Complete)
+    useEffect(() => {
+        setIsFormDisabled(statusId === 5);
+    }, [statusId]);
+    
     // Form data state
     const [formData, setFormData] = useState({
         referralBy: 'Self',
@@ -462,6 +467,8 @@ export default function Treatment() {
     const [mlPrescriptionsTable, setMlPrescriptionsTable] = useState<PrescriptionRow[]>([]);
     const [mlInstructionsTable, setMlInstructionsTable] = useState<PrescriptionRow[]>([]);
     const [mlTestsTable, setMlTestsTable] = useState<string[]>([]);
+    // Store labTestsAsked from master-lists API for print
+    const labTestsAskedRef = React.useRef<any[]>([]);
 
     const [billingData, setBillingData] = useState({
         billed: '',
@@ -473,6 +480,16 @@ export default function Treatment() {
         feesCollected: '',
         paymentRemark: ''
     });
+    
+    // Folder amount API response data
+    const [folderAmountData, setFolderAmountData] = useState<{
+        success?: boolean;
+        totalAcBalance?: number;
+        rows?: any[];
+    } | null>(null);
+    
+    // Ref to track if folder-amount API has set acBalance (to prevent master-lists from overwriting)
+    const folderAmountSetRef = React.useRef<boolean>(false);
     
     // Attachments data
     const [attachments, setAttachments] = useState<Attachment[]>([
@@ -557,6 +574,594 @@ export default function Treatment() {
         } finally {
             setOpeningDocumentId(null);
         }
+    };
+
+    // Helper function to escape HTML
+    const escapeHtml = (text: string): string => {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    };
+
+    // Print prescription/report
+    const handlePrint = () => {
+        // Get current date and time
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('en-GB', {
+            day: '2-digit',
+            month: '2-digit',
+            year: '2-digit'
+        });
+        const timeStr = now.toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+        });
+
+        // Format visit date
+        const visitDate = treatmentData?.visitNumber
+            ? new Date().toLocaleDateString('en-GB', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric'
+            }).replace(/ /g, '-')
+            : new Date().toLocaleDateString('en-GB', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric'
+            }).replace(/ /g, '-');
+
+        // Get patient info
+        const patientName = escapeHtml(treatmentData?.patientName || '');
+        const gender = escapeHtml(treatmentData?.gender || '');
+        const age = treatmentData?.age ? `${treatmentData.age}` : '';
+        const patientId = escapeHtml(treatmentData?.patientId || '');
+        const contact = escapeHtml(treatmentData?.contact || '-');
+        const weight = escapeHtml(formData.weight || '-');
+        const height = escapeHtml(formData.height || '-');
+        const bmi = escapeHtml(formData.bmi || '-');
+
+        // Get medical details
+        const complaints = complaintsRows.length > 0
+            ? complaintsRows.map(c => escapeHtml(c.label)).join(', ')
+            : (selectedComplaints.length > 0
+                ? complaintsOptions.filter(opt => selectedComplaints.includes(opt.value))
+                    .map(opt => escapeHtml(opt.label)).join(', ')
+                : '-');
+
+        const examinationFindings = escapeHtml(formData.examinationFindings || '-');
+        const diagnosis = diagnosisRows.length > 0
+            ? diagnosisRows.map(d => escapeHtml(d.diagnosis)).join(', ')
+            : (selectedDiagnoses.length > 0
+                ? diagnosesOptions.filter(opt => selectedDiagnoses.includes(opt.value))
+                    .map(opt => escapeHtml(opt.label)).join(', ')
+                : escapeHtml(selectedDiagnosis || '-'));
+
+        const pulse = escapeHtml(formData.pulse || '-');
+        const bp = escapeHtml(formData.bp || '-');
+        const sugar = escapeHtml(formData.sugar || '-');
+
+        // Get advice
+        const advice = escapeHtml(formData.visitComments || formData.additionalComments || '');
+
+        // Build instructions HTML from mlInstructionsTable
+        let instructionsHTML = '';
+        if (mlInstructionsTable && mlInstructionsTable.length > 0) {
+            instructionsHTML = mlInstructionsTable.map((row) => {
+                if (!row.instruction || !row.instruction.trim()) {
+                    return '';
+                }
+                const groupName = row.prescription ? escapeHtml(row.prescription) : '';
+                let instructionText = row.instruction.trim();
+                
+                // Escape HTML first
+                instructionText = escapeHtml(instructionText);
+                
+                // Replace multiple spaces (2 or more) with line breaks to separate instruction items
+                // This handles cases like "item1        item2        item3"
+                let formattedText = instructionText.replace(/\s{2,}/g, '<br/>');
+                
+                // Also handle explicit line breaks
+                formattedText = formattedText.replace(/\n/g, '<br/>');
+                
+                return `
+                    <div style="margin-top: 15px; margin-bottom: 10px;">
+                        ${groupName ? `<div style="font-size: 14px; font-weight: bold; margin-bottom: 8px;">${groupName}</div>` : ''}
+                        <div style="font-size: 12px; white-space: pre-wrap; line-height: 1.8; padding-left: 0;">${formattedText}</div>
+                    </div>
+                `;
+            }).filter(html => html.trim()).join('');
+        }
+
+        // Choose prescriptions (fallback to master list if local state empty)
+        const rowsToPrint = prescriptionRows.length > 0 ? prescriptionRows : mlPrescriptionsTable;
+
+        // Build prescription table HTML
+        let prescriptionTableHTML = '';
+        if (rowsToPrint.length > 0) {
+            prescriptionTableHTML = `
+                <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+                    <thead>
+                        <tr style="background-color: #f5f5f5;">
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left; font-weight: bold;">Medicines</th>
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: center; font-weight: bold;">Morning<br/>सकाळी</th>
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: center; font-weight: bold;">Afternoon<br/>दुपारी</th>
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: center; font-weight: bold;">Evening<br/>रात्री</th>
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: center; font-weight: bold;">Days</th>
+                            <th style="border: 1px solid #ddd; padding: 8px; text-align: left; font-weight: bold;">Instruction</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rowsToPrint.map(row => `
+                            <tr>
+                                <td style="border: 1px solid #ddd; padding: 8px;">${escapeHtml(row.prescription || '-')}</td>
+                                <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${escapeHtml(row.b || '0')}</td>
+                                <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${escapeHtml(row.l || '0')}</td>
+                                <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${escapeHtml(row.d || '0')}</td>
+                                <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${escapeHtml(row.days || '-')}</td>
+                                <td style="border: 1px solid #ddd; padding: 8px;">${escapeHtml(row.instruction || '-')}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        } else {
+            prescriptionTableHTML = '<p style="margin-top: 10px;">No prescriptions found.</p>';
+        }
+
+        // Create print HTML (mirrors Treatment print layout)
+        const printHTML = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Prescription - ${patientName}</title>
+                <style>
+                    @media print {
+                        @page {
+                            margin: 20mm;
+                        }
+                        body {
+                            margin: 0;
+                            padding: 0;
+                        }
+                    }
+                    body {
+                        font-family: Arial, sans-serif;
+                        padding: 20px;
+                        max-width: 800px;
+                        margin: 0 auto;
+                    }
+                    .horizontal-line {
+                        border-top: 2px solid #000;
+                        margin: 10px 0;
+                    }
+                    .patient-info-line1 {
+                        font-size: 16px;
+                        font-weight: bold;
+                        margin: 10px 0;
+                        line-height: 1.8;
+                    }
+                    .patient-info-line2 {
+                        font-size: 14px;
+                        margin: 10px 0;
+                        line-height: 1.8;
+                    }
+                    .medical-details {
+                        font-size: 16px;
+                        font-weight: bold;
+                        margin: 10px 0;
+                        line-height: 1.8;
+                    }
+                    .prescription-section {
+                        margin-top: 15px;
+                    }
+                    .prescription-section strong {
+                        font-size: 16px;
+                        font-weight: bold;
+                    }
+                    table {
+                        width: 100%;
+                        border-collapse: collapse;
+                        margin-top: 10px;
+                        font-size: 12px;
+                    }
+                    th, td {
+                        border: 1px solid #ddd;
+                        padding: 8px;
+                    }
+                    th {
+                        background-color: #f5f5f5;
+                        font-weight: bold;
+                        text-align: left;
+                    }
+                    td {
+                        text-align: left;
+                    }
+                    .advice-section {
+                        margin-top: 20px;
+                        position: relative;
+                    }
+                    .advice-line-top {
+                        border-top: 2px solid #000;
+                        margin-bottom: 5px;
+                    }
+                    .advice-line-bottom {
+                        border-top: 2px solid #000;
+                        margin-top: 5px;
+                    }
+                    .advice-text {
+                        font-size: 14px;
+                        font-weight: bold;
+                        text-align: left;
+                        margin: 5px 0;
+                    }
+                    .advice-content {
+                        margin-top: 5px;
+                        white-space: pre-wrap;
+                        font-size: 12px;
+                    }
+                    .instructions-section {
+                        margin-top: 20px;
+                        position: relative;
+                    }
+                    .instructions-line-top {
+                        border-top: 2px solid #000;
+                        margin-bottom: 5px;
+                    }
+                    .instructions-line-bottom {
+                        border-top: 2px solid #000;
+                        margin-top: 5px;
+                    }
+                    .instructions-text {
+                        font-size: 14px;
+                        font-weight: bold;
+                        text-align: left;
+                        margin: 5px 0;
+                    }
+                    .instructions-content {
+                        margin-top: 5px;
+                        white-space: pre-wrap;
+                        font-size: 12px;
+                        line-height: 1.6;
+                    }
+                </style>
+            </head>
+            <body>
+                <!-- 8 blank lines for header page space -->
+                <div style="height: 8em; line-height: 1em;"></div>
+                
+                <div class="horizontal-line"></div>
+                
+                <div class="patient-info-line1">
+                    Name: ${patientName} ${gender} / ${age} Y Id: ${patientId} Date: ${visitDate}
+                </div>
+                
+                <div class="patient-info-line2">
+                    Contact Number: ${contact}, Weight (Kg): ${weight} Height (Cm): ${height} BMI: ${bmi}
+                </div>
+
+                <div class="horizontal-line"></div>
+
+                <div class="medical-details">
+                    Complaint: ${complaints}<br/>
+                    Examination Finding: ${examinationFindings}<br/>
+                    Diagnosis: ${diagnosis}<br/>
+                    Pulse: ${pulse} BP: ${bp} Sugar: ${sugar}
+                </div>
+
+                <div class="prescription-section">
+                    <strong>Rx:</strong>
+                    ${prescriptionTableHTML}
+                </div>
+
+                <div class="advice-section">
+                    <div class="advice-line-top"></div>
+                    <div class="advice-text">Adv:</div>
+                    ${advice ? `<div class="advice-content">${advice}</div>` : ''}
+                    <div class="advice-line-bottom"></div>
+                </div>
+
+                ${instructionsHTML ? `
+                <div class="instructions-section">
+                    <div class="instructions-line-top"></div>
+                    <div class="instructions-text">Instructions for Patient:</div>
+                    <div class="instructions-content">${instructionsHTML}</div>
+                    <div class="instructions-line-bottom"></div>
+                </div>
+                ` : ''}
+            </body>
+            </html>
+        `;
+
+        // Print within the same tab using a hidden iframe (mirrors Treatment)
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'fixed';
+        iframe.style.right = '0';
+        iframe.style.bottom = '0';
+        iframe.style.width = '0';
+        iframe.style.height = '0';
+        iframe.style.border = '0';
+        iframe.srcdoc = printHTML;
+        document.body.appendChild(iframe);
+
+        // Flag to track if we've already triggered lab results print
+        let labResultsPrinted = false;
+        
+        // Function to handle printing lab results after prescription print
+        const handleLabResultsPrint = () => {
+            // Use ref to get labTestsAsked from API
+            const currentLabTestsAsked = labTestsAskedRef.current;
+            console.log('🔍 handleLabResultsPrint called');
+            console.log('🔍 labResultsPrinted:', labResultsPrinted);
+            console.log('🔍 currentLabTestsAsked (from ref):', currentLabTestsAsked);
+            console.log('🔍 currentLabTestsAsked length:', currentLabTestsAsked?.length);
+            console.log('🔍 currentLabTestsAsked is array:', Array.isArray(currentLabTestsAsked));
+            
+            if (!labResultsPrinted) {
+                // Check if labTestsAsked exist using ref
+                if (currentLabTestsAsked && Array.isArray(currentLabTestsAsked) && currentLabTestsAsked.length > 0) {
+                    labResultsPrinted = true;
+                    console.log('✅ Triggering lab test results print with', currentLabTestsAsked.length, 'lab tests...');
+                    // Delay to ensure first print dialog is fully closed
+                    setTimeout(() => {
+                        try {
+                            printLabTestResults();
+                        } catch (error) {
+                            console.error('❌ Error in printLabTestResults:', error);
+                        }
+                    }, 1000); // 1 second delay after first print closes
+                } else {
+                    console.log('❌ Cannot print lab results - no labTestsAsked available:', {
+                        alreadyPrinted: labResultsPrinted,
+                        hasLabTestsAsked: !!currentLabTestsAsked,
+                        isArray: Array.isArray(currentLabTestsAsked),
+                        labTestsAskedLength: currentLabTestsAsked?.length || 0
+                    });
+                }
+            } else {
+                console.log('❌ Already printed lab results');
+            }
+        };
+
+        iframe.onload = () => {
+            try {
+                const win = iframe.contentWindow;
+                if (win) {
+                    let cleanupDone = false;
+                    
+                    const cleanup = () => {
+                        if (cleanupDone) return;
+                        cleanupDone = true;
+                        setTimeout(() => {
+                            if (iframe.parentNode) {
+                                iframe.parentNode.removeChild(iframe);
+                            }
+                        }, 100);
+                    };
+                    
+                    // Method 1: Listen for afterprint event
+                    const handleAfterPrint = () => {
+                        console.log('✅ afterprint event detected');
+                        cleanup();
+                        handleLabResultsPrint();
+                    };
+                    
+                    // Add listeners to both iframe and main window
+                    win.addEventListener('afterprint', handleAfterPrint);
+                    window.addEventListener('afterprint', handleAfterPrint);
+                    
+                    // Method 2: Use window focus/blur events (more reliable)
+                    let printDialogOpened = false;
+                    
+                    const handleWindowBlur = () => {
+                        console.log('Window blurred - print dialog opened');
+                        printDialogOpened = true;
+                    };
+                    
+                    const handleWindowFocus = () => {
+                        if (printDialogOpened) {
+                            console.log('✅ Window focused - print dialog closed');
+                            window.removeEventListener('blur', handleWindowBlur);
+                            window.removeEventListener('focus', handleWindowFocus);
+                            cleanup();
+                            // Small delay to ensure print dialog is fully closed
+                            setTimeout(() => {
+                                handleLabResultsPrint();
+                            }, 300);
+                        }
+                    };
+                    
+                    // Add focus/blur listeners
+                    window.addEventListener('blur', handleWindowBlur);
+                    window.addEventListener('focus', handleWindowFocus);
+                    
+                    // Clean up listeners after 10 seconds
+                    setTimeout(() => {
+                        window.removeEventListener('blur', handleWindowBlur);
+                        window.removeEventListener('focus', handleWindowFocus);
+                        window.removeEventListener('afterprint', handleAfterPrint);
+                    }, 10000);
+                    
+                    // Method 3: Simple timeout fallback
+                    win.focus();
+                    win.print();
+                    
+                    // Fallback timeout - triggers second print after 2 seconds
+                    setTimeout(() => {
+                        if (!labResultsPrinted) {
+                            console.log('✅ Fallback timeout: triggering lab results print');
+                            window.removeEventListener('blur', handleWindowBlur);
+                            window.removeEventListener('focus', handleWindowFocus);
+                            window.removeEventListener('afterprint', handleAfterPrint);
+                            cleanup();
+                            handleLabResultsPrint();
+                        }
+                    }, 2000);
+                }
+            } catch (error) {
+                console.error('Error printing prescription:', error);
+                // Fallback: remove iframe and check for lab results after timeout
+                setTimeout(() => {
+                    if (iframe.parentNode) {
+                        iframe.parentNode.removeChild(iframe);
+                    }
+                    handleLabResultsPrint();
+                }, 2000);
+            }
+        };
+    };
+
+    // Print lab test results
+    const printLabTestResults = () => {
+        // Use ref to get labTestsAsked from API
+        const currentLabTestsAsked = labTestsAskedRef.current;
+        console.log('🔍 printLabTestResults called');
+        console.log('🔍 currentLabTestsAsked (from ref):', currentLabTestsAsked);
+        console.log('🔍 currentLabTestsAsked length:', currentLabTestsAsked?.length);
+        console.log('🔍 currentLabTestsAsked is array:', Array.isArray(currentLabTestsAsked));
+        
+        if (!currentLabTestsAsked || !Array.isArray(currentLabTestsAsked) || currentLabTestsAsked.length === 0) {
+            console.log('❌ No lab tests asked to print - invalid or empty data');
+            return;
+        }
+        
+        console.log('✅ Starting lab test results print with', currentLabTestsAsked.length, 'lab tests...');
+
+        // Format visit date (same as prescription print)
+        const visitDate = treatmentData?.visitNumber
+            ? new Date().toLocaleDateString('en-GB', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric'
+            }).replace(/ /g, '-')
+            : new Date().toLocaleDateString('en-GB', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric'
+            }).replace(/ /g, '-');
+
+        // Get patient info (same as prescription print)
+        const patientName = escapeHtml(treatmentData?.patientName || '');
+        const gender = escapeHtml(treatmentData?.gender || '');
+        const age = treatmentData?.age ? `${treatmentData.age}` : '';
+        const patientId = escapeHtml(treatmentData?.patientId || '');
+        const contact = escapeHtml(treatmentData?.contact || '-');
+        const weight = escapeHtml(formData.weight || '-');
+        const height = escapeHtml(formData.height || '-');
+        const bmi = escapeHtml(formData.bmi || '-');
+
+        // Build lab test list HTML from labTestsAsked
+        let labTestListHTML = '';
+        if (currentLabTestsAsked.length > 0) {
+            labTestListHTML = '<ul style="list-style-type: none; padding-left: 0; margin-top: 10px;">';
+            currentLabTestsAsked.forEach((labTest: any) => {
+                const labTestName = labTest.id || labTest.name || labTest.labTestName || 'Unknown Test';
+                labTestListHTML += `
+                    <li style="font-size: 14px; margin-bottom: 8px; padding-left: 20px; position: relative;">
+                        <span style="position: absolute; left: 0;">•</span>
+                        ${escapeHtml(labTestName)}
+                    </li>
+                `;
+            });
+            labTestListHTML += '</ul>';
+        }
+
+        // Create print HTML for lab test results
+        const printHTML = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Lab Tests Asked - ${patientName}</title>
+                <style>
+                    @media print {
+                        @page {
+                            margin: 20mm;
+                        }
+                        body {
+                            margin: 0;
+                            padding: 0;
+                        }
+                    }
+                    body {
+                        font-family: Arial, sans-serif;
+                        padding: 20px;
+                        max-width: 800px;
+                        margin: 0 auto;
+                    }
+                    .horizontal-line {
+                        border-top: 2px solid #000;
+                        margin: 10px 0;
+                    }
+                    .patient-info-line1 {
+                        font-size: 16px;
+                        font-weight: bold;
+                        margin: 10px 0;
+                        line-height: 1.8;
+                    }
+                    .patient-info-line2 {
+                        font-size: 14px;
+                        margin: 10px 0;
+                        line-height: 1.8;
+                    }
+                </style>
+            </head>
+            <body>
+                <!-- 8 blank lines for header page space -->
+                <div style="height: 8em; line-height: 1em;"></div>
+                
+                <div class="horizontal-line"></div>
+                
+                <div class="patient-info-line1">
+                    Name: ${patientName} ${gender} / ${age} Y Id: ${patientId} Date: ${visitDate}
+                </div>
+                
+                <div class="patient-info-line2">
+                    Contact Number: ${contact}, Weight (Kg): ${weight} Height (Cm): ${height} BMI: ${bmi}
+                </div>
+
+                <div class="horizontal-line"></div>
+
+                <div style="margin-top: 15px;">
+                    <strong style="font-size: 16px; font-weight: bold;">Lab Tests Asked:</strong>
+                    ${labTestListHTML}
+                </div>
+            </body>
+            </html>
+        `;
+
+        // Print lab test results using iframe
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'fixed';
+        iframe.style.right = '0';
+        iframe.style.bottom = '0';
+        iframe.style.width = '0';
+        iframe.style.height = '0';
+        iframe.style.border = '0';
+        iframe.srcdoc = printHTML;
+        document.body.appendChild(iframe);
+        iframe.onload = () => {
+            try {
+                const win = iframe.contentWindow;
+                if (win) {
+                    win.addEventListener('afterprint', () => {
+                        setTimeout(() => {
+                            if (iframe.parentNode) {
+                                iframe.parentNode.removeChild(iframe);
+                            }
+                        }, 100);
+                    });
+                    win.focus();
+                    win.print();
+                }
+            } catch (error) {
+                console.error('Error printing lab test results:', error);
+                setTimeout(() => {
+                    if (iframe.parentNode) {
+                        iframe.parentNode.removeChild(iframe);
+                    }
+                }, 2000);
+            }
+        };
     };
 
     // Addendum modal moved to Treatment page
@@ -712,10 +1317,23 @@ export default function Treatment() {
                 try {
                     const vitals = (resp as any)?.data?.vitals?.[0];
                     const dataRoot = (resp as any)?.data || {};
+                    const safeToStr = (v: any) => (v === undefined || v === null ? '' : String(v));
                     const medicinesFromMaster = Array.isArray(dataRoot?.medicines) ? dataRoot.medicines : [];
                     const medicinesJoined = medicinesFromMaster
                         .map((m: any) => String(m?.short_description ?? m?.medicine ?? m?.medicineName ?? m?.name ?? ''))
                         .filter(Boolean)
+                        .join(', ');
+                    const dressingFromMaster = Array.isArray(dataRoot?.dressing) ? dataRoot.dressing : [];
+                    const dressingCombined = dressingFromMaster
+                        .map((d: any) =>
+                            safeToStr(
+                                d?.dressing_description ??
+                                d?.short_description ??
+                                d?.longdressing_description ??
+                                d
+                            ).trim()
+                        )
+                        .filter((text: string) => text.length > 0)
                         .join(', ');
                     if (vitals && typeof vitals === 'object') {
                         setFormData(prev => ({
@@ -731,6 +1349,7 @@ export default function Treatment() {
                             medicalHistoryText: vitals.habits_comments !== undefined ? String(vitals.habits_comments) : prev.medicalHistoryText,
                             visitComments: vitals.instructions !== undefined ? String(vitals.instructions) : prev.visitComments,
                             medicines: medicinesJoined || prev.medicines,
+                            dressingBodyParts: dressingCombined || prev.dressingBodyParts,
                             visitType: {
                                 ...prev.visitType,
                                 inPerson: vitals.in_person !== undefined ? Boolean(vitals.in_person) : prev.visitType.inPerson
@@ -788,18 +1407,29 @@ export default function Treatment() {
                                 const billedValue = uiFields?.billedRs ?? vitals?.fees_to_collect ?? vitals?.Fees_To_Collect ?? prev.billed;
                                 const billedStr = billedValue !== undefined && billedValue !== null ? String(billedValue) : prev.billed;
                                 
+                                // Don't overwrite acBalance if folder-amount API has already set it
+                                // Use ref to check if folder-amount API has set the value (more reliable than state)
+                                const acBalanceValue = folderAmountSetRef.current ? prev.acBalance : 
+                                    (uiFields?.acBalanceRs !== undefined && uiFields?.acBalanceRs !== null ? String(uiFields.acBalanceRs) : prev.acBalance);
+                                
                                 return {
                                     ...prev,
                                     billed: billedStr,
                                     discount: uiFields?.discountRs !== undefined && uiFields?.discountRs !== null ? String(uiFields.discountRs) : prev.discount,
                                     dues: uiFields?.duesRs !== undefined && uiFields?.duesRs !== null ? String(uiFields.duesRs) : prev.dues,
-                                    acBalance: uiFields?.acBalanceRs !== undefined && uiFields?.acBalanceRs !== null ? String(uiFields.acBalanceRs) : prev.acBalance,
+                                    acBalance: acBalanceValue,
                                     receiptNo: uiFields?.receiptNo !== undefined && uiFields?.receiptNo !== null ? String(uiFields.receiptNo) : prev.receiptNo,
                                     feesCollected: uiFields?.feesCollected !== undefined && uiFields?.feesCollected !== null ? String(uiFields.feesCollected) : prev.feesCollected,
                                     paymentRemark: uiFields?.paymentRemark !== undefined && uiFields?.paymentRemark !== null ? String(uiFields.paymentRemark) : prev.paymentRemark,
                                     paymentBy: uiFields?.paymentById !== undefined && uiFields?.paymentById !== null ? String(uiFields.paymentById) : prev.paymentBy
                                 };
                             });
+                            
+                            // Load statusId from master lists (vitals or uiFields)
+                            const loadedStatusId = vitals?.statusId ?? vitals?.status_id ?? uiFields?.statusId ?? dataRoot?.statusId;
+                            if (loadedStatusId !== undefined && loadedStatusId !== null) {
+                                setStatusId(Number(loadedStatusId));
+                            }
                         } catch (_) {
                             // ignore mapping errors
                         }
@@ -807,7 +1437,6 @@ export default function Treatment() {
 
                     // Patch table data from master lists
                     try {
-                        const safeToStr = (v: any) => (v === undefined || v === null ? '' : String(v));
                         const mlComplaintsArr = Array.isArray(dataRoot?.complaints) ? dataRoot.complaints : [];
                         setMlComplaints(mlComplaintsArr.map((c: any) => ({
                             label: safeToStr(c?.complaint_description ?? c?.label ?? c?.name ?? c?.complaint ?? c?.description ?? ''),
@@ -861,6 +1490,13 @@ export default function Treatment() {
 
                         const testsArr = Array.isArray(dataRoot?.labTestsAsked) ? dataRoot.labTestsAsked : [];
                         setMlTestsTable(testsArr.map((t: any) => safeToStr(t?.id ?? t?.name ?? t?.testName ?? t?.label ?? t)).filter((s: string) => !!s));
+                        // Store labTestsAsked in ref for print functionality
+                        if (Array.isArray(testsArr) && testsArr.length > 0) {
+                            labTestsAskedRef.current = testsArr;
+                            console.log('Stored labTestsAsked from master-lists:', testsArr);
+                        } else {
+                            labTestsAskedRef.current = [];
+                        }
                     } catch (e2) {
                         console.warn('Billing: could not map table data from master lists', e2);
                     }
@@ -1370,6 +2006,65 @@ export default function Treatment() {
             }));
         }
     }, [formData.height, formData.weight]);
+
+    // Load patient folder amount for billing
+    useEffect(() => {
+        let cancelled = false;
+        // Reset the ref when patient changes
+        folderAmountSetRef.current = false;
+        
+        async function loadPatientFolderAmount() {
+            if (!treatmentData?.patientId || !sessionData?.clinicId) {
+                return;
+            }
+
+            try {
+                const clinicId = String(sessionData.clinicId);
+                const doctorId = 'DR-00010'; // Hardcoded as per requirement
+                const patientId = String(treatmentData.patientId);
+
+                const params = new URLSearchParams();
+                params.set('clinicId', clinicId);
+                params.set('doctorId', doctorId);
+                params.set('patientId', patientId);
+
+                const response = await fetch(`http://localhost:8080/api/fees/folder-amount?${params.toString()}`);
+                
+                if (cancelled) return;
+
+                if (!response.ok) {
+                    console.error('Failed to fetch folder amount:', response.status, response.statusText);
+                    return;
+                }
+
+                const data = await response.json();
+                console.log('=== Patient Folder Amount API Response (Billing) ===');
+                console.log('API URL:', `http://localhost:8080/api/fees/folder-amount?${params.toString()}`);
+                console.log('Response Data:', data);
+                console.log('==========================================');
+                
+                if (!cancelled && data) {
+                    setFolderAmountData(data);
+                    // Update A/C Balance with totalAcBalance
+                    if (data.totalAcBalance !== undefined && data.totalAcBalance !== null) {
+                        folderAmountSetRef.current = true; // Mark that folder-amount has set the value
+                        setBillingData(prev => ({
+                            ...prev,
+                            acBalance: String(data.totalAcBalance.toFixed(2))
+                        }));
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching patient folder amount:', error);
+            }
+        }
+
+        loadPatientFolderAmount();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [treatmentData?.patientId, sessionData?.clinicId]);
 
     // Handle previous visit click - same as Appointment page's handleLastVisitClick
     const handlePreviousVisitClick = async (visit: PreviousVisit) => {
@@ -3321,8 +4016,8 @@ export default function Treatment() {
                                                 height: 22,
                                                 borderRadius: 4,
                                                 border: 'none',
-                                                backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
-                                                color: '#fff',
+                                                backgroundColor: isFormDisabled ? '#D5D5D8' : '#1976d2',
+                                                color: isFormDisabled ? '#666' : '#fff',
                                                 fontWeight: 700,
                                                 lineHeight: '22px',
                                                 cursor: isFormDisabled ? 'not-allowed' : 'pointer',
@@ -3330,7 +4025,8 @@ export default function Treatment() {
                                                 boxSizing: 'border-box',
                                                 outline: 'none',
                                                 boxShadow: 'none',
-                                                transition: 'none'
+                                                transition: 'none',
+                                                opacity: isFormDisabled ? 0.7 : 1
                                             }}
                                             disabled={isFormDisabled}
                                             onMouseDown={(e) => {
@@ -3346,14 +4042,23 @@ export default function Treatment() {
                                         </div>
                                     )}
                                 </div>
-                            {/* Discount (enabled) */}
+                            {/* Discount (enabled/disabled based on status) */}
                             <div>
                                 <label style={{ display: 'block', marginBottom: 4, fontWeight: 600, fontSize: 12 }}>Discount (Rs)</label>
                                 <input
                                     type="text"
                                     value={billingData.discount}
                                     onChange={(e) => handleBillingChange('discount', e.target.value)}
-                                    style={{ width: '100%', border: '1px solid #ddd', padding: '6px 8px', fontSize: 12, background: 'white' }}
+                                    disabled={isFormDisabled}
+                                    style={{ 
+                                        width: '100%', 
+                                        border: '1px solid #ddd', 
+                                        padding: '6px 8px', 
+                                        fontSize: 12, 
+                                        background: isFormDisabled ? '#D5D5D8' : 'white',
+                                        cursor: isFormDisabled ? 'not-allowed' : 'text',
+                                        color: isFormDisabled ? '#666' : '#333'
+                                    }}
                                 />
                             </div>
                             {/* Dues (disabled) */}
@@ -3374,31 +4079,56 @@ export default function Treatment() {
                                         <span 
                                             style={{ 
                                                 color: '#1976d2', 
-                                                fontWeight: 'bold',
+                                                fontWeight: 'normal',
+                                                fontSize: '11px',
                                                 cursor: 'pointer',
                                                 userSelect: 'none'
                                             }}
                                             onClick={() => setShowAccountsPopup(true)}
                                             title="View Accounts"
-                                        >₹</span>
+                                        >payment history</span>
                                     </label>
-                                    <input
-                                        type="text"
-                                        value={billingData.acBalance}
-                                        onChange={(e) => handleBillingChange('acBalance', e.target.value)}
-                                        disabled
-                                        placeholder="0.00"
-                                        style={{
-                                            width: '100%',
-                                            padding: '6px 10px',
-                                            border: '1px solid #ccc',
-                                            borderRadius: '4px',
-                                            fontSize: '13px',
-                                            backgroundColor: '#f5f5f5',
-                                            color: '#666',
-                                            cursor: 'not-allowed'
-                                        }}
-                                    />
+                                    <div style={{ position: 'relative', width: '100%' }}>
+                                        <input
+                                            type="text"
+                                            value={billingData.acBalance}
+                                            onChange={(e) => handleBillingChange('acBalance', e.target.value)}
+                                            disabled
+                                            placeholder="0.00"
+                                            style={{
+                                                width: '100%',
+                                                padding: '6px 10px',
+                                                paddingRight: folderAmountData?.totalAcBalance !== undefined && 
+                                                             folderAmountData?.totalAcBalance !== null && 
+                                                             folderAmountData?.rows && 
+                                                             folderAmountData.rows.length > 0 ? '120px' : '10px',
+                                                border: '1px solid #ccc',
+                                                borderRadius: '4px',
+                                                fontSize: '13px',
+                                                backgroundColor: '#f5f5f5',
+                                                color: '#666',
+                                                cursor: 'not-allowed'
+                                            }}
+                                        />
+                                        {folderAmountData?.totalAcBalance !== undefined && 
+                                         folderAmountData?.totalAcBalance !== null && 
+                                         folderAmountData?.rows && 
+                                         folderAmountData.rows.length > 0 && (
+                                            <span style={{
+                                                position: 'absolute',
+                                                right: '10px',
+                                                top: '50%',
+                                                transform: 'translateY(-50%)',
+                                                fontSize: '11px',
+                                                fontWeight: 'bold',
+                                                color: folderAmountData.totalAcBalance > 0 ? '#d32f2f' : '#2e7d32',
+                                                whiteSpace: 'nowrap',
+                                                pointerEvents: 'none'
+                                            }}>
+                                                {folderAmountData.totalAcBalance > 0 ? 'Amount Pending' : 'Outstanding'}
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
                             {/* Receipt No (disabled) */}
                             <div>
@@ -3413,28 +4143,58 @@ export default function Treatment() {
                         </div>
 
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, marginBottom: 16 }}>
-                            {/* Collected (enabled) */}
+                            {/* Collected (enabled/disabled based on status) */}
                             <div>
                                 <label style={{ display: 'block', marginBottom: 4, fontWeight: 600, fontSize: 12 }}>Collected (Rs)</label>
                                 <input 
                                     type="text" 
                                     value={billingData.feesCollected}
                                     onChange={(e) => handleBillingChange('feesCollected', e.target.value)}
-                                    style={{ width: '100%', border: '1px solid #ddd', padding: '6px 8px', fontSize: 12, background: 'white' }} 
+                                    disabled={isFormDisabled}
+                                    style={{ 
+                                        width: '100%', 
+                                        border: '1px solid #ddd', 
+                                        padding: '6px 8px', 
+                                        fontSize: 12, 
+                                        background: isFormDisabled ? '#D5D5D8' : 'white',
+                                        cursor: isFormDisabled ? 'not-allowed' : 'text',
+                                        color: isFormDisabled ? '#666' : '#333'
+                                    }} 
                                 />
                             </div>
-                            {/* Reason (enabled) */}
+                            {/* Reason (enabled/disabled based on status) */}
                             <div>
                                 <label style={{ display: 'block', marginBottom: 4, fontWeight: 600, fontSize: 12 }}>Reason</label>
-                                <input type="text" style={{ width: '100%', border: '1px solid #ddd', padding: '6px 8px', fontSize: 12, background: 'white' }} />
+                                <input 
+                                    type="text" 
+                                    disabled={isFormDisabled}
+                                    style={{ 
+                                        width: '100%', 
+                                        border: '1px solid #ddd', 
+                                        padding: '6px 8px', 
+                                        fontSize: 12, 
+                                        background: isFormDisabled ? '#D5D5D8' : 'white',
+                                        cursor: isFormDisabled ? 'not-allowed' : 'text',
+                                        color: isFormDisabled ? '#666' : '#333'
+                                    }} 
+                                />
                             </div>
-                            {/* Payment By (enabled) */}
+                            {/* Payment By (enabled/disabled based on status) */}
                             <div>
                                 <label style={{ display: 'block', marginBottom: 4, fontWeight: 600, fontSize: 12 }}>Payment By</label>
                                 <select
                                     value={billingData.paymentBy}
                                     onChange={(e) => handleBillingChange('paymentBy', e.target.value)}
-                                    style={{ width: '100%', border: '1px solid #ddd', padding: '6px 8px', fontSize: 12, background: 'white' }}
+                                    disabled={isFormDisabled}
+                                    style={{ 
+                                        width: '100%', 
+                                        border: '1px solid #ddd', 
+                                        padding: '6px 8px', 
+                                        fontSize: 12, 
+                                        background: isFormDisabled ? '#D5D5D8' : 'white',
+                                        cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                        color: isFormDisabled ? '#666' : '#333'
+                                    }}
                                 >
                                     {paymentByOptions.length === 0 ? (
                                         <option value="">—</option>
@@ -3445,14 +4205,23 @@ export default function Treatment() {
                                     )}
                                 </select>
                             </div>
-                            {/* Payment Remark (enabled) */}
+                            {/* Payment Remark (enabled/disabled based on status) */}
                             <div>
                                 <label style={{ display: 'block', marginBottom: 4, fontWeight: 600, fontSize: 12 }}>Payment Remark</label>
                                 <input 
                                     type="text" 
                                     value={billingData.paymentRemark}
                                     onChange={(e) => handleBillingChange('paymentRemark', e.target.value)}
-                                    style={{ width: '100%', border: '1px solid #ddd', padding: '6px 8px', fontSize: 12, background: 'white' }} 
+                                    disabled={isFormDisabled}
+                                    style={{ 
+                                        width: '100%', 
+                                        border: '1px solid #ddd', 
+                                        padding: '6px 8px', 
+                                        fontSize: 12, 
+                                        background: isFormDisabled ? '#D5D5D8' : 'white',
+                                        cursor: isFormDisabled ? 'not-allowed' : 'text',
+                                        color: isFormDisabled ? '#666' : '#333'
+                                    }} 
                                 />
                             </div>
                             {/* Receipt Date (disabled) */}
@@ -3465,14 +4234,14 @@ export default function Treatment() {
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '20px', marginBottom: '40px', flexWrap: 'wrap' }}>
                                 <button
                                     type="button"
-                                    disabled
+                                    disabled={true}
                                     style={{
-                                        backgroundColor: '#1976D2', // gray background to show it's disabled
+                                        backgroundColor: '#D5D5D8',
                                         color: '#666',
                                         border: 'none',
                                         padding: '8px 12px',
                                         borderRadius: '4px',
-                                        cursor: 'not-allowed', // shows the "no" cursor
+                                        cursor: 'not-allowed',
                                         fontSize: '12px',
                                         opacity: 0.7
                                     }}
@@ -3481,7 +4250,8 @@ export default function Treatment() {
                                 </button>
                             <button 
                                 type="button" 
-                                onClick={() => window.print()}
+                                onClick={handlePrint}
+                                title="Print prescription/report"
                                 style={{
                                     backgroundColor: '#1976d2',
                                     color: 'white',
@@ -3489,7 +4259,21 @@ export default function Treatment() {
                                     padding: '8px 12px',
                                     borderRadius: '4px',
                                     cursor: 'pointer',
-                                    fontSize: '12px'
+                                    fontSize: '12px',
+                                    opacity: 1,
+                                    zIndex: 11,
+                                    position: 'relative',
+                                    fontWeight: 'bold',
+                                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                                    transition: 'background-color 0.2s, box-shadow 0.2s'
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.backgroundColor = '#1565c0';
+                                    e.currentTarget.style.boxShadow = '0 3px 6px rgba(0,0,0,0.3)';
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.backgroundColor = '#1976d2';
+                                    e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
                                 }}
                             >
                                 Print
@@ -3497,14 +4281,16 @@ export default function Treatment() {
                             <button 
                                 type="button" 
                                 onClick={handleBackToAppointments}
+                                disabled={isFormDisabled}
                                 style={{
-                                    backgroundColor: '#1976d2',
-                                    color: 'white',
+                                    backgroundColor: isFormDisabled ? '#D5D5D8' : '#1976d2',
+                                    color: isFormDisabled ? '#666' : 'white',
                                     border: 'none',
                                     padding: '8px 12px',
                                     borderRadius: '4px',
-                                    cursor: 'pointer',
-                                    fontSize: '12px'
+                                    cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                    fontSize: '12px',
+                                    opacity: isFormDisabled ? 0.7 : 1
                                 }}
                             >
                                 Close
@@ -3512,15 +4298,16 @@ export default function Treatment() {
                             <button 
                                 type="button" 
                                 onClick={handleTreatmentSubmit}
-                                disabled={isSubmitting || hasSubmittedSuccessfully}
+                                disabled={isSubmitting || hasSubmittedSuccessfully || isFormDisabled}
                                 style={{
-                                    backgroundColor: (isSubmitting || hasSubmittedSuccessfully) ? '#ccc' : '#1976d2',
-                                    color: 'white',
+                                    backgroundColor: (isSubmitting || hasSubmittedSuccessfully || isFormDisabled) ? '#D5D5D8' : '#1976d2',
+                                    color: (isSubmitting || hasSubmittedSuccessfully || isFormDisabled) ? '#666' : 'white',
                                     border: 'none',
                                     padding: '8px 12px',
                                     borderRadius: '4px',
-                                    cursor: (isSubmitting || hasSubmittedSuccessfully) ? 'not-allowed' : 'pointer',
-                                    fontSize: '12px'
+                                    cursor: (isSubmitting || hasSubmittedSuccessfully || isFormDisabled) ? 'not-allowed' : 'pointer',
+                                    fontSize: '12px',
+                                    opacity: (isSubmitting || hasSubmittedSuccessfully || isFormDisabled) ? 0.7 : 1
                                 }}
                             >
                                 {isSubmitting ? 'Submitting...' : hasSubmittedSuccessfully ? 'Submitted' : 'Submit'}
@@ -3631,7 +4418,10 @@ export default function Treatment() {
             <AccountsPopup
                 open={showAccountsPopup}
                 onClose={() => setShowAccountsPopup(false)}
-                patientId={selectedPatientForForm?.patientId || treatmentData?.patientId}
+                patientId={(() => {
+                    const pid = selectedPatientForForm?.id || selectedPatientForForm?.patientId || treatmentData?.patientId;
+                    return pid ? String(pid) : undefined;
+                })()}
                 patientName={selectedPatientForForm?.name || treatmentData?.patientName}
             />
           <AddBillingPopup
@@ -3658,6 +4448,15 @@ export default function Treatment() {
                 filteredBillingDetails={filteredBillingDetails}
                 selectedBillingDetailIds={selectedBillingDetailIds}
                 setSelectedBillingDetailIds={setSelectedBillingDetailIds}
+                followUp={formData.visitType.followUp}
+                userId={sessionData?.userId ? String(sessionData.userId) : undefined}
+                doctorId={treatmentData?.doctorId || sessionData?.doctorId}
+                patientId={treatmentData?.patientId}
+                clinicId={sessionData?.clinicId || treatmentData?.clinicId}
+                visitDate={toYyyyMmDd(new Date())}
+                patientVisitNo={treatmentData?.visitNumber}
+                shiftId={(sessionData as any)?.shiftId || 1}
+                useOverwrite={false}
             />
 
             {/* Quick Registration Modal - appears on top of Collections screen */}

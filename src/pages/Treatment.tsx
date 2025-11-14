@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { useNavigate, useLocation } from "react-router-dom";
 import { visitService, ComprehensiveVisitDataRequest } from '../services/visitService';
@@ -331,6 +331,26 @@ export default function Treatment() {
     const [showTestLabPopup, setShowTestLabPopup] = useState(false);
     const [showLabTestEntry, setShowLabTestEntry] = useState<boolean>(false);
     const [selectedPatientForLab, setSelectedPatientForLab] = useState<any>(null);
+    const [labTestResults, setLabTestResults] = useState<any[] | null>(null);
+    // Use ref to store latest lab test results for closure access
+    const labTestResultsRef = useRef<any[] | null>(null);
+    
+    // Handler to receive lab test results from LabTestEntry popup
+    const handleLabTestResultsFetched = (results: any[] | null) => {
+        if (results && results.length > 0) {
+            console.log('=== Lab Test Results Received in Treatment Screen ===');
+            console.log('Lab Test Results Data:', results);
+            console.log('Number of results:', results.length);
+            console.log('====================================================');
+            setLabTestResults(results);
+            // Also update ref for closure access
+            labTestResultsRef.current = results;
+        } else {
+            console.log('=== Lab Test Results: No data available ===');
+            setLabTestResults(null);
+            labTestResultsRef.current = null;
+        }
+    };
     
     // Past Services popup state
     const [showPastServicesPopup, setShowPastServicesPopup] = useState(false);
@@ -542,6 +562,13 @@ export default function Treatment() {
         dues: ''
     });
     
+    // Folder amount API response data
+    const [folderAmountData, setFolderAmountData] = useState<{
+        success?: boolean;
+        totalAcBalance?: number;
+        rows?: any[];
+    } | null>(null);
+    
     // Attachments data
     const [attachments, setAttachments] = useState<Attachment[]>([
         { id: '1', name: 'AniruddhaTongaonkar.Pdf', type: 'pdf' },
@@ -695,6 +722,42 @@ export default function Treatment() {
         // Get advice
         const advice = escapeHtml(formData.visitComments || formData.additionalComments || '');
 
+        // Build instructions HTML from selectedInstructionGroups
+        let instructionsHTML = '';
+        if (selectedInstructionGroups && selectedInstructionGroups.length > 0) {
+            // Sort by id (which contains sequence_no) to maintain order
+            const sortedGroups = [...selectedInstructionGroups].sort((a, b) => {
+                const idA = parseInt(a.id) || 0;
+                const idB = parseInt(b.id) || 0;
+                return idA - idB;
+            });
+
+            instructionsHTML = sortedGroups.map((group) => {
+                if (!group.instructions || !group.instructions.trim()) {
+                    return '';
+                }
+                const groupName = group.name ? escapeHtml(group.name) : '';
+                let instructionText = group.instructions.trim();
+                
+                // Escape HTML first
+                instructionText = escapeHtml(instructionText);
+                
+                // Replace multiple spaces (2 or more) with line breaks to separate instruction items
+                // This handles cases like "item1        item2        item3"
+                let formattedText = instructionText.replace(/\s{2,}/g, '<br/>');
+                
+                // Also handle explicit line breaks
+                formattedText = formattedText.replace(/\n/g, '<br/>');
+                
+                return `
+                    <div style="margin-top: 15px; margin-bottom: 10px;">
+                        ${groupName ? `<div style="font-size: 14px; font-weight: bold; margin-bottom: 8px;">${groupName}</div>` : ''}
+                        <div style="font-size: 12px; white-space: pre-wrap; line-height: 1.8; padding-left: 0;">${formattedText}</div>
+                    </div>
+                `;
+            }).filter(html => html.trim()).join('');
+        }
+
         // Build prescription table HTML
         let prescriptionTableHTML = '';
         if (prescriptionRows.length > 0) {
@@ -819,9 +882,36 @@ export default function Treatment() {
                         white-space: pre-wrap;
                         font-size: 12px;
                     }
+                    .instructions-section {
+                        margin-top: 20px;
+                        position: relative;
+                    }
+                    .instructions-line-top {
+                        border-top: 2px solid #000;
+                        margin-bottom: 5px;
+                    }
+                    .instructions-line-bottom {
+                        border-top: 2px solid #000;
+                        margin-top: 5px;
+                    }
+                    .instructions-text {
+                        font-size: 14px;
+                        font-weight: bold;
+                        text-align: left;
+                        margin: 5px 0;
+                    }
+                    .instructions-content {
+                        margin-top: 5px;
+                        white-space: pre-wrap;
+                        font-size: 12px;
+                        line-height: 1.6;
+                    }
                 </style>
             </head>
             <body>
+                <!-- 8 blank lines for header page space -->
+                <div style="height: 8em; line-height: 1em;"></div>
+                
                 <div class="horizontal-line"></div>
                 
                 <div class="patient-info-line1">
@@ -852,6 +942,15 @@ export default function Treatment() {
                     ${advice ? `<div class="advice-content">${advice}</div>` : ''}
                     <div class="advice-line-bottom"></div>
                 </div>
+
+                ${instructionsHTML ? `
+                <div class="instructions-section">
+                    <div class="instructions-line-top"></div>
+                    <div class="instructions-text">Instructions for Patient:</div>
+                    <div class="instructions-content">${instructionsHTML}</div>
+                    <div class="instructions-line-bottom"></div>
+                </div>
+                ` : ''}
             </body>
             </html>
         `;
@@ -867,22 +966,310 @@ export default function Treatment() {
 		// Use srcdoc so we don't navigate away or open a new tab
 		iframe.srcdoc = printHTML;
 		document.body.appendChild(iframe);
+		
+		// Flag to track if we've already triggered lab results print
+		let labResultsPrinted = false;
+		
+		// Function to handle printing lab results after prescription print
+		const handleLabResultsPrint = () => {
+			// Use ref to get labTestsAsked from API (instead of popup data)
+			const currentLabTestsAsked = labTestsAskedRef.current;
+			console.log('🔍 handleLabResultsPrint called');
+			console.log('🔍 labResultsPrinted:', labResultsPrinted);
+			console.log('🔍 currentLabTestsAsked (from ref):', currentLabTestsAsked);
+			console.log('🔍 currentLabTestsAsked length:', currentLabTestsAsked?.length);
+			console.log('🔍 currentLabTestsAsked is array:', Array.isArray(currentLabTestsAsked));
+			
+			if (!labResultsPrinted) {
+				// Check if labTestsAsked exist using ref
+				if (currentLabTestsAsked && Array.isArray(currentLabTestsAsked) && currentLabTestsAsked.length > 0) {
+					labResultsPrinted = true;
+					console.log('✅ Triggering lab test results print with', currentLabTestsAsked.length, 'lab tests...');
+					// Delay to ensure first print dialog is fully closed
+					setTimeout(() => {
+						try {
+							printLabTestResults();
+						} catch (error) {
+							console.error('❌ Error in printLabTestResults:', error);
+						}
+					}, 1000); // 1 second delay after first print closes
+				} else {
+					console.log('❌ Cannot print lab results - no labTestsAsked available:', {
+						alreadyPrinted: labResultsPrinted,
+						hasLabTestsAsked: !!currentLabTestsAsked,
+						isArray: Array.isArray(currentLabTestsAsked),
+						labTestsAskedLength: currentLabTestsAsked?.length || 0
+					});
+				}
+			} else {
+				console.log('❌ Already printed lab results');
+			}
+		};
+		
 		iframe.onload = () => {
 			try {
 				const win = iframe.contentWindow;
 				if (win) {
+					let cleanupDone = false;
+					
+					const cleanup = () => {
+						if (cleanupDone) return;
+						cleanupDone = true;
+						setTimeout(() => {
+							if (iframe.parentNode) {
+								iframe.parentNode.removeChild(iframe);
+							}
+						}, 100);
+					};
+					
+					// Method 1: Listen for afterprint event
+					const handleAfterPrint = () => {
+						console.log('✅ afterprint event detected');
+						cleanup();
+						handleLabResultsPrint();
+					};
+					
+					// Add listeners to both iframe and main window
+					win.addEventListener('afterprint', handleAfterPrint);
+					window.addEventListener('afterprint', handleAfterPrint);
+					
+					// Method 2: Use window focus/blur events (more reliable)
+					let printDialogOpened = false;
+					
+					const handleWindowBlur = () => {
+						console.log('Window blurred - print dialog opened');
+						printDialogOpened = true;
+					};
+					
+					const handleWindowFocus = () => {
+						if (printDialogOpened) {
+							console.log('✅ Window focused - print dialog closed');
+							window.removeEventListener('blur', handleWindowBlur);
+							window.removeEventListener('focus', handleWindowFocus);
+							cleanup();
+							// Small delay to ensure print dialog is fully closed
+							setTimeout(() => {
+								handleLabResultsPrint();
+							}, 300);
+						}
+					};
+					
+					// Add focus/blur listeners
+					window.addEventListener('blur', handleWindowBlur);
+					window.addEventListener('focus', handleWindowFocus);
+					
+					// Clean up listeners after 10 seconds
+					setTimeout(() => {
+						window.removeEventListener('blur', handleWindowBlur);
+						window.removeEventListener('focus', handleWindowFocus);
+						window.removeEventListener('afterprint', handleAfterPrint);
+					}, 10000);
+					
+					// Method 3: Simple timeout fallback (like old application pattern)
+					// After calling print(), wait a reasonable time then show second print
 					win.focus();
 					win.print();
+					
+					// Fallback timeout - triggers second print after 2 seconds
+					// This ensures second print shows even if events don't fire
+					setTimeout(() => {
+						if (!labResultsPrinted) {
+							console.log('✅ Fallback timeout: triggering lab results print');
+							window.removeEventListener('blur', handleWindowBlur);
+							window.removeEventListener('focus', handleWindowFocus);
+							window.removeEventListener('afterprint', handleAfterPrint);
+							cleanup();
+							handleLabResultsPrint();
+						}
+					}, 2000); // 2 second fallback (similar to old app's 500ms-5s pattern)
 				}
-			} finally {
-				// Give the browser a moment to spawn the print dialog before removal
+			} catch (error) {
+				console.error('Error printing prescription:', error);
+				// Fallback: remove iframe and check for lab results after timeout
 				setTimeout(() => {
 					if (iframe.parentNode) {
 						iframe.parentNode.removeChild(iframe);
 					}
-				}, 1000);
+					handleLabResultsPrint();
+				}, 2000);
 			}
 		};
+    };
+
+    // Print lab test results
+    const printLabTestResults = () => {
+        // Use ref to get labTestsAsked from API (instead of popup data)
+        const currentLabTestsAsked = labTestsAskedRef.current;
+        console.log('🔍 printLabTestResults called');
+        console.log('🔍 currentLabTestsAsked (from ref):', currentLabTestsAsked);
+        console.log('🔍 currentLabTestsAsked length:', currentLabTestsAsked?.length);
+        console.log('🔍 currentLabTestsAsked is array:', Array.isArray(currentLabTestsAsked));
+        
+        if (!currentLabTestsAsked || !Array.isArray(currentLabTestsAsked) || currentLabTestsAsked.length === 0) {
+            console.log('❌ No lab tests asked to print - invalid or empty data');
+            return;
+        }
+        
+        console.log('✅ Starting lab test results print with', currentLabTestsAsked.length, 'lab tests...');
+
+        // Format visit date (same as prescription print)
+        const visitDate = treatmentData?.visitNumber 
+            ? new Date().toLocaleDateString('en-GB', { 
+                day: '2-digit', 
+                month: 'short', 
+                year: 'numeric' 
+            }).replace(/ /g, '-')
+            : new Date().toLocaleDateString('en-GB', { 
+                day: '2-digit', 
+                month: 'short', 
+                year: 'numeric' 
+            }).replace(/ /g, '-');
+
+        // Get patient info (same as prescription print)
+        const patientName = escapeHtml(treatmentData?.patientName || '');
+        const gender = escapeHtml(treatmentData?.gender || '');
+        const age = treatmentData?.age ? `${treatmentData.age}` : '';
+        const patientId = escapeHtml(treatmentData?.patientId || '');
+        const contact = escapeHtml(treatmentData?.contact || '-');
+        const weight = escapeHtml(formData.weight || '-');
+        const height = escapeHtml(formData.height || '-');
+        const bmi = escapeHtml(formData.bmi || '-');
+
+        // Build lab test list HTML from labTestsAsked
+        let labTestListHTML = '';
+        if (currentLabTestsAsked.length > 0) {
+            labTestListHTML = '<ul style="list-style-type: none; padding-left: 0; margin-top: 10px;">';
+            currentLabTestsAsked.forEach((labTest: any) => {
+                const labTestName = labTest.id || labTest.name || labTest.labTestName || 'Unknown Test';
+                labTestListHTML += `
+                    <li style="font-size: 14px; margin-bottom: 8px; padding-left: 20px; position: relative;">
+                        <span style="position: absolute; left: 0;">•</span>
+                        ${escapeHtml(labTestName)}
+                    </li>
+                `;
+            });
+            labTestListHTML += '</ul>';
+        }
+
+        // Create print HTML for lab test results
+        const printHTML = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Lab Tests Asked - ${patientName}</title>
+                <style>
+                    @media print {
+                        @page {
+                            margin: 20mm;
+                        }
+                        body {
+                            margin: 0;
+                            padding: 0;
+                        }
+                    }
+                    body {
+                        font-family: Arial, sans-serif;
+                        padding: 20px;
+                        max-width: 800px;
+                        margin: 0 auto;
+                    }
+                    .horizontal-line {
+                        border-top: 2px solid #000;
+                        margin: 10px 0;
+                    }
+                    .patient-info-line1 {
+                        font-size: 16px;
+                        font-weight: bold;
+                        margin: 10px 0;
+                        line-height: 1.8;
+                    }
+                    .patient-info-line2 {
+                        font-size: 14px;
+                        margin: 10px 0;
+                        line-height: 1.8;
+                    }
+                    table {
+                        width: 100%;
+                        border-collapse: collapse;
+                        margin-top: 10px;
+                        font-size: 12px;
+                    }
+                    th, td {
+                        border: 1px solid #ddd;
+                        padding: 8px;
+                    }
+                    th {
+                        background-color: #f5f5f5;
+                        font-weight: bold;
+                        text-align: left;
+                    }
+                    td {
+                        text-align: left;
+                    }
+                    .comment-section {
+                        margin-top: 20px;
+                        white-space: pre-wrap;
+                        font-size: 12px;
+                    }
+                </style>
+            </head>
+            <body>
+                <!-- 8 blank lines for header page space -->
+                <div style="height: 8em; line-height: 1em;"></div>
+                
+                <div class="horizontal-line"></div>
+                
+                <div class="patient-info-line1">
+                    Name: ${patientName} ${gender} / ${age} Y Id: ${patientId} Date: ${visitDate}
+                </div>
+                
+                <div class="patient-info-line2">
+                    Contact Number: ${contact}, Weight (Kg): ${weight} Height (Cm): ${height} BMI: ${bmi}
+                </div>
+
+                <div class="horizontal-line"></div>
+
+                <div style="margin-top: 15px;">
+                    <strong style="font-size: 16px; font-weight: bold;">Lab Tests Asked:</strong>
+                    ${labTestListHTML}
+                </div>
+            </body>
+            </html>
+        `;
+
+        // Print lab test results using iframe
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'fixed';
+        iframe.style.right = '0';
+        iframe.style.bottom = '0';
+        iframe.style.width = '0';
+        iframe.style.height = '0';
+        iframe.style.border = '0';
+        iframe.srcdoc = printHTML;
+        document.body.appendChild(iframe);
+        iframe.onload = () => {
+            try {
+                const win = iframe.contentWindow;
+                if (win) {
+                    win.addEventListener('afterprint', () => {
+                        setTimeout(() => {
+                            if (iframe.parentNode) {
+                                iframe.parentNode.removeChild(iframe);
+                            }
+                        }, 100);
+                    });
+                    win.focus();
+                    win.print();
+                }
+            } catch (error) {
+                console.error('Error printing lab test results:', error);
+                setTimeout(() => {
+                    if (iframe.parentNode) {
+                        iframe.parentNode.removeChild(iframe);
+                    }
+                }, 2000);
+            }
+        };
     };
 
     // Fetch session data on component mount
@@ -1292,6 +1679,8 @@ export default function Treatment() {
 
     // Store master-lists billing data in a ref to use after billing options load
     const masterListsBillingRef = React.useRef<any[]>([]);
+    // Store labTestsAsked from master-lists API
+    const labTestsAskedRef = React.useRef<any[]>([]);
 
     // Load billing data from master-lists API
     React.useEffect(() => {
@@ -1341,6 +1730,15 @@ export default function Treatment() {
                     console.log('Stored billing data from master-lists:', billingArray);
                 } else {
                     masterListsBillingRef.current = [];
+                }
+
+                // Extract labTestsAsked array from response
+                const labTestsAskedArray = data?.data?.labTestsAsked || [];
+                if (Array.isArray(labTestsAskedArray) && labTestsAskedArray.length > 0) {
+                    labTestsAskedRef.current = labTestsAskedArray;
+                    console.log('Stored labTestsAsked from master-lists:', labTestsAskedArray);
+                } else {
+                    labTestsAskedRef.current = [];
                 }
 
                 // Extract instructionGroups array from response (this contains the selected groups)
@@ -1733,6 +2131,61 @@ export default function Treatment() {
         }
     }, [treatmentData?.patientId, sessionData?.doctorId, sessionData?.clinicId]);
 
+    // Load patient folder amount for billing
+    useEffect(() => {
+        let cancelled = false;
+        async function loadPatientFolderAmount() {
+            if (!treatmentData?.patientId || !sessionData?.clinicId) {
+                return;
+            }
+
+            try {
+                const clinicId = String(sessionData.clinicId);
+                const doctorId = 'DR-00010'; // Hardcoded as per requirement
+                const patientId = String(treatmentData.patientId);
+
+                const params = new URLSearchParams();
+                params.set('clinicId', clinicId);
+                params.set('doctorId', doctorId);
+                params.set('patientId', patientId);
+
+                const response = await fetch(`http://localhost:8080/api/fees/folder-amount?${params.toString()}`);
+                
+                if (cancelled) return;
+
+                if (!response.ok) {
+                    console.error('Failed to fetch folder amount:', response.status, response.statusText);
+                    return;
+                }
+
+                const data = await response.json();
+                console.log('=== Patient Folder Amount API Response ===');
+                console.log('API URL:', `http://localhost:8080/api/fees/folder-amount?${params.toString()}`);
+                console.log('Response Data:', data);
+                console.log('==========================================');
+                
+                if (!cancelled && data) {
+                    setFolderAmountData(data);
+                    // Update A/C Balance with totalAcBalance
+                    if (data.totalAcBalance !== undefined && data.totalAcBalance !== null) {
+                        setBillingData(prev => ({
+                            ...prev,
+                            acBalance: String(data.totalAcBalance.toFixed(2))
+                        }));
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching patient folder amount:', error);
+            }
+        }
+
+        loadPatientFolderAmount();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [treatmentData?.patientId, sessionData?.clinicId]);
+
     // Auto-calculate BMI when height or weight changes
     useEffect(() => {
         const calculatedBMI = calculateBMI(formData.height, formData.weight);
@@ -2004,6 +2457,7 @@ export default function Treatment() {
             examinationFindings: toStr(get(visit, 'examination_findings', 'Important_Findings', 'examinationFindings', 'findings', 'Findings', 'clinical_findings')),
             examinationComments: toStr(get(visit, 'examination_comments', 'Examination_Comments', 'examinationComments', 'exam_comments', 'Exam_Comments')),
             procedurePerformed: toStr(get(visit, 'procedure_performed', 'Procedure_Performed', 'procedurePerformed', 'procedures', 'Procedures')),
+            dressingBodyParts: toStr(get(visit, 'dressingBodyParts', 'dressing_body_parts', 'Dressing_Body_Parts', 'body_parts_dressed')),
 
             // Current visit text
             complaints: toStr(get(visit, 'Complaints')),
@@ -2366,6 +2820,7 @@ export default function Treatment() {
                 additionalComments: appointmentData.additionalComments ?? appointmentData.impression ?? '',
                 habitDetails: appointmentData.habitDetails ?? '',
                 procedurePerformed: appointmentData.observation ?? '',
+                dressingBodyParts: appointmentData.dressingBodyParts ?? appointmentData.dressing_body_parts ?? '',
                 followUpComment: appointmentData.followUpComment ?? ''
             };
             console.log('Normalized appointment fields:', normalized);
@@ -2398,6 +2853,7 @@ export default function Treatment() {
                 maybeSet('additionalComments', normalized.additionalComments);
                 maybeSet('medicalHistoryText', normalized.habitDetails);
                 maybeSet('procedurePerformed', normalized.procedurePerformed);
+                maybeSet('dressingBodyParts', normalized.dressingBodyParts);
                 // Do not patch PC with complaints fetched from appointment details
 
                 const heightNum = parseFloat(String(next.height));
@@ -2759,6 +3215,7 @@ export default function Treatment() {
                 habitDetails: formData.medicalHistoryText || '',
                 allergyDetails: formData.allergy,
                 observation: formData.procedurePerformed || '',
+                dressingBodyParts: formData.dressingBodyParts || '',
                 inPerson: formData.visitType.inPerson,
                 symptomComment: formData.detailedHistory,
                 reason: '',
@@ -6187,31 +6644,56 @@ export default function Treatment() {
                                         <span 
                                             style={{ 
                                                 color: '#1976d2', 
-                                                fontWeight: 'bold',
+                                                fontWeight: 'normal',
+                                                fontSize: '11px',
                                                 cursor: 'pointer',
                                                 userSelect: 'none'
                                             }}
                                             onClick={() => setShowAccountsPopup(true)}
                                             title="View Accounts"
-                                        >₹</span>
+                                        >payment history</span>
                                     </label>
-                                    <input
-                                        type="text"
-                                        value={billingData.acBalance}
-                                        onChange={(e) => handleBillingChange('acBalance', e.target.value)}
-                                        disabled
-                                        placeholder="0.00"
-                                        style={{
-                                            width: '100%',
-                                            padding: '6px 10px',
-                                            border: '1px solid #ccc',
-                                            borderRadius: '4px',
-                                            fontSize: '13px',
-                                            backgroundColor: '#f5f5f5',
-                                            color: '#666',
-                                            cursor: 'not-allowed'
-                                        }}
-                                    />
+                                    <div style={{ position: 'relative', width: '100%' }}>
+                                        <input
+                                            type="text"
+                                            value={billingData.acBalance}
+                                            onChange={(e) => handleBillingChange('acBalance', e.target.value)}
+                                            disabled
+                                            placeholder="0.00"
+                                            style={{
+                                                width: '100%',
+                                                padding: '6px 10px',
+                                                paddingRight: folderAmountData?.totalAcBalance !== undefined && 
+                                                             folderAmountData?.totalAcBalance !== null && 
+                                                             folderAmountData?.rows && 
+                                                             folderAmountData.rows.length > 0 ? '120px' : '10px',
+                                                border: '1px solid #ccc',
+                                                borderRadius: '4px',
+                                                fontSize: '13px',
+                                                backgroundColor: '#f5f5f5',
+                                                color: '#666',
+                                                cursor: 'not-allowed'
+                                            }}
+                                        />
+                                        {folderAmountData?.totalAcBalance !== undefined && 
+                                         folderAmountData?.totalAcBalance !== null && 
+                                         folderAmountData?.rows && 
+                                         folderAmountData.rows.length > 0 && (
+                                            <span style={{
+                                                position: 'absolute',
+                                                right: '10px',
+                                                top: '50%',
+                                                transform: 'translateY(-50%)',
+                                                fontSize: '11px',
+                                                fontWeight: 'bold',
+                                                color: folderAmountData.totalAcBalance > 0 ? '#d32f2f' : '#2e7d32',
+                                                whiteSpace: 'nowrap',
+                                                pointerEvents: 'none'
+                                            }}>
+                                                {folderAmountData.totalAcBalance > 0 ? 'Amount Pending' : 'Outstanding'}
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -6645,6 +7127,7 @@ export default function Treatment() {
                     patientData={selectedPatientForLab}
                     appointment={selectedPatientForLab}
                     sessionData={sessionData}
+                    onLabTestResultsFetched={handleLabTestResultsFetched}
                 />
             )}
 
@@ -6669,7 +7152,17 @@ export default function Treatment() {
             <AccountsPopup
                 open={showAccountsPopup}
                 onClose={() => setShowAccountsPopup(false)}
-                patientId={selectedPatientForForm?.patientId || treatmentData?.patientId}
+                patientId={(() => {
+                    const pid = selectedPatientForForm?.id || selectedPatientForForm?.patientId || treatmentData?.patientId;
+                    const result = pid ? String(pid) : undefined;
+                    console.log('=== Treatment.tsx - AccountsPopup patientId calculation ===');
+                    console.log('selectedPatientForForm?.id:', selectedPatientForForm?.id);
+                    console.log('selectedPatientForForm?.patientId:', selectedPatientForForm?.patientId);
+                    console.log('treatmentData?.patientId:', treatmentData?.patientId);
+                    console.log('treatmentData:', treatmentData);
+                    console.log('Final patientId result:', result);
+                    return result;
+                })()}
                 patientName={selectedPatientForForm?.name || treatmentData?.patientName}
             />
 
