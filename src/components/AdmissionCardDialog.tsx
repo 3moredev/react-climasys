@@ -1,8 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Close } from "@mui/icons-material";
+import { Snackbar } from "@mui/material";
+import { Calendar } from "lucide-react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import AddPatientPage from "../pages/AddPatientPage";
 import { sessionService } from "../services/sessionService";
+import { admissionService, AdmissionCardRequest, Department } from "../services/admissionService";
 
 interface AdmissionCardDialogProps {
   open: boolean;
@@ -53,9 +56,65 @@ export default function AdmissionCardDialog({
   });
   const [showQuickRegistration, setShowQuickRegistration] = useState(false);
   const [sessionData, setSessionData] = useState<any>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState("");
+  const [dateOfAdmissionYYYYMMDD, setDateOfAdmissionYYYYMMDD] = useState<string>("");
+  const datePickerRef = useRef<HTMLInputElement>(null);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [loadingDepartments, setLoadingDepartments] = useState<boolean>(false);
+
+  // Format date to dd-mmm-yy format for display
+  const formatDateToDDMMMYY = (dateString: string): string => {
+    if (!dateString) return "";
+    
+    // If it's already in yyyy-mm-dd format, convert it
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+      const date = new Date(dateString);
+      if (!isNaN(date.getTime())) {
+        const day = String(date.getDate()).padStart(2, '0');
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const month = months[date.getMonth()];
+        const year = String(date.getFullYear()).slice(-2);
+        return `${day}-${month}-${year}`;
+      }
+    }
+    
+    // If already in dd-mmm-yy format, return as is
+    if (/^\d{2}-[A-Za-z]{3}-\d{2}$/.test(dateString)) {
+      return dateString.toUpperCase();
+    }
+    
+    return dateString;
+  };
 
   useEffect(() => {
     if (admissionData) {
+      const dateOfAdmission = admissionData.dateOfAdmission || "";
+      // If date is in dd-mmm-yy format, try to convert to yyyy-mm-dd for storage
+      let yyyyMMDD = "";
+      if (dateOfAdmission && /^\d{2}-[A-Za-z]{3}-\d{2}$/.test(dateOfAdmission)) {
+        const parts = dateOfAdmission.split('-');
+        const day = parts[0];
+        const monthStr = parts[1];
+        const yearStr = parts[2];
+        
+        const months: { [key: string]: string } = {
+          'jan': '01', 'feb': '02', 'mar': '03', 'apr': '04',
+          'may': '05', 'jun': '06', 'jul': '07', 'aug': '08',
+          'sep': '09', 'oct': '10', 'nov': '11', 'dec': '12'
+        };
+        
+        const month = months[monthStr.toLowerCase()];
+        if (month) {
+          const fullYear = parseInt(yearStr) < 50 ? `20${yearStr}` : `19${yearStr}`;
+          yyyyMMDD = `${fullYear}-${month}-${day}`;
+        }
+      } else if (dateOfAdmission && /^\d{4}-\d{2}-\d{2}$/.test(dateOfAdmission)) {
+        yyyyMMDD = dateOfAdmission;
+      }
+      
+      setDateOfAdmissionYYYYMMDD(yyyyMMDD);
       setFormData({
         admissionIpdNo: admissionData.admissionIpdNo || "",
         ipdFileNo: admissionData.ipdFileNo || "",
@@ -63,7 +122,7 @@ export default function AdmissionCardDialog({
         relationWithPatient: admissionData.relationWithPatient || "",
         relativeContactNo: admissionData.relativeContactNo || "",
         department: admissionData.department || "Medicine",
-        dateOfAdmission: admissionData.dateOfAdmission || "",
+        dateOfAdmission: formatDateToDDMMMYY(dateOfAdmission || yyyyMMDD),
         timeOfAdmissionHH: admissionData.timeOfAdmissionHH || "",
         timeOfAdmissionMM: admissionData.timeOfAdmissionMM || "",
         timeOfAdmissionAMPM: admissionData.timeOfAdmissionAMPM || "AM",
@@ -81,10 +140,70 @@ export default function AdmissionCardDialog({
         lastAdvanceDate: admissionData.lastAdvanceDate || "",
         dateOfDischarge: admissionData.dateOfDischarge || "",
       });
+    } else {
+      // Reset form when admissionData is undefined (new admission)
+      setDateOfAdmissionYYYYMMDD("");
+      setFormData({
+        admissionIpdNo: "",
+        ipdFileNo: "",
+        relativeName: "",
+        relationWithPatient: "",
+        relativeContactNo: "",
+        department: "Medicine",
+        dateOfAdmission: "",
+        timeOfAdmissionHH: "",
+        timeOfAdmissionMM: "",
+        timeOfAdmissionAMPM: "AM",
+        room: "",
+        bed: "",
+        reasonForAdmission: "",
+        treatingDrSurgeon: "",
+        consultingDoctor: "",
+        referredBy: "",
+        packageRemarks: "",
+        insurance: "Yes",
+        company: "",
+        commentsNotes: "",
+        firstAdvance: "",
+        lastAdvanceDate: "",
+        dateOfDischarge: "",
+      });
     }
   }, [admissionData]);
 
-  // Load session data on component mount
+  // Reset form when dialog opens for new admission (no admissionData)
+  useEffect(() => {
+    if (open && !admissionData) {
+      setDateOfAdmissionYYYYMMDD("");
+      setFormData({
+        admissionIpdNo: "",
+        ipdFileNo: "",
+        relativeName: "",
+        relationWithPatient: "",
+        relativeContactNo: "",
+        department: "Medicine",
+        dateOfAdmission: "",
+        timeOfAdmissionHH: "",
+        timeOfAdmissionMM: "",
+        timeOfAdmissionAMPM: "AM",
+        room: "",
+        bed: "",
+        reasonForAdmission: "",
+        treatingDrSurgeon: "",
+        consultingDoctor: "",
+        referredBy: "",
+        packageRemarks: "",
+        insurance: "Yes",
+        company: "",
+        commentsNotes: "",
+        firstAdvance: "",
+        lastAdvanceDate: "",
+        dateOfDischarge: "",
+      });
+    }
+  }, [open, admissionData]);
+
+  // Load session data and departments on component mount
   useEffect(() => {
     const loadSessionData = async () => {
       try {
@@ -96,8 +215,24 @@ export default function AdmissionCardDialog({
         console.error('Error getting session data:', error);
       }
     };
+
+    const loadDepartments = async () => {
+      try {
+        setLoadingDepartments(true);
+        const response = await admissionService.getAllDepartments();
+        if (response.success && response.data && response.data.length > 0) {
+          setDepartments(response.data);
+        }
+      } catch (error) {
+        console.error('Error fetching departments:', error);
+      } finally {
+        setLoadingDepartments(false);
+      }
+    };
+
     if (open) {
       loadSessionData();
+      loadDepartments();
     }
   }, [open]);
 
@@ -105,16 +240,168 @@ export default function AdmissionCardDialog({
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = () => {
-    onSubmit?.(formData);
-    onClose();
+  // Handle relative contact number - only allow 10 digits
+  const handleRelativeContactChange = (value: string) => {
+    // Remove all non-digit characters
+    const digitsOnly = value.replace(/\D/g, '');
+    // Limit to 10 digits
+    if (digitsOnly.length <= 10) {
+      handleInputChange("relativeContactNo", digitsOnly);
+    }
   };
 
-  const displayPatientData = patientData || {
-    name: "IRAWATI GIRISH KAMAT",
-    id: "01-06-2019-021099",
-    gender: "Female",
-    age: 31,
+  // Handle date picker change - receives yyyy-mm-dd format
+  const handleDatePickerChange = (dateValue: string) => {
+    if (dateValue) {
+      // Store the yyyy-mm-dd format for submission
+      setDateOfAdmissionYYYYMMDD(dateValue);
+      // Convert to dd-mmm-yy for display
+      const formattedDate = formatDateToDDMMMYY(dateValue);
+      handleInputChange("dateOfAdmission", formattedDate);
+    } else {
+      setDateOfAdmissionYYYYMMDD("");
+      handleInputChange("dateOfAdmission", "");
+    }
+  };
+
+  // Handle manual date input change (when user types in dd-mmm-yy format)
+  const handleDateOfAdmissionChange = (value: string) => {
+    handleInputChange("dateOfAdmission", value);
+    // Try to parse if it's in dd-mmm-yy format and convert to yyyy-mm-dd
+    if (value && /^\d{2}-[A-Za-z]{3}-\d{2}$/.test(value)) {
+      const parts = value.split('-');
+      const day = parts[0];
+      const monthStr = parts[1];
+      const yearStr = parts[2];
+      
+      const months: { [key: string]: string } = {
+        'jan': '01', 'feb': '02', 'mar': '03', 'apr': '04',
+        'may': '05', 'jun': '06', 'jul': '07', 'aug': '08',
+        'sep': '09', 'oct': '10', 'nov': '11', 'dec': '12'
+      };
+      
+      const month = months[monthStr.toLowerCase()];
+      if (month) {
+        // Assume 20xx for years < 50, 19xx for years >= 50
+        const fullYear = parseInt(yearStr) < 50 ? `20${yearStr}` : `19${yearStr}`;
+        const yyyyMMDD = `${fullYear}-${month}-${day}`;
+        setDateOfAdmissionYYYYMMDD(yyyyMMDD);
+      }
+    }
+  };
+
+  // Insurance company options
+  const insuranceCompanies = [
+    "Bajaj Allianz",
+    "HDFC ERGO",
+    "ICICI Lombard",
+    "New India Assurance",
+    "Oriental Insurance",
+    "United India Insurance",
+    "Star Health",
+    "Reliance General Insurance",
+    "Future Generali",
+    "Tata AIG",
+    "SBI General Insurance",
+    "IFFCO Tokio",
+    "Royal Sundaram",
+    "Bharti AXA",
+    "Liberty General Insurance",
+    "Other"
+  ];
+
+  const displayPatientData = patientData;
+
+  const handleSubmit = async () => {
+    // Validate required fields
+    if (!displayPatientData?.id) {
+      setSnackbarMessage("Patient ID is required. Please select a patient.");
+      setSnackbarOpen(true);
+      return;
+    }
+
+    if (!sessionData?.doctorId || !sessionData?.clinicId) {
+      setSnackbarMessage("Session data is missing. Please refresh the page.");
+      setSnackbarOpen(true);
+      return;
+    }
+
+    // Validate Date of Admission (required)
+    if (!formData.dateOfAdmission || !dateOfAdmissionYYYYMMDD) {
+      setSnackbarMessage("Date of Admission is required.");
+      setSnackbarOpen(true);
+      return;
+    }
+
+    // Validate Time of Admission (required)
+    if (!formData.timeOfAdmissionHH || !formData.timeOfAdmissionMM) {
+      setSnackbarMessage("Time of Admission is required.");
+      setSnackbarOpen(true);
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      // Combine time fields into admissionTime format (HH:MM AM/PM)
+      let admissionTime = "";
+      if (formData.timeOfAdmissionHH && formData.timeOfAdmissionMM) {
+        // admissionTime = `${formData.timeOfAdmissionHH}:${formData.timeOfAdmissionMM} ${formData.timeOfAdmissionAMPM}`;
+        admissionTime = `${formData.timeOfAdmissionHH}:${formData.timeOfAdmissionMM}:00`;
+      }
+
+      // Map form data to API request format
+      const request: AdmissionCardRequest = {
+        patientId: displayPatientData.id!,
+        doctorId: sessionData.doctorId,
+        clinicId: sessionData.clinicId,
+        ipdRefNo: formData.admissionIpdNo || undefined,
+        relativeName: formData.relativeName || undefined,
+        relation: formData.relationWithPatient || undefined,
+        contactNo: formData.relativeContactNo || undefined,
+        admissionDate: dateOfAdmissionYYYYMMDD || formData.dateOfAdmission || undefined,
+        admissionTime: admissionTime || undefined,
+        reasonOfAdmission: formData.reasonForAdmission || undefined,
+        department: formData.department || undefined,
+        isInsurance: formData.insurance === "Yes" ? true : formData.insurance === "No" ? false : undefined,
+        insuranceDetails: formData.company || undefined,
+        treatingDoctor: formData.treatingDrSurgeon || undefined,
+        consultingDoctor: formData.consultingDoctor || undefined,
+        ipdFileNo: formData.ipdFileNo || undefined,
+        roomNo: formData.room || undefined,
+        bedNo: formData.bed || undefined,
+        packageRemarks: formData.packageRemarks || undefined,
+        referredDoctor: formData.referredBy || undefined,
+        commentsNote: formData.commentsNotes || undefined,
+        insuranceCompanyId: formData.company || undefined,
+        shiftId: '1',
+        loginId: '',
+      };
+
+      const response = await admissionService.saveAdmissionCard(request);
+
+      if (response.success) {
+        setSnackbarMessage(response.message || "Admission card saved successfully");
+        setSnackbarOpen(true);
+        
+        // Call the onSubmit callback if provided (for parent component to refresh data)
+        onSubmit?.(formData);
+        
+        // Close dialog after a short delay to show success message
+        setTimeout(() => {
+          onClose();
+        }, 1500);
+      } else {
+        setSnackbarMessage(response.error || "Failed to save admission card");
+        setSnackbarOpen(true);
+      }
+    } catch (error: any) {
+      console.error("Error saving admission card:", error);
+      setSnackbarMessage(error.message || "An error occurred while saving admission card");
+      setSnackbarOpen(true);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (!open) return null;
@@ -159,23 +446,29 @@ export default function AdmissionCardDialog({
             <Close />
           </button>
         </div>
-        <div 
-          onClick={() => {
-            if (displayPatientData.id) {
-              setShowQuickRegistration(true);
-            }
-          }}
-          className="text-primary mb-3" 
-          style={{ 
-            fontSize: "14px",
-            cursor: displayPatientData.id ? 'pointer' : 'default',
-            textDecoration: displayPatientData.id ? 'underline' : 'none'
-          }}
-          title={displayPatientData.id ? 'Click to view patient details' : ''}
-        >
-          {displayPatientData.name} / Id: ({displayPatientData.id}) /{" "}
-          {displayPatientData.gender} / {displayPatientData.age} Yr
-        </div>
+        {displayPatientData ? (
+          <div 
+            onClick={() => {
+              if (displayPatientData.id) {
+                setShowQuickRegistration(true);
+              }
+            }}
+            className="text-primary mb-3" 
+            style={{ 
+              fontSize: "14px",
+              cursor: displayPatientData.id ? 'pointer' : 'default',
+              textDecoration: displayPatientData.id ? 'underline' : 'none'
+            }}
+            title={displayPatientData.id ? 'Click to view patient details' : ''}
+          >
+            {displayPatientData.name || 'N/A'} / Id: ({displayPatientData.id || 'N/A'}) /{" "}
+            {displayPatientData.gender || 'N/A'} / {displayPatientData.age ? `${displayPatientData.age} Yr` : 'N/A'}
+          </div>
+        ) : (
+          <div className="text-muted mb-3" style={{ fontSize: "14px", fontStyle: "italic" }}>
+            No patient selected
+          </div>
+        )}
 
         {/* Form */}
         <div className="container-fluid">
@@ -185,7 +478,7 @@ export default function AdmissionCardDialog({
               <HorizontalField
                 label="Admission / IPD No"
                 value={formData.admissionIpdNo}
-                disabled={disabled}
+                disabled={true}
                 onChange={(v) => handleInputChange("admissionIpdNo", v)}
               />
               <HorizontalField
@@ -196,12 +489,19 @@ export default function AdmissionCardDialog({
               <HorizontalField
                 label="Relative Contact No"
                 value={formData.relativeContactNo}
-                onChange={(v) => handleInputChange("relativeContactNo", v)}
+                onChange={handleRelativeContactChange}
+                maxLength={10}
               />
               <HorizontalField
                 label="Date of Admission"
+                required
                 value={formData.dateOfAdmission}
-                onChange={(v) => handleInputChange("dateOfAdmission", v)}
+                onChange={handleDateOfAdmissionChange}
+                onDatePickerChange={handleDatePickerChange}
+                datePickerValue={dateOfAdmissionYYYYMMDD}
+                datePickerRef={datePickerRef}
+                isDate
+                dateFormat="dd-mmm-yy"
               />
               <HorizontalField
                 label="Reason for Admission"
@@ -223,7 +523,13 @@ export default function AdmissionCardDialog({
                 isRadio
                 options={["Yes", "No"]}
                 value={formData.insurance}
-                onChange={(v) => handleInputChange("insurance", v)}
+                onChange={(v) => {
+                  handleInputChange("insurance", v);
+                  // Clear company when insurance is "No"
+                  if (v === "No") {
+                    handleInputChange("company", "");
+                  }
+                }}
               />
               <HorizontalField
                 label="Comments / Notes"
@@ -233,7 +539,7 @@ export default function AdmissionCardDialog({
                <HorizontalField
                 label="Date of Discharge"
                 value={formData.dateOfDischarge}
-                disabled={disabled}
+                disabled={true}
                 onChange={(v) => handleInputChange("dateOfDischarge", v)}
               />
             </div>
@@ -253,18 +559,14 @@ export default function AdmissionCardDialog({
               <HorizontalField
                 label="Department"
                 isSelect
-                options={[
-                  "Medicine",
-                  "Surgery",
-                  "Pediatrics",
-                  "Orthopedics",
-                  "Cardiology",
-                ]}
+                options={departments.map(dept => dept.name)}
                 value={formData.department}
                 onChange={(v) => handleInputChange("department", v)}
+                disabled={loadingDepartments}
               />
               <HorizontalField
                 label="Time of Admission"
+                required
                 isTime
                 value={{
                   hh: formData.timeOfAdmissionHH,
@@ -313,17 +615,20 @@ export default function AdmissionCardDialog({
                 label="Company"
                 value={formData.company}
                 onChange={(v) => handleInputChange("company", v)}
+                isSelect={formData.insurance === "Yes"}
+                options={insuranceCompanies}
+                disabled={formData.insurance !== "Yes"}
               />
                 <HorizontalField
                 label="First Advance"
                 value={formData.firstAdvance}
-                disabled={disabled}
+                disabled={true}
                 onChange={(v) => handleInputChange("firstAdvance", v)}
               />
               <HorizontalField
                 label="Last Advance Date"
                 value={formData.lastAdvanceDate}
-                disabled={disabled}
+                disabled={true}
                 onChange={(v) => handleInputChange("lastAdvanceDate", v)}
               />
             </div>
@@ -332,17 +637,21 @@ export default function AdmissionCardDialog({
 
         {/* Footer */}
         <div className="d-flex justify-content-end border-top pt-3 mt-3 gap-2">
-          <button className="btn btn-primary" onClick={onClose}>
+          <button className="btn btn-primary" onClick={onClose} disabled={isSubmitting}>
             Close
           </button>
-          <button className="btn btn-primary" onClick={handleSubmit}>
-            Submit
+          <button 
+            className="btn btn-primary" 
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? "Saving..." : "Submit"}
           </button>
         </div>
       </div>
 
       {/* Quick Registration Modal - appears on top of Admission Card window */}
-      {showQuickRegistration && displayPatientData.id && (
+      {showQuickRegistration && displayPatientData?.id && (
         <AddPatientPage
           open={showQuickRegistration}
           onClose={() => {
@@ -354,6 +663,28 @@ export default function AdmissionCardDialog({
           clinicId={sessionData?.clinicId}
         />
       )}
+
+      {/* Success/Error Snackbar */}
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={3000}
+        onClose={() => {
+          setSnackbarOpen(false);
+          setSnackbarMessage("");
+        }}
+        message={snackbarMessage}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        sx={{
+          zIndex: 99999,
+          '& .MuiSnackbarContent-root': {
+            backgroundColor: snackbarMessage.toLowerCase().includes('error') || 
+                           snackbarMessage.toLowerCase().includes('failed') || 
+                           snackbarMessage.toLowerCase().includes('missing') ? '#f44336' : '#4caf50',
+            color: 'white',
+            fontWeight: 'bold'
+          }
+        }}
+      />
     </div>
   );
 }
@@ -368,8 +699,15 @@ function HorizontalField({
     options,
     isRadio,
     isTime,
+    isDate,
+    dateFormat,
+    onDatePickerChange,
+    datePickerValue,
+    datePickerRef,
     dual, // ✅ NEW: for two inputs like Room/Bed
     disabled = false,
+    maxLength,
+    required = false,
   }: {
     label: string;
     value?: any;
@@ -379,16 +717,26 @@ function HorizontalField({
     options?: string[];
     isRadio?: boolean;
     isTime?: boolean;
+    isDate?: boolean;
+    dateFormat?: string;
+    onDatePickerChange?: (v: string) => void;
+    datePickerValue?: string;
+    datePickerRef?: React.RefObject<HTMLInputElement>;
     dual?: { 
       label2: string; 
       value2: string; 
       onChange2: (v: string) => void; 
     };
     disabled?: boolean;
+    maxLength?: number;
+    required?: boolean;
   }) {
     return (
       <div className="row align-items-center mb-3">
-        <label className="col-4 col-form-label fw-medium">{label}</label>
+        <label className="col-4 col-form-label fw-medium">
+          {label}
+          {required && <span style={{ color: '#f44336', marginLeft: '4px' }}>*</span>}
+        </label>
         <div className="col-8">
           {dual ? (
             // ✅ Two inputs (Room + Bed)
@@ -452,7 +800,7 @@ function HorizontalField({
             <div className="d-flex gap-2">
               <select
                 className="form-select"
-                style={{ width: "70px" }}
+                style={{ width: "80px" }}
                 value={value.hh}
                 onChange={(e) => onChange({ ...value, hh: e.target.value })}
                 disabled={disabled}
@@ -466,7 +814,7 @@ function HorizontalField({
               </select>
               <select
                 className="form-select"
-                style={{ width: "70px" }}
+                style={{ width: "80px" }}
                 value={value.mm}
                 onChange={(e) => onChange({ ...value, mm: e.target.value })}
                 disabled={disabled}
@@ -489,13 +837,57 @@ function HorizontalField({
                 <option value="PM">PM</option>
               </select>
             </div>
+          ) : isDate ? (
+            <div style={{ position: "relative" }}>
+              <input
+                type="text"
+                className="form-control"
+                value={value || ""}
+                onChange={(e) => onChange(e.target.value)}
+                disabled={disabled}
+                placeholder={dateFormat || "dd-mmm-yy"}
+                style={{ textTransform: "uppercase", paddingRight: "40px" }}
+              />
+              <Calendar
+                size={20}
+                color="#666"
+                style={{
+                  position: "absolute",
+                  right: "10px",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  cursor: disabled ? "not-allowed" : "pointer",
+                  pointerEvents: disabled ? "none" : "auto"
+                }}
+                onClick={() => {
+                  if (!disabled && datePickerRef?.current) {
+                    datePickerRef.current.showPicker?.();
+                  }
+                }}
+              />
+              {/* Hidden native date picker */}
+              <input
+                ref={datePickerRef}
+                type="date"
+                value={datePickerValue || ""}
+                onChange={(e) => onDatePickerChange?.(e.target.value)}
+                style={{
+                  position: "absolute",
+                  opacity: 0,
+                  pointerEvents: "none",
+                  width: 0,
+                  height: 0
+                }}
+              />
+            </div>
           ) : (
             <input
               type="text"
               className="form-control"
-              value={value}
+              value={value || ""}
               onChange={(e) => onChange(e.target.value)}
               disabled={disabled}
+              maxLength={maxLength}
             />
           )}
         </div>

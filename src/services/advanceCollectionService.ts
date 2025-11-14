@@ -135,10 +135,10 @@ export const advanceCollectionService = {
         searchStr: params.searchStr
       };
       
-      // Only add doctorId if provided
-      if (params.doctorId) {
-        query.doctorId = params.doctorId;
-      }
+      // // Only add doctorId if provided
+      // if (params.doctorId) {
+      //   query.doctorId = params.doctorId;
+      // }
       
       // Call the backend endpoint /api/advance-collections/search
       // Note: baseURL already includes /api, so we use /advance-collections/search

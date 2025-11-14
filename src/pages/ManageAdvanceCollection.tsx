@@ -8,6 +8,7 @@ import { sessionService } from "../services/sessionService";
 import { admissionService, AdmissionCardDTO, AdmissionCardsRequest } from "../services/admissionService";
 import { advanceCollectionService, AdvanceCollectionSearchRequest, AdvanceCollectionSearchResultDTO } from "../services/advanceCollectionService";
 import { useSession } from "../store/hooks/useSession";
+import AdvanceCollectionDialog from "../components/AdvanceCollectionDialog";
 
 type AdvanceCollection = {
     sr: number;
@@ -31,7 +32,6 @@ export default function ManageAdvanceCollection() {
     const [searchError, setSearchError] = useState<string>("");
     const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
     const [searchingAdvanceCards, setSearchingAdvanceCards] = useState<boolean>(false);
-    const [showEmptyTable, setShowEmptyTable] = useState<boolean>(false);
     const searchInputRef = useRef<HTMLInputElement>(null);
     const searchRef = useRef<HTMLDivElement>(null);
     const [showQuickRegistration, setShowQuickRegistration] = useState(false);
@@ -39,9 +39,16 @@ export default function ManageAdvanceCollection() {
     const [sessionData, setSessionData] = useState<any>(null);
     const { clinicId, doctorId } = useSession();
     const [loadingAdvanceCollections, setLoadingAdvanceCollections] = useState<boolean>(false);
+    const [showAdvanceCollectionDialog, setShowAdvanceCollectionDialog] = useState<boolean>(false);
+    const [dialogPatientData, setDialogPatientData] = useState<{ name?: string; id?: string; gender?: string; age?: number } | null>(null);
+    const [dialogAdmissionData, setDialogAdmissionData] = useState<any>(null);
+    const [loadingAdmissionData, setLoadingAdmissionData] = useState<boolean>(false);
 
     // Dynamic data from API
     const [advanceCollections, setAdvanceCollections] = useState<AdvanceCollection[]>([]);
+    
+    // Search results for first table
+    const [searchResultsTable, setSearchResultsTable] = useState<AdvanceCollection[]>([]);
     
     // Pagination state
     const [currentPage, setCurrentPage] = useState<number>(1);
@@ -208,6 +215,7 @@ export default function ManageAdvanceCollection() {
     const handleSearch = async () => {
         if (!searchTerm.trim()) {
             console.log("Search term is empty");
+            setSearchResultsTable([]);
             return;
         }
 
@@ -226,7 +234,7 @@ export default function ManageAdvanceCollection() {
             console.log('Search advance cards response:', response);
             
             if (response.success && response.data && response.data.length > 0) {
-                // Map the search results to AdvanceCollection format
+                // Map the search results to AdvanceCollection format for first table
                 const mappedCollections: AdvanceCollection[] = response.data.map((result: AdvanceCollectionSearchResultDTO, index: number) => ({
                     sr: index + 1,
                     patientName: result.patientName || '--',
@@ -240,35 +248,256 @@ export default function ManageAdvanceCollection() {
                     advance: 0.00 // Not available in search response
                 }));
                 
-                // Update the advance collections list with search results
-                setAdvanceCollections(mappedCollections);
-                setCurrentPage(1); // Reset to first page
+                // Update the search results table (first table)
+                setSearchResultsTable(mappedCollections);
                 
                 console.log(`Found ${response.data.length} patients with advance cards`);
             } else {
                 console.log("No patients with advance cards found for:", searchTerm);
-                setAdvanceCollections([]);
+                // Set empty array to show table with dashes
+                setSearchResultsTable([]);
             }
         } catch (error: any) {
             console.error("Error searching advance cards:", error);
             setSearchError(error.message || "Failed to search advance cards");
-            setAdvanceCollections([]);
+            // Set empty array to show table with dashes
+            setSearchResultsTable([]);
         } finally {
             setSearchingAdvanceCards(false);
         }
     };
 
-    const handleNewAdvanceCollection = () => {
-        // Implement new advance collection functionality
-        console.log("New Advance Collection");
+    // // Helper function to get gender from gender_id
+    // const getGenderFromId = (genderId: number): string => {
+    //     switch (genderId) {
+    //         case 1: return 'Male';
+    //         case 2: return 'Female';
+    //         default: return 'N/A';
+    //     }
+    // };
+
+    const handleNewAdvanceCollection = async () => {
+        // Open dialog for new advance collection
+        // User needs to select a patient first or search for one
+        if (!selectedPatient) {
+            setSearchError("Please select a patient first by searching and selecting from the dropdown.");
+            return;
+        }
+        
+        const patientIdStr = String(selectedPatient.id);
+        const patientName = `${selectedPatient.first_name} ${selectedPatient.middle_name || ''} ${selectedPatient.last_name}`.trim();
+
+        setDialogPatientData({
+            name: patientName,
+            id: patientIdStr,
+            gender: selectedPatient.gender_id.toString(),
+            age: selectedPatient.age_given
+        });
+
+        try {
+            setLoadingAdmissionData(true);
+            
+            // Fetch full admission data by patient ID
+            const response = await admissionService.getAdmissionDataByPatientId(patientIdStr);
+            
+            console.log('Admission Data by Patient ID Response:', response);
+            
+            if (response.success && response.data && response.data.length > 0) {
+                // Get the first (most recent) admission record
+                const admissionData = response.data[0];
+                
+                // Map API response fields to dialog format
+                setDialogAdmissionData({
+                    admissionIpdNo: admissionData.ipd_refno || '',
+                    ipdFileNo: admissionData.ipdfileno || '',
+                    admissionDate: admissionData.admission_date || '',
+                    dischargeDate: admissionData.discharge_date || '',
+                    reasonOfAdmission: admissionData.reason_of_admission || '',
+                    insurance: admissionData.isinsurance ? 'Yes' : 'No',
+                    company: admissionData.insurance_company_id || '',
+                    advanceRs: admissionData.first_advance || admissionData.advance_rs || 0,
+                    department: admissionData.department || '',
+                    room: admissionData.roomno || '',
+                    bed: admissionData.bedno || '',
+                    packageRemarks: admissionData.packageremarks || '',
+                    hospitalBillNo: admissionData.hospital_bill_no || '',
+                    hospitalBillDate: admissionData.hospital_bill_date || ''
+                });
+            } else {
+                // No admission data found, set minimal data
+                console.warn('No admission data found for patient');
+                setDialogAdmissionData({
+                    admissionIpdNo: '',
+                    admissionDate: '',
+                    dischargeDate: '',
+                    reasonOfAdmission: '',
+                    insurance: 'No',
+                    company: '',
+                    advanceRs: 0,
+                    department: '',
+                    room: '',
+                    bed: '',
+                    packageRemarks: '',
+                    hospitalBillNo: '',
+                    hospitalBillDate: ''
+                });
+            }
+        } catch (error: any) {
+            console.error('Error fetching admission data:', error);
+            // On error, set minimal data
+            setDialogAdmissionData({
+                admissionIpdNo: '',
+                admissionDate: '',
+                dischargeDate: '',
+                reasonOfAdmission: '',
+                insurance: 'No',
+                company: '',
+                advanceRs: 0,
+                department: '',
+                room: '',
+                bed: '',
+                packageRemarks: '',
+                hospitalBillNo: '',
+                hospitalBillDate: ''
+            });
+        } finally {
+            setLoadingAdmissionData(false);
+            setShowAdvanceCollectionDialog(true);
+        }
     };
 
-    const handleClose = () => {
-        setShowEmptyTable(false);
-    };
+    const handleEdit = async (collection: AdvanceCollection) => {
+        // Open dialog for editing advance collection
+        try {
+            setLoadingAdmissionData(true);
+            
+            // Try to get patient details
+            let patient: Patient | null = null;
+            if (collection.patientId) {
+                try {
+                    patient = await patientService.getPatient(collection.patientId);
+                } catch (error) {
+                    console.error('Error fetching patient:', error);
+                }
+            }
 
-    const handleEdit = (collection: AdvanceCollection) => {
-        console.log("Editing:", collection);
+            // If patient not found by ID, try searching by name
+            if (!patient && collection.patientName) {
+                try {
+                    const response = await patientService.searchPatients({
+                        query: collection.patientName,
+                        status: 'all',
+                        page: 0,
+                        size: 10
+                    });
+                    if (response.patients && response.patients.length > 0) {
+                        patient = response.patients[0];
+                    }
+                } catch (error) {
+                    console.error('Error searching patient:', error);
+                }
+            }
+
+            setDialogPatientData(patient ? {
+                name: `${patient.first_name} ${patient.middle_name || ''} ${patient.last_name}`.trim(),
+                id: String(patient.id),
+                gender: patient.gender_id.toString(),
+                age: patient.age_given
+            } : {
+                name: collection.patientName,
+                id: collection.patientId
+            });
+
+            // Fetch full admission data by patient ID
+            if (collection.patientId) {
+                try {
+                    const response = await admissionService.getAdmissionDataByPatientId(collection.patientId);
+                    
+                    console.log('Admission Data by Patient ID Response (Edit):', response);
+                    
+                    if (response.success && response.data && response.data.length > 0) {
+                        // Get the first (most recent) admission record
+                        const admissionData = response.data[0];
+                        
+                        // Map API response fields to dialog format
+                        setDialogAdmissionData({
+                            admissionIpdNo: admissionData.ipd_refno || collection.admissionIpdNo || '',
+                            ipdFileNo: admissionData.ipdfileno || '',
+                            admissionDate: admissionData.admission_date || collection.admissionDate || '',
+                            dischargeDate: admissionData.discharge_date || '',
+                            reasonOfAdmission: admissionData.reason_of_admission || collection.reasonOfAdmission || '',
+                            insurance: admissionData.isinsurance ? 'Yes' : (collection.insurance || 'No'),
+                            company: admissionData.insurance_company_id || '',
+                            advanceRs: admissionData.first_advance || admissionData.advance_rs || collection.advance || 0,
+                            department: admissionData.department || '',
+                            room: admissionData.roomno || '',
+                            bed: admissionData.bedno || '',
+                            packageRemarks: admissionData.packageremarks || '',
+                            hospitalBillNo: admissionData.hospital_bill_no || '',
+                            hospitalBillDate: admissionData.hospital_bill_date || ''
+                        });
+                    } else {
+                        // No admission data found, use collection data
+                        setDialogAdmissionData({
+                            admissionIpdNo: collection.admissionIpdNo,
+                            admissionDate: collection.admissionDate,
+                            dischargeDate: '',
+                            reasonOfAdmission: collection.reasonOfAdmission,
+                            insurance: collection.insurance,
+                            company: '',
+                            advanceRs: collection.advance,
+                            department: '',
+                            room: '',
+                            bed: '',
+                            packageRemarks: '',
+                            hospitalBillNo: '',
+                            hospitalBillDate: ''
+                        });
+                    }
+                } catch (error: any) {
+                    console.error('Error fetching admission data:', error);
+                    // On error, use collection data
+                    setDialogAdmissionData({
+                        admissionIpdNo: collection.admissionIpdNo,
+                        admissionDate: collection.admissionDate,
+                        dischargeDate: '',
+                        reasonOfAdmission: collection.reasonOfAdmission,
+                        insurance: collection.insurance,
+                        company: '',
+                        advanceRs: collection.advance,
+                        department: '',
+                        room: '',
+                        bed: '',
+                        packageRemarks: '',
+                        hospitalBillNo: '',
+                        hospitalBillDate: ''
+                    });
+                }
+            } else {
+                // No patient ID, use collection data only
+                setDialogAdmissionData({
+                    admissionIpdNo: collection.admissionIpdNo,
+                    admissionDate: collection.admissionDate,
+                    dischargeDate: '',
+                    reasonOfAdmission: collection.reasonOfAdmission,
+                    insurance: collection.insurance,
+                    company: '',
+                    advanceRs: collection.advance,
+                    department: '',
+                    room: '',
+                    bed: '',
+                    packageRemarks: '',
+                    hospitalBillNo: '',
+                    hospitalBillDate: ''
+                });
+            }
+
+            setShowAdvanceCollectionDialog(true);
+        } catch (error) {
+            console.error('Error opening edit dialog:', error);
+        } finally {
+            setLoadingAdmissionData(false);
+        }
     };
 
     // Pagination handlers
@@ -643,6 +872,14 @@ export default function ManageAdvanceCollection() {
             </div>
 
             <div className="mb-4">
+                <h5 style={{ 
+                    fontWeight: '600', 
+                    fontSize: '1.1rem', 
+                    color: '#212121',
+                    marginBottom: '16px'
+                }}>
+                    Search Results
+                </h5>
                 <div className="table-responsive">
                     <table className="table advance-table">
                         <thead>
@@ -659,33 +896,126 @@ export default function ManageAdvanceCollection() {
                             </tr>
                         </thead>
                         <tbody>
-                            {showEmptyTable && (
+                            {searchingAdvanceCards ? (
+                                <tr>
+                                    <td colSpan={9} className="text-center p-4">
+                                        <div className="spinner-border spinner-border-sm text-primary" role="status">
+                                            <span className="visually-hidden">Loading...</span>
+                                        </div>
+                                        <span className="ms-2">Searching...</span>
+                                    </td>
+                                </tr>
+                            ) : searchResultsTable.length > 0 ? (
+                                searchResultsTable.map((collection, index) => (
+                                    <tr 
+                                        key={collection.sr || index}
+                                        onClick={async () => {
+                                            // When clicking on a row, open dialog with that patient's data
+                                            if (collection.patientId) {
+                                                try {
+                                                    // Fetch patient details
+                                                    const patient = await patientService.getPatient(collection.patientId);
+                                                    
+                                                    setDialogPatientData({
+                                                        name: `${patient.first_name} ${patient.middle_name || ''} ${patient.last_name}`.trim(),
+                                                        id: String(patient.id),
+                                                        gender: patient.gender_id.toString(),
+                                                        age: patient.age_given
+                                                    });
+
+                                                    // Fetch admission data
+                                                    setLoadingAdmissionData(true);
+                                                    const response = await admissionService.getAdmissionDataByPatientId(collection.patientId);
+                                                    
+                                                    if (response.success && response.data && response.data.length > 0) {
+                                                        const admissionData = response.data[0];
+                                                        setDialogAdmissionData({
+                                                            admissionIpdNo: admissionData.ipd_refno || collection.admissionIpdNo || '',
+                                                            ipdFileNo: admissionData.ipdfileno || '',
+                                                            admissionDate: admissionData.admission_date || collection.admissionDate || '',
+                                                            dischargeDate: admissionData.discharge_date || '',
+                                                            reasonOfAdmission: admissionData.reason_of_admission || collection.reasonOfAdmission || '',
+                                                            insurance: admissionData.isinsurance ? 'Yes' : (collection.insurance || 'No'),
+                                                            company: admissionData.insurance_company_id || '',
+                                                            advanceRs: admissionData.first_advance || admissionData.advance_rs || collection.advance || 0,
+                                                            department: admissionData.department || '',
+                                                            room: admissionData.roomno || '',
+                                                            bed: admissionData.bedno || '',
+                                                            packageRemarks: admissionData.packageremarks || '',
+                                                            hospitalBillNo: admissionData.hospital_bill_no || '',
+                                                            hospitalBillDate: admissionData.hospital_bill_date || ''
+                                                        });
+                                                    } else {
+                                                        setDialogAdmissionData({
+                                                            admissionIpdNo: collection.admissionIpdNo,
+                                                            admissionDate: collection.admissionDate,
+                                                            dischargeDate: '',
+                                                            reasonOfAdmission: collection.reasonOfAdmission,
+                                                            insurance: collection.insurance,
+                                                            company: '',
+                                                            advanceRs: collection.advance,
+                                                            department: '',
+                                                            room: '',
+                                                            bed: '',
+                                                            packageRemarks: '',
+                                                            hospitalBillNo: '',
+                                                            hospitalBillDate: ''
+                                                        });
+                                                    }
+                                                    
+                                                    setShowAdvanceCollectionDialog(true);
+                                                } catch (error) {
+                                                    console.error('Error opening dialog from search result:', error);
+                                                } finally {
+                                                    setLoadingAdmissionData(false);
+                                                }
+                                            }
+                                        }}
+                                        style={{ cursor: 'pointer' }}
+                                    >
+                                        <td className="sr-col">{collection.sr}</td>
+                                        <td className="admission-ipd-col">{collection.admissionIpdNo}</td>
+                                        <td className="admission-date-col">{collection.admissionDate}</td>
+                                        <td className="reason-col">{collection.reasonOfAdmission}</td>
+                                        <td className="insurance-col">{collection.insurance}</td>
+                                        <td className="date-advance-col">{collection.dateOfAdvance}</td>
+                                        <td className="receipt-col">{collection.receiptNo}</td>
+                                        <td className="advance-col">{collection.advance.toFixed(2)}</td>
+                                        <td className="action-col" onClick={(e) => e.stopPropagation()}>
+                                            <button
+                                                onClick={() => handleEdit(collection)}
+                                                style={{
+                                                    background: 'transparent',
+                                                    border: 'none',
+                                                    cursor: 'pointer',
+                                                    padding: '4px',
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center'
+                                                }}
+                                                title="Edit"
+                                            >
+                                                <Edit style={{ fontSize: '18px', color: '#007bff' }} />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
                                 <tr className="empty-table-row">
                                     <td className="sr-col">--</td>
                                     <td className="admission-ipd-col">--</td>
-                                    <td className="admission-date-col"></td>
-                                    <td className="reason-col"></td>
-                                    <td className="insurance-col"></td>
-                                    <td className="date-advance-col"></td>
-                                    <td className="receipt-col"></td>
-                                    <td className="advance-col"></td>
-                                    <td className="action-col"></td>
+                                    <td className="admission-date-col">--</td>
+                                    <td className="reason-col">--</td>
+                                    <td className="insurance-col">--</td>
+                                    <td className="date-advance-col">--</td>
+                                    <td className="receipt-col">--</td>
+                                    <td className="advance-col">--</td>
+                                    <td className="action-col">--</td>
                                 </tr>
                             )}
                         </tbody>
                     </table>
                 </div>
-                {showEmptyTable && (
-                    <div className="d-flex justify-content-end mt-3">
-                        <button
-                            className="btn"
-                            style={buttonStyle}
-                            onClick={handleClose}
-                        >
-                            Close
-                        </button>
-                    </div>
-                )}
             </div>
 
             <div className="mt-4">
@@ -861,6 +1191,23 @@ export default function ManageAdvanceCollection() {
                     clinicId={sessionData?.clinicId}
                 />
             )}
+
+            {/* Advance Collection Dialog */}
+            <AdvanceCollectionDialog
+                open={showAdvanceCollectionDialog}
+                onClose={() => {
+                    setShowAdvanceCollectionDialog(false);
+                    setDialogPatientData(null);
+                    setDialogAdmissionData(null);
+                }}
+                onSubmit={(data) => {
+                    // Refresh the advance collections list after successful submission
+                    // This will be handled by the dialog's internal refresh
+                    console.log('Advance collection submitted:', data);
+                }}
+                patientData={dialogPatientData || undefined}
+                admissionData={dialogAdmissionData || undefined}
+            />
         </div>
     );
 }

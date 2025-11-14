@@ -4,11 +4,12 @@ import { Edit, Close } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import AdmissionCardDialog from "../components/AdmissionCardDialog";
 import { patientService, Patient } from "../services/patientService";
-import { admissionService, AdmissionCardDTO, AdmissionCardsRequest } from "../services/admissionService";
+import { admissionService, AdmissionCardDTO, AdmissionCardsRequest, SearchAdmissionCardsRequest } from "../services/admissionService";
 import { useSession } from "../store/hooks/useSession";
 
 type AdmissionCard = {
     sr: number;
+    patientId?: string;
     patientName: string;
     admissionIpdNo: string;
     ipdFileNo: string;
@@ -31,7 +32,11 @@ export default function ManageAdmissionCard() {
     const [showEmptyTable, setShowEmptyTable] = useState<boolean>(false);
     const [showAdmissionCardDialog, setShowAdmissionCardDialog] = useState<boolean>(false);
     const [editingPatient, setEditingPatient] = useState<AdmissionCard | null>(null);
+    const [fullAdmissionData, setFullAdmissionData] = useState<any>(null);
     const [loadingAdmissionCards, setLoadingAdmissionCards] = useState<boolean>(false);
+    const [searchingAdmissionCards, setSearchingAdmissionCards] = useState<boolean>(false);
+    const [searchPerformed, setSearchPerformed] = useState<boolean>(false);
+    const [loadingAdmissionData, setLoadingAdmissionData] = useState<boolean>(false);
     const searchInputRef = useRef<HTMLInputElement>(null);
     const searchRef = useRef<HTMLDivElement>(null);
 
@@ -204,6 +209,7 @@ export default function ManageAdmissionCard() {
 
     const handleSearchChange = (value: string) => {
         setSearchTerm(value);
+        setSearchError(""); // Clear search error when user types
 
         const search = value.trim().toLowerCase();
         if (!search) {
@@ -212,9 +218,12 @@ export default function ManageAdmissionCard() {
             setSelectedPatient(null);
             setSelectedAdmissionCard(null);
             setEnableNewAdmissionCard(false);
+            setSearchPerformed(false); // Enable search button when input is cleared
             return;
         }
 
+        // Reset search performed flag when user types (enables search button)
+        setSearchPerformed(false);
         searchPatients(value);
     };
 
@@ -228,58 +237,96 @@ export default function ManageAdmissionCard() {
         // Store selected patient
         setSelectedPatient(patient);
         
-        // Check if patient has an admission card in the list
-        const patientFullNameLower = patientFullName.toLowerCase();
-        const hasAdmissionCard = admittedPatients.some(card => {
-            const cardName = card.patientName.trim().toLowerCase();
-            return cardName === patientFullNameLower || 
-                   cardName.includes(patientFullNameLower) ||
-                   patientFullNameLower.includes(cardName);
-        });
-        
-        // Enable "New Admission Card" button only if patient is selected but NOT in admitted list
-        setEnableNewAdmissionCard(!hasAdmissionCard);
-        
-        // Don't search immediately - wait for user to click Search button
+        // Don't enable/disable button here - wait for Search button click
+        // Clear any previous admission card selection
         setSelectedAdmissionCard(null);
+        setEnableNewAdmissionCard(false);
+        setSearchPerformed(false); // Enable search button when patient is selected
         
         console.log("Selected patient:", patient);
-        console.log("Has admission card:", hasAdmissionCard);
     };
 
-    const handleSearch = () => {
+    const handleSearch = async () => {
         if (!searchTerm.trim()) {
             setSelectedAdmissionCard(null);
             setSelectedPatient(null);
             setEnableNewAdmissionCard(false);
             return;
         }
-        
-        // Search for matching admission card by patient name
-        const searchQuery = searchTerm.trim().toLowerCase();
-        const matchingCard = admittedPatients.find(card => {
-            const cardName = card.patientName.trim().toLowerCase();
-            // Match by exact name or case-insensitive match
-            return cardName === searchQuery || 
-                   cardName.includes(searchQuery) ||
-                   searchQuery.includes(cardName);
-        });
-        
-        if (matchingCard) {
-            setSelectedAdmissionCard(matchingCard);
-            // If patient has admission card, disable the button
-            setEnableNewAdmissionCard(false);
-            console.log("Found matching admission card:", matchingCard);
-        } else {
-            // Clear selection if no match found
-            setSelectedAdmissionCard(null);
-            // If patient is selected but no admission card found, enable the button
-            if (selectedPatient) {
-                setEnableNewAdmissionCard(true);
-            } else {
+
+        if (!clinicId) {
+            console.warn('ClinicId not available, cannot search admission cards');
+            setSearchError("Clinic ID is required for search");
+            return;
+        }
+
+        try {
+            setSearchingAdmissionCards(true);
+            setSearchError("");
+
+            const searchParams: SearchAdmissionCardsRequest = {
+                searchStr: searchTerm.trim(),
+                clinicId: clinicId,
+                doctorId: doctorId
+            };
+
+            const response = await admissionService.searchAdmissionCards(searchParams);
+            
+            console.log('Search Admission Cards API Response:', response);
+
+            if (response.success && response.data && response.data.length > 0) {
+                // Map the first result to AdmissionCard format
+                const firstResult = response.data[0];
+                const matchingCard: AdmissionCard = {
+                    sr: 1,
+                    patientId: firstResult.patientId,
+                    patientName: firstResult.patientName || '--',
+                    admissionIpdNo: firstResult.admissionIpdNo || '--',
+                    ipdFileNo: firstResult.ipdFileNo || '--',
+                    admissionDate: firstResult.admissionDate || '--',
+                    reasonOfAdmission: firstResult.reasonOfAdmission || '--',
+                    dischargeDate: firstResult.dischargeDate || '--',
+                    insurance: firstResult.insurance || '--',
+                    company: firstResult.company || '--',
+                    advance: firstResult.advanceRs || 0.00
+                };
+
+                setSelectedAdmissionCard(matchingCard);
+                // Patient has an admission card, so disable the button
                 setEnableNewAdmissionCard(false);
+                setSearchError(""); // Clear any previous errors
+                console.log("Found matching admission card:", matchingCard);
+            } else {
+                // No results found from search API
+                setSelectedAdmissionCard(null);
+                
+                // Check if selected patient exists in the List of Admitted Patients
+                if (selectedPatient) {
+                    const patientFullName = `${selectedPatient.first_name} ${selectedPatient.middle_name || ''} ${selectedPatient.last_name}`.replace(/\s+/g, ' ').trim().toLowerCase();
+                    const isInAdmittedList = admittedPatients.some(card => {
+                        const cardName = card.patientName.trim().toLowerCase();
+                        return cardName === patientFullName || 
+                               cardName.includes(patientFullName) ||
+                               patientFullName.includes(cardName);
+                    });
+                    
+                    // Enable button only if patient is NOT in the admitted list
+                    setEnableNewAdmissionCard(!isInAdmittedList);
+                    console.log("Patient in admitted list:", isInAdmittedList);
+                } else {
+                    // No patient selected, disable the button
+                    setEnableNewAdmissionCard(false);
+                }
+                console.log("No matching admission card found for:", searchTerm);
             }
-            console.log("No matching admission card found for:", searchTerm);
+        } catch (error: any) {
+            console.error('Error searching admission cards:', error);
+            setSearchError(error.message || "Failed to search admission cards");
+            setSelectedAdmissionCard(null);
+            setEnableNewAdmissionCard(false);
+        } finally {
+            setSearchingAdmissionCards(false);
+            setSearchPerformed(true); // Disable search button after search completes
         }
     };
 
@@ -288,10 +335,11 @@ export default function ManageAdmissionCard() {
         setShowAdmissionCardDialog(true);
     };
 
-    const handleAdmissionCardSubmit = (data: any) => {
+    const handleAdmissionCardSubmit = async (data: any) => {
         // Handle form submission
         console.log("Admission Card Data:", data);
-        // You can add API call here to save the data
+        // Refresh the admission cards list after successful submission
+        await fetchAdmissionCards();
     };
 
     const handleNewPatient = () => {
@@ -302,14 +350,153 @@ export default function ManageAdmissionCard() {
         setShowEmptyTable(false);
     };
 
-    const handleEdit = (patient: AdmissionCard) => {
-        setEditingPatient(patient);
-        setShowAdmissionCardDialog(true);
+// Helper function to convert any date string to dd-mmm-yy
+const formatDateToDDMMMYY = (dateString: string): string => {
+    if (!dateString) return "";
+
+    // If already in dd-mmm-yy format
+    if (/^\d{2}-[A-Za-z]{3}-\d{2}$/.test(dateString)) {
+        return dateString.toUpperCase();
+    }
+
+    // If in yyyy-mm-dd format
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+        const date = new Date(dateString);
+        if (!isNaN(date.getTime())) {
+            const day = String(date.getDate()).padStart(2, '0');
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const month = months[date.getMonth()];
+            const year = String(date.getFullYear()).slice(-2);
+            return `${day}-${month}-${year}`;
+        }
+    }
+
+    // ⭐ NEW: Handle ISO string yyyy-mm-ddTHH:mm:ss.sssZ
+    const isoDate = new Date(dateString);
+    if (!isNaN(isoDate.getTime())) {
+        const day = String(isoDate.getDate()).padStart(2, '0');
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const month = months[isoDate.getMonth()];
+        const year = String(isoDate.getFullYear()).slice(-2);
+        return `${day}-${month}-${year}`;
+    }
+
+    return dateString;
+};
+
+    const handleEdit = async (patient: AdmissionCard) => {
+        if (!patient.patientId) {
+            console.warn('Patient ID not available for editing');
+            setEditingPatient(patient);
+            setShowAdmissionCardDialog(true);
+            return;
+        }
+
+        try {
+            setLoadingAdmissionData(true);
+            
+            // Fetch full admission data by patient ID
+            const response = await admissionService.getAdmissionDataByPatientId(patient.patientId);
+            
+            console.log('Admission Data by Patient ID Response:', response);
+            
+            if (response.success && response.data && response.data.length > 0) {
+                // Get the first (most recent) admission record
+                const admissionData = response.data[0];
+                
+                // Map API response fields to dialog format
+                // Split admission_time if it exists (format might be "HH:MM" or "HH:MM AM/PM")
+                let timeOfAdmissionHH = "";
+                let timeOfAdmissionMM = "";
+                let timeOfAdmissionAMPM = "AM";
+                
+                if (admissionData.admission_time) {
+                    const timeStr = String(admissionData.admission_time);
+                    // Handle different time formats
+                    if (timeStr.includes(":")) {
+                        const parts = timeStr.split(":");
+                        timeOfAdmissionHH = parts[0] || "";
+                        const mmPart = parts[1] || "";
+                        if (mmPart.includes(" ")) {
+                            const [mm, ampm] = mmPart.split(" ");
+                            timeOfAdmissionMM = mm || "";
+                            timeOfAdmissionAMPM = ampm?.toUpperCase() || "AM";
+                        } else {
+                            timeOfAdmissionMM = mmPart;
+                        }
+                    }
+                }
+                
+                // Merge admission data with existing patient card data
+                // Format dates from yyyy-mm-dd to dd-mmm-yy for display
+                const mergedAdmissionData = {
+                    // From existing card
+                    admissionIpdNo: admissionData.ipd_refno || "",
+                    ipdFileNo: admissionData.ipdfileno || "",
+                    // From API response
+                    relativeName: admissionData.relativename || "",
+                    relationWithPatient: admissionData.relation || "",
+                    relativeContactNo: admissionData.contactno || "",
+                    department: admissionData.department || "",
+                    dateOfAdmission: formatDateToDDMMMYY(admissionData.admission_date || ""),
+                    timeOfAdmissionHH: timeOfAdmissionHH,
+                    timeOfAdmissionMM: timeOfAdmissionMM,
+                    timeOfAdmissionAMPM: timeOfAdmissionAMPM,
+                    room: admissionData.roomno || "",
+                    bed: admissionData.bedno || "",
+                    reasonForAdmission: patient.reasonOfAdmission || admissionData.reason_of_admission || "",
+                    treatingDrSurgeon: admissionData.treatingdoctor || "",
+                    consultingDoctor: admissionData.consultantdoctor || "",
+                    referredBy: admissionData.referred_doctor || "",
+                    packageRemarks: admissionData.packageremarks || "",
+                    insurance: admissionData.isinsurance ? "Yes" : "No",
+                    company: admissionData.insurance_company_id || "",
+                    commentsNotes: admissionData.comments_note || "",
+                    //Payment from Advance collection table
+                    firstAdvance: patient.advance?.toString() || admissionData.first_advance?.toString() || "",
+                    lastAdvanceDate: formatDateToDDMMMYY(admissionData.last_advance_date || ""),
+                    dateOfDischarge: formatDateToDDMMMYY(patient.dischargeDate || admissionData.discharge_date || ""),
+                };
+                console.log("Date formated",formatDateToDDMMMYY(admissionData.admission_date));
+                // Update the patient object with merged data
+                const updatedPatient: AdmissionCard = {
+                    ...patient,
+                    // Keep existing fields but allow API data to override if needed
+                };
+                
+                setEditingPatient(updatedPatient);
+                setFullAdmissionData(mergedAdmissionData);
+                setShowAdmissionCardDialog(true);
+            } else {
+                // No detailed admission data found, use existing card data
+                console.warn('No detailed admission data found, using card data only');
+                setEditingPatient(patient);
+                setFullAdmissionData(null);
+                setShowAdmissionCardDialog(true);
+            }
+        } catch (error: any) {
+            console.error('Error fetching admission data:', error);
+            // On error, still open dialog with existing card data
+            setEditingPatient(patient);
+            setFullAdmissionData(null);
+            setShowAdmissionCardDialog(true);
+        } finally {
+            setLoadingAdmissionData(false);
+        }
     };
 
-    const handleCloseDialog = () => {
+    const handleCloseDialog = async () => {
+        const wasEditing = !!editingPatient;
         setShowAdmissionCardDialog(false);
         setEditingPatient(null);
+        setFullAdmissionData(null);
+        // If we were editing, refresh the list to show any changes
+        // (This handles the case where user closes dialog without submitting)
+        // Note: If user submitted, handleAdmissionCardSubmit will also refresh,
+        // but this ensures we refresh even if they just closed without saving
+        if (wasEditing) {
+            await fetchAdmissionCards();
+        }
     };
 
     // Pagination handlers
@@ -333,69 +520,55 @@ export default function ManageAdmissionCard() {
         setCurrentPage(1);
     }, [admittedPatients.length]);
 
-    // Re-check button state when admittedPatients or selectedPatient changes
-    useEffect(() => {
-        if (selectedPatient) {
-            const patientFullName = `${selectedPatient.first_name} ${selectedPatient.middle_name || ''} ${selectedPatient.last_name}`.replace(/\s+/g, ' ').trim().toLowerCase();
-            const hasAdmissionCard = admittedPatients.some(card => {
-                const cardName = card.patientName.trim().toLowerCase();
-                return cardName === patientFullName || 
-                       cardName.includes(patientFullName) ||
-                       patientFullName.includes(cardName);
-            });
-            setEnableNewAdmissionCard(!hasAdmissionCard);
-        } else {
-            setEnableNewAdmissionCard(false);
+    // Fetch admission cards function - extracted to be reusable
+    const fetchAdmissionCards = async () => {
+        if (!clinicId) {
+            console.warn('ClinicId not available, skipping admission cards fetch');
+            return;
         }
-    }, [admittedPatients, selectedPatient]);
+
+        try {
+            setLoadingAdmissionCards(true);
+            const params: AdmissionCardsRequest = {
+                clinicId: clinicId
+            };
+
+            const response = await admissionService.getAdmissionCards(params);
+            
+            // Console log the response as requested
+            console.log('Admission Cards API Response:', response);
+            
+            if (response.success && response.data) {
+                // Map the API response to AdmissionCard format with sr numbers
+                const mappedCards: AdmissionCard[] = response.data.map((card: AdmissionCardDTO, index: number) => ({
+                    sr: index + 1,
+                    patientId: card.patientId,
+                    patientName: card.patientName || '--',
+                    admissionIpdNo: card.admissionIpdNo || '--',
+                    ipdFileNo: card.ipdFileNo || '--',
+                    admissionDate: card.admissionDate || '--',
+                    reasonOfAdmission: card.reasonOfAdmission || '--',
+                    dischargeDate: card.dischargeDate || '--',
+                    insurance: card.insurance || '--',
+                    company: card.company || '--',
+                    advance: card.advanceRs || 0.00
+                }));
+                
+                setAdmittedPatients(mappedCards);
+            } else {
+                console.error('Failed to fetch admission cards:', response.error);
+                setAdmittedPatients([]);
+            }
+        } catch (error: any) {
+            console.error('Error fetching admission cards:', error);
+            setAdmittedPatients([]);
+        } finally {
+            setLoadingAdmissionCards(false);
+        }
+    };
 
     // Fetch admission cards on component mount
     useEffect(() => {
-        const fetchAdmissionCards = async () => {
-            if (!clinicId) {
-                console.warn('ClinicId not available, skipping admission cards fetch');
-                return;
-            }
-
-            try {
-                setLoadingAdmissionCards(true);
-                const params: AdmissionCardsRequest = {
-                    clinicId: clinicId
-                };
-
-                const response = await admissionService.getAdmissionCards(params);
-                
-                // Console log the response as requested
-                console.log('Admission Cards API Response:', response);
-                
-                if (response.success && response.data) {
-                    // Map the API response to AdmissionCard format with sr numbers
-                    const mappedCards: AdmissionCard[] = response.data.map((card: AdmissionCardDTO, index: number) => ({
-                        sr: index + 1,
-                        patientName: card.patientName || '--',
-                        admissionIpdNo: card.admissionIpdNo || '--',
-                        ipdFileNo: card.ipdFileNo || '--',
-                        admissionDate: card.admissionDate || '--',
-                        reasonOfAdmission: card.reasonOfAdmission || '--',
-                        dischargeDate: card.dischargeDate || '--',
-                        insurance: card.insurance || '--',
-                        company: card.company || '--',
-                        advance: card.advanceRs || 0.00
-                    }));
-                    
-                    setAdmittedPatients(mappedCards);
-                } else {
-                    console.error('Failed to fetch admission cards:', response.error);
-                    setAdmittedPatients([]);
-                }
-            } catch (error: any) {
-                console.error('Error fetching admission cards:', error);
-                setAdmittedPatients([]);
-            } finally {
-                setLoadingAdmissionCards(false);
-            }
-        };
-
         fetchAdmissionCards();
     }, [clinicId]);
 
@@ -640,10 +813,23 @@ export default function ManageAdmissionCard() {
                     className="btn"
                     style={buttonStyle}
                     onClick={handleSearch}
+                    disabled={searchingAdmissionCards || !clinicId || searchPerformed}
                 >
-                    Search
+                    {searchingAdmissionCards ? (
+                        <>
+                            <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                            Searching...
+                        </>
+                    ) : (
+                        "Search"
+                    )}
                 </button>
 
+                {searchError && (
+                    <div className="text-danger small" style={{ width: "100%", marginTop: "4px" }}>
+                        {searchError}
+                    </div>
+                )}
                 <button
                     className="btn"
                     style={{
@@ -698,6 +884,21 @@ export default function ManageAdmissionCard() {
                                     {/* <td className="advance-col">{selectedAdmissionCard.advanceRs.toFixed(2)}</td> */}
                                     <td className="advance-col">{selectedAdmissionCard.advance.toFixed(2)}</td>
                                     <td className="action-col">
+                                        <button
+                                            onClick={() => handleEdit(selectedAdmissionCard)}
+                                            style={{
+                                                background: 'transparent',
+                                                border: 'none',
+                                                cursor: 'pointer',
+                                                padding: '4px',
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center'
+                                            }}
+                                            title="Edit"
+                                        >
+                                            <Edit style={{ fontSize: '18px', color: '#007bff' }} />
+                                        </button>
                                     </td>
                                 </tr>
                             ) : (
@@ -923,23 +1124,31 @@ export default function ManageAdmissionCard() {
                 open={showAdmissionCardDialog}
                 onClose={handleCloseDialog}
                 onSubmit={handleAdmissionCardSubmit}
-                patientData={{
-                    name: editingPatient?.patientName || "IRAWATI GIRISH KAMAT",
-                    id: "01-06-2019-021099",
-                    gender: "Female",
-                    age: 31
-                }}
+                patientData={editingPatient ? {
+                    // When editing, use admission card patient data
+                    // Note: We only have patient name from admission card, not full patient details
+                    name: editingPatient.patientName,
+                    id: editingPatient.patientId, // Patient ID from admission card API response
+                    gender: undefined, // Gender not available in AdmissionCard
+                    age: undefined // Age not available in AdmissionCard
+                } : selectedPatient ? {
+                    // When creating new, use selected patient data
+                    name: `${selectedPatient.first_name} ${selectedPatient.middle_name || ''} ${selectedPatient.last_name}`.replace(/\s+/g, ' ').trim(),
+                    id: selectedPatient.id.toString(),
+                    gender: selectedPatient.gender_id.toString(),
+                    age: selectedPatient.age_given
+                } : undefined}
                 disabled={!!editingPatient}
-                admissionData={editingPatient ? {
+                admissionData={editingPatient ? (fullAdmissionData || {
                     admissionIpdNo: editingPatient.admissionIpdNo,
                     ipdFileNo: editingPatient.ipdFileNo,
-                    dateOfAdmission: editingPatient.admissionDate,
+                    dateOfAdmission: formatDateToDDMMMYY(editingPatient.admissionDate),
                     reasonForAdmission: editingPatient.reasonOfAdmission,
-                    dateOfDischarge: editingPatient.dischargeDate,
+                    dateOfDischarge: formatDateToDDMMMYY(editingPatient.dischargeDate),
                     insurance: editingPatient.insurance,
                     company: editingPatient.company,
                     firstAdvance: editingPatient.advance.toString(),
-                } : undefined}
+                }) : undefined}
             />
         </div>
     );

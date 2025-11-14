@@ -339,6 +339,36 @@ export interface PreviousVisitsWithDetailsResponse {
   patient_id: string;
 }
 
+// Admission Card DTO interface
+export interface AdmissionCardDTO {
+  patientName: string;
+  admissionIpdNo: string;
+  ipdFileNo: string;
+  admissionDate: string;
+  reasonOfAdmission: string;
+  dischargeDate: string;
+  insurance: string;
+  company: string;
+  advance: number;
+}
+
+// Admission Cards request parameters
+export interface AdmissionCardsRequest {
+  patientId?: string;
+  doctorId?: string;
+  clinicId: string;
+}
+
+// Admission Cards response interface
+export interface AdmissionCardsResponse {
+  success: boolean;
+  count: number;
+  data: AdmissionCardDTO[];
+  doctorId?: string;
+  clinicId: string;
+  error?: string;
+}
+
 export const patientService = {
   /**
    * Search patients with pagination support
@@ -1294,6 +1324,18 @@ export const patientService = {
       }
       throw new Error(error.response?.data?.message || 'Failed to update addendum');
     }
+  },
+
+  /**
+   * @deprecated This function has been moved to admissionService.getAdmissionCards()
+   * Please use admissionService.getAdmissionCards() instead.
+   * This function is kept for backward compatibility only.
+   */
+  async getAdmissionCards(params: AdmissionCardsRequest): Promise<AdmissionCardsResponse> {
+    // Re-export from admissionService to maintain backward compatibility
+    // Using dynamic import to avoid circular dependency
+    const { admissionService } = await import('./admissionService');
+    return admissionService.getAdmissionCards(params);
   }
 };
 
