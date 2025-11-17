@@ -10,6 +10,7 @@ import { advanceCollectionService, AdvanceCollectionSearchRequest, AdvanceCollec
 import { useSession } from "../store/hooks/useSession";
 import AdvanceCollectionDialog from "../components/AdvanceCollectionDialog";
 
+// Advance Collection type definition
 type AdvanceCollection = {
     sr: number;
     patientName: string;
@@ -66,6 +67,85 @@ export default function ManageAdvanceCollection() {
             setLoading(true);
             setSearchError("");
 
+            // Check if query looks like an IPD number (starts with IPD- or contains IPD pattern)
+            const isIpdSearch = /^IPD-/i.test(query.trim()) || /IPD/i.test(query.trim());
+            
+            // Try advance collection search first (supports IPD numbers and patient names)
+            // This is especially important for IPD number searches
+            try {
+                const advanceSearchParams: AdvanceCollectionSearchRequest = {
+                    searchStr: query.trim()
+                };
+                
+                console.log('Dropdown: Calling advance collection search API with params:', advanceSearchParams, 'isIpdSearch:', isIpdSearch);
+                const advanceResponse = await advanceCollectionService.searchPatientsWithAdvanceCard(advanceSearchParams);
+                console.log('Dropdown: Advance collection search API response:', advanceResponse);
+                
+                if (advanceResponse.success && advanceResponse.data && advanceResponse.data.length > 0) {
+                    console.log(`Dropdown: Found ${advanceResponse.data.length} results from advance collection search`);
+                    // Map advance collection search results to Patient format for dropdown
+                    const mappedPatients: Patient[] = advanceResponse.data.map((result: AdvanceCollectionSearchResultDTO) => {
+                        // Parse patient name from the search result (backend provides full name)
+                        const fullName = (result.patientName || '').trim();
+                        const nameParts = fullName.split(/\s+/).filter(part => part.length > 0);
+                        const firstName = nameParts[0] || '';
+                        const middleName = nameParts.length > 2 ? nameParts.slice(1, -1).join(' ') : '';
+                        const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : '';
+                        
+                        console.log(`Dropdown: Mapping result - IPD: ${result.ipdRefNo}, Patient: ${result.patientId}, Name: ${fullName}`);
+                        
+                        return {
+                            id: result.patientId,
+                            first_name: firstName,
+                            middle_name: middleName,
+                            last_name: lastName,
+                            mobile_1: result.mobile || '',
+                            gender_id: 0, // Not available in search response
+                            age_given: 0 // Not available in search response
+                        };
+                    });
+                    
+                    console.log(`Dropdown: Mapped ${mappedPatients.length} patients for dropdown`);
+                    setSearchResults(mappedPatients);
+                    setShowDropdown(true);
+                    return;
+                } else {
+                    console.log('Dropdown: Advance collection search returned no results', {
+                        success: advanceResponse.success,
+                        dataLength: advanceResponse.data?.length,
+                        isIpdSearch: isIpdSearch,
+                        searchStr: query.trim()
+                    });
+                    if (isIpdSearch) {
+                        // If it's an IPD search and no results, show empty dropdown with "No patients found"
+                        setSearchResults([]);
+                        setShowDropdown(true); // Show dropdown to display "No patients found"
+                        setSearchError(""); // Clear any previous errors
+                        return;
+                    }
+                    // For non-IPD searches, continue to fallback patient search
+                }
+            } catch (advanceError: any) {
+                console.error('Dropdown: Advance collection search failed:', advanceError);
+                console.error('Error details:', {
+                    message: advanceError.message,
+                    response: advanceError.response?.data,
+                    status: advanceError.response?.status,
+                    url: advanceError.config?.url
+                });
+                
+                if (isIpdSearch) {
+                    // For IPD searches, don't fall back - show error
+                    setSearchError(advanceError.message || "Failed to search IPD number");
+                    setSearchResults([]);
+                    setShowDropdown(true); // Show dropdown to display error
+                    return;
+                }
+                // For non-IPD searches, continue to fallback patient search
+                console.warn('Dropdown: Advance collection search failed, falling back to patient search');
+            }
+
+            // Fallback to regular patient search for non-IPD queries or if advance search fails
             const response = await patientService.searchPatients({
                 query: query,
                 status: 'all',
@@ -229,9 +309,16 @@ export default function ManageAdvanceCollection() {
                 searchStr: searchTerm.trim()
             };
 
+            console.log('Calling advance collection search API with params:', searchParams);
             const response = await advanceCollectionService.searchPatientsWithAdvanceCard(searchParams);
             
             console.log('Search advance cards response:', response);
+            console.log('Response details:', {
+                success: response.success,
+                count: response.count,
+                dataLength: response.data?.length,
+                data: response.data
+            });
             
             if (response.success && response.data && response.data.length > 0) {
                 // Map the search results to AdvanceCollection format for first table
@@ -240,7 +327,7 @@ export default function ManageAdvanceCollection() {
                     patientName: result.patientName || '--',
                     patientId: result.patientId,
                     admissionIpdNo: result.ipdRefNo || '--',
-                    admissionDate: result.admissionDate || '--',
+                    admissionDate: result.visitDate || '--', // visitDate is the field name in the DTO
                     reasonOfAdmission: '--', // Not available in search response
                     insurance: '--', // Not available in search response
                     dateOfAdvance: '--', // Not available in search response
@@ -259,7 +346,14 @@ export default function ManageAdvanceCollection() {
             }
         } catch (error: any) {
             console.error("Error searching advance cards:", error);
-            setSearchError(error.message || "Failed to search advance cards");
+            console.error("Error details:", {
+                message: error.message,
+                response: error.response?.data,
+                status: error.response?.status,
+                url: error.config?.url
+            });
+            const errorMessage = error.message || error.response?.data?.error || "Failed to search advance cards";
+            setSearchError(errorMessage);
             // Set empty array to show table with dashes
             setSearchResultsTable([]);
         } finally {
