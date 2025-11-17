@@ -58,7 +58,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="ptwikki-login-container" style={{ minHeight: '100vh', width: '100%', display: 'flex' }}>
+    <div className="ptwikki-login-container" style={{ minHeight: '100vh', width: '100%', display: 'flex', position: 'relative' }}>
       {/* Left Section - MyHealth Branding and Features */}
       <div className="ptwikki-left-section">
         {/* Medical Background Element */}
@@ -297,6 +297,20 @@ export default function LoginPage() {
           </form>
         </div>
       </div>
+      
+      {/* Recommended Resolution Text */}
+      <Typography 
+        variant="body2" 
+        style={{
+          position: 'absolute',
+          bottom: '20px',
+          left: '20px',
+          color: '#ffffff',
+          fontSize: '12px'
+        }}
+      >
+        Recommended resolution: 1920*1080
+      </Typography>
     </div>
   )
 }
