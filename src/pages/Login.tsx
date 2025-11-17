@@ -7,7 +7,6 @@ import {
   CircularProgress,
   Link,
 } from '@mui/material'
-import GlobalWrapper from '../components/Layout/GlobalWrapper'
 import { useForm, Controller } from 'react-hook-form'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAppSelector, useAppDispatch } from '../store/hooks'
@@ -59,7 +58,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="ptwikki-login-container">
+    <div className="ptwikki-login-container" style={{ minHeight: '100vh', width: '100%', display: 'flex' }}>
       {/* Left Section - MyHealth Branding and Features */}
       <div className="ptwikki-left-section">
         {/* Medical Background Element */}

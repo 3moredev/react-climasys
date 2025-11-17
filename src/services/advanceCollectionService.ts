@@ -31,8 +31,9 @@ export interface AdvanceCollectionSearchResultDTO {
   patientId: string;
   patientName: string;
   ipdRefNo: string;
-  admissionDate?: string;
-  // Add other fields as needed based on backend response
+  visitDate?: string; // Visit date from discharge_data
+  mobile?: string;
+  searchValue?: string; // Full search value string
 }
 
 // Advance Collection Search Response
@@ -140,9 +141,9 @@ export const advanceCollectionService = {
       //   query.doctorId = params.doctorId;
       // }
       
-      // Call the backend endpoint /api/advance-collections/search
-      // Note: baseURL already includes /api, so we use /advance-collections/search
-      const resp = await api.get<AdvanceCollectionSearchResponse>(`/advance-collections/search`, { params: query });
+      // Call the backend endpoint /api/advance-collection/search
+      // Note: baseURL already includes /api, so we use /advance-collection/search
+      const resp = await api.get<AdvanceCollectionSearchResponse>(`/advance-collection/search`, { params: query });
       console.log('Search patients with advance cards response:', resp.data);
       return resp.data;
     } catch (error: any) {
