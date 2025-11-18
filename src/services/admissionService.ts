@@ -12,6 +12,8 @@ export interface AdmissionCardDTO {
   insurance: string;
   company: string;
   advanceRs: number;
+  dateOfAdvance?: string;
+  receiptNo?: string;
 }
 
 // Admission Cards request parameters

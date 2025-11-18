@@ -692,13 +692,13 @@ export default function ManageAdvanceCollection() {
                     const mappedCollections: AdvanceCollection[] = response.data.map((card: AdmissionCardDTO, index: number) => ({
                         sr: index + 1,
                         patientName: card.patientName || '--',
-                        patientId: undefined, // Not available in API response
+                        patientId: card.patientId,
                         admissionIpdNo: card.admissionIpdNo || '--',
                         admissionDate: card.admissionDate || '--',
                         reasonOfAdmission: card.reasonOfAdmission || '--',
                         insurance: card.insurance || '--',
-                        dateOfAdvance: '--', // Not available in API response
-                        receiptNo: '--', // Not available in API response
+                        dateOfAdvance: card.dateOfAdvance || '--',
+                        receiptNo: card.receiptNo || '--',
                         advance: card.advanceRs || 0.00
                     }));
                     
