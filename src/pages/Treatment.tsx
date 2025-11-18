@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { useNavigate, useLocation } from "react-router-dom";
 import { visitService, ComprehensiveVisitDataRequest } from '../services/visitService';
-import trendsService, { PatientTrendItem } from '../services/trendsService';
 import { sessionService, SessionInfo } from "../services/sessionService";
 import { DocumentService } from "../services/documentService";
 import { Delete, Edit, Add, Info, TrendingUp, Download as DownloadIcon } from '@mui/icons-material';
@@ -27,7 +26,9 @@ import { patientService } from "../services/patientService";
 import PastServicesPopup from "../components/PastServicesPopup";
 import AccountsPopup from "../components/AccountsPopup";
 import LabTrendPopup from "../components/LabTrendPopup";
+import VitalsTrendPopup from "../components/VitalsTrendPopup";
 import AddPatientPage from "./AddPatientPage";
+import { buildPrescriptionPrintHTML, buildLabTestsPrintHTML, getHeaderImageUrl } from "../utils/printTemplates";
 
 // Specific styles for Duration/Comment input in table
 const durationCommentStyles = `
@@ -250,9 +251,6 @@ export default function Treatment() {
     const [treatmentData, setTreatmentData] = useState<TreatmentData | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
     const [showVitalsTrend, setShowVitalsTrend] = useState<boolean>(false);
-    const [trendLoading, setTrendLoading] = useState<boolean>(false);
-    const [trendError, setTrendError] = useState<string | null>(null);
-    const [trendRows, setTrendRows] = useState<Array<{ date: string; height: string; weight: string; pulse: string; bp: string; sugar: string; tft: string; pallorHb: string; findings: string; history: string }>>([]);
     const [showInstructionPopup, setShowInstructionPopup] = useState<boolean>(false);
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
     const [submitError, setSubmitError] = useState<string | null>(null);
@@ -663,6 +661,7 @@ export default function Treatment() {
 
     // Print prescription/report
     const handlePrint = () => {
+        const headerImageUrl = getHeaderImageUrl();
         // Get current date and time
         const now = new Date();
         const dateStr = now.toLocaleDateString('en-GB', { 
@@ -791,169 +790,34 @@ export default function Treatment() {
             prescriptionTableHTML = '<p style="margin-top: 10px;">No prescriptions found.</p>';
         }
 
-        // Create print HTML
-        const printHTML = `
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <title>Prescription - ${patientName}</title>
-                <style>
-                    @media print {
-                        @page {
-                            margin: 20mm;
-                        }
-                        body {
-                            margin: 0;
-                            padding: 0;
-                        }
-                    }
-                    body {
-                        font-family: Arial, sans-serif;
-                        padding: 20px;
-                        max-width: 800px;
-                        margin: 0 auto;
-                    }
-                    .horizontal-line {
-                        border-top: 2px solid #000;
-                        margin: 10px 0;
-                    }
-                    .patient-info-line1 {
-                        font-size: 16px;
-                        font-weight: bold;
-                        margin: 10px 0;
-                        line-height: 1.8;
-                    }
-                    .patient-info-line2 {
-                        font-size: 14px;
-                        margin: 10px 0;
-                        line-height: 1.8;
-                    }
-                    .medical-details {
-                        font-size: 16px;
-                        font-weight: bold;
-                        margin: 10px 0;
-                        line-height: 1.8;
-                    }
-                    .prescription-section {
-                        margin-top: 15px;
-                    }
-                    .prescription-section strong {
-                        font-size: 16px;
-                        font-weight: bold;
-                    }
-                    table {
-                        width: 100%;
-                        border-collapse: collapse;
-                        margin-top: 10px;
-                        font-size: 12px;
-                    }
-                    th, td {
-                        border: 1px solid #ddd;
-                        padding: 8px;
-                    }
-                    th {
-                        background-color: #f5f5f5;
-                        font-weight: bold;
-                        text-align: left;
-                    }
-                    td {
-                        text-align: left;
-                    }
-                    .advice-section {
-                        margin-top: 20px;
-                        position: relative;
-                    }
-                    .advice-line-top {
-                        border-top: 2px solid #000;
-                        margin-bottom: 5px;
-                    }
-                    .advice-line-bottom {
-                        border-top: 2px solid #000;
-                        margin-top: 5px;
-                    }
-                    .advice-text {
-                        font-size: 14px;
-                        font-weight: bold;
-                        text-align: left;
-                        margin: 5px 0;
-                    }
-                    .advice-content {
-                        margin-top: 5px;
-                        white-space: pre-wrap;
-                        font-size: 12px;
-                    }
-                    .instructions-section {
-                        margin-top: 20px;
-                        position: relative;
-                    }
-                    .instructions-line-top {
-                        border-top: 2px solid #000;
-                        margin-bottom: 5px;
-                    }
-                    .instructions-line-bottom {
-                        border-top: 2px solid #000;
-                        margin-top: 5px;
-                    }
-                    .instructions-text {
-                        font-size: 14px;
-                        font-weight: bold;
-                        text-align: left;
-                        margin: 5px 0;
-                    }
-                    .instructions-content {
-                        margin-top: 5px;
-                        white-space: pre-wrap;
-                        font-size: 12px;
-                        line-height: 1.6;
-                    }
-                </style>
-            </head>
-            <body>
-                <!-- 8 blank lines for header page space -->
-                <div style="height: 8em; line-height: 1em;"></div>
-                
-                <div class="horizontal-line"></div>
-                
-                <div class="patient-info-line1">
-                    Name: ${patientName} ${gender} / ${age} Y Id: ${patientId} Date: ${visitDate}
-                </div>
-                
-                <div class="patient-info-line2">
-                    Contact Number: ${contact}, Weight (Kg): ${weight} Height (Cm): ${height} BMI: ${bmi}
-                </div>
+        const patientInfo = {
+            name: patientName,
+            gender,
+            age,
+            patientId,
+            visitDate,
+            contact,
+            weight,
+            height,
+            bmi
+        };
 
-                <div class="horizontal-line"></div>
-
-                <div class="medical-details">
-                    Complaint: ${complaints}<br/>
-                    Examination Finding: ${examinationFindings}<br/>
-                    Diagnosis: ${diagnosis}<br/>
-                    Pulse: ${pulse} BP: ${bp} Sugar: ${sugar}
-                </div>
-
-                <div class="prescription-section">
-                    <strong>Rx:</strong>
-                    ${prescriptionTableHTML}
-                </div>
-
-                <div class="advice-section">
-                    <div class="advice-line-top"></div>
-                    <div class="advice-text">Adv:</div>
-                    ${advice ? `<div class="advice-content">${advice}</div>` : ''}
-                    <div class="advice-line-bottom"></div>
-                </div>
-
-                ${instructionsHTML ? `
-                <div class="instructions-section">
-                    <div class="instructions-line-top"></div>
-                    <div class="instructions-text">Instructions for Patient:</div>
-                    <div class="instructions-content">${instructionsHTML}</div>
-                    <div class="instructions-line-bottom"></div>
-                </div>
-                ` : ''}
-            </body>
-            </html>
-        `;
+        const printHTML = buildPrescriptionPrintHTML({
+            headerImageUrl,
+            title: `Prescription - ${patientName}`,
+            patientInfo,
+            medicalDetails: {
+                complaints,
+                examinationFindings,
+                diagnosis,
+                pulse,
+                bp,
+                sugar
+            },
+            prescriptionTableHTML,
+            adviceContent: advice,
+            instructionsHTML
+        });
 
 		// Print within the same tab using a hidden iframe
 		const iframe = document.createElement('iframe');
@@ -1151,91 +1015,24 @@ export default function Treatment() {
             labTestListHTML += '</ul>';
         }
 
-        // Create print HTML for lab test results
-        const printHTML = `
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <title>Lab Tests Asked - ${patientName}</title>
-                <style>
-                    @media print {
-                        @page {
-                            margin: 20mm;
-                        }
-                        body {
-                            margin: 0;
-                            padding: 0;
-                        }
-                    }
-                    body {
-                        font-family: Arial, sans-serif;
-                        padding: 20px;
-                        max-width: 800px;
-                        margin: 0 auto;
-                    }
-                    .horizontal-line {
-                        border-top: 2px solid #000;
-                        margin: 10px 0;
-                    }
-                    .patient-info-line1 {
-                        font-size: 16px;
-                        font-weight: bold;
-                        margin: 10px 0;
-                        line-height: 1.8;
-                    }
-                    .patient-info-line2 {
-                        font-size: 14px;
-                        margin: 10px 0;
-                        line-height: 1.8;
-                    }
-                    table {
-                        width: 100%;
-                        border-collapse: collapse;
-                        margin-top: 10px;
-                        font-size: 12px;
-                    }
-                    th, td {
-                        border: 1px solid #ddd;
-                        padding: 8px;
-                    }
-                    th {
-                        background-color: #f5f5f5;
-                        font-weight: bold;
-                        text-align: left;
-                    }
-                    td {
-                        text-align: left;
-                    }
-                    .comment-section {
-                        margin-top: 20px;
-                        white-space: pre-wrap;
-                        font-size: 12px;
-                    }
-                </style>
-            </head>
-            <body>
-                <!-- 8 blank lines for header page space -->
-                <div style="height: 8em; line-height: 1em;"></div>
-                
-                <div class="horizontal-line"></div>
-                
-                <div class="patient-info-line1">
-                    Name: ${patientName} ${gender} / ${age} Y Id: ${patientId} Date: ${visitDate}
-                </div>
-                
-                <div class="patient-info-line2">
-                    Contact Number: ${contact}, Weight (Kg): ${weight} Height (Cm): ${height} BMI: ${bmi}
-                </div>
+        const patientInfo = {
+            name: patientName,
+            gender,
+            age,
+            patientId,
+            visitDate,
+            contact,
+            weight,
+            height,
+            bmi
+        };
 
-                <div class="horizontal-line"></div>
-
-                <div style="margin-top: 15px;">
-                    <strong style="font-size: 16px; font-weight: bold;">Lab Tests Asked:</strong>
-                    ${labTestListHTML}
-                </div>
-            </body>
-            </html>
-        `;
+        const printHTML = buildLabTestsPrintHTML({
+            headerImageUrl: getHeaderImageUrl(),
+            title: `Lab Tests Asked - ${patientName}`,
+            patientInfo,
+            labTestListHTML
+        });
 
         // Print lab test results using iframe
         const iframe = document.createElement('iframe');
@@ -2141,15 +1938,20 @@ export default function Treatment() {
 
             try {
                 const clinicId = String(sessionData.clinicId);
-                const doctorId = 'DR-00010'; // Hardcoded as per requirement
+                const doctorId = treatmentData?.doctorId || sessionData?.doctorId;
                 const patientId = String(treatmentData.patientId);
+
+                if (!doctorId) {
+                    console.error('Doctor ID is required but not found in treatment data or session');
+                    return;
+                }
 
                 const params = new URLSearchParams();
                 params.set('clinicId', clinicId);
-                params.set('doctorId', doctorId);
+                params.set('doctorId', String(doctorId));
                 params.set('patientId', patientId);
 
-                const response = await fetch(`http://localhost:8080/api/fees/folder-amount?${params.toString()}`);
+                const response = await fetch(`/api/fees/folder-amount?${params.toString()}`);
                 
                 if (cancelled) return;
 
@@ -2160,7 +1962,7 @@ export default function Treatment() {
 
                 const data = await response.json();
                 console.log('=== Patient Folder Amount API Response ===');
-                console.log('API URL:', `http://localhost:8080/api/fees/folder-amount?${params.toString()}`);
+                console.log('API URL:', `/api/fees/folder-amount?${params.toString()}`);
                 console.log('Response Data:', data);
                 console.log('==========================================');
                 
@@ -2184,7 +1986,7 @@ export default function Treatment() {
         return () => {
             cancelled = true;
         };
-    }, [treatmentData?.patientId, sessionData?.clinicId]);
+    }, [treatmentData?.patientId, treatmentData?.doctorId, sessionData?.clinicId, sessionData?.doctorId]);
 
     // Auto-calculate BMI when height or weight changes
     useEffect(() => {
@@ -2963,6 +2765,49 @@ export default function Treatment() {
                 }
             }
 
+            // Patch Plan/Adv textarea using instructions payload (prefer plain text over arrays)
+            const resolvePlanAdvText = () => {
+                const candidates = [
+                    appointmentData.instructionsText,
+                    appointmentData.InstructionsText,
+                    appointmentData.plan,
+                    appointmentData.planAdv,
+                    typeof appointmentData.instructions === 'string' ? appointmentData.instructions : null,
+                    typeof appointmentData.Instructions === 'string' ? appointmentData.Instructions : null
+                ];
+                for (const candidate of candidates) {
+                    if (candidate !== null && candidate !== undefined) {
+                        const text = String(candidate).trim();
+                        if (text.length > 0) {
+                            return text;
+                        }
+                    }
+                }
+                return '';
+            };
+            const planAdvText = resolvePlanAdvText();
+            if (planAdvText) {
+                setFollowUpData(prev => ({
+                    ...prev,
+                    planAdv: planAdvText
+                }));
+                console.log('Patched followUpData.planAdv from appointment details:', planAdvText);
+            }
+
+            // Patch Remark Comments using additional instruction fields
+            const remarkSource = appointmentData.additionalInstructions
+                ?? appointmentData.additionalInstruction
+                ?? appointmentData.remarkComments
+                ?? appointmentData.remarks
+                ?? appointmentData.remark;
+            if (remarkSource && remarkSource !== '') {
+                setFollowUpData(prev => ({
+                    ...prev,
+                    remarkComments: String(remarkSource)
+                }));
+                console.log('Patched followUpData.remarkComments from appointment details:', remarkSource);
+            }
+
             // Load complaints rows from API response (support multiple shapes)
             const complaintsSource = Array.isArray(appointmentData.complaintsRows)
                 ? appointmentData.complaintsRows
@@ -3199,6 +3044,8 @@ export default function Treatment() {
                 chiefComplaint: formData.pc,
                 visitComments: formData.visitComments,
                 currentMedicines: formData.medicines,
+                instructions: followUpData.planAdv ? String(followUpData.planAdv) : '',
+                additionalInstructions: followUpData.remarkComments ? String(followUpData.remarkComments) : '',
                 
                 // Medical conditions from form data
                 hypertension: formData.medicalHistory.hypertension,
@@ -3831,8 +3678,8 @@ export default function Treatment() {
             
             // Calculate remaining amount after discount (Dues)
             const remainingAmount = Math.max(0, billedNum - discountNum);
-            const newAcBalance = billedNum - discountNum;
-            return { ...next, dues: String(remainingAmount), acBalance: String(newAcBalance) };
+            // Keep acBalance as is - don't recalculate, just show the value from API
+            return { ...next, dues: String(remainingAmount) };
         });
     };
 
@@ -3894,7 +3741,7 @@ export default function Treatment() {
                                 fontWeight: 'bold',
                                 fontSize: '14px'
                             }}>
-                                Previous Visits
+                                Previous Visits ({previousVisits.length})
                             </div>
                             <div style={{ padding: '0' }}>
                                 {loadingPreviousVisits ? (
@@ -3907,7 +3754,7 @@ export default function Treatment() {
                                         Loading previous visits...
                                     </div>
                                 ) : previousVisits.length > 0 ? (
-                                    previousVisits.map((visit, index) => (
+                                    previousVisits.slice(-10).reverse().map((visit, index) => (
                                         <div 
                                             key={visit.id}
                                             style={{
@@ -4391,60 +4238,7 @@ export default function Treatment() {
                                                     onMouseLeave={(e) => {
                                                         e.currentTarget.style.backgroundColor = '#1976d2';
                                                     }}
-                                                    onClick={async () => {
-                                                        const next = !showVitalsTrend;
-                                                        setShowVitalsTrend(next);
-                                                        if (next) {
-                                                            // Load trends when opening
-                                                            try {
-                                                                setTrendError(null);
-                                                                setTrendLoading(true);
-                                                                const patientId = treatmentData?.patientId;
-                                                                const clinicId = (treatmentData?.clinicId || sessionData?.clinicId) as string | undefined;
-                                                                const doctorId = (treatmentData?.doctorId || sessionData?.doctorId) as string | undefined;
-                                                                const shiftId = 1; // fallback if no shift available in session
-                                                                const visitDate = new Date().toISOString().slice(0, 10);
-                                                                const patientVisitNo = (treatmentData?.visitNumber ?? 0) as number;
-
-                                                                if (!patientId || !clinicId) {
-                                                                    throw new Error('Missing patient or clinic to load trends');
-                                                                }
-
-                                                                const data: PatientTrendItem[] = await trendsService.getPatientTrends({
-                                                                    patientId,
-                                                                    doctorId: doctorId ?? null,
-                                                                    clinicId,
-                                                                    shiftId,
-                                                                    visitDate,
-                                                                    patientVisitNo,
-                                                                });
-
-                                                                const mapped = (data || []).map((item) => {
-                                                                    const datePart = item.preDates ?? (item.visitDate ?? '--');
-                                                                    const shiftPart = item.shiftDescription ? ` ${item.shiftDescription}` : '';
-                                                                    const date = `${datePart}${shiftPart}`.trim();
-
-                                                                    const height = (item.heightInCms?.toFixed?.(2) ?? item.preHeightInCms ?? '--').toString();
-                                                                    const weight = (item.weightInKgs?.toFixed?.(2) ?? item.preWeight ?? '--').toString();
-                                                                    const pulse = ((item.pulse as unknown as string) ?? item.prePulse ?? '--').toString();
-                                                                    const bp = (item.bloodPressure ?? item.preBp ?? '--').toString();
-                                                                    const sugar = (item.sugar ?? item.preSugar ?? '--').toString();
-                                                                    const tft = (item.thtext ?? item.preThtext ?? '--').toString();
-                                                                    const pallorHb = (item.pallor ?? item.prePallor ?? '--').toString();
-                                                                    const findings = (item.importantFindings ?? item.preImportantFindings ?? '--').toString();
-                                                                    const history = (item.additionalComments ?? item.preAdditionalComments ?? '--').toString();
-                                                                    return { date, height, weight, pulse, bp, sugar, tft, pallorHb, findings, history };
-                                                                });
-
-                                                                setTrendRows(mapped);
-                                                            } catch (err: any) {
-                                                                setTrendError(err?.message || 'Failed to load patient trends');
-                                                                setTrendRows([]);
-                                                            } finally {
-                                                                setTrendLoading(false);
-                                                            }
-                                                        }
-                                                    }}
+                                                    onClick={() => setShowVitalsTrend(true)}
                                                 >
                                                     Trend
                                                 </button>
@@ -4455,60 +4249,6 @@ export default function Treatment() {
                             </div>
                         </div>
 
-                        {/* Historical Data Table */}
-                        {showVitalsTrend && (
-                            <div style={{ marginBottom: '15px' }}>
-                                <div style={{ border: '1px solid #ccc', borderRadius: '4px', overflow: 'hidden' }}>
-                                    <div style={{ 
-                                        display: 'grid', 
-                                        gridTemplateColumns: '120px 80px 80px 80px 100px 80px 80px 100px 120px 120px' as const, 
-                                        backgroundColor: '#1976d2', 
-                                        color: 'white',
-                                        fontWeight: 'bold',
-                                        fontSize: '11px'
-                                    }}>
-                                        <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Date</div>
-                                        <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Height</div>
-                                        <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Weight</div>
-                                        <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Pulse</div>
-                                        <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>BP</div>
-                                        <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Sugar</div>
-                                        <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>TFT</div>
-                                        <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Pallor/HB</div>
-                                        <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Important Findings</div>
-                                        <div style={{ padding: '6px' }}>Detailed History</div>
-                                    </div>
-                                    {trendLoading && (
-                                        <div style={{ padding: '10px', fontSize: '12px' }}>Loading trends...</div>
-                                    )}
-                                    {trendError && !trendLoading && (
-                                        <div style={{ padding: '10px', color: '#d32f2f', fontSize: '12px' }}>{trendError}</div>
-                                    )}
-                                    {!trendLoading && !trendError && trendRows.length === 0 && (
-                                        <div style={{ padding: '10px', fontSize: '12px' }}>No trends available.</div>
-                                    )}
-                                    {trendRows.map((row, index) => (
-                                        <div key={index} style={{ 
-                                            display: 'grid', 
-                                            gridTemplateColumns: '120px 80px 80px 80px 100px 80px 80px 100px 120px 120px' as const,
-                                            backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white',
-                                            borderBottom: '1px solid #e0e0e0'
-                                        }}>
-                                            <div style={{ padding: '10px', borderRight: '1px solid #e0e0e0', fontSize: '11px' }}>{row.date}</div>
-                                            <div style={{ padding: '10px', borderRight: '1px solid #e0e0e0', fontSize: '11px' }}>{row.height}</div>
-                                            <div style={{ padding: '10px', borderRight: '1px solid #e0e0e0', fontSize: '11px' }}>{row.weight}</div>
-                                            <div style={{ padding: '10px', borderRight: '1px solid #e0e0e0', fontSize: '11px' }}>{row.pulse}</div>
-                                            <div style={{ padding: '10px', borderRight: '1px solid #e0e0e0', fontSize: '11px' }}>{row.bp}</div>
-                                            <div style={{ padding: '10px', borderRight: '1px solid #e0e0e0', fontSize: '11px' }}>{row.sugar}</div>
-                                            <div style={{ padding: '10px', borderRight: '1px solid #e0e0e0', fontSize: '11px' }}>{row.tft}</div>
-                                            <div style={{ padding: '10px', borderRight: '1px solid #e0e0e0', fontSize: '11px' }}>{row.pallorHb}</div>
-                                            <div style={{ padding: '10px', borderRight: '1px solid #e0e0e0', fontSize: '11px' }}>{row.findings}</div>
-                                            <div style={{ padding: '10px', fontSize: '11px' }}>{row.history}</div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
 
                         {/* Complaints Section */}
                         <div style={{ marginBottom: '15px' }}>
@@ -6686,11 +6426,11 @@ export default function Treatment() {
                                                 transform: 'translateY(-50%)',
                                                 fontSize: '11px',
                                                 fontWeight: 'bold',
-                                                color: folderAmountData.totalAcBalance > 0 ? '#d32f2f' : '#2e7d32',
+                                                color: folderAmountData.totalAcBalance < 0 ? '#d32f2f' : '#2e7d32',
                                                 whiteSpace: 'nowrap',
                                                 pointerEvents: 'none'
                                             }}>
-                                                {folderAmountData.totalAcBalance > 0 ? 'Amount Pending' : 'Outstanding'}
+                                                {folderAmountData.totalAcBalance < 0 ? 'Amount Pending' : 'Outstanding'}
                                             </span>
                                         )}
                                     </div>
@@ -7096,7 +6836,7 @@ export default function Treatment() {
                         return {
                             ...prev,
                             billed: billedNum.toFixed(2),
-                            acBalance: acBal.toFixed(2),
+                            // Keep acBalance as is - don't change it, it comes from API
                             dues: acBal.toFixed(2)
                         };
                     });
@@ -7179,6 +6919,16 @@ export default function Treatment() {
                 visitDate={new Date().toISOString().split('T')[0]}
                 shiftId={(sessionData as any)?.shiftId || 1}
                 patientVisitNo={treatmentData?.visitNumber || 0}
+            />
+
+            {/* Vitals Trend Popup */}
+            <VitalsTrendPopup
+                open={showVitalsTrend}
+                onClose={() => setShowVitalsTrend(false)}
+                patientId={treatmentData?.patientId}
+                clinicId={treatmentData?.clinicId || sessionData?.clinicId}
+                doctorId={treatmentData?.doctorId || sessionData?.doctorId}
+                visitNumber={treatmentData?.visitNumber}
             />
 
             {/* Quick Registration Modal - appears on top of Treatment screen */}

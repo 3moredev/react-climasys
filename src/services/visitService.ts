@@ -104,6 +104,8 @@ export interface ComprehensiveVisitDataRequest {
   pregnant: boolean;
   edd: string;
   followUpType: string;
+  instructions?: string;
+  additionalInstructions?: string;
   feesToCollect: number;
   feesPaid: number;
   discount: number;

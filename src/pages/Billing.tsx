@@ -20,9 +20,12 @@ import AddPrescriptionPopup, { PrescriptionData } from "../components/AddPrescri
 import AddTestLabPopup, { TestLabData } from "../components/AddTestLabPopup";
 import PastServicesPopup from "../components/PastServicesPopup";
 import { DocumentService } from "../services/documentService";
+import { receiptService, SaveReceiptPayload } from "../services/receiptService";
 import AccountsPopup from "../components/AccountsPopup";
 import AddBillingPopup from "../components/AddBillingPopup";
 import AddPatientPage from "./AddPatientPage";
+import { buildPrescriptionPrintHTML, buildLabTestsPrintHTML, getHeaderImageUrl } from "../utils/printTemplates";
+import PrintReceiptPopup, { PrintReceiptFormValues } from "../components/PrintReceiptPopup";
 
 // Specific styles for Duration/Comment input in table
 const durationCommentStyles = `
@@ -321,6 +324,7 @@ export default function Treatment() {
 
     // Billing popup state
     const [showBillingPopup, setShowBillingPopup] = useState<boolean>(false);
+    const [showPrintReceiptPopup, setShowPrintReceiptPopup] = useState<boolean>(false);
     
     const filteredComplaints = React.useMemo(() => {
         const term = complaintSearch.trim().toLowerCase();
@@ -402,12 +406,7 @@ export default function Treatment() {
     
     const [diagnosisRows, setDiagnosisRows] = useState<DiagnosisRow[]>([]);
     const [medicineRows, setMedicineRows] = useState<MedicineRow[]>([]);
-    const [prescriptionRows, setPrescriptionRows] = useState<PrescriptionRow[]>([
-        { id: '1', prescription: 'RABIPLS D (RABEPRAZOLE & DOMPERIDONE)', b: '1', l: '1', d: '1', days: '10', instruction: 'AFTER MEAL' },
-        { id: '2', prescription: 'DYTOR 5 (TORSEMIDE)', b: '1', l: '', d: '', days: '10', instruction: 'AFTER MEAL' },
-        { id: '3', prescription: 'BIO D3 PLUS (CALCIUM + CALCITRIOL)', b: '1', l: '', d: '', days: '10', instruction: 'AFTER MEAL' },
-        { id: '4', prescription: 'VALIAM FORTE (MULTIVITAMIN + MULTIMINERAL)', b: '1', l: '', d: '', days: '10', instruction: 'AFTER MEAL' }
-    ]);
+    const [prescriptionRows, setPrescriptionRows] = useState<PrescriptionRow[]>([]);
     const [selectedComplaint, setSelectedComplaint] = useState('');
     const [selectedDiagnosis, setSelectedDiagnosis] = useState('');
     const [prescriptionInput, setPrescriptionInput] = useState('');
@@ -585,6 +584,7 @@ export default function Treatment() {
 
     // Print prescription/report
     const handlePrint = () => {
+        const headerImageUrl = getHeaderImageUrl();
         // Get current date and time
         const now = new Date();
         const dateStr = now.toLocaleDateString('en-GB', {
@@ -673,12 +673,9 @@ export default function Treatment() {
             }).filter(html => html.trim()).join('');
         }
 
-        // Choose prescriptions (fallback to master list if local state empty)
-        const rowsToPrint = prescriptionRows.length > 0 ? prescriptionRows : mlPrescriptionsTable;
-
-        // Build prescription table HTML
+        // Build prescription table HTML (only print if prescriptionRows has data, same as Treatment.tsx)
         let prescriptionTableHTML = '';
-        if (rowsToPrint.length > 0) {
+        if (prescriptionRows.length > 0) {
             prescriptionTableHTML = `
                 <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
                     <thead>
@@ -692,7 +689,7 @@ export default function Treatment() {
                         </tr>
                     </thead>
                     <tbody>
-                        ${rowsToPrint.map(row => `
+                        ${prescriptionRows.map(row => `
                             <tr>
                                 <td style="border: 1px solid #ddd; padding: 8px;">${escapeHtml(row.prescription || '-')}</td>
                                 <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${escapeHtml(row.b || '0')}</td>
@@ -709,169 +706,34 @@ export default function Treatment() {
             prescriptionTableHTML = '<p style="margin-top: 10px;">No prescriptions found.</p>';
         }
 
-        // Create print HTML (mirrors Treatment print layout)
-        const printHTML = `
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <title>Prescription - ${patientName}</title>
-                <style>
-                    @media print {
-                        @page {
-                            margin: 20mm;
-                        }
-                        body {
-                            margin: 0;
-                            padding: 0;
-                        }
-                    }
-                    body {
-                        font-family: Arial, sans-serif;
-                        padding: 20px;
-                        max-width: 800px;
-                        margin: 0 auto;
-                    }
-                    .horizontal-line {
-                        border-top: 2px solid #000;
-                        margin: 10px 0;
-                    }
-                    .patient-info-line1 {
-                        font-size: 16px;
-                        font-weight: bold;
-                        margin: 10px 0;
-                        line-height: 1.8;
-                    }
-                    .patient-info-line2 {
-                        font-size: 14px;
-                        margin: 10px 0;
-                        line-height: 1.8;
-                    }
-                    .medical-details {
-                        font-size: 16px;
-                        font-weight: bold;
-                        margin: 10px 0;
-                        line-height: 1.8;
-                    }
-                    .prescription-section {
-                        margin-top: 15px;
-                    }
-                    .prescription-section strong {
-                        font-size: 16px;
-                        font-weight: bold;
-                    }
-                    table {
-                        width: 100%;
-                        border-collapse: collapse;
-                        margin-top: 10px;
-                        font-size: 12px;
-                    }
-                    th, td {
-                        border: 1px solid #ddd;
-                        padding: 8px;
-                    }
-                    th {
-                        background-color: #f5f5f5;
-                        font-weight: bold;
-                        text-align: left;
-                    }
-                    td {
-                        text-align: left;
-                    }
-                    .advice-section {
-                        margin-top: 20px;
-                        position: relative;
-                    }
-                    .advice-line-top {
-                        border-top: 2px solid #000;
-                        margin-bottom: 5px;
-                    }
-                    .advice-line-bottom {
-                        border-top: 2px solid #000;
-                        margin-top: 5px;
-                    }
-                    .advice-text {
-                        font-size: 14px;
-                        font-weight: bold;
-                        text-align: left;
-                        margin: 5px 0;
-                    }
-                    .advice-content {
-                        margin-top: 5px;
-                        white-space: pre-wrap;
-                        font-size: 12px;
-                    }
-                    .instructions-section {
-                        margin-top: 20px;
-                        position: relative;
-                    }
-                    .instructions-line-top {
-                        border-top: 2px solid #000;
-                        margin-bottom: 5px;
-                    }
-                    .instructions-line-bottom {
-                        border-top: 2px solid #000;
-                        margin-top: 5px;
-                    }
-                    .instructions-text {
-                        font-size: 14px;
-                        font-weight: bold;
-                        text-align: left;
-                        margin: 5px 0;
-                    }
-                    .instructions-content {
-                        margin-top: 5px;
-                        white-space: pre-wrap;
-                        font-size: 12px;
-                        line-height: 1.6;
-                    }
-                </style>
-            </head>
-            <body>
-                <!-- 8 blank lines for header page space -->
-                <div style="height: 8em; line-height: 1em;"></div>
-                
-                <div class="horizontal-line"></div>
-                
-                <div class="patient-info-line1">
-                    Name: ${patientName} ${gender} / ${age} Y Id: ${patientId} Date: ${visitDate}
-                </div>
-                
-                <div class="patient-info-line2">
-                    Contact Number: ${contact}, Weight (Kg): ${weight} Height (Cm): ${height} BMI: ${bmi}
-                </div>
+        const patientInfo = {
+            name: patientName,
+            gender,
+            age,
+            patientId,
+            visitDate,
+            contact,
+            weight,
+            height,
+            bmi
+        };
 
-                <div class="horizontal-line"></div>
-
-                <div class="medical-details">
-                    Complaint: ${complaints}<br/>
-                    Examination Finding: ${examinationFindings}<br/>
-                    Diagnosis: ${diagnosis}<br/>
-                    Pulse: ${pulse} BP: ${bp} Sugar: ${sugar}
-                </div>
-
-                <div class="prescription-section">
-                    <strong>Rx:</strong>
-                    ${prescriptionTableHTML}
-                </div>
-
-                <div class="advice-section">
-                    <div class="advice-line-top"></div>
-                    <div class="advice-text">Adv:</div>
-                    ${advice ? `<div class="advice-content">${advice}</div>` : ''}
-                    <div class="advice-line-bottom"></div>
-                </div>
-
-                ${instructionsHTML ? `
-                <div class="instructions-section">
-                    <div class="instructions-line-top"></div>
-                    <div class="instructions-text">Instructions for Patient:</div>
-                    <div class="instructions-content">${instructionsHTML}</div>
-                    <div class="instructions-line-bottom"></div>
-                </div>
-                ` : ''}
-            </body>
-            </html>
-        `;
+        const printHTML = buildPrescriptionPrintHTML({
+            headerImageUrl,
+            title: `Prescription - ${patientName}`,
+            patientInfo,
+            medicalDetails: {
+                complaints,
+                examinationFindings,
+                diagnosis,
+                pulse,
+                bp,
+                sugar
+            },
+            prescriptionTableHTML,
+            adviceContent: advice,
+            instructionsHTML
+        });
 
         // Print within the same tab using a hidden iframe (mirrors Treatment)
         const iframe = document.createElement('iframe');
@@ -1066,68 +928,24 @@ export default function Treatment() {
             labTestListHTML += '</ul>';
         }
 
-        // Create print HTML for lab test results
-        const printHTML = `
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <title>Lab Tests Asked - ${patientName}</title>
-                <style>
-                    @media print {
-                        @page {
-                            margin: 20mm;
-                        }
-                        body {
-                            margin: 0;
-                            padding: 0;
-                        }
-                    }
-                    body {
-                        font-family: Arial, sans-serif;
-                        padding: 20px;
-                        max-width: 800px;
-                        margin: 0 auto;
-                    }
-                    .horizontal-line {
-                        border-top: 2px solid #000;
-                        margin: 10px 0;
-                    }
-                    .patient-info-line1 {
-                        font-size: 16px;
-                        font-weight: bold;
-                        margin: 10px 0;
-                        line-height: 1.8;
-                    }
-                    .patient-info-line2 {
-                        font-size: 14px;
-                        margin: 10px 0;
-                        line-height: 1.8;
-                    }
-                </style>
-            </head>
-            <body>
-                <!-- 8 blank lines for header page space -->
-                <div style="height: 8em; line-height: 1em;"></div>
-                
-                <div class="horizontal-line"></div>
-                
-                <div class="patient-info-line1">
-                    Name: ${patientName} ${gender} / ${age} Y Id: ${patientId} Date: ${visitDate}
-                </div>
-                
-                <div class="patient-info-line2">
-                    Contact Number: ${contact}, Weight (Kg): ${weight} Height (Cm): ${height} BMI: ${bmi}
-                </div>
+        const patientInfo = {
+            name: patientName,
+            gender,
+            age,
+            patientId,
+            visitDate,
+            contact,
+            weight,
+            height,
+            bmi
+        };
 
-                <div class="horizontal-line"></div>
-
-                <div style="margin-top: 15px;">
-                    <strong style="font-size: 16px; font-weight: bold;">Lab Tests Asked:</strong>
-                    ${labTestListHTML}
-                </div>
-            </body>
-            </html>
-        `;
+        const printHTML = buildLabTestsPrintHTML({
+            headerImageUrl: getHeaderImageUrl(),
+            title: `Lab Tests Asked - ${patientName}`,
+            patientInfo,
+            labTestListHTML
+        });
 
         // Print lab test results using iframe
         const iframe = document.createElement('iframe');
@@ -1235,7 +1053,7 @@ export default function Treatment() {
         const [billingSearch, setBillingSearch] = useState('');
         const billingRef = React.useRef<HTMLDivElement | null>(null);
     
-        const filteredBillingDetails = React.useMemo(() => {
+    const filteredBillingDetails = React.useMemo(() => {
             const term = billingSearch.trim().toLowerCase();
             if (!term) {
                 const selectedOptions = billingDetailsOptions.filter(opt => selectedBillingDetailIds.includes(opt.id));
@@ -1468,7 +1286,11 @@ export default function Treatment() {
                         setMlMedicinesTable(mlMedArr.map((m: any, idx: number) => mapToRxRow(m, idx, 'mlmed')).filter((r: PrescriptionRow) => !!r.prescription));
 
                         const mlRxArr = Array.isArray(dataRoot?.prescriptions) ? dataRoot.prescriptions : [];
-                        setMlPrescriptionsTable(mlRxArr.map((p: any, idx: number) => mapToRxRow(p, idx, 'mlrx')).filter((r: PrescriptionRow) => !!r.prescription));
+                        const mappedPrescriptions = mlRxArr.map((p: any, idx: number) => mapToRxRow(p, idx, 'mlrx')).filter((r: PrescriptionRow) => !!r.prescription);
+                        setMlPrescriptionsTable(mappedPrescriptions);
+                        // Populate prescriptionRows from master-lists API data (same as Treatment.tsx uses API data)
+                        // If no prescriptions from API, set empty array so print shows "No prescriptions found"
+                        setPrescriptionRows(mappedPrescriptions.length > 0 ? mappedPrescriptions : []);
 
                         // Build Instructions table ONLY from Instructions arrays
                         const instrArrRaw = Array.isArray((dataRoot as any)?.instructions)
@@ -1499,6 +1321,8 @@ export default function Treatment() {
                         }
                     } catch (e2) {
                         console.warn('Billing: could not map table data from master lists', e2);
+                        // Clear prescriptionRows if mapping fails
+                        setPrescriptionRows([]);
                     }
                 } catch (e) {
                     console.warn('Billing: could not map vitals from master lists response', e);
@@ -1795,8 +1619,108 @@ export default function Treatment() {
         return () => { cancelled = true; };
     }, [treatmentData?.patientId, sessionData?.doctorId, sessionData?.clinicId]);
 
+    const paymentByLabel = React.useMemo(() => {
+        const match = paymentByOptions.find(opt => opt.value === billingData.paymentBy);
+        return match?.label || '';
+    }, [paymentByOptions, billingData.paymentBy]);
+
+    const receiptDetailsText = React.useMemo(() => {
+        if (selectedBillingDetailIds.length === 0) return '';
+        const parts = selectedBillingDetailIds
+            .map(id => billingDetailsOptions.find(opt => opt.id === id))
+            .filter(Boolean)
+            .map(opt => {
+                if (!opt) return '';
+                const amount = typeof opt.default_fees === 'number' && !isNaN(opt.default_fees)
+                    ? ` Rs.${opt.default_fees.toFixed(2)}`
+                    : '';
+                return `${opt.billing_details}${amount}`;
+            })
+            .filter(Boolean);
+        return parts.join(', ');
+    }, [selectedBillingDetailIds, billingDetailsOptions]);
+
+    const buildReceiptPayload = (): SaveReceiptPayload | null => {
+        if (!treatmentData?.patientId || !treatmentData?.visitNumber) {
+            console.warn('Cannot build receipt payload - missing patient data', { treatmentData });
+            return null;
+        }
+
+        const clinicId = treatmentData.clinicId || sessionData?.clinicId;
+        const doctorId = treatmentData.doctorId || sessionData?.doctorId;
+        const userId = sessionData?.userId;
+
+        if (!clinicId || !doctorId || !userId) {
+            console.warn('Cannot build receipt payload - missing clinic/doctor/user info', {
+                clinicId,
+                doctorId,
+                userId
+            });
+            return null;
+        }
+
+        const patientVisitNo = Number(treatmentData.visitNumber);
+        if (!Number.isFinite(patientVisitNo) || patientVisitNo <= 0) {
+            console.warn('Cannot build receipt payload - invalid patient visit number', { patientVisitNo });
+            return null;
+        }
+
+        const billedAmount = parseFloat(billingData.billed) || 0;
+        const discountAmount = parseFloat(billingData.discount) || 0;
+        const collectedAmount = parseFloat(billingData.feesCollected) || 0;
+        const receiptAmountRaw = collectedAmount > 0 ? collectedAmount : billedAmount - discountAmount;
+        const receiptAmount = Math.max(0, receiptAmountRaw);
+
+        if (receiptAmount <= 0) {
+            console.warn('Skipping receipt generation - non-positive receipt amount', {
+                billedAmount,
+                discountAmount,
+                collectedAmount
+            });
+            return null;
+        }
+
+        const shiftIdRaw = Number((sessionData as any)?.shiftId ?? 1);
+        const shiftId = Number.isFinite(shiftIdRaw) ? shiftIdRaw : 1;
+        const todayIsoDate = new Date().toISOString().slice(0, 10);
+        const parsedPaymentById = billingData.paymentBy ? parseInt(billingData.paymentBy, 10) : undefined;
+        const paymentById = parsedPaymentById !== undefined && !Number.isNaN(parsedPaymentById)
+            ? parsedPaymentById
+            : undefined;
+
+        const payload: SaveReceiptPayload = {
+            patientId: String(treatmentData.patientId),
+            clinicId: String(clinicId),
+            doctorId: String(doctorId),
+            shiftId,
+            visitDate: todayIsoDate,
+            patientVisitNo,
+            receiptAmount: Number(receiptAmount.toFixed(2)),
+            treatmentDetails: receiptDetailsText || undefined,
+            visitType: 'V',
+            paymentById,
+            paymentRemark: billingData.paymentRemark || undefined,
+            userId: String(userId),
+            userName: sessionData?.firstName || sessionData?.loginId,
+            discount: discountAmount > 0 ? Number(discountAmount.toFixed(2)) : undefined,
+            feesCollected: collectedAmount > 0 ? Number(collectedAmount.toFixed(2)) : undefined
+        };
+
+        return payload;
+    };
+
     const handleBackToAppointments = () => {
         navigate('/appointment');
+    };
+
+    const handlePrintReceiptClick = () => {
+        if (!isFormDisabled) return;
+        setShowPrintReceiptPopup(true);
+    };
+
+    const handlePrintReceiptSubmit = (values: PrintReceiptFormValues) => {
+        console.log('Print receipt submitted:', values);
+        setShowPrintReceiptPopup(false);
     };
 
     // Fetch previous visits for the current patient
@@ -2020,15 +1944,20 @@ export default function Treatment() {
 
             try {
                 const clinicId = String(sessionData.clinicId);
-                const doctorId = 'DR-00010'; // Hardcoded as per requirement
+                const doctorId = treatmentData?.doctorId || sessionData?.doctorId;
                 const patientId = String(treatmentData.patientId);
+
+                if (!doctorId) {
+                    console.error('Doctor ID is required but not found in treatment or session data');
+                    return;
+                }
 
                 const params = new URLSearchParams();
                 params.set('clinicId', clinicId);
-                params.set('doctorId', doctorId);
+                params.set('doctorId', String(doctorId));
                 params.set('patientId', patientId);
 
-                const response = await fetch(`http://localhost:8080/api/fees/folder-amount?${params.toString()}`);
+                const response = await fetch(`/api/fees/folder-amount?${params.toString()}`);
                 
                 if (cancelled) return;
 
@@ -2039,7 +1968,7 @@ export default function Treatment() {
 
                 const data = await response.json();
                 console.log('=== Patient Folder Amount API Response (Billing) ===');
-                console.log('API URL:', `http://localhost:8080/api/fees/folder-amount?${params.toString()}`);
+                console.log('API URL:', `/api/fees/folder-amount?${params.toString()}`);
                 console.log('Response Data:', data);
                 console.log('==========================================');
                 
@@ -2064,7 +1993,7 @@ export default function Treatment() {
         return () => {
             cancelled = true;
         };
-    }, [treatmentData?.patientId, sessionData?.clinicId]);
+    }, [treatmentData?.patientId, treatmentData?.doctorId, sessionData?.clinicId, sessionData?.doctorId]);
 
     // Handle previous visit click - same as Appointment page's handleLastVisitClick
     const handlePreviousVisitClick = async (visit: PreviousVisit) => {
@@ -2836,9 +2765,30 @@ export default function Treatment() {
             console.log('API Response:', result);
             console.log('Success status:', result.success);
             
+            let receiptErrorMessage: string | null = null;
             if (result.success) {
+                if (isSubmit) {
+                    const receiptPayload = buildReceiptPayload();
+                    if (receiptPayload) {
+                        try {
+                            const receiptResponse = await receiptService.saveReceipt(receiptPayload);
+                            if (!receiptResponse.success) {
+                                throw new Error(receiptResponse.error || receiptResponse.message || 'Failed to generate receipt');
+                            }
+                            console.log('Receipt generated successfully:', receiptResponse);
+                        } catch (receiptError: any) {
+                            receiptErrorMessage = receiptError?.message || 'Failed to generate receipt';
+                            console.error('Receipt generation failed:', receiptError);
+                        }
+                    }
+                }
+
+                const successMessage = receiptErrorMessage
+                    ? `Treatment ${isSubmit ? 'submitted' : 'saved'} but receipt failed: ${receiptErrorMessage}`
+                    : `Treatment ${isSubmit ? 'submitted' : 'saved'} successfully!`;
+
                 console.log(`=== TREATMENT ${actionType}ED SUCCESSFULLY ===`);
-                setSnackbarMessage(`Treatment ${isSubmit ? 'submitted' : 'saved'} successfully!`);
+                setSnackbarMessage(successMessage);
                 setSnackbarOpen(true);
                 if (isSubmit) {
                     setHasSubmittedSuccessfully(true);
@@ -2886,6 +2836,16 @@ export default function Treatment() {
     };
 
     const handleTreatmentSubmit = async () => {
+        const collectedAmount = parseFloat(billingData.feesCollected) || 0;
+        const duesAmount = parseFloat(billingData.dues) || 0;
+
+        if (collectedAmount > duesAmount) {
+            const shouldProceed = window.confirm('Collected amount is more than dues. Do you want to continue?');
+            if (!shouldProceed) {
+                return;
+            }
+        }
+
         await handleTreatmentAction(true); // true = submit
     };
 
@@ -3057,10 +3017,14 @@ export default function Treatment() {
     };
 
     const handleBillingChange = (field: string, value: string) => {
+        const sanitizedValue = field === 'feesCollected'
+            ? value.replace(/[^0-9]/g, '')
+            : value;
+
         setBillingData(prev => {
             const updated = {
                 ...prev,
-                [field]: value
+                [field]: sanitizedValue
             };
             
             // When discount changes, automatically subtract it from fees_collected
@@ -3130,7 +3094,7 @@ export default function Treatment() {
                                 fontWeight: 'bold',
                                 fontSize: '14px'
                             }}>
-                                Previous Visits
+                                Previous Visits ({previousVisits.length})
                             </div>
                             <div style={{ padding: '0' }}>
                                 {loadingPreviousVisits ? (
@@ -3143,7 +3107,7 @@ export default function Treatment() {
                                         Loading previous visits...
                                     </div>
                                 ) : previousVisits.length > 0 ? (
-                                    previousVisits.map((visit, index) => (
+                                    previousVisits.slice(-10).reverse().map((visit, index) => (
                                         <div 
                                             key={visit.id}
                                             style={{
@@ -4092,7 +4056,6 @@ export default function Treatment() {
                                         <input
                                             type="text"
                                             value={billingData.acBalance}
-                                            onChange={(e) => handleBillingChange('acBalance', e.target.value)}
                                             disabled
                                             placeholder="0.00"
                                             style={{
@@ -4121,11 +4084,11 @@ export default function Treatment() {
                                                 transform: 'translateY(-50%)',
                                                 fontSize: '11px',
                                                 fontWeight: 'bold',
-                                                color: folderAmountData.totalAcBalance > 0 ? '#d32f2f' : '#2e7d32',
+                                                color: folderAmountData.totalAcBalance < 0 ? '#d32f2f' : '#2e7d32',
                                                 whiteSpace: 'nowrap',
                                                 pointerEvents: 'none'
                                             }}>
-                                                {folderAmountData.totalAcBalance > 0 ? 'Amount Pending' : 'Outstanding'}
+                                                {folderAmountData.totalAcBalance < 0 ? 'Amount Pending' : 'Outstanding'}
                                             </span>
                                         )}
                                     </div>
@@ -4234,18 +4197,18 @@ export default function Treatment() {
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '20px', marginBottom: '40px', flexWrap: 'wrap' }}>
                                 <button
                                     type="button"
-                                    disabled={true}
+                                    disabled={!isFormDisabled}
                                     style={{
-                                        backgroundColor: '#D5D5D8',
-                                        color: '#666',
+                                        backgroundColor: !isFormDisabled ? '#D5D5D8' : '#1976d2',
+                                        color: !isFormDisabled ? '#666' : 'white',
                                         border: 'none',
                                         padding: '8px 12px',
                                         borderRadius: '4px',
-                                        cursor: 'not-allowed',
+                                        cursor: !isFormDisabled ? 'not-allowed' : 'pointer',
                                         fontSize: '12px',
-                                        opacity: 0.7
+                                        opacity: !isFormDisabled ? 0.7 : 1
                                     }}
-                                >
+                                onClick={handlePrintReceiptClick}>
                                     Print Receipt
                                 </button>
                             <button 
@@ -4438,7 +4401,6 @@ export default function Treatment() {
                         return {
                             ...prev,
                             billed: billedNum.toFixed(2),
-                            acBalance: acBal.toFixed(2),
                             dues: acBal.toFixed(2)
                         };
                     });
@@ -4457,6 +4419,18 @@ export default function Treatment() {
                 patientVisitNo={treatmentData?.visitNumber}
                 shiftId={(sessionData as any)?.shiftId || 1}
                 useOverwrite={false}
+            />
+
+            <PrintReceiptPopup
+                open={showPrintReceiptPopup}
+                onClose={() => setShowPrintReceiptPopup(false)}
+                onSubmit={handlePrintReceiptSubmit}
+                patientName={treatmentData?.patientName}
+                patientAge={treatmentData?.age}
+                patientGender={treatmentData?.gender}
+                billingData={billingData}
+                paymentByLabel={paymentByLabel}
+                detailsText={receiptDetailsText}
             />
 
             {/* Quick Registration Modal - appears on top of Collections screen */}

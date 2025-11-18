@@ -216,9 +216,13 @@ export default function LabTrendPopup({
 
                     {!loading && !error && labTrends.length > 0 && (
                         <div style={{ border: '1px solid #ccc', borderRadius: '4px', overflow: 'hidden' }}>
-                            <div>
+                            <div style={{
+                                maxHeight: labTrends.length > 5 ? '280px' : 'none',
+                                overflowY: labTrends.length > 5 ? 'auto' : 'visible',
+                                overflowX: 'auto'
+                            }}>
                                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                                    <thead>
+                                    <thead style={{ position: 'sticky', top: 0, zIndex: 10 }}>
                                         <tr style={{ backgroundColor: '#1976d2', color: 'white', fontWeight: 'bold', fontSize: '11px' }}>
                                             <th style={{ padding: '6px', textAlign: 'left', fontWeight: 'bold', backgroundColor: '#1976d2', color: 'white', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Visit Date</th>
                                             <th style={{ padding: '6px', textAlign: 'left', fontWeight: 'bold', backgroundColor: '#1976d2', color: 'white', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Patient Visit No</th>

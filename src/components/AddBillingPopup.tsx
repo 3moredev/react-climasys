@@ -60,6 +60,10 @@ export default function AddBillingPopup({
     const [isSubmitting, setIsSubmitting] = React.useState<boolean>(false);
     // Preserve original order of options to ensure rows never jump when selected
     const initialOrderRef = React.useRef<Map<string, number>>(new Map());
+    // Track if initial billing matching has been done to prevent re-adding items when user unchecks
+    const hasMatchedBillingRef = React.useRef<boolean>(false);
+    // Track Professional Fees items that user has explicitly unchecked to prevent re-adding them
+    const uncheckedProfessionalFeesRef = React.useRef<Set<string>>(new Set());
 
     // Load via API if parent did not provide options
     React.useEffect(() => {
@@ -181,7 +185,16 @@ export default function AddBillingPopup({
         let cancelled = false;
         async function matchBillingFromMasterLists() {
             // Only run when popup is open
-            if (!open) return;
+            if (!open) {
+                // Reset the ref when popup closes so it can match again on next open
+                hasMatchedBillingRef.current = false;
+                return;
+            }
+            
+            // Only run once per popup open to prevent re-adding items when user unchecks them
+            if (hasMatchedBillingRef.current) {
+                return;
+            }
             
             // Only run if parent provided filteredBillingDetails (popup didn't load its own data)
             // If filteredBillingDetails is not provided, loadBillingDetails will handle matching
@@ -217,6 +230,7 @@ export default function AddBillingPopup({
                 // If billing array is empty, don't do anything (show popup as normal)
                 if (!Array.isArray(billingArray) || billingArray.length === 0) {
                     console.log('No billing data in master-lists, showing popup as normal');
+                    hasMatchedBillingRef.current = true; // Mark as done even if no data
                     return;
                 }
 
@@ -245,7 +259,7 @@ export default function AddBillingPopup({
                     }
                 });
 
-                // Pre-select matched items (merge with existing selections)
+                // Pre-select matched items (merge with existing selections) - only once
                 if (!cancelled && matchedIds.length > 0) {
                     setEffectiveSelectedIds(prev => {
                         // Merge with existing, avoiding duplicates
@@ -254,6 +268,9 @@ export default function AddBillingPopup({
                         return combined;
                     });
                 }
+                
+                // Mark as done so this doesn't run again until popup closes and reopens
+                hasMatchedBillingRef.current = true;
             } catch (e) {
                 console.error('Error matching billing from master-lists in popup:', e);
             }
@@ -348,6 +365,11 @@ export default function AddBillingPopup({
 
         if (!targetItem) return;
 
+        // Don't re-add if user has explicitly unchecked this item
+        if (uncheckedProfessionalFeesRef.current.has(targetItem.id)) {
+            return;
+        }
+
         // Check if we need to update selections
         const currentSelectedIds = effectiveSelectedIds;
         const hasTargetItem = currentSelectedIds.includes(targetItem.id);
@@ -363,7 +385,7 @@ export default function AddBillingPopup({
         // Only update if selection doesn't match what we want
         if (!hasTargetItem || hasOtherProfessionalFees) {
             setEffectiveSelectedIds(prev => {
-                // Remove all Professional Fees items first
+                // Remove all Professional Fees items first (except those user unchecked)
                 const withoutProfessionalFees = prev.filter(id => {
                     const opt = effectiveOptions.find(o => o.id === id);
                     if (!opt) return true;
@@ -371,8 +393,8 @@ export default function AddBillingPopup({
                     return groupName !== 'Professional Fees';
                 });
 
-                // Add the target item if not already present
-                if (!withoutProfessionalFees.includes(targetItem.id)) {
+                // Add the target item if not already present and not unchecked by user
+                if (!withoutProfessionalFees.includes(targetItem.id) && !uncheckedProfessionalFeesRef.current.has(targetItem.id)) {
                     return [...withoutProfessionalFees, targetItem.id];
                 }
                 return withoutProfessionalFees;
@@ -385,6 +407,8 @@ export default function AddBillingPopup({
         if (!open) {
             setErrorMessage(null);
             setIsSubmitting(false);
+            // Reset unchecked Professional Fees tracking when popup closes
+            uncheckedProfessionalFeesRef.current.clear();
         }
     }, [open]);
 
@@ -626,9 +650,16 @@ export default function AddBillingPopup({
                                         const toggle = (next: boolean) => {
                                             setEffectiveSelectedIds(prev => {
                                                 if (next) {
+                                                    // If checking, remove from unchecked list if it was there
+                                                    uncheckedProfessionalFeesRef.current.delete(opt.id);
                                                     if (prev.includes(opt.id)) return prev;
                                                     return [...prev, opt.id];
                                                 } else {
+                                                    // If unchecking, track Professional Fees items that user explicitly unchecked
+                                                    const groupName = (opt.billing_group_name || '').trim();
+                                                    if (groupName === 'Professional Fees') {
+                                                        uncheckedProfessionalFeesRef.current.add(opt.id);
+                                                    }
                                                     return prev.filter(v => v !== opt.id);
                                                 }
                                             });
