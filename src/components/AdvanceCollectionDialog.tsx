@@ -5,9 +5,10 @@ import { Calendar } from "lucide-react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import AddPatientPage from "../pages/AddPatientPage";
 import { sessionService } from "../services/sessionService";
-import { advanceCollectionService, AdvanceCollectionRequest, AdvanceCollectionDetailsRequest, AdvanceCollectionDTO } from "../services/advanceCollectionService";
+import { advanceCollectionService, AdvanceCollectionRequest, AdvanceCollectionDetailsRequest, AdvanceCollectionDTO, ReceiptDetailsRequest } from "../services/advanceCollectionService";
 import { patientService, Patient } from "../services/patientService";
 import { SessionInfo } from "../services/sessionService";
+import { admissionService, InsuranceCompany } from "../services/admissionService";
 
 interface AdvanceCollectionDialogProps {
   open: boolean;
@@ -50,7 +51,7 @@ export default function AdvanceCollectionDialog({
     advanceDate: "",
     paymentRemark: "",
     receivedRs: "",
-    paymentBy: "Cash",
+    paymentBy: 0, // Will be set to first option ID (number) when payment options load
     receiptNo: "",
     receiptDate: "",
   });
@@ -66,6 +67,9 @@ export default function AdvanceCollectionDialog({
   const [previousAdvanceRecords, setPreviousAdvanceRecords] = useState<AdvanceCollectionDTO[]>([]);
   const [loadingPreviousRecords, setLoadingPreviousRecords] = useState<boolean>(false);
   const [patientDetails, setPatientDetails] = useState<Patient | null>(null);
+  const [insuranceCompanies, setInsuranceCompanies] = useState<InsuranceCompany[]>([]);
+  const [loadingInsuranceCompanies, setLoadingInsuranceCompanies] = useState<boolean>(false);
+  const [paymentByOptions, setPaymentByOptions] = useState<{ value: number; label: string }[]>([]);
 
   // Format date to dd-mmm-yy format for display
   const formatDateToDDMMMYY = (dateString: string): string => {
@@ -88,26 +92,25 @@ export default function AdvanceCollectionDialog({
       return dateString.toUpperCase();
     }
     
-    return dateString;
-  };
-
-  // Format date to DD-MMM-YYYY format for display
-  const formatDateToDDMMMYYYY = (dateString: string): string => {
-    if (!dateString) return "";
-    
-    // If it's already in yyyy-mm-dd format, convert it
-    if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
-      const date = new Date(dateString);
-      if (!isNaN(date.getTime())) {
-        const day = String(date.getDate()).padStart(2, '0');
-        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        const month = months[date.getMonth()];
-        const year = String(date.getFullYear());
-        return `${day}-${month}-${year}`;
-      }
+    // Handle ISO string yyyy-mm-ddTHH:mm:ss.sssZ
+    const isoDate = new Date(dateString);
+    if (!isNaN(isoDate.getTime())) {
+      const day = String(isoDate.getDate()).padStart(2, '0');
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const month = months[isoDate.getMonth()];
+      const year = String(isoDate.getFullYear()).slice(-2);
+      return `${day}-${month}-${year}`;
     }
     
     return dateString;
+  };
+
+  // Get company name from company ID
+  const getCompanyName = (companyId: string | undefined): string => {
+    if (!companyId) return '--';
+    
+    const company = insuranceCompanies.find(ic => ic.id === companyId);
+    return company ? company.name : companyId; // Return ID if name not found
   };
 
   // Load session data and patient details on component mount
@@ -134,9 +137,96 @@ export default function AdvanceCollectionDialog({
       }
     };
 
+    const loadInsuranceCompanies = async () => {
+      try {
+        setLoadingInsuranceCompanies(true);
+        const response = await admissionService.getAllActiveInsuranceCompanies();
+        console.log('Insurance Companies API Response:', response);
+        
+        if (response.success && response.data && response.data.length > 0) {
+          // Ensure data structure is correct (id and name)
+          const validCompanies = response.data.filter(
+            (ic: any) => ic.id && ic.name
+          );
+          
+          if (validCompanies.length > 0) {
+            setInsuranceCompanies(validCompanies);
+            console.log(`Loaded ${validCompanies.length} insurance companies:`, validCompanies);
+          } else {
+            console.warn('No valid insurance companies found in response');
+            setInsuranceCompanies([]);
+          }
+        } else {
+          console.warn('Insurance companies response was empty or unsuccessful:', response);
+          setInsuranceCompanies([]);
+        }
+      } catch (error) {
+        console.error('Error fetching insurance companies:', error);
+        setInsuranceCompanies([]);
+      } finally {
+        setLoadingInsuranceCompanies(false);
+      }
+    };
+
+    const loadPaymentByOptions = async () => {
+      try {
+        const ref = await patientService.getAllReferenceData();
+        const preferKeys = ['paymentMethods', 'paymentBy', 'paymentTypes', 'paymentModes', 'payments', 'paymentByList'];
+        let raw: any[] = [];
+        for (const key of preferKeys) {
+          if (Array.isArray((ref as any)?.[key])) { 
+            raw = (ref as any)[key]; 
+            break; 
+          }
+        }
+        if (raw.length === 0) {
+          const firstArrayKey = Object.keys(ref || {}).find(k => 
+            Array.isArray((ref as any)[k]) && 
+            ((ref as any)[k][0] && 
+              (('description' in (ref as any)[k][0]) || 
+               ('label' in (ref as any)[k][0]) || 
+               ('name' in (ref as any)[k][0])))
+          );
+          if (firstArrayKey) raw = (ref as any)[firstArrayKey];
+        }
+        const toStr = (v: any) => (v === undefined || v === null ? '' : String(v));
+        const toNum = (v: any): number => {
+          if (v === undefined || v === null) return 0;
+          const num = typeof v === 'number' ? v : parseInt(String(v), 10);
+          return isNaN(num) ? 0 : num;
+        };
+        const options: { value: number; label: string }[] = Array.isArray(raw)
+          ? raw.map((r: any) => ({
+              value: toNum(r?.id ?? r?.value ?? r?.code ?? r?.paymentById ?? r?.key ?? r),
+              label: toStr(r?.paymentDescription ?? r?.description ?? r?.label ?? r?.name ?? r?.paymentBy ?? r)
+            })).filter(o => o.label && o.value > 0) // Filter out invalid options
+          : [];
+        setPaymentByOptions(options);
+        // If no selection yet, initialize to first option
+        setFormData(prev => ({ 
+          ...prev, 
+          paymentBy: prev.paymentBy || (options[0]?.value || 0) 
+        }));
+        console.log('Loaded payment by options:', options);
+      } catch (error) {
+        console.error('Error loading payment by options:', error);
+        // Fallback to default options if API fails (using numeric IDs)
+        setPaymentByOptions([
+          { value: 1, label: 'Cash' },
+          { value: 2, label: 'Card' },
+          { value: 3, label: 'UPI' },
+          { value: 4, label: 'Cheque' },
+          { value: 5, label: 'Online Transfer' },
+          { value: 6, label: 'Other' }
+        ]);
+      }
+    };
+
     if (open) {
       loadSessionData();
       loadPatientDetails();
+      loadInsuranceCompanies();
+      loadPaymentByOptions();
     }
   }, [open, patientData?.id]);
 
@@ -189,7 +279,7 @@ export default function AdvanceCollectionDialog({
         advanceDate: todayFormatted,
         paymentRemark: "",
         receivedRs: "",
-        paymentBy: "Cash",
+        paymentBy: 0, // Will be set when payment options load
         receiptNo: "",
         receiptDate: todayFormatted,
       });
@@ -271,8 +361,6 @@ export default function AdvanceCollectionDialog({
     }
   };
 
-  // Payment methods
-  const paymentMethods = ["Cash", "Card", "UPI", "Cheque", "Online Transfer", "Other"];
 
   // Helper function to get gender from gender_id
 //   const getGenderFromId = (genderId: number): string => {
@@ -288,13 +376,34 @@ export default function AdvanceCollectionDialog({
       name: patientData.name,
       id: patientData.id ? String(patientData.id) : undefined,
       gender: patientData.gender,
-      age: patientData.age
+      age: typeof patientData.age === 'number' ? patientData.age : (patientData.age ? parseInt(String(patientData.age), 10) : undefined)
     } : (patientDetails ? {
       name: `${patientDetails.first_name} ${patientDetails.middle_name || ''} ${patientDetails.last_name}`.trim(),
       id: String(patientDetails.id),
-      gender:patientDetails.gender_id.toString(),
-      age: patientDetails.age_given
+      gender: patientDetails.gender_id.toString(),
+      age: typeof patientDetails.age_given === 'number' ? patientDetails.age_given : (patientDetails.age_given ? parseInt(String(patientDetails.age_given), 10) : undefined)
     } : null);
+
+  // Helper function to convert date string to date-only format (yyyy-mm-dd)
+  const convertToDateOnly = (dateString: string): string => {
+    if (!dateString) return '';
+    
+    // If already in yyyy-mm-dd format, return as is
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+      return dateString;
+    }
+    
+    // Try to parse the date string and extract only the date part
+    const date = new Date(dateString);
+    if (!isNaN(date.getTime())) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+    
+    return '';
+  };
 
   const handleSubmit = async () => {
     // Validate required fields
@@ -332,21 +441,99 @@ export default function AdvanceCollectionDialog({
 
     setIsSubmitting(true);
 
+    // Convert dates to date-only format (yyyy-mm-dd)
+    const dateISO = advanceDateYYYYMMDD 
+      ? convertToDateOnly(advanceDateYYYYMMDD) // Date only format
+      : '';
+    const dateOfAdvanceISO = advanceDateYYYYMMDD 
+      ? convertToDateOnly(advanceDateYYYYMMDD) // Date only format
+      : undefined;
+    const receiptDateISO = receiptDateYYYYMMDD 
+      ? convertToDateOnly(receiptDateYYYYMMDD) // Date only format
+      : undefined;
+
+    // Declare request variable outside try block for error handling
+    let request: AdvanceCollectionRequest | null = null;
+
     try {
-      // Map form data to API request format
-      const request: AdvanceCollectionRequest = {
+      // First, call saveAdvanceReceiptDetails to generate receipt number
+      let generatedReceiptNo = formData.receiptNo?.trim() || '';
+      
+      try {
+        const receiptRequest: ReceiptDetailsRequest = {
+          patientId: String(displayPatientData.id || ''),
+          clinicId: sessionData.clinicId,
+          doctorId: sessionData.doctorId,
+          ipdRefNo: admissionData?.admissionIpdNo,
+          receiptNo: generatedReceiptNo || '', // Use provided receiptNo or empty to generate
+          amount: parseFloat(formData.receivedRs),
+          paymentById: formData.paymentBy > 0 ? formData.paymentBy : undefined,
+          paymentRemark: formData.paymentRemark?.trim() || undefined,
+          shiftId: 1,
+          loginId: '',
+          date: receiptDateISO
+        };
+        
+        console.log('Generating receipt number via saveAdvanceReceiptDetails:', receiptRequest);
+        const receiptResponse = await advanceCollectionService.saveAdvanceReceiptDetails(receiptRequest);
+        
+        if (receiptResponse.success) {
+          // Extract generated receipt number from response
+          // Check if receiptNo is in data object or response directly
+          if (receiptResponse.data?.receiptNo) {
+            generatedReceiptNo = receiptResponse.data.receiptNo;
+            console.log('Generated receipt number:', generatedReceiptNo);
+          } else if (receiptResponse.data && typeof receiptResponse.data === 'string') {
+            // If data is a string, it might be the receipt number
+            generatedReceiptNo = receiptResponse.data;
+            console.log('Generated receipt number (from data string):', generatedReceiptNo);
+          } else if (receiptResponse.message) {
+            // Sometimes receipt number might be in message
+            const receiptMatch = receiptResponse.message.match(/receipt[:\s]+([^\s,]+)/i);
+            if (receiptMatch) {
+              generatedReceiptNo = receiptMatch[1];
+              console.log('Generated receipt number (from message):', generatedReceiptNo);
+            }
+          }
+          
+          if (!generatedReceiptNo) {
+            console.warn('Receipt number not found in response, using provided receiptNo or empty');
+          }
+        } else {
+          console.warn('Receipt generation warning:', receiptResponse.error || receiptResponse.message);
+          // Continue with provided receiptNo or empty
+        }
+      } catch (receiptError: any) {
+        console.error('Error generating receipt number:', receiptError);
+        // Continue with provided receiptNo or empty - don't fail the whole operation
+      }
+
+      // Map form data to API request format with generated receipt number
+      // formData.paymentBy contains the numeric ID
+      request = {
         patientId: String(displayPatientData.id || ''),
         doctorId: sessionData.doctorId,
         clinicId: sessionData.clinicId,
         ipdRefNo: admissionData?.admissionIpdNo || '',
-        dateOfAdvance: advanceDateYYYYMMDD || '',
-        receiptNo: formData.receiptNo || '',
-        advance: parseFloat(formData.receivedRs),
+        date: dateISO, // Backend requires 'date' field in date-only format (yyyy-mm-dd) (NOT NULL constraint)
+        advanceDate: dateOfAdvanceISO, // Also send as dateOfAdvance in date-only format (yyyy-mm-dd)
+        receiptNo: generatedReceiptNo, // Use generated receipt number
+        amountReceived: parseFloat(formData.receivedRs),
+        paymentRemark: formData.paymentRemark?.trim() || undefined, // Use undefined instead of empty string
+        paymentById: formData.paymentBy > 0 ? formData.paymentBy : undefined, // Payment method ID as number
+        shiftId: 1,
+        loginId: '',
+        receiptDate: receiptDateISO, // Send receipt date in date-only format (yyyy-mm-dd)
       };
+      
+      console.log('Submitting advance collection request:', request);
+      console.log('Payment By ID:', formData.paymentBy);
+      console.log('Using receipt number:', generatedReceiptNo);
 
       const response = await advanceCollectionService.saveAdvanceCollection(request);
 
       if (response.success) {
+        
         setSnackbarMessage(response.message || "Advance collection saved successfully");
         setSnackbarOpen(true);
         
@@ -376,7 +563,7 @@ export default function AdvanceCollectionDialog({
           advanceDate: todayFormatted,
           paymentRemark: "",
           receivedRs: "",
-          paymentBy: "Cash",
+          paymentBy: (paymentByOptions[0]?.value ?? 0) as number, // Reset to first option ID (number)
           receiptNo: "",
           receiptDate: todayFormatted,
         });
@@ -386,7 +573,28 @@ export default function AdvanceCollectionDialog({
       }
     } catch (error: any) {
       console.error("Error saving advance collection:", error);
-      setSnackbarMessage(error.message || "An error occurred while saving advance collection");
+      console.error("Error details:", {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        fullError: error.response
+      });
+      if (request) {
+        console.error("Request that failed:", JSON.stringify(request, null, 2));
+      }
+      
+      // Extract detailed error message
+      let errorMessage = "An error occurred while saving advance collection";
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      setSnackbarMessage(errorMessage);
       setSnackbarOpen(true);
     } finally {
       setIsSubmitting(false);
@@ -426,17 +634,27 @@ export default function AdvanceCollectionDialog({
           maxWidth: "1400px",
           maxHeight: "95vh",
           overflowY: "auto",
+          backgroundColor: "#ffffff",
+          boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
         }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
-          <h4 className="mb-0 fw-bold" style={{ color: "#007bff" }}>Advance Collection</h4>
+        <div className="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3" style={{ borderBottom: "2px solid #e0e0e0" }}>
+          <h4 className="mb-0 fw-bold" style={{ color: "#007bff", fontSize: "1.5rem" }}>Advance Collection</h4>
           <button
             onClick={onClose}
-            style={{ border: "none", background: "none", cursor: "pointer" }}
+            style={{ 
+              border: "none", 
+              background: "none", 
+              cursor: "pointer",
+              padding: "4px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center"
+            }}
           >
-            <Close />
+            <Close style={{ color: "#666" }} />
           </button>
         </div>
 
@@ -454,7 +672,8 @@ export default function AdvanceCollectionDialog({
               cursor: displayPatientData.id ? 'pointer' : 'default',
               textDecoration: displayPatientData.id ? 'underline' : 'none',
               color: "#28a745",
-              fontWeight: 500
+              fontWeight: 500,
+              padding: "8px 0"
             }}
             title={displayPatientData.id ? 'Click to view patient details' : ''}
           >
@@ -462,7 +681,7 @@ export default function AdvanceCollectionDialog({
             {displayPatientData.gender || 'N/A'} / {displayPatientData.age ? `${displayPatientData.age} Yr` : 'N/A'}
           </div>
         ) : (
-          <div className="text-muted mb-3" style={{ fontSize: "14px", fontStyle: "italic" }}>
+          <div className="text-muted mb-3" style={{ fontSize: "14px", fontStyle: "italic", padding: "8px 0" }}>
             No patient selected
           </div>
         )}
@@ -480,11 +699,11 @@ export default function AdvanceCollectionDialog({
               />
               <HorizontalField
                 label="Discharge Date"
-                value={admissionData?.dischargeDate ? formatDateToDDMMMYYYY(admissionData.dischargeDate) : 'DD-MMM-YYYY'}
+                value={admissionData?.dischargeDate ? formatDateToDDMMMYY(admissionData.dischargeDate) : '--'}
                 disabled={true}
                 onChange={() => {}}
                 isDate
-                dateFormat="DD-MMM-YYYY"
+                dateFormat="dd-mmm-yy"
               />
               <HorizontalField
                 label="Insurance"
@@ -494,11 +713,11 @@ export default function AdvanceCollectionDialog({
               />
               <HorizontalField
                 label="Hospital bill Date"
-                value={admissionData?.hospitalBillDate ? formatDateToDDMMMYYYY(admissionData.hospitalBillDate) : '--'}
+                value={admissionData?.hospitalBillDate ? formatDateToDDMMMYY(admissionData.hospitalBillDate) : '--'}
                 disabled={true}
                 onChange={() => {}}
                 isDate
-                dateFormat="DD-MMM-YYYY"
+                dateFormat="dd-mmm-yy"
               />
             </div>
 
@@ -523,7 +742,7 @@ export default function AdvanceCollectionDialog({
               </div>
               <HorizontalField
                 label="Company"
-                value={admissionData?.company || '--'}
+                value={getCompanyName(admissionData?.company)}
                 disabled={true}
                 onChange={() => {}}
               />
@@ -539,11 +758,11 @@ export default function AdvanceCollectionDialog({
             <div className="col-md-4">
               <HorizontalField
                 label="Admission Date"
-                value={admissionData?.admissionDate ? formatDateToDDMMMYYYY(admissionData.admissionDate) : '--'}
+                value={admissionData?.admissionDate ? formatDateToDDMMMYY(admissionData.admissionDate) : '--'}
                 disabled={true}
                 onChange={() => {}}
                 isDate
-                dateFormat="DD-MMM-YYYY"
+                dateFormat="dd-mmm-yy"
               />
               <HorizontalField
                 label="Department"
@@ -569,10 +788,10 @@ export default function AdvanceCollectionDialog({
 
         {/* New Advance Collection Input Section */}
         <div className="container-fluid mb-4">
-          <h6 className="mb-3 fw-bold" style={{ color: "#007bff" }}>New Advance Collection</h6>
+          <h6 className="mb-3 fw-bold" style={{ color: "#007bff", fontSize: "1.1rem", marginTop: "20px" }}>New Advance Collection</h6>
+          {/* FIRST ROW - 3 fields */}
           <div className="row">
-            {/* LEFT COLUMN - Advance Details */}
-            <div className="col-md-6">
+            <div className="col-md-4">
               <HorizontalField
                 label="Advance Date"
                 value={formData.advanceDate}
@@ -584,20 +803,8 @@ export default function AdvanceCollectionDialog({
                 dateFormat="dd-mmm-yy"
                 required
               />
-              <HorizontalField
-                label="Payment Remark"
-                value={formData.paymentRemark}
-                onChange={(v) => handleInputChange("paymentRemark", v)}
-              />
-               <HorizontalField
-                label="Receipt No"
-                value={formData.receiptNo}
-                onChange={(v) => handleInputChange("receiptNo", v)}
-              />
             </div>
-
-            {/* RIGHT COLUMN - Receipt Details */}
-            <div className="col-md-6">
+            <div className="col-md-4">
               <HorizontalField
                 label="Received (Rs)"
                 value={formData.receivedRs}
@@ -608,13 +815,37 @@ export default function AdvanceCollectionDialog({
                 }}
                 required
               />
-              <HorizontalField
+              
+            </div>
+            <div className="col-md-4">
+            <HorizontalField
                 label="Payment By"
                 isSelect
-                options={paymentMethods}
-                value={formData.paymentBy}
-                onChange={(v) => handleInputChange("paymentBy", v)}
+                options={paymentByOptions.map(opt => opt.label)}
+                optionValues={paymentByOptions.map(opt => String(opt.value)) as string[]}
+                value={String(formData.paymentBy)}
+                onChange={(v) => handleInputChange("paymentBy", parseInt(v, 10) || 0)}
               />
+            </div>
+          </div>
+          
+          {/* SECOND ROW - 3 fields */}
+          <div className="row">
+          <div className="col-md-4">
+            <HorizontalField
+                label="Payment Remark"
+                value={formData.paymentRemark}
+                onChange={(v) => handleInputChange("paymentRemark", v)}
+              />
+            </div>
+            <div className="col-md-4">
+              <HorizontalField
+                label="Receipt No"
+                value={formData.receiptNo}
+                onChange={(v) => handleInputChange("receiptNo", v)}
+              />
+            </div>
+            <div className="col-md-4">
               <HorizontalField
                 label="Receipt Date"
                 value={formData.receiptDate}
@@ -662,11 +893,11 @@ export default function AdvanceCollectionDialog({
                     <tr key={index}>
                       <td>{index + 1}</td>
                       <td>{admissionData?.admissionIpdNo || '--'}</td>
-                      <td>{admissionData?.admissionDate ? formatDateToDDMMMYYYY(admissionData.admissionDate) : '--'}</td>
-                      <td>{admissionData?.dischargeDate ? formatDateToDDMMMYYYY(admissionData.dischargeDate) : '--'}</td>
+                      <td>{admissionData?.admissionDate ? formatDateToDDMMMYY(admissionData.admissionDate) : '--'}</td>
+                      <td>{admissionData?.dischargeDate ? formatDateToDDMMMYY(admissionData.dischargeDate) : '--'}</td>
                       <td>{admissionData?.reasonOfAdmission || '--'}</td>
                       <td>{admissionData?.insurance || '--'}</td>
-                      <td>{record.dateOfAdvance ? formatDateToDDMMMYYYY(record.dateOfAdvance) : '--'}</td>
+                      <td>{record.dateOfAdvance ? formatDateToDDMMMYY(record.dateOfAdvance) : '--'}</td>
                       <td>{record.receiptNo || '--'}</td>
                       <td>{record.advance ? record.advance.toFixed(2) : '0.00'}</td>
                     </tr>
@@ -689,22 +920,49 @@ export default function AdvanceCollectionDialog({
             className="btn" 
             onClick={onClose} 
             disabled={isSubmitting}
-            style={{ backgroundColor: "#6c757d", color: "#ffffff" }}
+            style={{ 
+              backgroundColor: "rgb(0, 123, 255)", 
+              color: "#ffffff",
+              border: "none",
+              padding: "8px 20px",
+              borderRadius: "4px",
+              fontWeight: 500,
+              cursor: isSubmitting ? "not-allowed" : "pointer"
+            }}
           >
             Close
           </button>
           <button 
-            className="btn" 
+            className="btn"
             onClick={handlePrintReceipt}
-            disabled={isSubmitting || previousAdvanceRecords.length === 0}
-            style={{ backgroundColor: "#17a2b8", color: "#ffffff" }}
+            disabled={true}
+            style={{
+              backgroundColor: "rgb(0, 123, 255)",
+              color: "#ffffff",
+              border: "none",
+              padding: "8px 20px",
+              borderRadius: "4px",
+              fontWeight: 500,
+              cursor: "not-allowed",
+              opacity: 0.6
+            }}
           >
             Print Receipt
           </button>
           <button 
-            className="btn btn-primary" 
+            className="btn" 
             onClick={handleSubmit}
             disabled={isSubmitting}
+            style={{ 
+              backgroundColor: "#007bff", 
+              color: "#ffffff",
+              border: "none",
+              padding: "8px 20px",
+              borderRadius: "4px",
+              fontWeight: 500,
+              cursor: isSubmitting ? "not-allowed" : "pointer",
+              opacity: isSubmitting ? 0.6 : 1
+            }}
           >
             {isSubmitting ? "Saving..." : "Submit"}
           </button>
@@ -758,6 +1016,7 @@ function HorizontalField({
     isTextarea,
     isSelect,
     options,
+    optionValues,
     isRadio,
     isDate,
     dateFormat,
@@ -774,6 +1033,7 @@ function HorizontalField({
     isTextarea?: boolean;
     isSelect?: boolean;
     options?: string[];
+    optionValues?: string[]; // Values to use when options are displayed names
     isRadio?: boolean;
     isDate?: boolean;
     dateFormat?: string;
@@ -792,25 +1052,49 @@ function HorizontalField({
         </label>
         <div className="col-8">
           {isTextarea ? (
-            <textarea
-              className="form-control"
-              rows={2}
-              value={value}
-              onChange={(e) => onChange(e.target.value)}
-              disabled={disabled}
-            />
+              <textarea
+                className="form-control"
+                rows={2}
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                disabled={disabled}
+                style={{
+                  border: "1px solid #ced4da",
+                  borderRadius: "4px",
+                  padding: "6px 12px",
+                  fontSize: "14px"
+                }}
+              />
           ) : isSelect ? (
             <select
               className="form-select"
-              value={value}
+              value={value || ""}
               onChange={(e) => onChange(e.target.value)}
               disabled={disabled}
+              style={{
+                border: "1px solid #ced4da",
+                borderRadius: "4px",
+                padding: "6px 12px",
+                fontSize: "14px"
+              }}
             >
-              {options?.map((opt) => (
-                <option key={opt} value={opt}>
-                  {opt}
-                </option>
-              ))}
+              {options && options.length > 0 ? (
+                options.map((opt, index) => {
+                  // If optionValues is provided, use it for the value, otherwise use the option text
+                  const optionValue = (optionValues && optionValues[index] !== undefined) 
+                    ? optionValues[index] 
+                    : opt;
+                  // Use a combination of index and optionValue for unique key
+                  const uniqueKey = optionValue ? `${optionValue}-${index}` : `option-${index}`;
+                  return (
+                    <option key={uniqueKey} value={optionValue}>
+                      {opt}
+                    </option>
+                  );
+                })
+              ) : (
+                <option value="">Select...</option>
+              )}
             </select>
           ) : isRadio ? (
             <div className="d-flex gap-3">
@@ -880,6 +1164,12 @@ function HorizontalField({
               onChange={(e) => onChange(e.target.value)}
               disabled={disabled}
               maxLength={maxLength}
+              style={{
+                border: "1px solid #ced4da",
+                borderRadius: "4px",
+                padding: "6px 12px",
+                fontSize: "14px"
+              }}
             />
           )}
         </div>

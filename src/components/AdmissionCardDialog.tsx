@@ -5,7 +5,7 @@ import { Calendar } from "lucide-react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import AddPatientPage from "../pages/AddPatientPage";
 import { sessionService } from "../services/sessionService";
-import { admissionService, AdmissionCardRequest, Department } from "../services/admissionService";
+import { admissionService, AdmissionCardRequest, Department, InsuranceCompany } from "../services/admissionService";
 
 interface AdmissionCardDialogProps {
   open: boolean;
@@ -47,8 +47,13 @@ export default function AdmissionCardDialog({
     consultingDoctor: admissionData?.consultingDoctor || "",
     referredBy: admissionData?.referredBy || "",
     packageRemarks: admissionData?.packageRemarks || "",
-    insurance: admissionData?.insurance || "Yes",
-    company: admissionData?.company || "",
+    insurance: (() => {
+      if (admissionData?.insurance) return admissionData.insurance;
+      if (admissionData?.isinsurance === true || admissionData?.isinsurance === "true") return "Yes";
+      if (admissionData?.isinsurance === false || admissionData?.isinsurance === "false") return "No";
+      return "Yes"; // default
+    })(),
+    company: admissionData?.insurance_company_id || "",
     commentsNotes: admissionData?.commentsNotes || "",
     firstAdvance: admissionData?.firstAdvance || "",
     lastAdvanceDate: admissionData?.lastAdvanceDate || "",
@@ -63,6 +68,8 @@ export default function AdmissionCardDialog({
   const datePickerRef = useRef<HTMLInputElement>(null);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loadingDepartments, setLoadingDepartments] = useState<boolean>(false);
+  const [insuranceCompanies, setInsuranceCompanies] = useState<InsuranceCompany[]>([]);
+  const [loadingInsuranceCompanies, setLoadingInsuranceCompanies] = useState<boolean>(false);
 
   // Format date to dd-mmm-yy format for display
   const formatDateToDDMMMYY = (dateString: string): string => {
@@ -133,7 +140,12 @@ export default function AdmissionCardDialog({
         consultingDoctor: admissionData.consultingDoctor || "",
         referredBy: admissionData.referredBy || "",
         packageRemarks: admissionData.packageRemarks || "",
-        insurance: admissionData.insurance || "Yes",
+        insurance: (() => {
+          if (admissionData.insurance) return admissionData.insurance;
+          if (admissionData.isinsurance === true || admissionData.isinsurance === "true") return "Yes";
+          if (admissionData.isinsurance === false || admissionData.isinsurance === "false") return "No";
+          return "Yes"; // default
+        })(),
         company: admissionData.company || "",
         commentsNotes: admissionData.commentsNotes || "",
         firstAdvance: admissionData.firstAdvance || "",
@@ -161,7 +173,7 @@ export default function AdmissionCardDialog({
         consultingDoctor: "",
         referredBy: "",
         packageRemarks: "",
-        insurance: "Yes",
+        insurance: "",
         company: "",
         commentsNotes: "",
         firstAdvance: "",
@@ -170,6 +182,35 @@ export default function AdmissionCardDialog({
       });
     }
   }, [admissionData]);
+
+  // Normalize company field when insurance companies are loaded from API response
+  // If company is a name, find and convert to ID
+  // This ensures the dropdown displays correctly and stores IDs for submission
+  useEffect(() => {
+    if (insuranceCompanies.length > 0 && formData.company) {
+      // Check if company is already an ID (exists in insuranceCompanies from API response)
+      const isId = insuranceCompanies.some(ic => ic.id === formData.company);
+      
+      if (!isId) {
+        // Try to find by name in the fetched insurance companies
+        const foundCompany = insuranceCompanies.find(
+          ic => ic.name.toLowerCase() === formData.company.toLowerCase()
+        );
+        
+        if (foundCompany && foundCompany.id !== formData.company) {
+          // Update to use ID from API response instead of name
+          console.log(`Converting company name "${formData.company}" to ID "${foundCompany.id}"`);
+          setFormData(prev => ({ ...prev, company: foundCompany.id }));
+        } else if (!foundCompany) {
+          // Company name not found in fetched list, clear it
+          console.warn(`Company "${formData.company}" not found in insurance companies list`);
+        }
+      } else {
+        // Company is already an ID and exists in the fetched list - dropdown will display correctly
+        console.log(`Company ID "${formData.company}" found in insurance companies list`);
+      }
+    }
+  }, [insuranceCompanies]); // Run when insurance companies are loaded from API
 
   // Reset form when dialog opens for new admission (no admissionData)
   useEffect(() => {
@@ -230,9 +271,41 @@ export default function AdmissionCardDialog({
       }
     };
 
+    const loadInsuranceCompanies = async () => {
+      try {
+        setLoadingInsuranceCompanies(true);
+        const response = await admissionService.getAllActiveInsuranceCompanies();
+        console.log('Insurance Companies API Response:', response);
+        
+        if (response.success && response.data && response.data.length > 0) {
+          // Ensure data structure is correct (id and name)
+          const validCompanies = response.data.filter(
+            (ic: any) => ic.id && ic.name
+          );
+          
+          if (validCompanies.length > 0) {
+            setInsuranceCompanies(validCompanies);
+            console.log(`Loaded ${validCompanies.length} insurance companies:`, validCompanies);
+          } else {
+            console.warn('No valid insurance companies found in response');
+            setInsuranceCompanies([]);
+          }
+        } else {
+          console.warn('Insurance companies response was empty or unsuccessful:', response);
+          setInsuranceCompanies([]);
+        }
+      } catch (error) {
+        console.error('Error fetching insurance companies:', error);
+        setInsuranceCompanies([]);
+      } finally {
+        setLoadingInsuranceCompanies(false);
+      }
+    };
+
     if (open) {
       loadSessionData();
       loadDepartments();
+      loadInsuranceCompanies();
     }
   }, [open]);
 
@@ -290,29 +363,11 @@ export default function AdmissionCardDialog({
     }
   };
 
-  // Insurance company options
-  const insuranceCompanies = [
-    "Bajaj Allianz",
-    "HDFC ERGO",
-    "ICICI Lombard",
-    "New India Assurance",
-    "Oriental Insurance",
-    "United India Insurance",
-    "Star Health",
-    "Reliance General Insurance",
-    "Future Generali",
-    "Tata AIG",
-    "SBI General Insurance",
-    "IFFCO Tokio",
-    "Royal Sundaram",
-    "Bharti AXA",
-    "Liberty General Insurance",
-    "Other"
-  ];
 
   const displayPatientData = patientData;
 
   const handleSubmit = async () => {
+    console.log('Patient Data', patientData);
     // Validate required fields
     if (!displayPatientData?.id) {
       setSnackbarMessage("Patient ID is required. Please select a patient.");
@@ -616,8 +671,9 @@ export default function AdmissionCardDialog({
                 value={formData.company}
                 onChange={(v) => handleInputChange("company", v)}
                 isSelect={formData.insurance === "Yes"}
-                options={insuranceCompanies}
-                disabled={formData.insurance !== "Yes"}
+                options={insuranceCompanies.map(ic => ic.name)}
+                optionValues={insuranceCompanies.map(ic => ic.id)}
+                disabled={formData.insurance !== "Yes" || loadingInsuranceCompanies}
               />
                 <HorizontalField
                 label="First Advance"
@@ -697,6 +753,7 @@ function HorizontalField({
     isTextarea,
     isSelect,
     options,
+    optionValues,
     isRadio,
     isTime,
     isDate,
@@ -715,6 +772,7 @@ function HorizontalField({
     isTextarea?: boolean;
     isSelect?: boolean;
     options?: string[];
+    optionValues?: string[]; // Values to use when options are displayed names
     isRadio?: boolean;
     isTime?: boolean;
     isDate?: boolean;
@@ -773,11 +831,20 @@ function HorizontalField({
               onChange={(e) => onChange(e.target.value)}
               disabled={disabled}
             >
-              {options?.map((opt) => (
-                <option key={opt} value={opt}>
-                  {opt}
-                </option>
-              ))}
+              <option value="">Select...</option>
+              {options?.map((opt, index) => {
+                // If optionValues is provided, use it for the value, otherwise use the option text
+                const optionValue = (optionValues && optionValues[index] !== undefined) 
+                  ? optionValues[index] 
+                  : opt;
+                // Use a combination of index and optionValue for unique key
+                const uniqueKey = optionValue ? `${optionValue}-${index}` : `option-${index}`;
+                return (
+                  <option key={uniqueKey} value={optionValue}>
+                    {opt}
+                  </option>
+                );
+              })}
             </select>
           ) : isRadio ? (
             <div className="d-flex gap-3">

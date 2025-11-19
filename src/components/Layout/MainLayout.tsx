@@ -87,7 +87,7 @@ const subMenus: Record<string, Array<SubMenuItem>> = {
   ],
   'OPD Master': [
     { label: 'Treatment Master', children: [
-      { label: 'Manage Complaints ', path: '/settings?t=operation-keyword' },
+      { label: 'Manage Complaints ', path: '/manage-complaints' },
       { label: 'Manage Diagnosis', path: '/settings?t=sub-category' },
       { label: 'Manage Procedure', path: '/settings?t=sub-category' },
       { label: 'Manage Labs', path: '/settings?t=sub-category' },
@@ -267,7 +267,8 @@ export default function MainLayout({ children }: MainLayoutProps) {
     if (currentPath.startsWith('/reports')) return 2
     
     // OPD Master (index 3)
-    // Check if settings path with OPD master query params (but not IPD master params)
+    // Check for manage-complaints and settings path with OPD master query params (but not IPD master params)
+    if (currentPath.startsWith('/manage-complaints')) return 3
     if (currentPath.startsWith('/settings')) {
       // IPD Report specific params
       if (tParam === 'treatment' || tParam === 'prescription') return 5

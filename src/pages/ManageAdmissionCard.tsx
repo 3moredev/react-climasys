@@ -33,6 +33,7 @@ export default function ManageAdmissionCard() {
     const [showAdmissionCardDialog, setShowAdmissionCardDialog] = useState<boolean>(false);
     const [editingPatient, setEditingPatient] = useState<AdmissionCard | null>(null);
     const [fullAdmissionData, setFullAdmissionData] = useState<any>(null);
+    const [editingPatientDetails, setEditingPatientDetails] = useState<Patient | null>(null);
     const [loadingAdmissionCards, setLoadingAdmissionCards] = useState<boolean>(false);
     const [searchingAdmissionCards, setSearchingAdmissionCards] = useState<boolean>(false);
     const [searchPerformed, setSearchPerformed] = useState<boolean>(false);
@@ -388,12 +389,24 @@ const formatDateToDDMMMYY = (dateString: string): string => {
         if (!patient.patientId) {
             console.warn('Patient ID not available for editing');
             setEditingPatient(patient);
+            setEditingPatientDetails(null);
             setShowAdmissionCardDialog(true);
             return;
         }
 
         try {
             setLoadingAdmissionData(true);
+            
+            // Fetch patient details to get gender_id and age_given
+            let patientDetails: Patient | null = null;
+            try {
+                patientDetails = await patientService.getPatient(patient.patientId);
+                console.log('Patient Details Response:', patientDetails);
+                setEditingPatientDetails(patientDetails);
+            } catch (patientError) {
+                console.warn('Could not fetch patient details:', patientError);
+                setEditingPatientDetails(null);
+            }
             
             // Fetch full admission data by patient ID
             const response = await admissionService.getAdmissionDataByPatientId(patient.patientId);
@@ -479,6 +492,7 @@ const formatDateToDDMMMYY = (dateString: string): string => {
             // On error, still open dialog with existing card data
             setEditingPatient(patient);
             setFullAdmissionData(null);
+            setEditingPatientDetails(null);
             setShowAdmissionCardDialog(true);
         } finally {
             setLoadingAdmissionData(false);
@@ -490,6 +504,7 @@ const formatDateToDDMMMYY = (dateString: string): string => {
         setShowAdmissionCardDialog(false);
         setEditingPatient(null);
         setFullAdmissionData(null);
+        setEditingPatientDetails(null);
         // If we were editing, refresh the list to show any changes
         // (This handles the case where user closes dialog without submitting)
         // Note: If user submitted, handleAdmissionCardSubmit will also refresh,
@@ -1125,12 +1140,11 @@ const formatDateToDDMMMYY = (dateString: string): string => {
                 onClose={handleCloseDialog}
                 onSubmit={handleAdmissionCardSubmit}
                 patientData={editingPatient ? {
-                    // When editing, use admission card patient data
-                    // Note: We only have patient name from admission card, not full patient details
+                    // When editing, use admission card patient data with fetched patient details
                     name: editingPatient.patientName,
                     id: editingPatient.patientId, // Patient ID from admission card API response
-                    gender: undefined, // Gender not available in AdmissionCard
-                    age: undefined // Age not available in AdmissionCard
+                    gender: editingPatientDetails?.gender_id?.toString() || undefined, // Gender ID as string from fetched patient details
+                    age: editingPatientDetails?.age_given || undefined // Age from fetched patient details
                 } : selectedPatient ? {
                     // When creating new, use selected patient data
                     name: `${selectedPatient.first_name} ${selectedPatient.middle_name || ''} ${selectedPatient.last_name}`.replace(/\s+/g, ' ').trim(),

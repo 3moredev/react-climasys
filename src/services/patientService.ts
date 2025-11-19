@@ -1,8 +1,13 @@
 import api from './api';
+import type { 
+  AdmissionCardDTO as AdmissionServiceAdmissionCardDTO,
+  AdmissionCardsRequest as AdmissionServiceAdmissionCardsRequest,
+  AdmissionCardsResponse as AdmissionServiceAdmissionCardsResponse
+} from './admissionService';
 
 // Patient interface based on the backend response
 export interface Patient {
-  id: number;
+  id: string;
   folder_no: string;
   full_name: string;
   first_name: string;
@@ -10,12 +15,13 @@ export interface Patient {
   last_name: string;
   mobile_1: string;
   date_of_birth: string;
-  gender_id: number;
+  gender_id: string;
   registration_status: string;
   date_of_registration: string;
-  age_given: number;
+  age_given: string;
   reports_received: boolean;
   doctor_id: string;
+  
 }
 
 // Search response interface
@@ -198,6 +204,51 @@ export interface FeesDetailsResponse {
   [key: string]: any;
 }
 
+// Complaints for doctor response (flexible map array)
+export type ComplaintsForDoctorResponse = Array<Record<string, any>>;
+
+// Delete complaint response interface
+export interface DeleteComplaintResponse {
+  message?: string;
+  error?: string;
+  success?: boolean;
+  [key: string]: any;
+}
+
+// Create complaint request interface
+export interface CreateComplaintRequest {
+  shortDescription?: string;
+  short_description?: string;
+  complaintDescription?: string;
+  complaint_description?: string;
+  priority?: number;
+  priority_value?: number;
+  displayToOperator?: boolean;
+  display_to_operator?: boolean | number;
+  doctorId?: string;
+  doctor_id?: string;
+  clinicId?: string;
+  clinic_id?: string;
+  [key: string]: any; // Allow additional fields
+}
+
+// Create complaint response interface
+export interface CreateComplaintResponse {
+  id?: string;
+  shortDescription?: string;
+  short_description?: string;
+  complaintDescription?: string;
+  complaint_description?: string;
+  priority?: number;
+  priority_value?: number;
+  displayToOperator?: boolean;
+  display_to_operator?: boolean | number;
+  message?: string;
+  error?: string;
+  success?: boolean;
+  [key: string]: any;
+}
+
 // Quick registration request interface
 export interface QuickRegistrationRequest {
   doctorId: string;
@@ -339,35 +390,14 @@ export interface PreviousVisitsWithDetailsResponse {
   patient_id: string;
 }
 
-// Admission Card DTO interface
-export interface AdmissionCardDTO {
-  patientName: string;
-  admissionIpdNo: string;
-  ipdFileNo: string;
-  admissionDate: string;
-  reasonOfAdmission: string;
-  dischargeDate: string;
-  insurance: string;
-  company: string;
-  advance: number;
-}
-
-// Admission Cards request parameters
-export interface AdmissionCardsRequest {
-  patientId?: string;
-  doctorId?: string;
-  clinicId: string;
-}
-
-// Admission Cards response interface
-export interface AdmissionCardsResponse {
-  success: boolean;
-  count: number;
-  data: AdmissionCardDTO[];
-  doctorId?: string;
-  clinicId: string;
-  error?: string;
-}
+// Admission Card DTO interface - DEPRECATED: Use admissionService types instead
+// These are kept for backward compatibility but should be imported from admissionService
+// Re-export for backward compatibility
+export { 
+  AdmissionServiceAdmissionCardDTO as AdmissionCardDTO,
+  AdmissionServiceAdmissionCardsRequest as AdmissionCardsRequest,
+  AdmissionServiceAdmissionCardsResponse as AdmissionCardsResponse
+};
 
 export const patientService = {
   /**
@@ -1331,11 +1361,192 @@ export const patientService = {
    * Please use admissionService.getAdmissionCards() instead.
    * This function is kept for backward compatibility only.
    */
-  async getAdmissionCards(params: AdmissionCardsRequest): Promise<AdmissionCardsResponse> {
+  async getAdmissionCards(params: AdmissionServiceAdmissionCardsRequest): Promise<AdmissionServiceAdmissionCardsResponse> {
     // Re-export from admissionService to maintain backward compatibility
     // Using dynamic import to avoid circular dependency
     const { admissionService } = await import('./admissionService');
     return admissionService.getAdmissionCards(params);
+  },
+
+  /**
+   * Get all complaints for a doctor in a clinic
+   * Mirrors backend @GetMapping("/all/{clinicId}") with optional doctorId query parameter
+   * @param clinicId - Clinic ID
+   * @param doctorId - Doctor ID (optional)
+   * @returns Promise<ComplaintsForDoctorResponse> - Array of complaint objects
+   */
+  async getAllComplaintsForDoctor(clinicId: string, doctorId?: string): Promise<ComplaintsForDoctorResponse> {
+    try {
+      console.log(`Getting all complaints for clinic: ${clinicId} and doctor: ${doctorId || 'all'}`);
+      
+      // Build query parameters - doctorId is optional
+      const params: Record<string, string> = {};
+      if (doctorId) {
+        params.doctorId = doctorId;
+      }
+      
+      // Try common mount points
+      try {
+        const resp = await api.get<ComplaintsForDoctorResponse>(`/complain/all/${encodeURIComponent(clinicId)}`, { params });
+        console.log('Get all complaints for doctor response:', resp.data);
+        return resp.data;
+      } catch (e1: any) {
+        if (e1?.response?.status !== 404) throw e1;
+        // Fallback to alternative endpoint
+        try {
+          const resp = await api.get<ComplaintsForDoctorResponse>(`/complaint/all/${encodeURIComponent(clinicId)}`, { params });
+          console.log('Get all complaints for doctor response (fallback):', resp.data);
+          return resp.data;
+        } catch (e2: any) {
+          if (e2?.response?.status !== 404) throw e2;
+          // Last fallback
+          const resp = await api.get<ComplaintsForDoctorResponse>(`/complaints/all/${encodeURIComponent(clinicId)}`, { params });
+          console.log('Get all complaints for doctor response (fallback 2):', resp.data);
+          return resp.data;
+        }
+      }
+    } catch (error: any) {
+      console.error('Get all complaints for doctor API Error:', error);
+      
+      if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
+        throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
+      }
+      
+      if (error.response?.status === 400) {
+        const msg = error.response?.data?.error || error.response?.data?.message || 'Invalid request parameters.';
+        throw new Error(msg);
+      } else if (error.response?.status === 404) {
+        throw new Error('Complaints endpoint not found. Please confirm backend route.');
+      } else if (error.response?.status === 500) {
+        throw new Error('Server error occurred while fetching complaints.');
+      }
+      
+      if (error.response?.data?.error) {
+        throw new Error(error.response.data.error);
+      }
+      
+      throw new Error(error.response?.data?.message || 'Failed to get complaints');
+    }
+  },
+
+  /**
+   * Delete a complaint for a doctor in a clinic
+   * Mirrors backend @DeleteMapping("/doctor/{doctorId}/clinic/{clinicId}/complaint/{shortDescription}")
+   * @param doctorId - Doctor ID
+   * @param clinicId - Clinic ID
+   * @param shortDescription - Short description of the complaint to delete
+   * @returns Promise<DeleteComplaintResponse> - Success or error message
+   */
+  async deleteComplaint(doctorId: string, clinicId: string, shortDescription: string): Promise<DeleteComplaintResponse> {
+    try {
+      console.log(`Deleting complaint: ${shortDescription} for doctor: ${doctorId} and clinic: ${clinicId}`);
+      
+      // Encode the shortDescription to handle special characters
+      const encodedShortDescription = encodeURIComponent(shortDescription);
+      
+      // Try common mount points
+      try {
+        const resp = await api.delete<DeleteComplaintResponse>(
+          `/complaint-master/doctor/${encodeURIComponent(doctorId)}/clinic/${encodeURIComponent(clinicId)}/complaint/${encodedShortDescription}`
+        );
+        console.log('Delete complaint response:', resp.data);
+        return resp.data;
+      } catch (e1: any) {
+        if (e1?.response?.status !== 404) throw e1;
+        // Fallback to alternative endpoint
+        try {
+          const resp = await api.delete<DeleteComplaintResponse>(
+            `/complaint/doctor/${encodeURIComponent(doctorId)}/clinic/${encodeURIComponent(clinicId)}/complaint/${encodedShortDescription}`
+          );
+          console.log('Delete complaint response (fallback):', resp.data);
+          return resp.data;
+        } catch (e2: any) {
+          if (e2?.response?.status !== 404) throw e2;
+          // Last fallback
+          const resp = await api.delete<DeleteComplaintResponse>(
+            `/complaints/doctor/${encodeURIComponent(doctorId)}/clinic/${encodeURIComponent(clinicId)}/complaint/${encodedShortDescription}`
+          );
+          console.log('Delete complaint response (fallback 2):', resp.data);
+          return resp.data;
+        }
+      }
+    } catch (error: any) {
+      console.error('Delete complaint API Error:', error);
+      
+      if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
+        throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
+      }
+      
+      if (error.response?.status === 400) {
+        const msg = error.response?.data?.error || error.response?.data?.message || 'Invalid request parameters.';
+        throw new Error(msg);
+      } else if (error.response?.status === 404) {
+        const msg = error.response?.data?.error || 'Complaint not found or access denied.';
+        throw new Error(msg);
+      } else if (error.response?.status === 500) {
+        throw new Error('Server error occurred while deleting complaint.');
+      }
+      
+      if (error.response?.data?.error) {
+        throw new Error(error.response.data.error);
+      }
+      
+      throw new Error(error.response?.data?.message || 'Failed to delete complaint');
+    }
+  },
+
+  /**
+   * Create a new complaint
+   * Mirrors backend @PostMapping("/api/complaint-master")
+   * @param complaint - Complaint data to create
+   * @returns Promise<CreateComplaintResponse> - Created complaint or error message
+   */
+  async createComplaint(complaint: CreateComplaintRequest): Promise<CreateComplaintResponse> {
+    try {
+      console.log('Creating new complaint:', complaint);
+      
+      // Try common mount points
+      try {
+        const resp = await api.post<CreateComplaintResponse>(`/complaint-master`, complaint);
+        console.log('Create complaint response:', resp.data);
+        return resp.data;
+      } catch (e1: any) {
+        if (e1?.response?.status !== 404) throw e1;
+        // Fallback to alternative endpoint
+        try {
+          const resp = await api.post<CreateComplaintResponse>(`/complaint`, complaint);
+          console.log('Create complaint response (fallback):', resp.data);
+          return resp.data;
+        } catch (e2: any) {
+          if (e2?.response?.status !== 404) throw e2;
+          // Last fallback
+          const resp = await api.post<CreateComplaintResponse>(`/complaints`, complaint);
+          console.log('Create complaint response (fallback 2):', resp.data);
+          return resp.data;
+        }
+      }
+    } catch (error: any) {
+      console.error('Create complaint API Error:', error);
+      
+      if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
+        throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
+      }
+      
+      if (error.response?.status === 400) {
+        const msg = error.response?.data?.error || error.response?.data?.message || 'Invalid request parameters.';
+        throw new Error(msg);
+      } else if (error.response?.status === 404) {
+        throw new Error('Create complaint endpoint not found. Please confirm backend route.');
+      } else if (error.response?.status === 500) {
+        throw new Error('Server error occurred while creating complaint.');
+      }
+      
+      if (error.response?.data?.error) {
+        throw new Error(error.response.data.error);
+      }
+      
+      throw new Error(error.response?.data?.message || 'Failed to create complaint');
+    }
   }
 };
 

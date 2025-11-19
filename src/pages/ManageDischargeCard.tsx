@@ -9,6 +9,7 @@ import { useSession } from "../store/hooks/useSession";
 type DischargeCard = {
     sr: number;
     patientName: string;
+    patientId?: string;
     ipdNo: string;
     ipdFileNo: string;
     admissionDate: string;
@@ -24,14 +25,17 @@ export default function ManageDischargeCard() {
     const [showDropdown, setShowDropdown] = useState<boolean>(false);
     const [loading, setLoading] = useState<boolean>(false);
     const [searchError, setSearchError] = useState<string>("");
-    const [showEmptyTable, setShowEmptyTable] = useState<boolean>(false);
     const searchInputRef = useRef<HTMLInputElement>(null);
     const searchRef = useRef<HTMLDivElement>(null);
     const { clinicId, doctorId } = useSession();
     const [loadingDischargeCards, setLoadingDischargeCards] = useState<boolean>(false);
+    const [searchingDischargeCards, setSearchingDischargeCards] = useState<boolean>(false);
 
     // Dynamic data from API
     const [dischargeCards, setDischargeCards] = useState<DischargeCard[]>([]);
+    
+    // Search results for first table
+    const [searchResultsTable, setSearchResultsTable] = useState<DischargeCard[]>([]);
     
     // Pagination state
     const [currentPage, setCurrentPage] = useState<number>(1);
@@ -49,92 +53,87 @@ export default function ManageDischargeCard() {
             setLoading(true);
             setSearchError("");
 
-            const response = await patientService.searchPatients({
-                query: query,
-                status: 'all',
-                page: 0,
-                size: 200
-            });
-
+            // Search through the admitted patients list (dischargeCards)
             const q = query.trim().toLowerCase();
-            const patients = response.patients || [];
-
             const queryWords = q.split(/\s+/).filter(word => word.length > 0);
 
-            const tokenMatch = (p: any): boolean => {
-                const patientId = String(p.id || '').toLowerCase();
-                const firstName = String(p.first_name || '').toLowerCase();
-                const middleName = String(p.middle_name || '').toLowerCase();
-                const lastName = String(p.last_name || '').toLowerCase();
-                const fullName = `${firstName} ${middleName} ${lastName}`.replace(/\s+/g, ' ').trim().toLowerCase();
-                const firstLast = `${firstName} ${lastName}`.replace(/\s+/g, ' ').trim();
-                const lastFirst = `${lastName} ${firstName}`.replace(/\s+/g, ' ').trim();
-                const contact = String(p.mobile_1 || '').replace(/\D/g, '');
-                const queryDigits = q.replace(/\D/g, '');
-
-                return (
-                    patientId === q ||
-                    patientId.includes(q) ||
-                    (queryDigits.length >= 3 && contact.includes(queryDigits)) ||
-                    (queryWords.length > 1 && ([fullName, firstLast, lastFirst]
-                        .some(name => queryWords.every(word => name.includes(word))))) ||
-                    (queryWords.length === 1 && (
-                        firstName.startsWith(q) ||
-                        middleName.startsWith(q) ||
-                        lastName.startsWith(q) ||
-                        fullName.includes(q) ||
-                        firstName.includes(q) ||
-                        middleName.includes(q) ||
-                        lastName.includes(q)
-                    ))
-                );
-            };
-
-            let searchResults = patients.filter((p: any) => tokenMatch(p));
-
-            if (searchResults.length === 0 && queryWords.length > 1) {
-                try {
-                    const tokenResponses = await Promise.all(
-                        queryWords.map(word => patientService.searchPatients({
-                            query: word,
-                            status: 'all',
-                            page: 0,
-                            size: 200
-                        }))
-                    );
-                    const mergedById: Record<string, any> = {};
-                    for (const r of tokenResponses) {
-                        const arr = (r?.patients || []) as any[];
-                        for (const p of arr) {
-                            const idKey = String(p.id || '').toLowerCase();
-                            if (!mergedById[idKey]) mergedById[idKey] = p;
-                        }
-                    }
-                    const mergedArray = Object.values(mergedById);
-                    searchResults = mergedArray.filter((p: any) => tokenMatch(p));
-                } catch (e) {
-                    console.warn('Per-token search fallback failed', e);
+            // Filter discharge cards based on search query
+            const matchedCards = dischargeCards.filter((card) => {
+                const patientName = (card.patientName || '').toLowerCase();
+                const patientId = (card.patientId || '').toLowerCase();
+                const ipdNo = (card.ipdNo || '').toLowerCase();
+                const ipdFileNo = (card.ipdFileNo || '').toLowerCase();
+                
+                // Check if search term matches patient ID, patient name, IPD number, or IPD file number
+                if (patientId.includes(q) || ipdNo.includes(q) || ipdFileNo.includes(q)) {
+                    return true;
                 }
-            }
+                
+                // For patient name, check if all query words are found in the name
+                if (queryWords.length > 0) {
+                    return queryWords.every(word => patientName.includes(word));
+                }
+                
+                return patientName.includes(q);
+            });
 
-            const sortedResults = searchResults.sort((a: any, b: any) => {
-                const q = query.trim().toLowerCase();
-                const getScore = (patient: any) => {
+            // Convert discharge cards to Patient format for dropdown
+            // Limit to first 20 results to avoid too many API calls
+            const limitedCards = matchedCards.slice(0, 20);
+            const patientResults: Patient[] = [];
+            
+            // Fetch patient details in parallel for better performance
+            const patientPromises = limitedCards
+                .filter(card => card.patientId)
+                .map(async (card) => {
+                    try {
+                        // Fetch patient details by ID
+                        const patient = await patientService.getPatient(card.patientId!);
+                        return patient;
+                    } catch (error) {
+                        // If patient fetch fails, create a minimal patient object from card data
+                        const nameParts = (card.patientName || '').split(/\s+/).filter(part => part.length > 0);
+                        const firstName = nameParts[0] || '';
+                        const middleName = nameParts.length > 2 ? nameParts.slice(1, -1).join(' ') : '';
+                        const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : '';
+                        
+                        return {
+                            id: card.patientId!,
+                            folder_no: '',
+                            full_name: card.patientName || '',
+                            first_name: firstName,
+                            middle_name: middleName || undefined,
+                            last_name: lastName,
+                            mobile_1: '',
+                            date_of_birth: '',
+                            gender_id: '0',
+                            registration_status: '',
+                            date_of_registration: '',
+                            age_given: '0',
+                            reports_received: false,
+                            doctor_id: ''
+                        } as Patient;
+                    }
+                });
+            
+            const fetchedPatients = await Promise.all(patientPromises);
+            patientResults.push(...fetchedPatients);
+
+            // Sort results by relevance
+            const sortedResults = patientResults.sort((a: Patient, b: Patient) => {
+                const getScore = (patient: Patient) => {
                     const id = String(patient.id || '').toLowerCase();
                     const firstName = String(patient.first_name || '').toLowerCase();
                     const middleName = String(patient.middle_name || '').toLowerCase();
                     const lastName = String(patient.last_name || '').toLowerCase();
                     const fullName = `${firstName} ${middleName} ${lastName}`.replace(/\s+/g, ' ').trim().toLowerCase();
-                    const contact = String(patient.mobile_1 || '').replace(/\D/g, '');
                     const queryWords = q.split(/\s+/).filter(word => word.length > 0);
-                    const queryDigits = q.replace(/\D/g, '');
 
                     let score = 0;
                     if (id === q) score += 1000;
                     else if (id.startsWith(q)) score += 800;
                     else if (id.includes(q)) score += 600;
-                    if (queryDigits.length >= 3 && contact === queryDigits) score += 200;
-                    if (queryDigits.length >= 3 && contact.includes(queryDigits)) score += 100;
+                    
                     if (queryWords.length > 1) {
                         const allWordsFound = queryWords.every(word => fullName.includes(word));
                         if (allWordsFound) {
@@ -179,25 +178,95 @@ export default function ManageDischargeCard() {
     };
 
     const handlePatientSelect = (patient: Patient) => {
-        setSearchTerm("");
+        // Set the search term to the patient's full name
+        const patientFullName = `${patient.first_name} ${patient.middle_name || ''} ${patient.last_name}`.replace(/\s+/g, ' ').trim();
+        setSearchTerm(patientFullName);
         setSearchResults([]);
         setShowDropdown(false);
+        
         console.log("Selected patient:", patient);
+        // Note: Table will be populated when user clicks the Search button
     };
 
     const handleSearch = () => {
-        console.log("Searching for:", searchTerm);
+        if (!searchTerm.trim()) {
+            console.log("Search term is empty");
+            setSearchResultsTable([]);
+            return;
+        }
+
+        try {
+            setSearchingDischargeCards(true);
+            setSearchError("");
+            
+            const searchQuery = searchTerm.trim().toLowerCase();
+            
+            // Check if dischargeCards is loaded
+            if (dischargeCards.length === 0) {
+                console.warn('Discharge cards list is empty. Please wait for the list to load.');
+                setSearchResultsTable([]);
+                setSearchError("Discharge cards list is not loaded yet. Please wait and try again.");
+                setSearchingDischargeCards(false);
+                return;
+            }
+            
+            // Search through the dischargeCards list (admitted patients)
+            const filteredResults = dischargeCards.filter((card) => {
+                const patientName = (card.patientName || '').toLowerCase().trim();
+                const patientId = (card.patientId || '').toLowerCase().trim();
+                const ipdNo = (card.ipdNo || '').toLowerCase().trim();
+                const ipdFileNo = (card.ipdFileNo || '').toLowerCase().trim();
+                
+                // Normalize search query - remove extra spaces
+                const normalizedQuery = searchQuery.replace(/\s+/g, ' ').trim();
+                const normalizedPatientName = patientName.replace(/\s+/g, ' ').trim();
+                
+                // Check if search term matches patient ID, patient name, IPD number, or IPD file number
+                // For patient name, check both exact match and contains match
+                return (
+                    patientId === normalizedQuery ||
+                    patientId.includes(normalizedQuery) ||
+                    normalizedPatientName === normalizedQuery ||
+                    normalizedPatientName.includes(normalizedQuery) ||
+                    ipdNo === normalizedQuery ||
+                    ipdNo.includes(normalizedQuery) ||
+                    ipdFileNo === normalizedQuery ||
+                    ipdFileNo.includes(normalizedQuery)
+                );
+            });
+            
+            // Map results with sequential serial numbers
+            const mappedResults: DischargeCard[] = filteredResults.map((card, index) => ({
+                ...card,
+                sr: index + 1
+            }));
+            
+            // Populate the first table with search results
+            setSearchResultsTable(mappedResults);
+            
+            if (mappedResults.length > 0) {
+                console.log(`Search completed. Found ${mappedResults.length} discharge card(s) matching: "${searchTerm}"`);
+                console.log('Search results:', mappedResults);
+            } else {
+                console.log(`No discharge cards found matching: "${searchTerm}"`);
+                setSearchError(`No discharge cards found matching: "${searchTerm}"`);
+            }
+        } catch (error: any) {
+            console.error("Error searching discharge cards:", error);
+            setSearchError(error.message || "Failed to search discharge cards");
+            setSearchResultsTable([]);
+        } finally {
+            setSearchingDischargeCards(false);
+        }
     };
 
     const handleClear = () => {
         setSearchTerm("");
         setSearchResults([]);
+        setSearchResultsTable([]);
         setShowDropdown(false);
     };
 
-    const handleClose = () => {
-        setShowEmptyTable(false);
-    };
 
     const handleEdit = (card: DischargeCard) => {
         console.log("Editing:", card);
@@ -242,22 +311,31 @@ export default function ManageDischargeCard() {
                 
                 console.log('Discharge Cards API Response:', response);
                 
-                if (response.success && response.data) {
+                if (response.success && response.data && Array.isArray(response.data)) {
                     // Map the API response to DischargeCard format
+                    // Use reasonOfAdmission for keywordOperation
                     const mappedCards: DischargeCard[] = response.data.map((card: AdmissionCardDTO, index: number) => ({
                         sr: index + 1,
                         patientName: card.patientName || '--',
+                        patientId: card.patientId,
                         ipdNo: card.admissionIpdNo || '--',
                         ipdFileNo: card.ipdFileNo || '--',
                         admissionDate: card.admissionDate || '--',
                         dischargeDate: card.dischargeDate || '--',
-                        keywordOperation: '--', // Not available in API response
-                        advance: card.advanceRs || 0.00
+                        keywordOperation: card.reasonOfAdmission || '--', // Use reasonOfAdmission from API
+                        advance: typeof card.advanceRs === 'number' ? card.advanceRs : 0.00
                     }));
                     
+                    console.log(`Mapped ${mappedCards.length} discharge cards from admission list:`, mappedCards);
                     setDischargeCards(mappedCards);
                 } else {
-                    console.error('Failed to fetch discharge cards:', response.error);
+                    console.error('Failed to fetch discharge cards - Response:', {
+                        success: response.success,
+                        hasData: !!response.data,
+                        isArray: Array.isArray(response.data),
+                        dataLength: response.data?.length,
+                        error: response.error
+                    });
                     setDischargeCards([]);
                 }
             } catch (error: any) {
@@ -502,10 +580,15 @@ export default function ManageDischargeCard() {
 
                 <button
                     className="btn"
-                    style={buttonStyle}
+                    style={{
+                        ...buttonStyle,
+                        opacity: searchingDischargeCards ? 0.7 : 1,
+                        cursor: searchingDischargeCards ? 'not-allowed' : 'pointer'
+                    }}
                     onClick={handleSearch}
+                    disabled={searchingDischargeCards}
                 >
-                    Search
+                    {searchingDischargeCards ? 'Searching...' : 'Search'}
                 </button>
 
                 <button
@@ -518,6 +601,14 @@ export default function ManageDischargeCard() {
             </div>
 
             <div className="mb-4">
+                <h5 style={{ 
+                    fontWeight: '600', 
+                    fontSize: '1.1rem', 
+                    color: '#212121',
+                    marginBottom: '16px'
+                }}>
+                    Search Results
+                </h5>
                 <div className="table-responsive">
                     <table className="table discharge-table">
                         <thead>
@@ -534,33 +625,61 @@ export default function ManageDischargeCard() {
                             </tr>
                         </thead>
                         <tbody>
-                            {showEmptyTable && (
+                            {searchingDischargeCards ? (
+                                <tr>
+                                    <td colSpan={9} className="text-center p-4">
+                                        <div className="spinner-border spinner-border-sm text-primary" role="status">
+                                            <span className="visually-hidden">Loading...</span>
+                                        </div>
+                                        <span className="ms-2">Searching...</span>
+                                    </td>
+                                </tr>
+                            ) : searchResultsTable.length > 0 ? (
+                                searchResultsTable.map((card, index) => (
+                                    <tr key={`search-result-${card.patientId || card.ipdNo || index}-${card.sr || index}`}>
+                                        <td className="sr-col">{card.sr || index + 1}</td>
+                                        <td className="patient-name-col">{card.patientName || '--'}</td>
+                                        <td className="ipd-no-col">{card.ipdNo || '--'}</td>
+                                        <td className="ipd-file-col">{card.ipdFileNo || '--'}</td>
+                                        <td className="admission-date-col">{card.admissionDate || '--'}</td>
+                                        <td className="discharge-date-col">{card.dischargeDate || '--'}</td>
+                                        <td className="keyword-col">{card.keywordOperation || '--'}</td>
+                                        <td className="advance-col">{typeof card.advance === 'number' ? card.advance.toFixed(2) : '0.00'}</td>
+                                        <td className="action-col">
+                                            <button
+                                                onClick={() => handleEdit(card)}
+                                                style={{
+                                                    background: 'transparent',
+                                                    border: 'none',
+                                                    cursor: 'pointer',
+                                                    padding: '4px',
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center'
+                                                }}
+                                                title="Edit"
+                                            >
+                                                <Edit style={{ fontSize: '18px', color: '#007bff' }} />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
                                 <tr className="empty-table-row">
                                     <td className="sr-col">--</td>
                                     <td className="patient-name-col">--</td>
-                                    <td className="ipd-no-col"></td>
-                                    <td className="ipd-file-col"></td>
-                                    <td className="admission-date-col"></td>
-                                    <td className="discharge-date-col"></td>
-                                    <td className="keyword-col"></td>
-                                    <td className="advance-col"></td>
-                                    <td className="action-col"></td>
+                                    <td className="ipd-no-col">--</td>
+                                    <td className="ipd-file-col">--</td>
+                                    <td className="admission-date-col">--</td>
+                                    <td className="discharge-date-col">--</td>
+                                    <td className="keyword-col">--</td>
+                                    <td className="advance-col">--</td>
+                                    <td className="action-col">--</td>
                                 </tr>
                             )}
                         </tbody>
                     </table>
                 </div>
-                {showEmptyTable && (
-                    <div className="d-flex justify-content-end mt-3">
-                        <button
-                            className="btn"
-                            style={buttonStyle}
-                            onClick={handleClose}
-                        >
-                            Close
-                        </button>
-                    </div>
-                )}
             </div>
 
             <div className="mt-4">
@@ -600,15 +719,15 @@ export default function ManageDischargeCard() {
                                 </tr>
                             ) : dischargeCards.length > 0 ? (
                                 currentDischargeCards.map((card, index) => (
-                                    <tr key={card.sr}>
+                                    <tr key={`discharge-card-${card.patientId || card.ipdNo || index}-${startIndex + index}`}>
                                         <td className="sr-col">{startIndex + index + 1}</td>
-                                        <td className="patient-name-col">{card.patientName}</td>
-                                        <td className="ipd-no-col">{card.ipdNo}</td>
-                                        <td className="ipd-file-col">{card.ipdFileNo}</td>
-                                        <td className="admission-date-col">{card.admissionDate}</td>
-                                        <td className="discharge-date-col">{card.dischargeDate}</td>
-                                        <td className="keyword-col">{card.keywordOperation}</td>
-                                        <td className="advance-col">{card.advance.toFixed(2)}</td>
+                                        <td className="patient-name-col">{card.patientName || '--'}</td>
+                                        <td className="ipd-no-col">{card.ipdNo || '--'}</td>
+                                        <td className="ipd-file-col">{card.ipdFileNo || '--'}</td>
+                                        <td className="admission-date-col">{card.admissionDate || '--'}</td>
+                                        <td className="discharge-date-col">{card.dischargeDate || '--'}</td>
+                                        <td className="keyword-col">{card.keywordOperation || '--'}</td>
+                                        <td className="advance-col">{typeof card.advance === 'number' ? card.advance.toFixed(2) : '0.00'}</td>
                                         <td className="action-col">
                                             <button
                                                 onClick={() => handleEdit(card)}

@@ -110,6 +110,20 @@ export interface AdmissionDataByPatientIdResponse {
   error?: string;
 }
 
+// Insurance Company interface
+export interface InsuranceCompany {
+  id: string; // ID field
+  name: string; // Name field
+}
+
+// Insurance Companies response interface
+export interface InsuranceCompaniesResponse {
+  success: boolean;
+  count: number;
+  data: InsuranceCompany[];
+  error?: string;
+}
+
 export const admissionService = {
   /**
    * Get list of admitted patients (admission cards)
@@ -298,6 +312,48 @@ export const admissionService = {
       }
       
       throw new Error(error.response?.data?.message || 'Failed to fetch departments');
+    }
+  },
+
+  /**
+   * Get all active insurance companies for dropdown
+   * Mirrors backend @GetMapping("/dropdown") under @RequestMapping("/api/admission")
+   * Retrieves all active (non-deleted) insurance companies from insurance_company_master table.
+   * Returns companies with Company_Id as ID and Company_Name as Name.
+   * This replaces the USP_GetDDL_InsuranceComp stored procedure.
+   * Used for populating insurance company dropdown in Admission Card form when Insurance is set to 'Yes'.
+   * @returns Promise<InsuranceCompaniesResponse>
+   */
+  async getAllActiveInsuranceCompanies(): Promise<InsuranceCompaniesResponse> {
+    try {
+      console.log('Fetching all active insurance companies');
+      
+      // Call the backend endpoint /api/admission/dropdown
+      // Note: baseURL already includes /api, so we use /admission/dropdown
+      const resp = await api.get<InsuranceCompaniesResponse>(`/insurance/companies/dropdown`);
+      console.log('Get all active insurance companies response:', resp.data);
+      return resp.data;
+    } catch (error: any) {
+      console.error('Get all active insurance companies API Error:', error);
+      
+      if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
+        throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
+      }
+      
+      if (error.response?.status === 400) {
+        const msg = error.response?.data?.message || error.response?.data?.error || 'Invalid request parameters.';
+        throw new Error(msg);
+      } else if (error.response?.status === 404) {
+        throw new Error('Get all active insurance companies endpoint not found. Please confirm backend route.');
+      } else if (error.response?.status === 500) {
+        throw new Error('Server error occurred while fetching insurance companies.');
+      }
+      
+      if (error.response?.data?.error) {
+        throw new Error(error.response.data.error);
+      }
+      
+      throw new Error(error.response?.data?.message || 'Failed to fetch insurance companies');
     }
   },
 
