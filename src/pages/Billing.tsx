@@ -20,7 +20,7 @@ import AddPrescriptionPopup, { PrescriptionData } from "../components/AddPrescri
 import AddTestLabPopup, { TestLabData } from "../components/AddTestLabPopup";
 import PastServicesPopup from "../components/PastServicesPopup";
 import { DocumentService } from "../services/documentService";
-import { receiptService, SaveReceiptPayload } from "../services/receiptService";
+import { SaveReceiptPayload } from "../services/receiptService";
 import AccountsPopup from "../components/AccountsPopup";
 import AddBillingPopup from "../components/AddBillingPopup";
 import AddPatientPage from "./AddPatientPage";
@@ -1230,6 +1230,10 @@ export default function Treatment() {
                                 const acBalanceValue = folderAmountSetRef.current ? prev.acBalance : 
                                     (uiFields?.acBalanceRs !== undefined && uiFields?.acBalanceRs !== null ? String(uiFields.acBalanceRs) : prev.acBalance);
                                 
+                                // Check for collectedRs from multiple sources: dataRoot.collectedRs, uiFields.feesCollected, or uiFields.collectedRs
+                                const collectedValue = dataRoot?.collectedRs ?? uiFields?.feesCollected ?? uiFields?.collectedRs ?? prev.feesCollected;
+                                const collectedStr = collectedValue !== undefined && collectedValue !== null ? String(collectedValue) : prev.feesCollected;
+                                
                                 return {
                                     ...prev,
                                     billed: billedStr,
@@ -1237,7 +1241,7 @@ export default function Treatment() {
                                     dues: uiFields?.duesRs !== undefined && uiFields?.duesRs !== null ? String(uiFields.duesRs) : prev.dues,
                                     acBalance: acBalanceValue,
                                     receiptNo: uiFields?.receiptNo !== undefined && uiFields?.receiptNo !== null ? String(uiFields.receiptNo) : prev.receiptNo,
-                                    feesCollected: uiFields?.feesCollected !== undefined && uiFields?.feesCollected !== null ? String(uiFields.feesCollected) : prev.feesCollected,
+                                    feesCollected: collectedStr,
                                     paymentRemark: uiFields?.paymentRemark !== undefined && uiFields?.paymentRemark !== null ? String(uiFields.paymentRemark) : prev.paymentRemark,
                                     paymentBy: uiFields?.paymentById !== undefined && uiFields?.paymentById !== null ? String(uiFields.paymentById) : prev.paymentBy
                                 };
@@ -1392,16 +1396,17 @@ export default function Treatment() {
     React.useEffect(() => {
         let cancelled = false;
         async function loadComplaints() {
-            if (!treatmentData?.doctorId) return;
+            const doctorId = treatmentData?.doctorId || sessionData?.doctorId;
+            const clinicId = treatmentData?.clinicId || sessionData?.clinicId;
+            if (!doctorId || !clinicId) return;
             
             setComplaintsLoading(true);
             setComplaintsError(null);
             
             try {
-                const doctorId = treatmentData.doctorId;
-                console.log('Loading complaints for doctor:', doctorId);
+                console.log('Loading complaints for doctor:', doctorId, 'clinic:', clinicId);
                 
-                const complaints = await complaintService.getAllComplaintsForDoctor(doctorId);
+                const complaints = await complaintService.getAllComplaintsForDoctor(doctorId, clinicId);
                 if (!cancelled) {
                     setComplaintsOptions(complaints);
                     console.log('Loaded complaints:', complaints);
@@ -1422,7 +1427,7 @@ export default function Treatment() {
         return () => {
             cancelled = true;
         };
-    }, [treatmentData?.doctorId]);
+    }, [treatmentData?.doctorId, treatmentData?.clinicId, sessionData?.doctorId, sessionData?.clinicId]);
 
     // Close medicines dropdown on outside click
     React.useEffect(() => {
@@ -1640,7 +1645,7 @@ export default function Treatment() {
         return parts.join(', ');
     }, [selectedBillingDetailIds, billingDetailsOptions]);
 
-    const buildReceiptPayload = (): SaveReceiptPayload | null => {
+    const buildReceiptPayload = React.useCallback((detailsOverride?: string): SaveReceiptPayload | null => {
         if (!treatmentData?.patientId || !treatmentData?.visitNumber) {
             console.warn('Cannot build receipt payload - missing patient data', { treatmentData });
             return null;
@@ -1688,6 +1693,8 @@ export default function Treatment() {
             ? parsedPaymentById
             : undefined;
 
+        const treatmentDetailsValue = detailsOverride !== undefined ? detailsOverride : receiptDetailsText;
+
         const payload: SaveReceiptPayload = {
             patientId: String(treatmentData.patientId),
             clinicId: String(clinicId),
@@ -1696,7 +1703,7 @@ export default function Treatment() {
             visitDate: todayIsoDate,
             patientVisitNo,
             receiptAmount: Number(receiptAmount.toFixed(2)),
-            treatmentDetails: receiptDetailsText || undefined,
+            treatmentDetails: treatmentDetailsValue || undefined,
             visitType: 'V',
             paymentById,
             paymentRemark: billingData.paymentRemark || undefined,
@@ -1707,7 +1714,7 @@ export default function Treatment() {
         };
 
         return payload;
-    };
+    }, [treatmentData, sessionData, billingData, receiptDetailsText]);
 
     const handleBackToAppointments = () => {
         navigate('/appointment');
@@ -1719,7 +1726,10 @@ export default function Treatment() {
     };
 
     const handlePrintReceiptSubmit = (values: PrintReceiptFormValues) => {
-        console.log('Print receipt submitted:', values);
+        setBillingData(prev => ({
+            ...prev,
+            receiptNo: values.receiptNo || prev.receiptNo,
+        }));
         setShowPrintReceiptPopup(false);
     };
 
@@ -2765,27 +2775,8 @@ export default function Treatment() {
             console.log('API Response:', result);
             console.log('Success status:', result.success);
             
-            let receiptErrorMessage: string | null = null;
             if (result.success) {
-                if (isSubmit) {
-                    const receiptPayload = buildReceiptPayload();
-                    if (receiptPayload) {
-                        try {
-                            const receiptResponse = await receiptService.saveReceipt(receiptPayload);
-                            if (!receiptResponse.success) {
-                                throw new Error(receiptResponse.error || receiptResponse.message || 'Failed to generate receipt');
-                            }
-                            console.log('Receipt generated successfully:', receiptResponse);
-                        } catch (receiptError: any) {
-                            receiptErrorMessage = receiptError?.message || 'Failed to generate receipt';
-                            console.error('Receipt generation failed:', receiptError);
-                        }
-                    }
-                }
-
-                const successMessage = receiptErrorMessage
-                    ? `Treatment ${isSubmit ? 'submitted' : 'saved'} but receipt failed: ${receiptErrorMessage}`
-                    : `Treatment ${isSubmit ? 'submitted' : 'saved'} successfully!`;
+                const successMessage = `Treatment ${isSubmit ? 'submitted' : 'saved'} successfully!`;
 
                 console.log(`=== TREATMENT ${actionType}ED SUCCESSFULLY ===`);
                 setSnackbarMessage(successMessage);
@@ -4431,6 +4422,7 @@ export default function Treatment() {
                 billingData={billingData}
                 paymentByLabel={paymentByLabel}
                 detailsText={receiptDetailsText}
+                buildReceiptPayload={buildReceiptPayload}
             />
 
             {/* Quick Registration Modal - appears on top of Collections screen */}

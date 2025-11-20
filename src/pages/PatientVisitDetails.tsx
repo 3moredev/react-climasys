@@ -338,17 +338,19 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
     React.useEffect(() => {
         let cancelled = false;
         async function loadComplaints() {
-            if (!open || !patientData?.provider) return;
+            if (!open) return;
+            
+            const doctorId = patientData?.provider || sessionDataForQuickReg?.doctorId;
+            const clinicId = patientData?.clinicId || sessionDataForQuickReg?.clinicId;
+            if (!doctorId || !clinicId) return;
             
             setComplaintsLoading(true);
             setComplaintsError(null);
             
             try {
-                // Extract doctor ID from provider field or use a default
-                const doctorId = patientData.provider || '1'; // fallback to doctor ID 1
-                console.log('Loading complaints for doctor:', doctorId);
+                console.log('Loading complaints for doctor:', doctorId, 'clinic:', clinicId);
                 
-                const complaints = await complaintService.getAllComplaintsForDoctor(doctorId);
+                const complaints = await complaintService.getAllComplaintsForDoctor(String(doctorId), String(clinicId));
                 if (!cancelled) {
                     setComplaintsOptions(complaints);
                     console.log('Loaded complaints:', complaints);
@@ -369,7 +371,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
         return () => {
             cancelled = true;
         };
-    }, [open, patientData?.provider]);
+    }, [open, patientData?.provider, patientData?.clinicId, sessionDataForQuickReg?.doctorId, sessionDataForQuickReg?.clinicId]);
 
     // When complaints options are loaded, hydrate selections from API-provided complaints
     React.useEffect(() => {
@@ -2173,12 +2175,18 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                         <button 
                                                             onClick={() => {
                                                                 if (readOnly) return;
+                                                                const doctorId = patientData?.provider || sessionDataForQuickReg?.doctorId;
+                                                                const clinicId = patientData?.clinicId || sessionDataForQuickReg?.clinicId;
+                                                                if (!doctorId || !clinicId) {
+                                                                    setComplaintsError('Doctor or clinic information is unavailable.');
+                                                                    return;
+                                                                }
                                                                 setComplaintsError(null);
-                                                                // Trigger reload by updating a dependency
-                                                                const doctorId = patientData?.provider || '1';
-                                                                complaintService.getAllComplaintsForDoctor(doctorId)
+                                                                setComplaintsLoading(true);
+                                                                complaintService.getAllComplaintsForDoctor(String(doctorId), String(clinicId))
                                                                     .then(setComplaintsOptions)
-                                                                    .catch(e => setComplaintsError(e.message));
+                                                                    .catch(e => setComplaintsError(e.message))
+                                                                    .finally(() => setComplaintsLoading(false));
                                                             }}
                                                             disabled={readOnly}
                                                             style={{ 

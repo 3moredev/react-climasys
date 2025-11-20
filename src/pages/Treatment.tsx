@@ -184,6 +184,13 @@ interface ComplaintRow {
     comment: string;
 }
 
+interface AddComplaintFormData {
+    shortDescription: string;
+    complaintDescription: string;
+    priority: string;
+    displayToOperator: boolean;
+}
+
 interface DiagnosisRow {
     id: string;
     value?: string;
@@ -383,6 +390,11 @@ export default function Treatment() {
     const [complaintsError, setComplaintsError] = useState<string | null>(null);
     const complaintsRowsBuiltFromApiRef = React.useRef(false);
     const selectedComplaintsPatchedFromApiRef = React.useRef(false);
+    const complaintsRowsLoadedFromSaveResponseRef = React.useRef(false);
+    const diagnosisRowsLoadedFromSaveResponseRef = React.useRef(false);
+    const medicineRowsLoadedFromSaveResponseRef = React.useRef(false);
+    const prescriptionRowsLoadedFromSaveResponseRef = React.useRef(false);
+    const investigationRowsLoadedFromSaveResponseRef = React.useRef(false);
     
     const filteredComplaints = React.useMemo(() => {
         const term = complaintSearch.trim().toLowerCase();
@@ -505,10 +517,30 @@ export default function Treatment() {
     
     // Instruction groups state
     const [selectedInstructionGroups, setSelectedInstructionGroups] = useState<InstructionGroup[]>([]);
+    
+    // Helper function to normalize InstructionGroup - ensure only required fields (id, name, nameHindi, instructions)
+    const normalizeInstructionGroup = (group: any): InstructionGroup => {
+        return {
+            id: String(group?.id || ''),
+            name: String(group?.name || ''),
+            nameHindi: String(group?.nameHindi || ''),
+            instructions: String(group?.instructions || '')
+        };
+    };
+    
+    // Helper function to normalize array of InstructionGroups
+    const normalizeInstructionGroups = (groups: any[]): InstructionGroup[] => {
+        if (!Array.isArray(groups)) return [];
+        return groups.map(normalizeInstructionGroup);
+    };
+    
     React.useEffect(() => {
         console.log('*** selectedInstructionGroups state updated ***');
         console.log('New selectedInstructionGroups:', selectedInstructionGroups);
         console.log('selectedInstructionGroups length:', selectedInstructionGroups?.length || 0);
+        if (selectedInstructionGroups && selectedInstructionGroups.length > 0) {
+            console.log('selectedInstructionGroups clean format:', JSON.stringify(selectedInstructionGroups, null, 2));
+        }
     }, [selectedInstructionGroups]);
     const [dressingSearch, setDressingSearch] = useState('');
     const [isDressingsOpen, setIsDressingsOpen] = useState(false);
@@ -1255,16 +1287,17 @@ export default function Treatment() {
     React.useEffect(() => {
         let cancelled = false;
         async function loadComplaints() {
-            if (!treatmentData?.doctorId) return;
+            const doctorId = treatmentData?.doctorId || sessionData?.doctorId;
+            const clinicId = treatmentData?.clinicId || sessionData?.clinicId;
+            if (!doctorId || !clinicId) return;
             
             setComplaintsLoading(true);
             setComplaintsError(null);
             
             try {
-                const doctorId = treatmentData.doctorId;
-                console.log('Loading complaints for doctor:', doctorId);
+                console.log('Loading complaints for doctor:', doctorId, 'clinic:', clinicId);
                 
-                const complaints = await complaintService.getAllComplaintsForDoctor(doctorId);
+                const complaints = await complaintService.getAllComplaintsForDoctor(doctorId, clinicId);
                 if (!cancelled) {
                     setComplaintsOptions(complaints);
                     console.log('Loaded complaints:', complaints);
@@ -1285,7 +1318,7 @@ export default function Treatment() {
         return () => {
             cancelled = true;
         };
-    }, [treatmentData?.doctorId]);
+    }, [treatmentData?.doctorId, treatmentData?.clinicId, sessionData?.doctorId, sessionData?.clinicId]);
 
     // Close medicines dropdown on outside click
     React.useEffect(() => {
@@ -1588,8 +1621,11 @@ export default function Treatment() {
                                 hasInstructions: !!group.instructions
                             });
                         });
-                        setSelectedInstructionGroups(mappedInstructionGroups);
-                        console.log('✅ selectedInstructionGroups state has been SET');
+                        // Normalize the mapped groups to ensure clean format
+                        const normalizedMappedGroups = normalizeInstructionGroups(mappedInstructionGroups);
+                        setSelectedInstructionGroups(normalizedMappedGroups);
+                        console.log('✅ selectedInstructionGroups state has been SET (normalized)');
+                        console.log('Normalized instruction groups:', JSON.stringify(normalizedMappedGroups, null, 2));
                     }
                 } else {
                     if (!cancelled) {
@@ -2374,16 +2410,32 @@ export default function Treatment() {
         setShowComplaintPopup(true);
     };
 
-    const handleSaveComplaint = (complaintDescription: string) => {
-        // Add the new complaint to the complaints rows
+    const handleSaveComplaint: (data: AddComplaintFormData) => void = ({
+        shortDescription,
+        complaintDescription
+    }: AddComplaintFormData) => {
+        const id = `custom_${Date.now()}`;
+        const label = shortDescription
+            ? `${shortDescription} : ${complaintDescription}`
+            : complaintDescription;
+
         const newComplaint: ComplaintRow = {
-            id: `custom_${Date.now()}`,
-            value: `custom_${Date.now()}`,
-            label: complaintDescription,
+            id,
+            value: id,
+            label,
             comment: ''
         };
         
         setComplaintsRows(prev => [...prev, newComplaint]);
+        setComplaintsOptions(prev => [
+            ...prev,
+            {
+                value: id,
+                label,
+                short_description: shortDescription,
+                complaint_description: complaintDescription
+            }
+        ]);
         setShowComplaintPopup(false);
     };
 
@@ -2809,23 +2861,30 @@ export default function Treatment() {
             }
 
             // Load complaints rows from API response (support multiple shapes)
-            const complaintsSource = Array.isArray(appointmentData.complaintsRows)
-                ? appointmentData.complaintsRows
-                : (Array.isArray(appointmentData.complaints) ? appointmentData.complaints : null);
-            if (complaintsSource && complaintsSource.length > 0) {
-                const mappedComplaintsRows: ComplaintRow[] = complaintsSource.map((row: any, index: number) => ({
-                    id: `complaint-${index}-${Date.now()}`,
-                    value: row.value || row.complaint_description || row.short_description || row.complaint || '',
-                    label: row.label || row.complaint_description || row.complaint || row.short_description || '',
-                    comment: row.comment || row.duration || ''
-                }));
-                setComplaintsRows(mappedComplaintsRows);
-                complaintsRowsBuiltFromApiRef.current = true; // Mark as built from API
-                console.log('Loaded complaints rows from API:', mappedComplaintsRows);
-            } else if (Array.isArray(complaintsSource)) {
-                // Empty array - clear existing rows
-                setComplaintsRows([]);
-                complaintsRowsBuiltFromApiRef.current = false; // Reset flag
+            // Skip if we just loaded from save response to prevent overwriting deletions
+            if (!complaintsRowsLoadedFromSaveResponseRef.current) {
+                const complaintsSource = Array.isArray(appointmentData.complaintsRows)
+                    ? appointmentData.complaintsRows
+                    : (Array.isArray(appointmentData.complaints) ? appointmentData.complaints : null);
+                if (complaintsSource && complaintsSource.length > 0) {
+                    const mappedComplaintsRows: ComplaintRow[] = complaintsSource.map((row: any, index: number) => ({
+                        id: `complaint-${index}-${Date.now()}`,
+                        value: row.value || row.complaint_description || row.short_description || row.complaint || '',
+                        label: row.label || row.complaint_description || row.complaint || row.short_description || '',
+                        comment: row.comment || row.duration || ''
+                    }));
+                    setComplaintsRows(mappedComplaintsRows);
+                    complaintsRowsBuiltFromApiRef.current = true; // Mark as built from API
+                    console.log('Loaded complaints rows from API:', mappedComplaintsRows);
+                } else if (Array.isArray(complaintsSource)) {
+                    // Empty array - clear existing rows
+                    setComplaintsRows([]);
+                    complaintsRowsBuiltFromApiRef.current = false; // Reset flag
+                }
+            } else {
+                console.log('Skipping complaints rows reload - already loaded from save response');
+                // Reset the flag after skipping so future loads work normally
+                complaintsRowsLoadedFromSaveResponseRef.current = false;
             }
 
             // Update complaint selections if available (for dropdown display)
@@ -2840,79 +2899,103 @@ export default function Treatment() {
             }
 
             // Load diagnosis rows from API response (support multiple shapes)
-            const diagnosisSource = Array.isArray(appointmentData.diagnosisRows)
-                ? appointmentData.diagnosisRows
-                : (Array.isArray(appointmentData.diagnosis) ? appointmentData.diagnosis : null);
-            if (diagnosisSource && diagnosisSource.length > 0) {
-                const mappedDiagnosisRows: DiagnosisRow[] = diagnosisSource.map((row: any, index: number) => ({
-                    id: `diag-${index}-${Date.now()}`,
-                    value: row.short_description || row.diagnosis_description || row.desease_description || '',
-                    diagnosis: row.diagnosis || row.desease_description || row.diagnosis_description || '',
-                    comment: ''
-                }));
-                setDiagnosisRows(mappedDiagnosisRows);
-                console.log('Loaded diagnosis rows from API:', mappedDiagnosisRows);
-            } else if (Array.isArray(diagnosisSource)) {
-                // Empty array - clear existing rows
-                setDiagnosisRows([]);
+            // Skip if we just loaded from save response to prevent overwriting deletions
+            if (!diagnosisRowsLoadedFromSaveResponseRef.current) {
+                const diagnosisSource = Array.isArray(appointmentData.diagnosisRows)
+                    ? appointmentData.diagnosisRows
+                    : (Array.isArray(appointmentData.diagnosis) ? appointmentData.diagnosis : null);
+                if (diagnosisSource && diagnosisSource.length > 0) {
+                    const mappedDiagnosisRows: DiagnosisRow[] = diagnosisSource.map((row: any, index: number) => ({
+                        id: `diag-${index}-${Date.now()}`,
+                        value: row.short_description || row.diagnosis_description || row.desease_description || '',
+                        diagnosis: row.diagnosis || row.desease_description || row.diagnosis_description || '',
+                        comment: ''
+                    }));
+                    setDiagnosisRows(mappedDiagnosisRows);
+                    console.log('Loaded diagnosis rows from API:', mappedDiagnosisRows);
+                } else if (Array.isArray(diagnosisSource)) {
+                    // Empty array - clear existing rows
+                    setDiagnosisRows([]);
+                }
+            } else {
+                console.log('Skipping diagnosis rows reload - already loaded from save response');
+                diagnosisRowsLoadedFromSaveResponseRef.current = false;
             }
 
             // Load medicine rows from API response (support multiple shapes)
-            const medicineSource = Array.isArray(appointmentData.medicineRows)
-                ? appointmentData.medicineRows
-                : (Array.isArray(appointmentData.medicines) ? appointmentData.medicines : null);
-            if (medicineSource && medicineSource.length > 0) {
-                const mappedMedicineRows: MedicineRow[] = medicineSource.map((row: any, index: number) => ({
-                    id: `med-${index}-${Date.now()}`,
-                    medicine: row.medicine || row.medicine_description || row.short_description || '',
-                    short_description: row.short_description || row.medicine_description || '',
-                    morning: row.morning || 0,
-                    afternoon: row.afternoon || 0,
-                    b: String(row.morning || ''),
-                    l: String(row.afternoon || ''),
-                    d: String(row.night || ''),
-                    days: String(row.days || row.no_of_days || ''),
-                    instruction: row.instruction || ''
-                }));
-                setMedicineRows(mappedMedicineRows);
-                console.log('Loaded medicine rows from API:', mappedMedicineRows);
-            } else if (Array.isArray(medicineSource)) {
-                setMedicineRows([]);
+            // Skip if we just loaded from save response to prevent overwriting deletions
+            if (!medicineRowsLoadedFromSaveResponseRef.current) {
+                const medicineSource = Array.isArray(appointmentData.medicineRows)
+                    ? appointmentData.medicineRows
+                    : (Array.isArray(appointmentData.medicines) ? appointmentData.medicines : null);
+                if (medicineSource && medicineSource.length > 0) {
+                    const mappedMedicineRows: MedicineRow[] = medicineSource.map((row: any, index: number) => ({
+                        id: `med-${index}-${Date.now()}`,
+                        medicine: row.medicine || row.medicine_description || row.short_description || '',
+                        short_description: row.short_description || row.medicine_description || '',
+                        morning: row.morning || 0,
+                        afternoon: row.afternoon || 0,
+                        b: String(row.morning || ''),
+                        l: String(row.afternoon || ''),
+                        d: String(row.night || ''),
+                        days: String(row.days || row.no_of_days || ''),
+                        instruction: row.instruction || ''
+                    }));
+                    setMedicineRows(mappedMedicineRows);
+                    console.log('Loaded medicine rows from API:', mappedMedicineRows);
+                } else if (Array.isArray(medicineSource)) {
+                    setMedicineRows([]);
+                }
+            } else {
+                console.log('Skipping medicine rows reload - already loaded from save response');
+                medicineRowsLoadedFromSaveResponseRef.current = false;
             }
 
             // Load prescription rows from API response (support multiple shapes)
-            const prescriptionSource = Array.isArray(appointmentData.prescriptionRows)
-                ? appointmentData.prescriptionRows
-                : (Array.isArray(appointmentData.prescriptions) ? appointmentData.prescriptions : null);
-            if (prescriptionSource && prescriptionSource.length > 0) {
-                const mappedPrescriptionRows: PrescriptionRow[] = prescriptionSource.map((row: any, index: number) => ({
-                    id: `pres-${index}-${Date.now()}`,
-                    prescription: row.prescription || `${row.brand_name || ''} ${row.medicine_name || ''}`.trim() || row.medicine_description || row.short_description || '',
-                    b: String(row.b || row.morning || ''),
-                    l: String(row.l || row.afternoon || ''),
-                    d: String(row.d || row.night || ''),
-                    days: String(row.days || row.no_of_days || ''),
-                    instruction: row.instruction || ''
-                }));
-                setPrescriptionRows(mappedPrescriptionRows);
-                console.log('Loaded prescription rows from API:', mappedPrescriptionRows);
-            } else if (Array.isArray(prescriptionSource)) {
-                setPrescriptionRows([]);
+            // Skip if we just loaded from save response to prevent overwriting deletions
+            if (!prescriptionRowsLoadedFromSaveResponseRef.current) {
+                const prescriptionSource = Array.isArray(appointmentData.prescriptionRows)
+                    ? appointmentData.prescriptionRows
+                    : (Array.isArray(appointmentData.prescriptions) ? appointmentData.prescriptions : null);
+                if (prescriptionSource && prescriptionSource.length > 0) {
+                    const mappedPrescriptionRows: PrescriptionRow[] = prescriptionSource.map((row: any, index: number) => ({
+                        id: `pres-${index}-${Date.now()}`,
+                        prescription: row.prescription || `${row.brand_name || ''} ${row.medicine_name || ''}`.trim() || row.medicine_description || row.short_description || '',
+                        b: String(row.b || row.morning || ''),
+                        l: String(row.l || row.afternoon || ''),
+                        d: String(row.d || row.night || ''),
+                        days: String(row.days || row.no_of_days || ''),
+                        instruction: row.instruction || ''
+                    }));
+                    setPrescriptionRows(mappedPrescriptionRows);
+                    console.log('Loaded prescription rows from API:', mappedPrescriptionRows);
+                } else if (Array.isArray(prescriptionSource)) {
+                    setPrescriptionRows([]);
+                }
+            } else {
+                console.log('Skipping prescription rows reload - already loaded from save response');
+                prescriptionRowsLoadedFromSaveResponseRef.current = false;
             }
 
             // Load investigation rows from API response (support multiple shapes)
-            const investigationSource = Array.isArray(appointmentData.investigationRows)
-                ? appointmentData.investigationRows
-                : (Array.isArray(appointmentData.investigations) ? appointmentData.investigations : null);
-            if (investigationSource && investigationSource.length > 0) {
-                const mappedInvestigationRows: InvestigationRow[] = investigationSource.map((row: any, index: number) => ({
-                    id: `inv-${index}-${Date.now()}`,
-                    investigation: row.investigation || row.lab_test_description || row.id || ''
-                }));
-                setInvestigationRows(mappedInvestigationRows);
-                console.log('Loaded investigation rows from API:', mappedInvestigationRows);
-            } else if (Array.isArray(investigationSource)) {
-                setInvestigationRows([]);
+            // Skip if we just loaded from save response to prevent overwriting deletions
+            if (!investigationRowsLoadedFromSaveResponseRef.current) {
+                const investigationSource = Array.isArray(appointmentData.investigationRows)
+                    ? appointmentData.investigationRows
+                    : (Array.isArray(appointmentData.investigations) ? appointmentData.investigations : null);
+                if (investigationSource && investigationSource.length > 0) {
+                    const mappedInvestigationRows: InvestigationRow[] = investigationSource.map((row: any, index: number) => ({
+                        id: `inv-${index}-${Date.now()}`,
+                        investigation: row.investigation || row.lab_test_description || row.id || ''
+                    }));
+                    setInvestigationRows(mappedInvestigationRows);
+                    console.log('Loaded investigation rows from API:', mappedInvestigationRows);
+                } else if (Array.isArray(investigationSource)) {
+                    setInvestigationRows([]);
+                }
+            } else {
+                console.log('Skipping investigation rows reload - already loaded from save response');
+                investigationRowsLoadedFromSaveResponseRef.current = false;
             }
 
             console.log('=== FINISHED PATCHING FROM APPOINTMENT DETAILS ===');
@@ -3173,16 +3256,16 @@ export default function Treatment() {
                 // Table: visit_groups_instructions
                 instructionGroups: selectedInstructionGroups.length > 0
                     ? selectedInstructionGroups.map((group, index) => {
+                        // Ensure we're using clean normalized data
+                        const cleanGroup = normalizeInstructionGroup(group);
                         const mapped = {
-                            groupDescription: group.name || '',
-                            instructionsDescription: group.instructions || '',
+                            groupDescription: cleanGroup.name || '',
+                            instructionsDescription: cleanGroup.instructions || '',
                             sequenceNo: index + 1
                         };
-                        console.log(`Instruction Group ${index + 1} mapped:`, {
-                            original: group,
-                            mapped: mapped,
-                            hasName: !!group.name,
-                            hasInstructions: !!group.instructions
+                        console.log(`Instruction Group ${index + 1} mapped to backend:`, {
+                            cleanGroup: cleanGroup,
+                            mapped: mapped
                         });
                         return mapped;
                     })
@@ -3199,21 +3282,21 @@ export default function Treatment() {
             console.log('Shift ID:', visitData.shiftId);
             console.log('Patient Visit No:', visitData.patientVisitNo);
             console.log('=== INSTRUCTION GROUPS DEBUG ===');
-            console.log('selectedInstructionGroups state:', selectedInstructionGroups);
+            console.log('selectedInstructionGroups state (clean format):', JSON.stringify(selectedInstructionGroups, null, 2));
             console.log('selectedInstructionGroups length:', selectedInstructionGroups.length);
             console.log('Instruction Groups Count in visitData:', visitData.instructionGroups?.length || 0);
             if (visitData.instructionGroups && visitData.instructionGroups.length > 0) {
-                console.log('Instruction Groups in request:', JSON.stringify(visitData.instructionGroups, null, 2));
+                console.log('=== INSTRUCTION GROUPS BEING SENT TO BACKEND ===');
+                console.log('Instruction Groups in request (backend format):', JSON.stringify(visitData.instructionGroups, null, 2));
                 visitData.instructionGroups.forEach((ig, idx) => {
-                    console.log(`Instruction Group ${idx + 1}:`, {
+                    console.log(`Backend Instruction Group ${idx + 1}:`, {
                         groupDescription: ig.groupDescription,
                         instructionsDescription: ig.instructionsDescription,
-                        sequenceNo: ig.sequenceNo,
-                        isEmpty: !ig.groupDescription && !ig.instructionsDescription
+                        sequenceNo: ig.sequenceNo
                     });
                 });
             } else {
-                console.warn('⚠️ NO INSTRUCTION GROUPS IN REQUEST! selectedInstructionGroups:', selectedInstructionGroups);
+                console.warn('⚠️ NO INSTRUCTION GROUPS IN REQUEST! selectedInstructionGroups:', JSON.stringify(selectedInstructionGroups, null, 2));
             }
             
             // Check for null/undefined values that might cause validation errors
@@ -3246,55 +3329,113 @@ export default function Treatment() {
                 setSnackbarOpen(true);
                 
                 // Load rows directly from save response if available
-                if (result.diagnosisRows && Array.isArray(result.diagnosisRows) && result.diagnosisRows.length > 0) {
-                    const mappedDiagnosisRows: DiagnosisRow[] = result.diagnosisRows.map((row: any, index: number) => ({
-                        id: `diag-${index}-${Date.now()}`,
-                        value: row.short_description || '',
-                        diagnosis: row.diagnosis || row.desease_description || '',
-                        comment: ''
-                    }));
-                    setDiagnosisRows(mappedDiagnosisRows);
-                    console.log('Loaded diagnosis rows from save response:', mappedDiagnosisRows);
+                // Load complaints rows from save response first (to preserve deletions)
+                if (result.complaintsRows && Array.isArray(result.complaintsRows)) {
+                    if (result.complaintsRows.length > 0) {
+                        const mappedComplaintsRows: ComplaintRow[] = result.complaintsRows.map((row: any, index: number) => ({
+                            id: `complaint-${index}-${Date.now()}`,
+                            value: row.value || row.complaint_description || row.short_description || row.complaint || '',
+                            label: row.label || row.complaint_description || row.complaint || row.short_description || '',
+                            comment: row.comment || row.complaint_comment || row.duration || ''
+                        }));
+                        setComplaintsRows(mappedComplaintsRows);
+                        complaintsRowsBuiltFromApiRef.current = true; // Mark as built from API
+                        complaintsRowsLoadedFromSaveResponseRef.current = true; // Mark as loaded from save response
+                        console.log('Loaded complaints rows from save response:', mappedComplaintsRows);
+                    } else {
+                        // Empty array - clear existing rows
+                        setComplaintsRows([]);
+                        complaintsRowsBuiltFromApiRef.current = false;
+                        complaintsRowsLoadedFromSaveResponseRef.current = true; // Mark as loaded from save response (even if empty)
+                        console.log('Cleared complaints rows (empty array from save response)');
+                    }
                 }
                 
-                if (result.medicineRows && Array.isArray(result.medicineRows) && result.medicineRows.length > 0) {
-                    const mappedMedicineRows: MedicineRow[] = result.medicineRows.map((row: any, index: number) => ({
-                        id: `med-${index}-${Date.now()}`,
-                        medicine: row.medicine || row.medicine_description || '',
-                        short_description: row.short_description || '',
-                        morning: row.morning || 0,
-                        afternoon: row.afternoon || 0,
-                        b: String(row.morning || ''),
-                        l: String(row.afternoon || ''),
-                        d: String(row.night || ''),
-                        days: String(row.days || row.no_of_days || ''),
-                        instruction: row.instruction || ''
-                    }));
-                    setMedicineRows(mappedMedicineRows);
-                    console.log('Loaded medicine rows from save response:', mappedMedicineRows);
+                // Load diagnosis rows from save response (to preserve deletions)
+                if (result.diagnosisRows && Array.isArray(result.diagnosisRows)) {
+                    if (result.diagnosisRows.length > 0) {
+                        const mappedDiagnosisRows: DiagnosisRow[] = result.diagnosisRows.map((row: any, index: number) => ({
+                            id: `diag-${index}-${Date.now()}`,
+                            value: row.short_description || '',
+                            diagnosis: row.diagnosis || row.desease_description || '',
+                            comment: ''
+                        }));
+                        setDiagnosisRows(mappedDiagnosisRows);
+                        diagnosisRowsLoadedFromSaveResponseRef.current = true;
+                        console.log('Loaded diagnosis rows from save response:', mappedDiagnosisRows);
+                    } else {
+                        // Empty array - clear existing rows
+                        setDiagnosisRows([]);
+                        diagnosisRowsLoadedFromSaveResponseRef.current = true;
+                        console.log('Cleared diagnosis rows (empty array from save response)');
+                    }
                 }
                 
-                if (result.prescriptionRows && Array.isArray(result.prescriptionRows) && result.prescriptionRows.length > 0) {
-                    const mappedPrescriptionRows: PrescriptionRow[] = result.prescriptionRows.map((row: any, index: number) => ({
-                        id: `pres-${index}-${Date.now()}`,
-                        prescription: row.prescription || `${row.brand_name || ''} ${row.medicine_name || ''}`.trim() || '',
-                        b: String(row.b || row.morning || ''),
-                        l: String(row.l || row.afternoon || ''),
-                        d: String(row.d || row.night || ''),
-                        days: String(row.days || row.no_of_days || ''),
-                        instruction: row.instruction || ''
-                    }));
-                    setPrescriptionRows(mappedPrescriptionRows);
-                    console.log('Loaded prescription rows from save response:', mappedPrescriptionRows);
+                // Load medicine rows from save response (to preserve deletions)
+                if (result.medicineRows && Array.isArray(result.medicineRows)) {
+                    if (result.medicineRows.length > 0) {
+                        const mappedMedicineRows: MedicineRow[] = result.medicineRows.map((row: any, index: number) => ({
+                            id: `med-${index}-${Date.now()}`,
+                            medicine: row.medicine || row.medicine_description || '',
+                            short_description: row.short_description || '',
+                            morning: row.morning || 0,
+                            afternoon: row.afternoon || 0,
+                            b: String(row.morning || ''),
+                            l: String(row.afternoon || ''),
+                            d: String(row.night || ''),
+                            days: String(row.days || row.no_of_days || ''),
+                            instruction: row.instruction || ''
+                        }));
+                        setMedicineRows(mappedMedicineRows);
+                        medicineRowsLoadedFromSaveResponseRef.current = true;
+                        console.log('Loaded medicine rows from save response:', mappedMedicineRows);
+                    } else {
+                        // Empty array - clear existing rows
+                        setMedicineRows([]);
+                        medicineRowsLoadedFromSaveResponseRef.current = true;
+                        console.log('Cleared medicine rows (empty array from save response)');
+                    }
                 }
                 
-                if (result.investigationRows && Array.isArray(result.investigationRows) && result.investigationRows.length > 0) {
-                    const mappedInvestigationRows: InvestigationRow[] = result.investigationRows.map((row: any, index: number) => ({
-                        id: `inv-${index}-${Date.now()}`,
-                        investigation: row.investigation || row.lab_test_description || ''
-                    }));
-                    setInvestigationRows(mappedInvestigationRows);
-                    console.log('Loaded investigation rows from save response:', mappedInvestigationRows);
+                // Load prescription rows from save response (to preserve deletions)
+                if (result.prescriptionRows && Array.isArray(result.prescriptionRows)) {
+                    if (result.prescriptionRows.length > 0) {
+                        const mappedPrescriptionRows: PrescriptionRow[] = result.prescriptionRows.map((row: any, index: number) => ({
+                            id: `pres-${index}-${Date.now()}`,
+                            prescription: row.prescription || `${row.brand_name || ''} ${row.medicine_name || ''}`.trim() || '',
+                            b: String(row.b || row.morning || ''),
+                            l: String(row.l || row.afternoon || ''),
+                            d: String(row.d || row.night || ''),
+                            days: String(row.days || row.no_of_days || ''),
+                            instruction: row.instruction || ''
+                        }));
+                        setPrescriptionRows(mappedPrescriptionRows);
+                        prescriptionRowsLoadedFromSaveResponseRef.current = true;
+                        console.log('Loaded prescription rows from save response:', mappedPrescriptionRows);
+                    } else {
+                        // Empty array - clear existing rows
+                        setPrescriptionRows([]);
+                        prescriptionRowsLoadedFromSaveResponseRef.current = true;
+                        console.log('Cleared prescription rows (empty array from save response)');
+                    }
+                }
+                
+                // Load investigation rows from save response (to preserve deletions)
+                if (result.investigationRows && Array.isArray(result.investigationRows)) {
+                    if (result.investigationRows.length > 0) {
+                        const mappedInvestigationRows: InvestigationRow[] = result.investigationRows.map((row: any, index: number) => ({
+                            id: `inv-${index}-${Date.now()}`,
+                            investigation: row.investigation || row.lab_test_description || ''
+                        }));
+                        setInvestigationRows(mappedInvestigationRows);
+                        investigationRowsLoadedFromSaveResponseRef.current = true;
+                        console.log('Loaded investigation rows from save response:', mappedInvestigationRows);
+                    } else {
+                        // Empty array - clear existing rows
+                        setInvestigationRows([]);
+                        investigationRowsLoadedFromSaveResponseRef.current = true;
+                        console.log('Cleared investigation rows (empty array from save response)');
+                    }
                 }
                 
                 // Fetch latest appointment details and patch values before navigating away
@@ -4176,76 +4317,74 @@ export default function Treatment() {
 
                         {/* Vitals Row */}
                         <div style={{ marginBottom: '15px' }}>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 130px)' as const, gap: '12px' }}>
-                                {[
-                                    { key: 'height', label: 'Height (Cm)' },
-                                    { key: 'weight', label: 'Weight (Kg)' },
-                                    { key: 'bmi', label: 'BMI' },
-                                    { key: 'pulse', label: 'Pulse (min)' },
-                                    { key: 'bp', label: 'BP' },
-                                    { key: 'sugar', label: 'Sugar' },
-                                    { key: 'tft', label: 'TFT' },
-                                    { key: 'pallorHb', label: 'Pallor/HB' }
-                                ].map(({ key, label }) => (
-                                    <div key={key}>
-                                        <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                            {label}
-                                        </label>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', position: key === 'pallorHb' ? 'relative' as const : undefined }}>
-                                            <input
-                                                type="text"
-                                                value={formData[key as keyof typeof formData] as string}
-                                                onChange={(e) => handleInputChange(key, e.target.value)}
-                                                disabled={key === 'bmi' || isFormDisabled}
-                                                style={{
-                                                    flex: 1,
-                                                    padding: '6px 10px',
-                                                    border: '1px solid #ccc',
-                                                    borderRadius: '4px',
-                                                    fontSize: '13px',
-                                                    backgroundColor: key === 'bmi' || isFormDisabled ? '#f5f5f5' : 'white',
-                                                    color: key === 'bmi' || isFormDisabled ? '#666' : '#333',
-                                                    cursor: key === 'bmi' || isFormDisabled ? 'not-allowed' : 'text'
-                                                }}
-                                            />
-                                            {key === 'pallorHb' && (
-                                                <button
-                                                    type="button"
-                                                    disabled={isFormDisabled}
-                                                    title="Show vitals trend"
-                                                    style={{
-                                                        position: 'absolute',
-                                                        left: 'calc(100% + 13px)',
-                                                        top: '50%',
-                                                        marginTop: '-16px',
-                                                        backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
-                                                        color: 'white',
-                                                        border: 'none',
-                                                        height: '32px',
-                                                        padding: '0 10px',
-                                                        borderRadius: '6px',
-                                                        cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                                        fontSize: '12px',
-                                                        fontWeight: '500',
-                                                        lineHeight: 1,
-                                                        whiteSpace: 'nowrap',
-                                                        outline: 'none',
-                                                        transition: 'background-color 0.2s'
-                                                    }}
-                                                    onMouseEnter={(e) => {
-                                                        e.currentTarget.style.backgroundColor = '#1565c0';
-                                                    }}
-                                                    onMouseLeave={(e) => {
-                                                        e.currentTarget.style.backgroundColor = '#1976d2';
-                                                    }}
-                                                    onClick={() => setShowVitalsTrend(true)}
-                                                >
-                                                    Trend
-                                                </button>
-                                            )}
-                                        </div>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'stretch' }}>
+                                <div style={{ flex: '1 1 700px', minWidth: '260px' }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '12px' }}>
+                                        {[
+                                            { key: 'height', label: 'Height (Cm)' },
+                                            { key: 'weight', label: 'Weight (Kg)' },
+                                            { key: 'bmi', label: 'BMI' },
+                                            { key: 'pulse', label: 'Pulse (min)' },
+                                            { key: 'bp', label: 'BP' },
+                                            { key: 'sugar', label: 'Sugar' },
+                                            { key: 'tft', label: 'TFT' },
+                                            { key: 'pallorHb', label: 'Pallor/HB' }
+                                        ].map(({ key, label }) => (
+                                            <div key={key}>
+                                                <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                                                    {label}
+                                                </label>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                                    <input
+                                                        type="text"
+                                                        value={formData[key as keyof typeof formData] as string}
+                                                        onChange={(e) => handleInputChange(key, e.target.value)}
+                                                        disabled={key === 'bmi' || isFormDisabled}
+                                                        style={{
+                                                            flex: 1,
+                                                            padding: '6px 10px',
+                                                            border: '1px solid #ccc',
+                                                            borderRadius: '4px',
+                                                            fontSize: '13px',
+                                                            backgroundColor: key === 'bmi' || isFormDisabled ? '#f5f5f5' : 'white',
+                                                            color: key === 'bmi' || isFormDisabled ? '#666' : '#333',
+                                                            cursor: key === 'bmi' || isFormDisabled ? 'not-allowed' : 'text'
+                                                        }}
+                                                    />
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
-                                ))}
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+                                    <button
+                                        type="button"
+                                        disabled={isFormDisabled}
+                                        title="Show vitals trend"
+                                        style={{
+                                            padding: '0 14px',
+                                            backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
+                                            color: 'white',
+                                            border: 'none',
+                                            borderRadius: '6px',
+                                            cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                            fontSize: '12px',
+                                            fontWeight: '500',
+                                            height: '32px',
+                                            transition: 'background-color 0.2s',
+                                            whiteSpace: 'nowrap'
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1565c0';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1976d2';
+                                        }}
+                                        onClick={() => setShowVitalsTrend(true)}
+                                    >
+                                        Trend
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
@@ -4341,12 +4480,20 @@ export default function Treatment() {
                                                                 {complaintsError}
                                         <button
                                                                     onClick={() => {
+                                                                        const doctorId = treatmentData?.doctorId || sessionData?.doctorId;
+                                                                        const clinicId = treatmentData?.clinicId || sessionData?.clinicId;
+                                                                        if (!doctorId || !clinicId) {
+                                                                            setComplaintsError('Doctor or clinic details are missing. Please reload the visit.');
+                                                                            return;
+                                                                        }
+                                                                        
                                                                         setComplaintsError(null);
-                                                                        // Trigger reload by updating a dependency
-                                                                        const doctorId = treatmentData?.doctorId || '1';
-                                                                        complaintService.getAllComplaintsForDoctor(doctorId)
+                                                                        setComplaintsLoading(true);
+                                                                        
+                                                                        complaintService.getAllComplaintsForDoctor(doctorId, clinicId)
                                                                             .then(setComplaintsOptions)
-                                                                            .catch(e => setComplaintsError(e.message));
+                                                                            .catch(e => setComplaintsError(e.message))
+                                                                            .finally(() => setComplaintsLoading(false));
                                                                     }}
                                             style={{
                                                                         marginLeft: '8px', 
@@ -6669,12 +6816,58 @@ export default function Treatment() {
             {/* Instruction Groups Popup */}
             <InstructionGroupsPopup
                 isOpen={showInstructionPopup}
-                onClose={() => setShowInstructionPopup(false)}
+                onClose={() => {
+                    console.log('=== TREATMENT SCREEN: Instruction Popup CLOSED ===');
+                    console.log('selectedInstructionGroups after closing:', selectedInstructionGroups);
+                    console.log('selectedInstructionGroups length:', selectedInstructionGroups?.length || 0);
+                    console.log('selectedInstructionGroups is array:', Array.isArray(selectedInstructionGroups));
+                    if (selectedInstructionGroups && selectedInstructionGroups.length > 0) {
+                        console.log('=== FINAL selectedInstructionGroups (clean format for backend) ===');
+                        console.log('selectedInstructionGroups content:', JSON.stringify(selectedInstructionGroups, null, 2));
+                        selectedInstructionGroups.forEach((group, idx) => {
+                            console.log(`Final Group ${idx + 1}:`, {
+                                id: group.id,
+                                name: group.name,
+                                nameHindi: group.nameHindi,
+                                instructions: group.instructions
+                            });
+                        });
+                    } else {
+                        console.warn('⚠️ selectedInstructionGroups is EMPTY after closing popup!');
+                    }
+                    setShowInstructionPopup(false);
+                }}
                 patientName={treatmentData?.patientName || ''}
                 patientAge={Number(treatmentData?.age || 0)}
                 patientGender={(treatmentData?.gender || '').toString()}
                 initialSelectedGroups={selectedInstructionGroups}
-                onChange={(groups) => setSelectedInstructionGroups(groups)}
+                onChange={(groups) => {
+                    console.log('=== TREATMENT SCREEN: Instruction Popup onChange CALLED ===');
+                    console.log('Received groups from popup (raw):', groups);
+                    console.log('Received groups length:', groups?.length || 0);
+                    console.log('Received groups is array:', Array.isArray(groups));
+                    
+                    // Normalize groups to ensure clean format (only id, name, nameHindi, instructions)
+                    const normalizedGroups = normalizeInstructionGroups(groups || []);
+                    
+                    if (normalizedGroups && normalizedGroups.length > 0) {
+                        console.log('=== NORMALIZED GROUPS (clean format) ===');
+                        console.log('Normalized groups content:', JSON.stringify(normalizedGroups, null, 2));
+                        normalizedGroups.forEach((group, idx) => {
+                            console.log(`Normalized Group ${idx + 1}:`, {
+                                id: group.id,
+                                name: group.name,
+                                nameHindi: group.nameHindi,
+                                instructions: group.instructions
+                            });
+                        });
+                    } else {
+                        console.warn('⚠️ Received EMPTY groups array from popup onChange!');
+                    }
+                    
+                    // Store normalized (clean) groups
+                    setSelectedInstructionGroups(normalizedGroups);
+                }}
             />
             {/* Debug: Log when popup opens */}
             {showInstructionPopup && (() => {

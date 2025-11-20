@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { buildReceiptPrintHTML, getHeaderImageUrl } from "../utils/printTemplates";
+import { receiptService, SaveReceiptPayload } from "../services/receiptService";
 
 export interface PrintReceiptFormValues {
     receiptNo: string;
@@ -25,6 +26,7 @@ interface PrintReceiptPopupProps {
     };
     paymentByLabel?: string;
     detailsText?: string;
+    buildReceiptPayload?: (details: string) => SaveReceiptPayload | null;
 }
 
 const fieldLabelStyle: React.CSSProperties = {
@@ -43,6 +45,13 @@ const inputStyle: React.CSSProperties = {
     fontSize: 13,
     outline: "none",
     fontFamily: "'Roboto', sans-serif",
+};
+
+const disabledInputStyle: React.CSSProperties = {
+    ...inputStyle,
+    backgroundColor: "#f5f5f5",
+    color: "#8d8d8d",
+    cursor: "not-allowed",
 };
 
 const ones = [
@@ -113,6 +122,7 @@ const PrintReceiptPopup: React.FC<PrintReceiptPopupProps> = ({
     billingData,
     paymentByLabel,
     detailsText,
+    buildReceiptPayload,
 }) => {
     const initialValues = useMemo<PrintReceiptFormValues>(() => {
         const today = new Date();
@@ -127,10 +137,16 @@ const PrintReceiptPopup: React.FC<PrintReceiptPopupProps> = ({
     }, [billingData?.billed, billingData?.feesCollected, billingData?.paymentRemark, billingData?.receiptNo, detailsText, patientGender, paymentByLabel]);
 
     const [formValues, setFormValues] = useState<PrintReceiptFormValues>(initialValues);
+    const [isSavingReceipt, setIsSavingReceipt] = useState(false);
+    const [statusMessage, setStatusMessage] = useState<string | null>(null);
+    const [statusType, setStatusType] = useState<"success" | "error" | null>(null);
 
     useEffect(() => {
         if (open) {
             setFormValues(initialValues);
+            setStatusMessage(null);
+            setStatusType(null);
+            setIsSavingReceipt(false);
         }
     }, [open, initialValues]);
 
@@ -140,9 +156,50 @@ const PrintReceiptPopup: React.FC<PrintReceiptPopupProps> = ({
         setFormValues(prev => ({ ...prev, [field]: value }));
     };
 
-    const handleSubmit = () => {
-        onSubmit?.(formValues);
-        triggerPrint(formValues);
+    const handleSubmit = async () => {
+        const hasExistingReceipt = !!formValues.receiptNo?.trim();
+        if (hasExistingReceipt || !buildReceiptPayload) {
+            if (hasExistingReceipt) {
+                setStatusType("success");
+                setStatusMessage("Using existing receipt.");
+            }
+            onSubmit?.(formValues);
+            triggerPrint(formValues);
+            return;
+        }
+
+        const payload = buildReceiptPayload(formValues.details);
+        if (!payload) {
+            setStatusType("error");
+            setStatusMessage("Receipt details are incomplete.");
+            return;
+        }
+
+        setIsSavingReceipt(true);
+        setStatusMessage(null);
+        setStatusType(null);
+
+        try {
+            const receiptResponse = await receiptService.saveReceipt(payload);
+            const updatedValues: PrintReceiptFormValues = {
+                ...formValues,
+                receiptNo: receiptResponse.receiptNumber || formValues.receiptNo,
+                receiptDate: receiptResponse.receiptDate
+                    ? new Date(receiptResponse.receiptDate).toISOString().slice(0, 10)
+                    : formValues.receiptDate,
+            };
+            setFormValues(updatedValues);
+            setStatusType("success");
+            setStatusMessage("Receipt generated successfully.");
+            onSubmit?.(updatedValues);
+            triggerPrint(updatedValues);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : "Failed to generate receipt.";
+            setStatusType("error");
+            setStatusMessage(message);
+        } finally {
+            setIsSavingReceipt(false);
+        }
     };
 
     const triggerPrint = (values: PrintReceiptFormValues) => {
@@ -286,8 +343,8 @@ const PrintReceiptPopup: React.FC<PrintReceiptPopupProps> = ({
                         <input
                             type="text"
                             value={formValues.receiptNo}
-                            onChange={(e) => handleChange("receiptNo", e.target.value)}
-                            style={inputStyle}
+                            disabled
+                            style={disabledInputStyle}
                         />
                     </div>
                     <div>
@@ -295,8 +352,8 @@ const PrintReceiptPopup: React.FC<PrintReceiptPopupProps> = ({
                         <input
                             type="date"
                             value={formValues.receiptDate}
-                            onChange={(e) => handleChange("receiptDate", e.target.value)}
-                            style={inputStyle}
+                            disabled
+                            style={disabledInputStyle}
                         />
                     </div>
                     <div>
@@ -304,8 +361,8 @@ const PrintReceiptPopup: React.FC<PrintReceiptPopupProps> = ({
                         <input
                             type="text"
                             value={formValues.receiptAmount}
-                            onChange={(e) => handleChange("receiptAmount", e.target.value)}
-                            style={inputStyle}
+                            disabled
+                            style={disabledInputStyle}
                         />
                     </div>
                     <div>
@@ -313,8 +370,8 @@ const PrintReceiptPopup: React.FC<PrintReceiptPopupProps> = ({
                         <input
                             type="text"
                             value={formValues.paymentBy}
-                            onChange={(e) => handleChange("paymentBy", e.target.value)}
-                            style={inputStyle}
+                            disabled
+                            style={disabledInputStyle}
                         />
                     </div>
                     <div>
@@ -322,8 +379,8 @@ const PrintReceiptPopup: React.FC<PrintReceiptPopupProps> = ({
                         <input
                             type="text"
                             value={formValues.paymentRemark}
-                            onChange={(e) => handleChange("paymentRemark", e.target.value)}
-                            style={inputStyle}
+                            disabled
+                            style={disabledInputStyle}
                         />
                     </div>
                     <div style={{ gridColumn: "span 2" }}>
@@ -339,26 +396,32 @@ const PrintReceiptPopup: React.FC<PrintReceiptPopupProps> = ({
                     <div
                         style={{
                             display: "flex",
-                            justifyContent: "flex-end",
+                            justifyContent: "space-between",
+                            alignItems: "center",
                             marginTop: 26,
                         }}
                     >
+                        <div style={{ flex: 1, fontSize: 12, color: statusType === "error" ? "#d32f2f" : "#2e7d32" }}>
+                            {statusMessage}
+                        </div>
                         <button
                             onClick={handleSubmit}
+                            disabled={isSavingReceipt}
                             style={{
                                 minWidth: 120,
                                 padding: "10px 22px",
                                 borderRadius: 4,
                                 border: "none",
-                                cursor: "pointer",
+                                cursor: isSavingReceipt ? "not-allowed" : "pointer",
                                 fontWeight: 600,
                                 fontSize: 13,
-                                backgroundColor: "#1976d2",
+                                backgroundColor: isSavingReceipt ? "#9e9e9e" : "#1976d2",
                                 color: "#fff",
                                 boxShadow: "0 4px 10px rgba(0,0,0,0.15)",
+                                transition: "background-color 0.2s",
                             }}
                         >
-                            Submit
+                            {isSavingReceipt ? "Generating..." : "Submit"}
                         </button>
                     </div>
                 </div>

@@ -21,20 +21,55 @@ export const complaintService = {
    * @param doctorId - Doctor ID
    * @returns Promise<ComplaintOption[]> - Array of complaint options
    */
-  async getAllComplaintsForDoctor(doctorId: string): Promise<ComplaintOption[]> {
+  async getAllComplaintsForDoctor(doctorId: string, clinicId: string): Promise<ComplaintOption[]> {
     try {
-      console.log('Fetching complaints for doctor:', doctorId);
+      if (!doctorId) {
+        throw new Error('Doctor ID is required to load complaints.');
+      }
+      if (!clinicId) {
+        throw new Error('Clinic ID is required to load complaints.');
+      }
+
+      console.log('Fetching complaints for doctor:', doctorId, 'clinic:', clinicId);
       
-      const response = await api.get(`/complain/all/${doctorId}`);
-      console.log('Complaints API response:', response.data);
+      const response = await api.get(`/refdata/patient-profile`, {
+        params: { doctorId, clinicId }
+      });
+      console.log('Patient profile complaints response:', response.data);
       
-      // Transform API response to dropdown options format
-      const complaints: ComplaintOption[] = response.data.map((complaint: ComplaintApiResponse) => ({
-        value: complaint.id, // Use the concatenated ID as unique identifier
-        label: complaint.short_description || complaint.complaint_description,
-        short_description: complaint.short_description,
-        complaint_description: complaint.complaint_description
-      }));
+      const data = response.data || {};
+      const complaintsCandidates = [
+        data.complaints,
+        data.operatorComplaints,
+        data.complaintMaster,
+        data.complaintsList
+      ];
+      const complaintsSource =
+        complaintsCandidates.find((list: any) => Array.isArray(list) && list.length > 0) || [];
+      
+      if (!Array.isArray(complaintsSource) || complaintsSource.length === 0) {
+        console.warn('No complaints found in patient profile response.');
+        return [];
+      }
+      
+      const complaints: ComplaintOption[] = complaintsSource.map((complaint: any, index: number) => {
+        const value =
+          complaint.id ??
+          complaint.short_description ??
+          complaint.complaint_description ??
+          `complaint_${index}`;
+        const label =
+          complaint.short_description ||
+          complaint.complaint_description ||
+          value;
+        
+        return {
+          value: String(value),
+          label: String(label),
+          short_description: complaint.short_description,
+          complaint_description: complaint.complaint_description
+        };
+      });
       
       return complaints;
     } catch (error: any) {
@@ -47,9 +82,9 @@ export const complaintService = {
       
       // Handle HTTP errors
       if (error.response?.status === 400) {
-        throw new Error('Invalid request. Please check your doctor ID.');
+        throw new Error('Invalid request. Please check your doctor and clinic IDs.');
       } else if (error.response?.status === 404) {
-        throw new Error('Complaints endpoint not found. Please check your backend configuration.');
+        throw new Error('Patient profile complaints endpoint not found. Please check your backend configuration.');
       } else if (error.response?.status === 500) {
         throw new Error('Server error occurred while fetching complaints.');
       }

@@ -295,10 +295,27 @@ export default function AddBillingPopup({
             }
         }
     }, [effectiveOptions]);
-    const effectiveSearch = billingSearch !== undefined ? billingSearch : localSearch;
-    const effectiveSelectedIds = selectedBillingDetailIds ?? localSelectedIds;
-    const setEffectiveSearch = setBillingSearch ?? setLocalSearch;
-    const setEffectiveSelectedIds = (setSelectedBillingDetailIds ?? setLocalSelectedIds);
+    const isSearchControlled = billingSearch !== undefined && typeof setBillingSearch === 'function';
+    const isSelectionControlled = selectedBillingDetailIds !== undefined && typeof setSelectedBillingDetailIds === 'function';
+
+    const effectiveSearch = isSearchControlled ? (billingSearch ?? '') : localSearch;
+    const effectiveSelectedIds = isSelectionControlled ? (selectedBillingDetailIds ?? []) : localSelectedIds;
+    const setEffectiveSearch = isSearchControlled ? (setBillingSearch as (value: string) => void) : setLocalSearch;
+    const setEffectiveSelectedIds = isSelectionControlled ? (setSelectedBillingDetailIds as (updater: (prev: string[]) => string[]) => void) : setLocalSelectedIds;
+
+    // When parent only provides initial search text / selections (without setters),
+    // sync them once into our local state so the popup stays editable.
+    React.useEffect(() => {
+        if (!isSearchControlled && typeof billingSearch === 'string') {
+            setLocalSearch(billingSearch);
+        }
+    }, [billingSearch, isSearchControlled]);
+
+    React.useEffect(() => {
+        if (!isSelectionControlled && Array.isArray(selectedBillingDetailIds)) {
+            setLocalSelectedIds(selectedBillingDetailIds);
+        }
+    }, [selectedBillingDetailIds, isSelectionControlled]);
 
     const computedFiltered = React.useMemo(() => {
         const term = effectiveSearch.trim().toLowerCase();
@@ -647,7 +664,10 @@ export default function AddBillingPopup({
                                     )}
                                     {computedFiltered.map((opt, idx) => {
                                         const checked = effectiveSelectedIds.includes(opt.id);
+                                        const groupName = (opt.billing_group_name || '').trim();
+                                        const checkboxDisabled = isFormDisabled;
                                         const toggle = (next: boolean) => {
+                                            if (checkboxDisabled) return;
                                             setEffectiveSelectedIds(prev => {
                                                 if (next) {
                                                     // If checking, remove from unchecked list if it was there
@@ -656,7 +676,6 @@ export default function AddBillingPopup({
                                                     return [...prev, opt.id];
                                                 } else {
                                                     // If unchecking, track Professional Fees items that user explicitly unchecked
-                                                    const groupName = (opt.billing_group_name || '').trim();
                                                     if (groupName === 'Professional Fees') {
                                                         uncheckedProfessionalFeesRef.current.add(opt.id);
                                                     }
@@ -684,7 +703,7 @@ export default function AddBillingPopup({
                                                         type="checkbox"
                                                         checked={checked}
                                                         onChange={(e) => toggle(e.target.checked)}
-                                                        disabled={isFormDisabled}
+                                                        disabled={checkboxDisabled}
                                                         style={{
                                                             cursor: isFormDisabled ? 'not-allowed' : 'pointer',
                                                             width: '18px',
