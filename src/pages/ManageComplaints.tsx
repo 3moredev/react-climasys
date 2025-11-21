@@ -5,6 +5,7 @@ import { CircularProgress } from "@mui/material";
 import { patientService } from "../services/patientService";
 import { doctorService, Doctor } from "../services/doctorService";
 import { useSession } from "../store/hooks/useSession";
+import { useAppSelector } from "../store/hooks";
 import AddComplaintPopup from "../components/AddComplaintPopup";
 
 // Complaint type definition
@@ -22,7 +23,10 @@ export default function ManageComplaints() {
   const [selectedDoctorId, setSelectedDoctorId] = useState<string>("");
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(10);
-  const { clinicId, doctorId } = useSession();
+  const { clinicId, doctorId, userId } = useSession();
+  
+  // Get login API response data from Redux auth state
+  const authState = useAppSelector((state) => state.auth);
   
   // Dynamic data from API
   const [complaints, setComplaints] = useState<Complaint[]>([]);
@@ -281,6 +285,26 @@ export default function ManageComplaints() {
     }
   }, [clinicId, selectedDoctorId, fetchComplaints, doctorId]);
 
+  // Console log login API response data
+  useEffect(() => {
+    const loginResponseData = {
+      loginStatus: authState.user ? 1 : 0,
+      userDetails: authState.userDetails,
+      shiftTimes: authState.shiftTimes,
+      availableRoles: authState.availableRoles,
+      systemParams: authState.systemParams,
+      licenseKey: authState.licenseKey,
+      userMasterDetails: null,
+      errorMessage: authState.error
+    };
+    console.log('Login API Response Data:', loginResponseData);
+    console.log('Available Roles:', loginResponseData.availableRoles);
+    console.log('User Details:', loginResponseData.userDetails);
+    console.log('Shift Times:', loginResponseData.shiftTimes);
+    console.log('System Params:', loginResponseData.systemParams);
+    console.log('License Key:', loginResponseData.licenseKey);
+  }, [authState]);
+
   return (
     <div className="container-fluid" style={{ fontFamily: "'Roboto', sans-serif", padding: "20px" }}>
       <style>{`
@@ -500,11 +524,6 @@ export default function ManageComplaints() {
           <Search className="search-icon" style={{ fontSize: '20px' }} />
         </div>
 
-        <button className="btn-primary-custom" onClick={handleSearch}>
-          <Search style={{ fontSize: '18px' }} />
-          Search
-        </button>
-
         <button className="btn-primary-custom " onClick={handleAddNew}>
           <label>Add New Complaint</label>
         </button>
@@ -513,38 +532,40 @@ export default function ManageComplaints() {
           <Refresh style={{ fontSize: '20px' }} />
         </button>
         
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '0.9rem', color: '#666', whiteSpace: 'nowrap' }}>For Provider</span>
-          <select
-            className="provider-dropdown"
-            value={selectedDoctorId}
-            onChange={async (e) => {
-              const doctorIdValue = e.target.value;
-              setSelectedDoctorId(doctorIdValue);
-              const doctor = doctors.find(d => d.id === doctorIdValue);
-              setSelectedProvider(doctor?.name || '');
-              setCurrentPage(1); // Reset to first page when doctor changes
-              
-              // Immediately fetch complaints for the selected doctor
-              if (clinicId && doctorIdValue) {
-                await fetchComplaints(doctorIdValue);
-              }
-            }}
-            disabled={loadingDoctors || doctors.length === 0}
-          >
-            {loadingDoctors ? (
-              <option value="">Loading doctors...</option>
-            ) : doctors.length === 0 ? (
-              <option value="">No doctors available</option>
-            ) : (
-              doctors.map((doctor) => (
-                <option key={doctor.id} value={doctor.id}>
-                  {doctor.name}
-                </option>
-              ))
-            )}
-          </select>
-        </div>
+        {userId !== 7 && (
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '0.9rem', color: '#666', whiteSpace: 'nowrap' }}>For Provider</span>
+            <select
+              className="provider-dropdown"
+              value={selectedDoctorId}
+              onChange={async (e) => {
+                const doctorIdValue = e.target.value;
+                setSelectedDoctorId(doctorIdValue);
+                const doctor = doctors.find(d => d.id === doctorIdValue);
+                setSelectedProvider(doctor?.name || '');
+                setCurrentPage(1); // Reset to first page when doctor changes
+                
+                // Immediately fetch complaints for the selected doctor
+                if (clinicId && doctorIdValue) {
+                  await fetchComplaints(doctorIdValue);
+                }
+              }}
+              disabled={loadingDoctors || doctors.length === 0}
+            >
+              {loadingDoctors ? (
+                <option value="">Loading doctors...</option>
+              ) : doctors.length === 0 ? (
+                <option value="">No doctors available</option>
+              ) : (
+                doctors.map((doctor) => (
+                  <option key={doctor.id} value={doctor.id}>
+                    {doctor.name}
+                  </option>
+                ))
+              )}
+            </select>
+          </div>
+        )}
       </div>
 
       {/* Error Message */}

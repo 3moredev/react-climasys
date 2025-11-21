@@ -36,6 +36,7 @@ import ManageAdvanceCollection from './pages/ManageAdvanceCollection'
 import ManageDischargeCard from './pages/ManageDischargeCard'
 import ManageComplaints from './pages/ManageComplaints'
 import ManageDiagnosis from './pages/ManageDiagnosis'
+import ManageLabs from './pages/ManageLabs'
 import ManageHospitalBill from './pages/ManageHospitalBill'
 // Import dev helpers for console access
 import './utils/devHelpers'
@@ -198,6 +199,13 @@ function App() {
               <AuthGuard>
                 <MainLayout>
                   <ManageDiagnosis />
+                </MainLayout>
+              </AuthGuard>
+            } />
+            <Route path="/manage-labs" element={
+              <AuthGuard>
+                <MainLayout>
+                  <ManageLabs />
                 </MainLayout>
               </AuthGuard>
             } />

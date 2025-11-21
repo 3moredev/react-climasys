@@ -24,6 +24,7 @@ export interface CreateDiagnosisRequest {
   diagnosisDescription?: string;
   diagnosis_description?: string;
   priority?: number;
+  priorityValue?: number;
   priority_value?: number;
   doctorId?: string;
   doctor_id?: string;
@@ -40,6 +41,7 @@ export interface CreateDiagnosisResponse {
   diagnosisDescription?: string;
   diagnosis_description?: string;
   priority?: number;
+  priorityValue?: number;
   priority_value?: number;
   message?: string;
   error?: string;

@@ -2,20 +2,19 @@ import React, { useState, useEffect, useCallback } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { Edit, Delete, Search, Refresh, Add } from "@mui/icons-material";
 import { CircularProgress } from "@mui/material";
-import { diagnosisService, DiagnosisApiResponse } from "../services/diagnosisService";
+import { labService, LabTestApiResponse } from "../services/labService";
 import { doctorService, Doctor } from "../services/doctorService";
 import { useSession } from "../store/hooks/useSession";
-import AddDiagnosisPopup from "../components/AddDiagnosisPopup";
+import AddLabTestPopup from "../components/AddLabTestPopup";
 
-// Diagnosis type definition
-type Diagnosis = {
+// Lab Test type definition
+type LabTest = {
   sr: number;
-  shortDescription: string;
-  diagnosisDescription: string;
+  labTestName: string;
   priority: number;
 };
 
-export default function ManageDiagnosis() {
+export default function ManageLabs() {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [selectedProvider, setSelectedProvider] = useState<string>("");
   const [selectedDoctorId, setSelectedDoctorId] = useState<string>("");
@@ -24,30 +23,29 @@ export default function ManageDiagnosis() {
   const { clinicId, doctorId, userId } = useSession();
   
   // Dynamic data from API
-  const [diagnoses, setDiagnoses] = useState<Diagnosis[]>([]);
+  const [labTests, setLabTests] = useState<LabTest[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [loadingDoctors, setLoadingDoctors] = useState<boolean>(false);
   const [showAddPopup, setShowAddPopup] = useState<boolean>(false);
-  const [editData, setEditData] = useState<Diagnosis | null>(null);
+  const [editData, setEditData] = useState<LabTest | null>(null);
 
-  // Filter diagnoses based on search term
-  const filteredDiagnoses = diagnoses.filter(diagnosis => {
+  // Filter lab tests based on search term
+  const filteredLabTests = labTests.filter(labTest => {
     if (!searchTerm.trim()) return true;
     const search = searchTerm.toLowerCase();
     return (
-      diagnosis.shortDescription.toLowerCase().includes(search) ||
-      diagnosis.diagnosisDescription.toLowerCase().includes(search) ||
-      diagnosis.priority.toString().includes(search)
+      labTest.labTestName.toLowerCase().includes(search) ||
+      labTest.priority.toString().includes(search)
     );
   });
 
   // Pagination calculations
-  const totalPages = Math.ceil(filteredDiagnoses.length / pageSize);
+  const totalPages = Math.ceil(filteredLabTests.length / pageSize);
   const startIndex = (currentPage - 1) * pageSize;
   const endIndex = startIndex + pageSize;
-  const currentDiagnoses = filteredDiagnoses.slice(startIndex, endIndex);
+  const currentLabTests = filteredLabTests.slice(startIndex, endIndex);
 
   const handleSearch = () => {
     setCurrentPage(1); // Reset to first page on search
@@ -72,9 +70,8 @@ export default function ManageDiagnosis() {
     setEditData(null);
   };
 
-  const handleSaveDiagnosis = async (data: {
-    shortDescription: string;
-    diagnosisDescription: string;
+  const handleSaveLabTest = async (data: {
+    labTestName: string;
     priority: string;
   }) => {
     if (!clinicId) {
@@ -93,16 +90,13 @@ export default function ManageDiagnosis() {
       setLoading(true);
       setError(null);
       
-      // Prepare diagnosis data for API
-      const priorityValue = data.priority ? parseInt(data.priority, 10) : 0;
-      const diagnosisData = {
-        shortDescription: data.shortDescription,
-        short_description: data.shortDescription,
-        diagnosisDescription: data.diagnosisDescription,
-        diagnosis_description: data.diagnosisDescription,
-        priority: priorityValue,
-        priorityValue: priorityValue,
-        priority_value: priorityValue,
+      // Prepare lab test data for API
+      const labTestData = {
+        labTestName: data.labTestName,
+        Lab_Test_Description: data.labTestName,
+        priority: data.priority ? parseInt(data.priority, 10) : 0,
+        priorityValue: data.priority ? parseInt(data.priority, 10) : 0,
+        Priority_Value: data.priority ? parseInt(data.priority, 10) : 0,
         doctorId: doctorIdToUse,
         doctor_id: doctorIdToUse,
         clinicId: clinicId,
@@ -110,52 +104,52 @@ export default function ManageDiagnosis() {
       };
       
       if (editData) {
-        // Update existing diagnosis
-        console.log('Updating diagnosis:', diagnosisData);
-        await diagnosisService.updateDiagnosis(diagnosisData);
-        console.log('Diagnosis updated successfully');
+        // Update existing lab test
+        console.log('Updating lab test:', labTestData);
+        await labService.updateLabTest(doctorIdToUse, clinicId, editData.labTestName, labTestData);
+        console.log('Lab test updated successfully');
       } else {
-        // Create new diagnosis
-        console.log('Creating diagnosis:', diagnosisData);
-        await diagnosisService.createDiagnosis(diagnosisData);
-        console.log('Diagnosis created successfully');
+        // Create new lab test
+        console.log('Creating lab test:', labTestData);
+        await labService.createLabTest(labTestData);
+        console.log('Lab test created successfully');
       }
       
       // Close popup and clear edit data
       setShowAddPopup(false);
       setEditData(null);
       
-      // Refresh diagnoses list
-      await fetchDiagnoses(doctorIdToUse);
+      // Refresh lab tests list
+      await fetchLabTests(doctorIdToUse);
     } catch (err: any) {
-      console.error('Error saving diagnosis:', err);
-      setError(err.message || (editData ? 'Failed to update diagnosis' : 'Failed to create diagnosis'));
+      console.error('Error saving lab test:', err);
+      setError(err.message || (editData ? 'Failed to update lab test' : 'Failed to create lab test'));
       // Keep popup open on error so user can retry
     } finally {
       setLoading(false);
     }
   };
 
-  const handleEdit = (diagnosis: Diagnosis) => {
-    setEditData(diagnosis);
+  const handleEdit = (labTest: LabTest) => {
+    setEditData(labTest);
     setShowAddPopup(true);
   };
 
-  const handleDelete = async (diagnosis: Diagnosis) => {
+  const handleDelete = async (labTest: LabTest) => {
     // Confirm deletion
-    if (!window.confirm(`Are you sure you want to delete the diagnosis "${diagnosis.shortDescription}"?`)) {
+    if (!window.confirm(`Are you sure you want to delete the lab test "${labTest.labTestName}"?`)) {
       return;
     }
 
     if (!clinicId) {
-      setError('Clinic ID is required to delete diagnosis');
+      setError('Clinic ID is required to delete lab test');
       return;
     }
 
     // Use selectedDoctorId if available, otherwise fall back to doctorId from session
     const doctorIdToUse = selectedDoctorId || doctorId;
     if (!doctorIdToUse) {
-      setError('Doctor ID is required to delete diagnosis');
+      setError('Doctor ID is required to delete lab test');
       return;
     }
 
@@ -163,17 +157,17 @@ export default function ManageDiagnosis() {
       setLoading(true);
       setError(null);
       
-      console.log('Deleting diagnosis:', diagnosis.shortDescription, 'for doctor:', doctorIdToUse, 'and clinic:', clinicId);
-      await diagnosisService.deleteDiagnosis(doctorIdToUse, clinicId, diagnosis.shortDescription);
+      console.log('Deleting lab test:', labTest.labTestName, 'for doctor:', doctorIdToUse, 'and clinic:', clinicId);
+      await labService.deleteLabTest(doctorIdToUse, clinicId, labTest.labTestName);
       
-      // Refresh the diagnoses list after successful deletion
-      await fetchDiagnoses(doctorIdToUse);
+      // Refresh the lab tests list after successful deletion
+      await fetchLabTests(doctorIdToUse);
       
       // Show success message (optional - you can remove this if you prefer)
-      console.log('Diagnosis deleted successfully');
+      console.log('Lab test deleted successfully');
     } catch (err: any) {
-      console.error('Error deleting diagnosis:', err);
-      setError(err.message || 'Failed to delete diagnosis');
+      console.error('Error deleting lab test:', err);
+      setError(err.message || 'Failed to delete lab test');
     } finally {
       setLoading(false);
     }
@@ -182,11 +176,11 @@ export default function ManageDiagnosis() {
   const handleRefresh = () => {
     setSearchTerm("");
     setCurrentPage(1);
-    fetchDiagnoses();
+    fetchLabTests();
   };
 
-  // Fetch diagnoses from API
-  const fetchDiagnoses = useCallback(async (doctorIdToFetch?: string) => {
+  // Fetch lab tests from API
+  const fetchLabTests = useCallback(async (doctorIdToFetch?: string) => {
     setLoading(true);
     setError(null);
 
@@ -194,28 +188,27 @@ export default function ManageDiagnosis() {
       // Use provided doctorId, then selectedDoctorId, then fall back to doctorId from session
       const doctorIdToUse = doctorIdToFetch || selectedDoctorId || doctorId;
       if (!doctorIdToUse) {
-        setError('Doctor ID is required to fetch diagnoses');
+        setError('Doctor ID is required to fetch lab tests');
         setLoading(false);
         return;
       }
       
-      console.log('Fetching diagnoses for doctor:', doctorIdToUse);
-      const response = await diagnosisService.getAllDiagnosesForDoctor(doctorIdToUse);
+      console.log('Fetching lab tests for doctor:', doctorIdToUse);
+      const response = await labService.getAllLabTestsForDoctor(doctorIdToUse);
       
-      // Map API response to Diagnosis type
-      const mappedDiagnoses: Diagnosis[] = response.map((item: DiagnosisApiResponse, index: number) => ({
+      // Map API response to LabTest type
+      const mappedLabTests: LabTest[] = response.map((item: LabTestApiResponse, index: number) => ({
         sr: index + 1,
-        shortDescription: item.shortDescription || '',
-        diagnosisDescription: item.diagnosisDescription || '',
-        priority: item.priorityValue || 0
+        labTestName: item.labTestName || item.Lab_Test_Description || '',
+        priority: item.priorityValue || item.Priority_Value || 0
       }));
 
-      setDiagnoses(mappedDiagnoses);
+      setLabTests(mappedLabTests);
       setCurrentPage(1); // Reset to first page when new data is loaded
     } catch (err: any) {
-      console.error('Error fetching diagnoses:', err);
-      setError(err.message || 'Failed to fetch diagnoses');
-      setDiagnoses([]); // Clear diagnoses on error
+      console.error('Error fetching lab tests:', err);
+      setError(err.message || 'Failed to fetch lab tests');
+      setLabTests([]); // Clear lab tests on error
     } finally {
       setLoading(false);
     }
@@ -267,24 +260,24 @@ export default function ManageDiagnosis() {
     }
   }, [clinicId, fetchDoctors]);
 
-  // Fetch diagnoses when component mounts or when selectedDoctorId changes
+  // Fetch lab tests when component mounts or when selectedDoctorId changes
   useEffect(() => {
     if (selectedDoctorId) {
-      fetchDiagnoses();
+      fetchLabTests();
     } else if (!selectedDoctorId && doctorId) {
       // If no doctor is selected but we have a session doctorId, use that
-      fetchDiagnoses();
+      fetchLabTests();
     }
-  }, [selectedDoctorId, fetchDiagnoses, doctorId]);
+  }, [selectedDoctorId, fetchLabTests, doctorId]);
 
   return (
     <div className="container-fluid" style={{ fontFamily: "'Roboto', sans-serif", padding: "20px" }}>
       <style>{`
-        .diagnosis-table {
+        .lab-tests-table {
           width: 100%;
           border-collapse: collapse;
         }
-        .diagnosis-table thead th {
+        .lab-tests-table thead th {
           background-color: rgb(0, 123, 255);
           color: #ffffff;
           padding: 12px;
@@ -293,18 +286,18 @@ export default function ManageDiagnosis() {
           font-size: 0.9rem;
           border: 1px solid #dee2e6;
         }
-        .diagnosis-table tbody td {
+        .lab-tests-table tbody td {
           padding: 12px;
           border: 1px solid #dee2e6;
           font-size: 0.9rem;
         }
-        .diagnosis-table tbody tr:nth-child(even) {
+        .lab-tests-table tbody tr:nth-child(even) {
           background-color: #f8f9fa;
         }
-        .diagnosis-table tbody tr:nth-child(odd) {
+        .lab-tests-table tbody tr:nth-child(odd) {
           background-color: #ffffff;
         }
-        .diagnosis-table tbody tr:hover {
+        .lab-tests-table tbody tr:hover {
           background-color: #e9ecef;
         }
         .action-icons {
@@ -476,7 +469,7 @@ export default function ManageDiagnosis() {
         color: '#212121',
         marginBottom: '24px'
       }}>
-        Manage Diagnosis
+        Manage Labs
       </h1>
 
       {/* Search and Action Section */}
@@ -484,7 +477,7 @@ export default function ManageDiagnosis() {
         <div className="search-input-wrapper">
           <input
             type="text"
-            placeholder="Enter Short Description, Diagnosis Description, Priority"
+            placeholder="Search Lab Test"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             onKeyPress={(e) => {
@@ -497,7 +490,7 @@ export default function ManageDiagnosis() {
         </div>
 
         <button className="btn-primary-custom " onClick={handleAddNew}>
-          <label>Add New Diagnosis</label>
+          <label>Add New Lab Test</label>
         </button>
 
         <button className="btn-icon" onClick={handleRefresh} title="Refresh">
@@ -517,9 +510,9 @@ export default function ManageDiagnosis() {
                 setSelectedProvider(doctor?.name || '');
                 setCurrentPage(1); // Reset to first page when doctor changes
                 
-                // Immediately fetch diagnoses for the selected doctor
+                // Immediately fetch lab tests for the selected doctor
                 if (doctorIdValue) {
-                  await fetchDiagnoses(doctorIdValue);
+                  await fetchLabTests(doctorIdValue);
                 }
               }}
               disabled={loadingDoctors || doctors.length === 0}
@@ -554,38 +547,36 @@ export default function ManageDiagnosis() {
         </div>
       )}
 
-      {/* Diagnoses Table */}
+      {/* Lab Tests Table */}
       <div className="table-responsive">
         {loading ? (
           <div style={{ textAlign: 'center', padding: '40px' }}>
             <CircularProgress style={{ color: 'rgb(0, 123, 255)' }} />
-            <p style={{ marginTop: '16px', color: '#666' }}>Loading diagnoses...</p>
+            <p style={{ marginTop: '16px', color: '#666' }}>Loading lab tests...</p>
           </div>
         ) : (
-          <table className="diagnosis-table">
+          <table className="lab-tests-table">
             <thead>
               <tr>
                 <th style={{ width: '5%' }}>Sr.</th>
-                <th style={{ width: '20%' }}>Short Description</th>
-                <th style={{ width: '40%' }}>Diagnosis Description</th>
+                <th style={{ width: '60%' }}>Lab Test Name</th>
                 <th style={{ width: '10%' }}>Priority</th>
                 <th style={{ width: '15%' }}>Action</th>
               </tr>
             </thead>
             <tbody>
-              {currentDiagnoses.length > 0 ? (
-                currentDiagnoses.map((diagnosis) => (
-                  <tr key={diagnosis.sr}>
-                    <td>{diagnosis.sr}</td>
-                    <td>{diagnosis.shortDescription}</td>
-                    <td>{diagnosis.diagnosisDescription}</td>
-                    <td>{diagnosis.priority}</td>
+              {currentLabTests.length > 0 ? (
+                currentLabTests.map((labTest) => (
+                  <tr key={labTest.sr}>
+                    <td>{labTest.sr}</td>
+                    <td>{labTest.labTestName}</td>
+                    <td>{labTest.priority}</td>
                     <td>
                       <div className="action-icons">
-                        <div title="Edit" onClick={() => handleEdit(diagnosis)}>
+                        <div title="Edit" onClick={() => handleEdit(labTest)}>
                           <Edit style={{ fontSize: '20px' }} />
                         </div>
-                        <div title="Delete" onClick={() => handleDelete(diagnosis)}>
+                        <div title="Delete" onClick={() => handleDelete(labTest)}>
                           <Delete style={{ fontSize: '20px' }} />
                         </div>
                       </div>
@@ -594,8 +585,8 @@ export default function ManageDiagnosis() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={5} style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
-                    {error ? 'Error loading diagnoses' : 'No diagnoses found'}
+                  <td colSpan={4} style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
+                    {error ? 'Error loading lab tests' : 'No lab tests found'}
                   </td>
                 </tr>
               )}
@@ -605,11 +596,11 @@ export default function ManageDiagnosis() {
       </div>
 
       {/* Pagination */}
-      {filteredDiagnoses.length > 0 && (
+      {filteredLabTests.length > 0 && (
         <div className="pagination-container">
           <div className="pagination-info">
             <span>
-              Showing {startIndex + 1} to {Math.min(endIndex, filteredDiagnoses.length)} of {filteredDiagnoses.length} diagnoses
+              Showing {startIndex + 1} to {Math.min(endIndex, filteredLabTests.length)} of {filteredLabTests.length} lab tests
             </span>
             <div className="page-size-selector">
               <span>Show:</span>
@@ -671,14 +662,13 @@ export default function ManageDiagnosis() {
         </div>
       )}
 
-      {/* Add Diagnosis Popup */}
-      <AddDiagnosisPopup
+      {/* Add Lab Test Popup */}
+      <AddLabTestPopup
         open={showAddPopup}
         onClose={handleCloseAddPopup}
-        onSave={handleSaveDiagnosis}
+        onSave={handleSaveLabTest}
         editData={editData ? {
-          shortDescription: editData.shortDescription,
-          diagnosisDescription: editData.diagnosisDescription,
+          labTestName: editData.labTestName,
           priority: editData.priority
         } : null}
       />
