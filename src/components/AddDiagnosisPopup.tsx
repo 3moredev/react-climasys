@@ -1,36 +1,73 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Close } from '@mui/icons-material';
 import { Snackbar } from '@mui/material';
 
 interface AddDiagnosisPopupProps {
     open: boolean;
     onClose: () => void;
-    onSave: (diagnosisDescription: string) => void;
+    onSave: (data: {
+        shortDescription: string;
+        diagnosisDescription: string;
+        priority: string;
+    }) => void;
+    editData?: {
+        shortDescription: string;
+        diagnosisDescription: string;
+        priority: number;
+    } | null;
 }
 
-const AddDiagnosisPopup: React.FC<AddDiagnosisPopupProps> = ({ open, onClose, onSave }) => {
+const AddDiagnosisPopup: React.FC<AddDiagnosisPopupProps> = ({ open, onClose, onSave, editData }) => {
+    const [shortDescription, setShortDescription] = useState('');
     const [diagnosisDescription, setDiagnosisDescription] = useState('');
+    const [priority, setPriority] = useState('');
     
     // Snackbar state management
     const [snackbarOpen, setSnackbarOpen] = useState(false);
     const [snackbarMessage, setSnackbarMessage] = useState('');
 
-    const handleSave = () => {
+    // Populate form when editData changes
+    useEffect(() => {
+        if (editData) {
+            setShortDescription(editData.shortDescription || '');
+            setDiagnosisDescription(editData.diagnosisDescription || '');
+            setPriority(editData.priority?.toString() || '');
+        } else {
+            // Reset form when not in edit mode
+            setShortDescription('');
+            setDiagnosisDescription('');
+            setPriority('');
+        }
+    }, [editData, open]);
+
+    const handleSubmit = () => {
+        if (!shortDescription.trim()) {
+            setSnackbarMessage('Short Description is required');
+            setSnackbarOpen(true);
+            return;
+        }
+        
         if (!diagnosisDescription.trim()) {
             setSnackbarMessage('Diagnosis Description is required');
             setSnackbarOpen(true);
             return;
         }
         
-        // Call the parent onSave callback with the diagnosis description
-        onSave(diagnosisDescription.trim());
+        // Call the parent onSave callback with all form data
+        onSave({
+            shortDescription: shortDescription.trim(),
+            diagnosisDescription: diagnosisDescription.trim(),
+            priority: priority.trim(),
+        });
         
         // Show success snackbar
-        setSnackbarMessage('Diagnosis added successfully!');
+        setSnackbarMessage(editData ? 'Diagnosis updated successfully!' : 'Diagnosis added successfully!');
         setSnackbarOpen(true);
         
         // Reset form
+        setShortDescription('');
         setDiagnosisDescription('');
+        setPriority('');
         
         // Close popup after showing success message
         setTimeout(() => {
@@ -39,8 +76,18 @@ const AddDiagnosisPopup: React.FC<AddDiagnosisPopupProps> = ({ open, onClose, on
     };
 
     const handleClose = () => {
+        setShortDescription('');
         setDiagnosisDescription('');
+        setPriority('');
         onClose();
+    };
+
+    const handleBack = () => {
+        handleClose();
+    };
+
+    const handleCancel = () => {
+        handleClose();
     };
 
     if (!open) return null;
@@ -92,7 +139,7 @@ const AddDiagnosisPopup: React.FC<AddDiagnosisPopupProps> = ({ open, onClose, on
                         alignItems: 'center'
                     }}>
                         <h3 style={{ margin: 0, color: '#000000', fontSize: '18px', fontWeight: 'bold' }}>
-                            Add Diagnosis
+                            {editData ? 'Edit Diagnosis' : 'Add Diagnosis'}
                         </h3>
                         <button
                             onClick={handleClose}
@@ -101,9 +148,9 @@ const AddDiagnosisPopup: React.FC<AddDiagnosisPopupProps> = ({ open, onClose, on
                                 border: 'none',
                                 cursor: 'pointer',
                                 padding: '5px',
-                                borderRadius: '8px',
+                                borderRadius: '50%',
                                 color: '#fff',
-                                backgroundColor: '#1976d2',
+                                backgroundColor: 'rgb(0, 123, 255)',
                                 width: '32px',
                                 height: '32px',
                                 display: 'flex',
@@ -112,10 +159,10 @@ const AddDiagnosisPopup: React.FC<AddDiagnosisPopupProps> = ({ open, onClose, on
                                 transition: 'background-color 0.2s'
                             }}
                             onMouseEnter={(e) => {
-                                e.currentTarget.style.backgroundColor = '#1565c0';
+                                e.currentTarget.style.backgroundColor = 'rgb(0, 100, 200)';
                             }}
                             onMouseLeave={(e) => {
-                                e.currentTarget.style.backgroundColor = '#1976d2';
+                                e.currentTarget.style.backgroundColor = 'rgb(0, 123, 255)';
                             }}
                         >
                             <Close fontSize="small" />
@@ -127,21 +174,68 @@ const AddDiagnosisPopup: React.FC<AddDiagnosisPopupProps> = ({ open, onClose, on
                 <div style={{ padding: '20px', flex: 1 }}>
                     <div style={{ marginBottom: '15px' }}>
                         <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                            Short Description *
+                        </label>
+                        <input
+                            type="text"
+                            placeholder="Diagnosis Short Description"
+                            value={shortDescription}
+                            onChange={(e) => setShortDescription(e.target.value)}
+                            disabled={!!editData}
+                            style={{
+                                width: '100%',
+                                padding: '8px 12px',
+                                border: '1px solid #ced4da',
+                                borderRadius: '4px',
+                                fontSize: '0.9rem',
+                                backgroundColor: editData ? '#e9ecef' : 'white',
+                                outline: 'none',
+                                boxSizing: 'border-box',
+                                cursor: editData ? 'not-allowed' : 'text'
+                            }}
+                        />
+                    </div>
+
+                    <div style={{ marginBottom: '15px' }}>
+                        <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
                             Diagnosis Description *
                         </label>
                         <input
                             type="text"
-                            placeholder="Enter diagnosis description"
+                            placeholder="Diagnosis Description"
                             value={diagnosisDescription}
                             onChange={(e) => setDiagnosisDescription(e.target.value)}
                             style={{
                                 width: '100%',
-                                padding: '6px 10px',
-                                border: '1px solid #ccc',
+                                padding: '8px 12px',
+                                border: '1px solid #ced4da',
                                 borderRadius: '4px',
-                                fontSize: '13px',
+                                fontSize: '0.9rem',
                                 backgroundColor: 'white',
-                                outline: 'none'
+                                outline: 'none',
+                                boxSizing: 'border-box'
+                            }}
+                        />
+                    </div>
+
+                    <div style={{ marginBottom: '15px' }}>
+                        <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                            Priority
+                        </label>
+                        <input
+                            type="text"
+                            placeholder="Priority"
+                            value={priority}
+                            onChange={(e) => setPriority(e.target.value)}
+                            style={{
+                                width: '100%',
+                                padding: '8px 12px',
+                                border: '1px solid #ced4da',
+                                borderRadius: '4px',
+                                fontSize: '0.9rem',
+                                backgroundColor: 'white',
+                                outline: 'none',
+                                boxSizing: 'border-box'
                             }}
                         />
                     </div>
@@ -150,7 +244,7 @@ const AddDiagnosisPopup: React.FC<AddDiagnosisPopupProps> = ({ open, onClose, on
                 {/* Popup Footer */}
                 <div style={{
                     background: 'transparent',
-                    padding: '0 20px 14px',
+                    padding: '0 20px 20px',
                     borderBottomLeftRadius: '8px',
                     borderBottomRightRadius: '8px',
                     display: 'flex',
@@ -158,26 +252,73 @@ const AddDiagnosisPopup: React.FC<AddDiagnosisPopupProps> = ({ open, onClose, on
                     gap: '8px'
                 }}>
                     <button
-                        onClick={handleSave}
+                        onClick={handleSubmit}
                         style={{
                             padding: '8px 16px',
-                            backgroundColor: '#1976d2',
+                            backgroundColor: 'rgb(0, 123, 255)',
                             color: 'white',
                             border: 'none',
                             borderRadius: '4px',
                             cursor: 'pointer',
-                            fontSize: '14px',
+                            fontSize: '0.9rem',
                             fontWeight: '500',
-                            transition: 'background-color 0.2s'
+                            transition: 'background-color 0.2s',
+                            whiteSpace: 'nowrap'
                         }}
                         onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = '#1565c0';
+                            e.currentTarget.style.backgroundColor = 'rgb(0, 100, 200)';
                         }}
                         onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = '#1976d2';
+                            e.currentTarget.style.backgroundColor = 'rgb(0, 123, 255)';
                         }}
                     >
-                        Save
+                        Submit
+                    </button>
+                    <button
+                        onClick={handleCancel}
+                        style={{
+                            padding: '8px 16px',
+                            backgroundColor: 'rgb(0, 123, 255)',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '0.9rem',
+                            fontWeight: '500',
+                            transition: 'background-color 0.2s',
+                            whiteSpace: 'nowrap'
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = 'rgb(0, 100, 200)';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'rgb(0, 123, 255)';
+                        }}
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={handleBack}
+                        style={{
+                            padding: '8px 16px',
+                            backgroundColor: 'rgb(0, 123, 255)',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '0.9rem',
+                            fontWeight: '500',
+                            transition: 'background-color 0.2s',
+                            whiteSpace: 'nowrap'
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = 'rgb(0, 100, 200)';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'rgb(0, 123, 255)';
+                        }}
+                    >
+                        Back
                     </button>
                 </div>
             </div>

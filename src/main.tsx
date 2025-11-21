@@ -34,6 +34,8 @@ import SimpleDashboardTest from './SimpleDashboardTest'
 import ManageAdmissionCard from './pages/ManageAdmissionCard'
 import ManageAdvanceCollection from './pages/ManageAdvanceCollection'
 import ManageDischargeCard from './pages/ManageDischargeCard'
+import ManageComplaints from './pages/ManageComplaints'
+import ManageDiagnosis from './pages/ManageDiagnosis'
 import ManageHospitalBill from './pages/ManageHospitalBill'
 // Import dev helpers for console access
 import './utils/devHelpers'
@@ -182,6 +184,20 @@ function App() {
               <AuthGuard>
                 <MainLayout>
                   <ManageHospitalBill />
+                </MainLayout>
+              </AuthGuard>
+            } />
+            <Route path="/manage-complaints" element={
+              <AuthGuard>
+                <MainLayout>
+                  <ManageComplaints />
+                </MainLayout>
+              </AuthGuard>
+            } />
+            <Route path="/manage-diagnosis" element={
+              <AuthGuard>
+                <MainLayout>
+                  <ManageDiagnosis />
                 </MainLayout>
               </AuthGuard>
             } />

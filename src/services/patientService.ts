@@ -221,7 +221,7 @@ export interface CreateComplaintRequest {
   short_description?: string;
   complaintDescription?: string;
   complaint_description?: string;
-  priority?: number;
+  priorityValue?: number;
   priority_value?: number;
   displayToOperator?: boolean;
   display_to_operator?: boolean | number;
@@ -239,7 +239,7 @@ export interface CreateComplaintResponse {
   short_description?: string;
   complaintDescription?: string;
   complaint_description?: string;
-  priority?: number;
+  priorityValue?: number;
   priority_value?: number;
   displayToOperator?: boolean;
   display_to_operator?: boolean | number;
@@ -248,6 +248,12 @@ export interface CreateComplaintResponse {
   success?: boolean;
   [key: string]: any;
 }
+
+// Update complaint request interface (same as create)
+export interface UpdateComplaintRequest extends CreateComplaintRequest {}
+
+// Update complaint response interface (same as create)
+export interface UpdateComplaintResponse extends CreateComplaintResponse {}
 
 // Quick registration request interface
 export interface QuickRegistrationRequest {
@@ -1546,6 +1552,64 @@ export const patientService = {
       }
       
       throw new Error(error.response?.data?.message || 'Failed to create complaint');
+    }
+  },
+
+  /**
+   * Update an existing complaint
+   * @param doctorId - Doctor ID
+   * @param clinicId - Clinic ID
+   * @param shortDescription - Short description of the complaint to update (used as identifier)
+   * @param complaint - Updated complaint data
+   * @returns Promise<UpdateComplaintResponse> - Updated complaint or error message
+   */
+  async updateComplaint(complaint: UpdateComplaintRequest): Promise<UpdateComplaintResponse> {
+    try {
+      console.log('Updating complaint:', complaint);
+            // Try common mount points
+      try {
+        const resp = await api.put<UpdateComplaintResponse>(
+          `/complaint-master`,complaint);
+        console.log('Update complaint response:', resp.data);
+        return resp.data;
+      } catch (e1: any) {
+        if (e1?.response?.status !== 404) throw e1;
+        // Fallback to alternative endpoint
+        try {
+          const resp = await api.put<UpdateComplaintResponse>(
+            `/complaint`, complaint);
+          console.log('Update complaint response (fallback):', resp.data);
+          return resp.data;
+        } catch (e2: any) {
+          if (e2?.response?.status !== 404) throw e2;
+          // Last fallback
+          const resp = await api.put<UpdateComplaintResponse>(
+            `/complaints`, complaint);
+          console.log('Update complaint response (fallback 2):', resp.data);
+          return resp.data;
+        }
+      }
+    } catch (error: any) {
+      console.error('Update complaint API Error:', error);
+      
+      if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
+        throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
+      }
+      
+      if (error.response?.status === 400) {
+        const msg = error.response?.data?.error || error.response?.data?.message || 'Invalid request parameters.';
+        throw new Error(msg);
+      } else if (error.response?.status === 404) {
+        throw new Error('Update complaint endpoint not found. Please confirm backend route.');
+      } else if (error.response?.status === 500) {
+        throw new Error('Server error occurred while updating complaint.');
+      }
+      
+      if (error.response?.data?.error) {
+        throw new Error(error.response.data.error);
+      }
+      
+      throw new Error(error.response?.data?.message || 'Failed to update complaint');
     }
   }
 };

@@ -2,21 +2,20 @@ import React, { useState, useEffect, useCallback } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { Edit, Delete, Search, Refresh, Add } from "@mui/icons-material";
 import { CircularProgress } from "@mui/material";
-import { patientService } from "../services/patientService";
+import { diagnosisService, DiagnosisApiResponse } from "../services/diagnosisService";
 import { doctorService, Doctor } from "../services/doctorService";
 import { useSession } from "../store/hooks/useSession";
-import AddComplaintPopup from "../components/AddComplaintPopup";
+import AddDiagnosisPopup from "../components/AddDiagnosisPopup";
 
-// Complaint type definition
-type Complaint = {
+// Diagnosis type definition
+type Diagnosis = {
   sr: number;
   shortDescription: string;
-  complaintDescription: string;
+  diagnosisDescription: string;
   priority: number;
-  displayToOperator: boolean;
 };
 
-export default function ManageComplaints() {
+export default function ManageDiagnosis() {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [selectedProvider, setSelectedProvider] = useState<string>("");
   const [selectedDoctorId, setSelectedDoctorId] = useState<string>("");
@@ -25,30 +24,30 @@ export default function ManageComplaints() {
   const { clinicId, doctorId } = useSession();
   
   // Dynamic data from API
-  const [complaints, setComplaints] = useState<Complaint[]>([]);
+  const [diagnoses, setDiagnoses] = useState<Diagnosis[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [loadingDoctors, setLoadingDoctors] = useState<boolean>(false);
   const [showAddPopup, setShowAddPopup] = useState<boolean>(false);
-  const [editData, setEditData] = useState<Complaint | null>(null);
+  const [editData, setEditData] = useState<Diagnosis | null>(null);
 
-  // Filter complaints based on search term
-  const filteredComplaints = complaints.filter(complaint => {
+  // Filter diagnoses based on search term
+  const filteredDiagnoses = diagnoses.filter(diagnosis => {
     if (!searchTerm.trim()) return true;
     const search = searchTerm.toLowerCase();
     return (
-      complaint.shortDescription.toLowerCase().includes(search) ||
-      complaint.complaintDescription.toLowerCase().includes(search) ||
-      complaint.priority.toString().includes(search)
+      diagnosis.shortDescription.toLowerCase().includes(search) ||
+      diagnosis.diagnosisDescription.toLowerCase().includes(search) ||
+      diagnosis.priority.toString().includes(search)
     );
   });
 
   // Pagination calculations
-  const totalPages = Math.ceil(filteredComplaints.length / pageSize);
+  const totalPages = Math.ceil(filteredDiagnoses.length / pageSize);
   const startIndex = (currentPage - 1) * pageSize;
   const endIndex = startIndex + pageSize;
-  const currentComplaints = filteredComplaints.slice(startIndex, endIndex);
+  const currentDiagnoses = filteredDiagnoses.slice(startIndex, endIndex);
 
   const handleSearch = () => {
     setCurrentPage(1); // Reset to first page on search
@@ -73,11 +72,10 @@ export default function ManageComplaints() {
     setEditData(null);
   };
 
-  const handleSaveComplaint = async (data: {
+  const handleSaveDiagnosis = async (data: {
     shortDescription: string;
-    complaintDescription: string;
+    diagnosisDescription: string;
     priority: string;
-    displayToOperator: boolean;
   }) => {
     if (!clinicId) {
       setError('Clinic ID is required');
@@ -95,17 +93,14 @@ export default function ManageComplaints() {
       setLoading(true);
       setError(null);
       
-      // Prepare complaint data for API
-      const complaintData = {
+      // Prepare diagnosis data for API
+      const diagnosisData = {
         shortDescription: data.shortDescription,
         short_description: data.shortDescription,
-        complaintDescription: data.complaintDescription,
-        complaint_description: data.complaintDescription,
+        diagnosisDescription: data.diagnosisDescription,
+        diagnosis_description: data.diagnosisDescription,
         priority: data.priority ? parseInt(data.priority, 10) : 0,
-        priorityValue: data.priority ? parseInt(data.priority, 10) : 0,
         priority_value: data.priority ? parseInt(data.priority, 10) : 0,
-        displayToOperator: data.displayToOperator,
-        display_to_operator: data.displayToOperator,
         doctorId: doctorIdToUse,
         doctor_id: doctorIdToUse,
         clinicId: clinicId,
@@ -113,52 +108,52 @@ export default function ManageComplaints() {
       };
       
       if (editData) {
-        // Update existing complaint
-        console.log('Updating complaint:', complaintData);
-        await patientService.updateComplaint(complaintData);
-        console.log('Complaint updated successfully');
+        // Update existing diagnosis
+        console.log('Updating diagnosis:', diagnosisData);
+        await diagnosisService.updateDiagnosis(diagnosisData);
+        console.log('Diagnosis updated successfully');
       } else {
-        // Create new complaint
-        console.log('Creating complaint:', complaintData);
-        await patientService.createComplaint(complaintData);
-        console.log('Complaint created successfully');
+        // Create new diagnosis
+        console.log('Creating diagnosis:', diagnosisData);
+        await diagnosisService.createDiagnosis(diagnosisData);
+        console.log('Diagnosis created successfully');
       }
       
       // Close popup and clear edit data
       setShowAddPopup(false);
       setEditData(null);
       
-      // Refresh complaints list
-      await fetchComplaints(doctorIdToUse);
+      // Refresh diagnoses list
+      await fetchDiagnoses(doctorIdToUse);
     } catch (err: any) {
-      console.error('Error saving complaint:', err);
-      setError(err.message || (editData ? 'Failed to update complaint' : 'Failed to create complaint'));
+      console.error('Error saving diagnosis:', err);
+      setError(err.message || (editData ? 'Failed to update diagnosis' : 'Failed to create diagnosis'));
       // Keep popup open on error so user can retry
     } finally {
       setLoading(false);
     }
   };
 
-  const handleEdit = (complaint: Complaint) => {
-    setEditData(complaint);
+  const handleEdit = (diagnosis: Diagnosis) => {
+    setEditData(diagnosis);
     setShowAddPopup(true);
   };
 
-  const handleDelete = async (complaint: Complaint) => {
+  const handleDelete = async (diagnosis: Diagnosis) => {
     // Confirm deletion
-    if (!window.confirm(`Are you sure you want to delete the complaint "${complaint.shortDescription}"?`)) {
+    if (!window.confirm(`Are you sure you want to delete the diagnosis "${diagnosis.shortDescription}"?`)) {
       return;
     }
 
     if (!clinicId) {
-      setError('Clinic ID is required to delete complaint');
+      setError('Clinic ID is required to delete diagnosis');
       return;
     }
 
     // Use selectedDoctorId if available, otherwise fall back to doctorId from session
     const doctorIdToUse = selectedDoctorId || doctorId;
     if (!doctorIdToUse) {
-      setError('Doctor ID is required to delete complaint');
+      setError('Doctor ID is required to delete diagnosis');
       return;
     }
 
@@ -166,17 +161,17 @@ export default function ManageComplaints() {
       setLoading(true);
       setError(null);
       
-      console.log('Deleting complaint:', complaint.shortDescription, 'for doctor:', doctorIdToUse, 'and clinic:', clinicId);
-      await patientService.deleteComplaint(doctorIdToUse, clinicId, complaint.shortDescription);
+      console.log('Deleting diagnosis:', diagnosis.shortDescription, 'for doctor:', doctorIdToUse, 'and clinic:', clinicId);
+      await diagnosisService.deleteDiagnosis(doctorIdToUse, clinicId, diagnosis.shortDescription);
       
-      // Refresh the complaints list after successful deletion
-      await fetchComplaints(doctorIdToUse);
+      // Refresh the diagnoses list after successful deletion
+      await fetchDiagnoses(doctorIdToUse);
       
       // Show success message (optional - you can remove this if you prefer)
-      console.log('Complaint deleted successfully');
+      console.log('Diagnosis deleted successfully');
     } catch (err: any) {
-      console.error('Error deleting complaint:', err);
-      setError(err.message || 'Failed to delete complaint');
+      console.error('Error deleting diagnosis:', err);
+      setError(err.message || 'Failed to delete diagnosis');
     } finally {
       setLoading(false);
     }
@@ -185,45 +180,44 @@ export default function ManageComplaints() {
   const handleRefresh = () => {
     setSearchTerm("");
     setCurrentPage(1);
-    fetchComplaints();
+    fetchDiagnoses();
   };
 
-  // Fetch complaints from API
-  const fetchComplaints = useCallback(async (doctorIdToFetch?: string) => {
-    if (!clinicId) {
-      console.warn('ClinicId not available, skipping complaints fetch');
-      setError('Clinic ID is required to fetch complaints');
-      return;
-    }
-
+  // Fetch diagnoses from API
+  const fetchDiagnoses = useCallback(async (doctorIdToFetch?: string) => {
     setLoading(true);
     setError(null);
 
     try {
       // Use provided doctorId, then selectedDoctorId, then fall back to doctorId from session
       const doctorIdToUse = doctorIdToFetch || selectedDoctorId || doctorId;
-      console.log('Fetching complaints for clinic:', clinicId, 'doctor:', doctorIdToUse);
-      const response = await patientService.getAllComplaintsForDoctor(clinicId, doctorIdToUse);
+      if (!doctorIdToUse) {
+        setError('Doctor ID is required to fetch diagnoses');
+        setLoading(false);
+        return;
+      }
       
-      // Map API response to Complaint type
-      const mappedComplaints: Complaint[] = response.map((item: any, index: number) => ({
+      console.log('Fetching diagnoses for doctor:', doctorIdToUse);
+      const response = await diagnosisService.getAllDiagnosesForDoctor(doctorIdToUse);
+      
+      // Map API response to Diagnosis type
+      const mappedDiagnoses: Diagnosis[] = response.map((item: DiagnosisApiResponse, index: number) => ({
         sr: index + 1,
-        shortDescription: item.short_description || item.shortDescription || item.complaint_short_description || '',
-        complaintDescription: item.complaint_description || item.complaintDescription || item.description || '',
-        priority: item.priority || item.priority_value || item.priorityValue || 0,
-        displayToOperator: item.display_to_operator === true || item.displayToOperator === true || item.display_to_operator === 1 || item.displayToOperator === 1
+        shortDescription: item.shortDescription || '',
+        diagnosisDescription: item.diagnosisDescription || '',
+        priority: item.priorityValue || 0
       }));
 
-      setComplaints(mappedComplaints);
+      setDiagnoses(mappedDiagnoses);
       setCurrentPage(1); // Reset to first page when new data is loaded
     } catch (err: any) {
-      console.error('Error fetching complaints:', err);
-      setError(err.message || 'Failed to fetch complaints');
-      setComplaints([]); // Clear complaints on error
+      console.error('Error fetching diagnoses:', err);
+      setError(err.message || 'Failed to fetch diagnoses');
+      setDiagnoses([]); // Clear diagnoses on error
     } finally {
       setLoading(false);
     }
-  }, [clinicId, selectedDoctorId, doctorId]);
+  }, [selectedDoctorId, doctorId]);
 
   // Fetch doctors for the clinic
   const fetchDoctors = useCallback(async () => {
@@ -271,24 +265,24 @@ export default function ManageComplaints() {
     }
   }, [clinicId, fetchDoctors]);
 
-  // Fetch complaints when component mounts or when clinicId/selectedDoctorId changes
+  // Fetch diagnoses when component mounts or when selectedDoctorId changes
   useEffect(() => {
-    if (clinicId && selectedDoctorId) {
-      fetchComplaints();
-    } else if (clinicId && !selectedDoctorId && doctorId) {
+    if (selectedDoctorId) {
+      fetchDiagnoses();
+    } else if (!selectedDoctorId && doctorId) {
       // If no doctor is selected but we have a session doctorId, use that
-      fetchComplaints();
+      fetchDiagnoses();
     }
-  }, [clinicId, selectedDoctorId, fetchComplaints, doctorId]);
+  }, [selectedDoctorId, fetchDiagnoses, doctorId]);
 
   return (
     <div className="container-fluid" style={{ fontFamily: "'Roboto', sans-serif", padding: "20px" }}>
       <style>{`
-        .complaints-table {
+        .diagnosis-table {
           width: 100%;
           border-collapse: collapse;
         }
-        .complaints-table thead th {
+        .diagnosis-table thead th {
           background-color: rgb(0, 123, 255);
           color: #ffffff;
           padding: 12px;
@@ -297,18 +291,18 @@ export default function ManageComplaints() {
           font-size: 0.9rem;
           border: 1px solid #dee2e6;
         }
-        .complaints-table tbody td {
+        .diagnosis-table tbody td {
           padding: 12px;
           border: 1px solid #dee2e6;
           font-size: 0.9rem;
         }
-        .complaints-table tbody tr:nth-child(even) {
+        .diagnosis-table tbody tr:nth-child(even) {
           background-color: #f8f9fa;
         }
-        .complaints-table tbody tr:nth-child(odd) {
+        .diagnosis-table tbody tr:nth-child(odd) {
           background-color: #ffffff;
         }
-        .complaints-table tbody tr:hover {
+        .diagnosis-table tbody tr:hover {
           background-color: #e9ecef;
         }
         .action-icons {
@@ -480,7 +474,7 @@ export default function ManageComplaints() {
         color: '#212121',
         marginBottom: '24px'
       }}>
-        Manage Complaints
+        Manage Diagnosis
       </h1>
 
       {/* Search and Action Section */}
@@ -488,7 +482,7 @@ export default function ManageComplaints() {
         <div className="search-input-wrapper">
           <input
             type="text"
-            placeholder="Enter Short Description / Complaint Description / Priority"
+            placeholder="Enter Short Description, Diagnosis Description, Priority"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             onKeyPress={(e) => {
@@ -506,7 +500,7 @@ export default function ManageComplaints() {
         </button>
 
         <button className="btn-primary-custom " onClick={handleAddNew}>
-          <label>Add New Complaint</label>
+          <label>Add New Diagnosis</label>
         </button>
 
         <button className="btn-icon" onClick={handleRefresh} title="Refresh">
@@ -525,9 +519,9 @@ export default function ManageComplaints() {
               setSelectedProvider(doctor?.name || '');
               setCurrentPage(1); // Reset to first page when doctor changes
               
-              // Immediately fetch complaints for the selected doctor
-              if (clinicId && doctorIdValue) {
-                await fetchComplaints(doctorIdValue);
+              // Immediately fetch diagnoses for the selected doctor
+              if (doctorIdValue) {
+                await fetchDiagnoses(doctorIdValue);
               }
             }}
             disabled={loadingDoctors || doctors.length === 0}
@@ -561,47 +555,38 @@ export default function ManageComplaints() {
         </div>
       )}
 
-      {/* Complaints Table */}
+      {/* Diagnoses Table */}
       <div className="table-responsive">
         {loading ? (
           <div style={{ textAlign: 'center', padding: '40px' }}>
             <CircularProgress style={{ color: 'rgb(0, 123, 255)' }} />
-            <p style={{ marginTop: '16px', color: '#666' }}>Loading complaints...</p>
+            <p style={{ marginTop: '16px', color: '#666' }}>Loading diagnoses...</p>
           </div>
         ) : (
-          <table className="complaints-table">
+          <table className="diagnosis-table">
             <thead>
               <tr>
                 <th style={{ width: '5%' }}>Sr.</th>
                 <th style={{ width: '20%' }}>Short Description</th>
-                <th style={{ width: '30%' }}>Complaint Description</th>
+                <th style={{ width: '40%' }}>Diagnosis Description</th>
                 <th style={{ width: '10%' }}>Priority</th>
-                <th style={{ width: '20%' }}>Display to Operator</th>
                 <th style={{ width: '15%' }}>Action</th>
               </tr>
             </thead>
             <tbody>
-              {currentComplaints.length > 0 ? (
-                currentComplaints.map((complaint) => (
-                  <tr key={complaint.sr}>
-                    <td>{complaint.sr}</td>
-                    <td>{complaint.shortDescription}</td>
-                    <td>{complaint.complaintDescription}</td>
-                    <td>{complaint.priority}</td>
-                    <td>
-                      <input
-                        type="checkbox"
-                        checked={complaint.displayToOperator}
-                        readOnly
-                        style={{ cursor: 'pointer' }}
-                      />
-                    </td>
+              {currentDiagnoses.length > 0 ? (
+                currentDiagnoses.map((diagnosis) => (
+                  <tr key={diagnosis.sr}>
+                    <td>{diagnosis.sr}</td>
+                    <td>{diagnosis.shortDescription}</td>
+                    <td>{diagnosis.diagnosisDescription}</td>
+                    <td>{diagnosis.priority}</td>
                     <td>
                       <div className="action-icons">
-                        <div title="Edit" onClick={() => handleEdit(complaint)}>
+                        <div title="Edit" onClick={() => handleEdit(diagnosis)}>
                           <Edit style={{ fontSize: '20px' }} />
                         </div>
-                        <div title="Delete" onClick={() => handleDelete(complaint)}>
+                        <div title="Delete" onClick={() => handleDelete(diagnosis)}>
                           <Delete style={{ fontSize: '20px' }} />
                         </div>
                       </div>
@@ -610,8 +595,8 @@ export default function ManageComplaints() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
-                    {error ? 'Error loading complaints' : 'No complaints found'}
+                  <td colSpan={5} style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
+                    {error ? 'Error loading diagnoses' : 'No diagnoses found'}
                   </td>
                 </tr>
               )}
@@ -621,11 +606,11 @@ export default function ManageComplaints() {
       </div>
 
       {/* Pagination */}
-      {filteredComplaints.length > 0 && (
+      {filteredDiagnoses.length > 0 && (
         <div className="pagination-container">
           <div className="pagination-info">
             <span>
-              Showing {startIndex + 1} to {Math.min(endIndex, filteredComplaints.length)} of {filteredComplaints.length} complaints
+              Showing {startIndex + 1} to {Math.min(endIndex, filteredDiagnoses.length)} of {filteredDiagnoses.length} diagnoses
             </span>
             <div className="page-size-selector">
               <span>Show:</span>
@@ -687,16 +672,15 @@ export default function ManageComplaints() {
         </div>
       )}
 
-      {/* Add Complaint Popup */}
-      <AddComplaintPopup
+      {/* Add Diagnosis Popup */}
+      <AddDiagnosisPopup
         open={showAddPopup}
         onClose={handleCloseAddPopup}
-        onSave={handleSaveComplaint}
+        onSave={handleSaveDiagnosis}
         editData={editData ? {
           shortDescription: editData.shortDescription,
-          complaintDescription: editData.complaintDescription,
-          priority: editData.priority,
-          displayToOperator: editData.displayToOperator
+          diagnosisDescription: editData.diagnosisDescription,
+          priority: editData.priority
         } : null}
       />
     </div>

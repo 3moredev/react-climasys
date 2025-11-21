@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Close } from '@mui/icons-material';
 import { Snackbar } from '@mui/material';
 
@@ -11,9 +11,15 @@ interface AddComplaintPopupProps {
         priority: string;
         displayToOperator: boolean;
     }) => void;
+    editData?: {
+        shortDescription: string;
+        complaintDescription: string;
+        priority: number;
+        displayToOperator: boolean;
+    } | null;
 }
 
-const AddComplaintPopup: React.FC<AddComplaintPopupProps> = ({ open, onClose, onSave }) => {
+const AddComplaintPopup: React.FC<AddComplaintPopupProps> = ({ open, onClose, onSave, editData }) => {
     const [shortDescription, setShortDescription] = useState('');
     const [complaintDescription, setComplaintDescription] = useState('');
     const [priority, setPriority] = useState('');
@@ -22,6 +28,22 @@ const AddComplaintPopup: React.FC<AddComplaintPopupProps> = ({ open, onClose, on
     // Snackbar state management
     const [snackbarOpen, setSnackbarOpen] = useState(false);
     const [snackbarMessage, setSnackbarMessage] = useState('');
+
+    // Populate form when editData changes
+    useEffect(() => {
+        if (editData) {
+            setShortDescription(editData.shortDescription || '');
+            setComplaintDescription(editData.complaintDescription || '');
+            setPriority(editData.priority?.toString() || '');
+            setDisplayToOperator(editData.displayToOperator || false);
+        } else {
+            // Reset form when not in edit mode
+            setShortDescription('');
+            setComplaintDescription('');
+            setPriority('');
+            setDisplayToOperator(false);
+        }
+    }, [editData, open]);
 
     const handleSubmit = () => {
         if (!shortDescription.trim()) {
@@ -45,7 +67,7 @@ const AddComplaintPopup: React.FC<AddComplaintPopupProps> = ({ open, onClose, on
         });
         
         // Show success snackbar
-        setSnackbarMessage('Complaint added successfully!');
+        setSnackbarMessage(editData ? 'Complaint updated successfully!' : 'Complaint added successfully!');
         setSnackbarOpen(true);
         
         // Reset form
@@ -125,7 +147,7 @@ const AddComplaintPopup: React.FC<AddComplaintPopupProps> = ({ open, onClose, on
                         alignItems: 'center'
                     }}>
                         <h3 style={{ margin: 0, color: '#000000', fontSize: '18px', fontWeight: 'bold' }}>
-                            Add Complaint
+                            {editData ? 'Edit Complaint' : 'Add Complaint'}
                         </h3>
                         <button
                             onClick={handleClose}
@@ -167,15 +189,17 @@ const AddComplaintPopup: React.FC<AddComplaintPopupProps> = ({ open, onClose, on
                             placeholder="Complaint Short Description"
                             value={shortDescription}
                             onChange={(e) => setShortDescription(e.target.value)}
+                            disabled={!!editData}
                             style={{
                                 width: '100%',
                                 padding: '8px 12px',
                                 border: '1px solid #ced4da',
                                 borderRadius: '4px',
                                 fontSize: '0.9rem',
-                                backgroundColor: 'white',
+                                backgroundColor: editData ? '#e9ecef' : 'white',
                                 outline: 'none',
-                                boxSizing: 'border-box'
+                                boxSizing: 'border-box',
+                                cursor: editData ? 'not-allowed' : 'text'
                             }}
                         />
                     </div>
