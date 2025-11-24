@@ -15,6 +15,9 @@ import {
   Tabs,
   Tab,
   Tooltip,
+  Paper,
+  Popper,
+  MenuList,
 } from '@mui/material'
 import GlobalWrapper from './GlobalWrapper'
 import {
@@ -180,8 +183,16 @@ export default function MainLayout({ children }: MainLayoutProps) {
     setTabMenu({ index, anchor: event.currentTarget as HTMLElement })
   }
 
-  const closeTabMenu = () => setTabMenu(null)
-  const closeSubMenus = () => { setSubMenuL2(null); setSubMenuL3(null) }
+const closeTabMenu = () => setTabMenu(null)
+const closeSubMenus = () => { setSubMenuL2(null); setSubMenuL3(null) }
+
+const handleSubItemClick = (path?: string) => {
+  if (!path) return
+  console.log('[MainLayout] Navigating to', path)
+  closeSubMenus()
+  closeTabMenu()
+  navigate(path)
+}
 
   const handleLogout = async () => {
     try {
@@ -392,8 +403,16 @@ export default function MainLayout({ children }: MainLayoutProps) {
                           setSubMenuL3(null)
                         }
                       }}
-                      onClick={() => { if (item.path) { handleNavigation(item.path); closeSubMenus(); closeTabMenu(); } }}
-                      sx={{ pl: 1, pr: 2, minWidth: 240, display: 'flex', justifyContent: 'space-between', gap: 1 }}
+                      onClick={() => handleSubItemClick(item.path)}
+                      sx={{
+                        pl: 1,
+                        pr: 2,
+                        minWidth: 240,
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        gap: 1,
+                        textDecoration: 'none',
+                      }}
                     >
                       {item.label}
                       {hasChildren ? <KeyboardArrowRight fontSize="small" /> : null}
@@ -403,57 +422,73 @@ export default function MainLayout({ children }: MainLayoutProps) {
               </Menu>
 
               {/* Level 2 submenu */}
-              <Menu
+              <Popper
+                open={Boolean(subMenuL2?.anchor)}
                 anchorEl={subMenuL2?.anchor ?? null}
-                open={Boolean(subMenuL2)}
-                onClose={() => setSubMenuL2(null)}
-                keepMounted
-                anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-                transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-                MenuListProps={{ onMouseLeave: () => setSubMenuL2(null) }}
+                placement="right-start"
+                modifiers={[{ name: 'offset', options: { offset: [0, -4] } }]}
+                sx={{ zIndex: theme.zIndex.modal + 1 }}
               >
-                {subMenuL2?.items.map((item) => {
-                  const hasChildren = Boolean((item as any).children && (item as any).children!.length)
-                  return (
-                    <MenuItem
-                      key={item.label}
-                      onMouseEnter={(e) => {
-                        if (hasChildren) {
-                          setSubMenuL3({ anchor: e.currentTarget as HTMLElement, items: (item as any).children! })
-                        } else {
-                          setSubMenuL3(null)
-                        }
-                      }}
-                      onClick={() => { if (item.path) { handleNavigation(item.path); closeSubMenus(); closeTabMenu(); } }}
-                      sx={{ minWidth: 260, display: 'flex', justifyContent: 'space-between', gap: 1 }}
-                    >
-                      {item.label}
-                      {hasChildren ? <KeyboardArrowRight fontSize="small" /> : null}
-                    </MenuItem>
-                  )
-                })}
-              </Menu>
+                <Paper
+                  elevation={4}
+                  onMouseLeave={() => { setSubMenuL2(null); setSubMenuL3(null) }}
+                >
+                  <MenuList autoFocusItem={false} dense>
+                    {subMenuL2?.items.map((item) => {
+                      const hasChildren = Boolean((item as any).children && (item as any).children!.length)
+                      return (
+                        <MenuItem
+                          key={item.label}
+                          onMouseEnter={(e) => {
+                            if (hasChildren) {
+                              setSubMenuL3({
+                                anchor: e.currentTarget as HTMLElement,
+                                items: (item as any).children!,
+                              })
+                            } else {
+                              setSubMenuL3(null)
+                            }
+                          }}
+                          onClick={() => handleSubItemClick(item.path)}
+                          sx={{
+                            minWidth: 240,
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            gap: 1,
+                          }}
+                        >
+                          {item.label}
+                          {hasChildren ? <KeyboardArrowRight fontSize="small" /> : null}
+                        </MenuItem>
+                      )
+                    })}
+                  </MenuList>
+                </Paper>
+              </Popper>
 
               {/* Level 3 submenu */}
-              <Menu
+              <Popper
+                open={Boolean(subMenuL3?.anchor)}
                 anchorEl={subMenuL3?.anchor ?? null}
-                open={Boolean(subMenuL3)}
-                onClose={() => setSubMenuL3(null)}
-                keepMounted
-                anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-                transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-                MenuListProps={{ onMouseLeave: () => setSubMenuL3(null) }}
+                placement="right-start"
+                modifiers={[{ name: 'offset', options: { offset: [0, -4] } }]}
+                sx={{ zIndex: theme.zIndex.modal + 2 }}
               >
-                {subMenuL3?.items.map((item) => (
-                  <MenuItem
-                    key={item.label}
-                    onClick={() => { if (item.path) { handleNavigation(item.path); closeSubMenus(); closeTabMenu(); } }}
-                    sx={{ minWidth: 280 }}
-                  >
-                    {item.label}
-                  </MenuItem>
-                ))}
-              </Menu>
+                <Paper elevation={4} onMouseLeave={() => setSubMenuL3(null)}>
+                  <MenuList autoFocusItem={false} dense>
+                    {subMenuL3?.items.map((item) => (
+                      <MenuItem
+                        key={item.label}
+                        disabled={!item.path}
+                        onClick={() => handleSubItemClick(item.path)}
+                        sx={{ minWidth: 220 }}
+                      >
+                        {item.label}
+                      </MenuItem>
+                    ))}
+                  </MenuList>
+                </Paper>
+              </Popper>
             </Box>
 
             {/* Date and User Menu */}
