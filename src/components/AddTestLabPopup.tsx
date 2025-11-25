@@ -1,37 +1,77 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Close, Delete } from '@mui/icons-material';
 import { Snackbar } from '@mui/material';
+import { labService } from '../services/labService';
+import { labParameterService } from '../services/labParameterService';
+import { useSession } from '../store/hooks/useSession';
 
 interface AddTestLabPopupProps {
     open: boolean;
     onClose: () => void;
     onSave: (testLabData: TestLabData) => void;
+    editData?: {
+        labTestName: string;
+        priority: number | string;
+        parameters?: LabTestRow[];
+    } | null;
+    clinicId?: string;
+    doctorId?: string;
 }
 
 interface TestLabData {
     labTestName: string;
     priority: string;
-    selectedDiagnosis: string;
+    parameterName: string;
     labTestRows: LabTestRow[];
 }
 
 interface LabTestRow {
     id: string;
-    labTest: string;
+    parameterName: string;
     comment: string;
 }
 
-const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave }) => {
+const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave, editData, clinicId, doctorId }) => {
     const [testLabData, setTestLabData] = useState<TestLabData>({
         labTestName: '',
         priority: '',
-        selectedDiagnosis: '',
+        parameterName: '',
         labTestRows: []
     });
     
     // Snackbar state management
     const [snackbarOpen, setSnackbarOpen] = useState(false);
     const [snackbarMessage, setSnackbarMessage] = useState('');
+    const [isSaving, setIsSaving] = useState(false);
+    
+    // Get session data if not provided
+    const session = useSession();
+    const finalClinicId = clinicId || session.clinicId;
+    const finalDoctorId = doctorId || session.doctorId;
+
+    // Load edit data when popup opens or editData changes
+    useEffect(() => {
+        if (open && editData) {
+            setTestLabData({
+                labTestName: editData.labTestName || '',
+                priority: String(editData.priority || ''),
+                parameterName: '',
+                labTestRows: editData.parameters ? editData.parameters.map(param => ({
+                    id: param.id || `param_${Date.now()}_${Math.random()}`,
+                    parameterName: param.parameterName || '',
+                    comment: param.comment || ''
+                })) : []
+            });
+        } else if (open && !editData) {
+            // Reset form when opening for new entry
+            setTestLabData({
+                labTestName: '',
+                priority: '',
+                parameterName: '',
+                labTestRows: []
+            });
+        }
+    }, [open, editData]);
 
     const handleInputChange = (field: keyof TestLabData, value: string) => {
         setTestLabData(prev => ({
@@ -40,19 +80,34 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
         }));
     };
 
-    const handleAddLabTest = () => {
-        if (!testLabData.selectedDiagnosis.trim()) return;
+    const handleAddParameter = () => {
+        if (!testLabData.parameterName.trim()) {
+            setSnackbarMessage('Please enter a parameter name');
+            setSnackbarOpen(true);
+            return;
+        }
         
-        const newLabTest: LabTestRow = {
-            id: `lab_${Date.now()}`,
-            labTest: testLabData.selectedDiagnosis,
+        // Check if parameter already exists
+        const exists = testLabData.labTestRows.some(
+            row => row.parameterName.toLowerCase() === testLabData.parameterName.toLowerCase().trim()
+        );
+        
+        if (exists) {
+            setSnackbarMessage('This parameter already exists');
+            setSnackbarOpen(true);
+            return;
+        }
+        
+        const newParameter: LabTestRow = {
+            id: `param_${Date.now()}`,
+            parameterName: testLabData.parameterName.trim(),
             comment: ''
         };
         
         setTestLabData(prev => ({
             ...prev,
-            labTestRows: [...prev.labTestRows, newLabTest],
-            selectedDiagnosis: ''
+            labTestRows: [...prev.labTestRows, newParameter],
+            parameterName: ''
         }));
     };
 
@@ -72,7 +127,7 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
         }));
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         // Validate required fields
         if (!testLabData.labTestName.trim()) {
             setSnackbarMessage('Lab Test Name is required');
@@ -85,32 +140,180 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
             return;
         }
         
-        // Call the parent onSave callback with the test lab data
-        onSave(testLabData);
+        if (!finalClinicId) {
+            setSnackbarMessage('Clinic ID is required');
+            setSnackbarOpen(true);
+            return;
+        }
         
-        // Show success snackbar
-        setSnackbarMessage('Test Lab added successfully!');
-        setSnackbarOpen(true);
+        if (!finalDoctorId) {
+            setSnackbarMessage('Doctor ID is required');
+            setSnackbarOpen(true);
+            return;
+        }
         
-        // Reset form
-        setTestLabData({
-            labTestName: '',
-            priority: '',
-            selectedDiagnosis: '',
-            labTestRows: []
-        });
+        setIsSaving(true);
         
-        // Close popup after showing success message
-        setTimeout(() => {
-            onClose();
-        }, 1500);
+        try {
+            // If editing, use the parent handler
+            if (editData) {
+                onSave(testLabData);
+                setSnackbarMessage('Lab Test updated successfully!');
+                setSnackbarOpen(true);
+                setTimeout(() => {
+                    onClose();
+                }, 1500);
+                return;
+            }
+            
+            // For new lab test: Check if exists first, then create if needed
+            console.log('Step 1: Checking if lab test already exists...');
+            
+            // First, check if the lab test already exists
+            const existingLabTests = await labService.getAllLabTestsForDoctor(finalDoctorId!, finalClinicId!);
+            const existingLabTest = existingLabTests.find(
+                (test: any) => {
+                    const testName = test.labTestName || test.Lab_Test_Description || test.lab_test_description || '';
+                    const searchName = testLabData.labTestName.trim();
+                    return testName.toLowerCase().trim() === searchName.toLowerCase();
+                }
+            );
+            
+            let labTestId: number | string | undefined;
+            
+            if (existingLabTest) {
+                // Lab test already exists, use its ID
+                console.log('Lab test already exists, using existing ID:', existingLabTest.ID || existingLabTest.id);
+                labTestId = existingLabTest.ID || existingLabTest.id;
+            } else {
+                // Lab test doesn't exist, create it
+                console.log('Step 1: Creating new lab test...');
+                
+                // Prepare lab test data
+                const labTestData = {
+                    labTestName: testLabData.labTestName,
+                    Lab_Test_Description: testLabData.labTestName,
+                    labTestDescription: testLabData.labTestName,
+                    priority: testLabData.priority ? parseInt(testLabData.priority, 10) : 0,
+                    priorityValue: testLabData.priority ? parseInt(testLabData.priority, 10) : 0,
+                    Priority_Value: testLabData.priority ? parseInt(testLabData.priority, 10) : 0,
+                    doctorId: finalDoctorId,
+                    doctor_id: finalDoctorId,
+                    clinicId: finalClinicId,
+                    clinic_id: finalClinicId
+                };
+                
+                try {
+                    // Try to create the lab test
+                    const createResponse = await labService.createLabTest(labTestData);
+                    console.log('Lab test created successfully:', createResponse);
+                    
+                    // Get the lab test ID from response
+                    labTestId = createResponse.id || createResponse.ID || createResponse.data?.id || createResponse.data?.ID;
+                    
+                    if (!labTestId) {
+                        // Fetch the lab test to get its ID
+                        console.log('Fetching lab test to get ID...');
+                        const labTests = await labService.getAllLabTestsForDoctor(finalDoctorId!, finalClinicId!);
+                        const createdLabTest = labTests.find(
+                            (test: any) => {
+                                const testName = test.labTestName || test.Lab_Test_Description || test.lab_test_description || '';
+                                const searchName = testLabData.labTestName.trim();
+                                return testName.toLowerCase().trim() === searchName.toLowerCase();
+                            }
+                        );
+                        labTestId = createdLabTest?.ID || createdLabTest?.id;
+                    }
+                } catch (createError: any) {
+                    // If creation fails with "already exists" error, fetch the existing one
+                    if (createError.message && (
+                        createError.message.toLowerCase().includes('already exists') ||
+                        createError.message.toLowerCase().includes('duplicate') ||
+                        createError.response?.data?.error?.toLowerCase().includes('already exists')
+                    )) {
+                        console.log('Lab test already exists (from error), fetching existing lab test...');
+                        const labTests = await labService.getAllLabTestsForDoctor(finalDoctorId!, finalClinicId!);
+                        const foundLabTest = labTests.find(
+                            (test: any) => {
+                                const testName = test.labTestName || test.Lab_Test_Description || test.lab_test_description || '';
+                                const searchName = testLabData.labTestName.trim();
+                                return testName.toLowerCase().trim() === searchName.toLowerCase();
+                            }
+                        );
+                        labTestId = foundLabTest?.ID || foundLabTest?.id;
+                        
+                        if (!labTestId) {
+                            throw new Error('Lab test already exists but could not find its ID. Please refresh and try again.');
+                        }
+                    } else {
+                        // Re-throw other errors
+                        throw createError;
+                    }
+                }
+            }
+            
+            if (!labTestId) {
+                throw new Error('Lab test ID not found. Cannot create parameters.');
+            }
+            
+            console.log('Step 2: Creating parameters with lab test ID:', labTestId);
+            
+            // Step 3: Create parameters if they exist using createLabTestParameterByDoctorClinicAndTestId
+            if (testLabData.labTestRows && testLabData.labTestRows.length > 0) {
+                console.log(`Creating ${testLabData.labTestRows.length} parameters...`);
+                
+                // Create each parameter individually using the new API method
+                for (const row of testLabData.labTestRows) {
+                    try {
+                        await labParameterService.createLabTestParameterByDoctorClinicAndTestId(
+                            finalDoctorId!,
+                            finalClinicId!,
+                            Number(labTestId),
+                            row.parameterName
+                        );
+                        console.log(`Parameter "${row.parameterName}" created successfully`);
+                    } catch (paramError: any) {
+                        console.error(`Error creating parameter "${row.parameterName}":`, paramError);
+                        // Continue with other parameters even if one fails
+                        // You can optionally throw here if you want to stop on first error
+                    }
+                }
+                console.log('All parameters created successfully');
+            }
+            
+            // Call the parent onSave callback for any additional handling
+            onSave(testLabData);
+            
+            // Show success snackbar
+            setSnackbarMessage('Lab Test and parameters created successfully!');
+            setSnackbarOpen(true);
+            
+            // Reset form
+            setTestLabData({
+                labTestName: '',
+                priority: '',
+                parameterName: '',
+                labTestRows: []
+            });
+            
+            // Close popup after showing success message
+            setTimeout(() => {
+                onClose();
+            }, 1500);
+        } catch (error: any) {
+            console.error('Error saving lab test:', error);
+            setSnackbarMessage(error.message || 'Failed to create lab test');
+            setSnackbarOpen(true);
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const handleClose = () => {
         setTestLabData({
             labTestName: '',
             priority: '',
-            selectedDiagnosis: '',
+            parameterName: '',
             labTestRows: []
         });
         onClose();
@@ -165,7 +368,7 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
                         alignItems: 'center'
                     }}>
                         <h3 style={{ margin: 0, color: '#000000', fontSize: '18px', fontWeight: 'bold' }}>
-                            Add Test Lab
+                            Add Lab Test
                         </h3>
                         <button
                             onClick={handleClose}
@@ -201,7 +404,7 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
                     {/* Lab Test Name - Full Width */}
                     <div style={{ marginBottom: '15px' }}>
                         <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                            Lab Test name *
+                            Lab Test Name*
                         </label>
                         <input
                             type="text"
@@ -242,32 +445,36 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
                         />
                     </div>
 
-                    {/* Lab Test Selection */}
+                    {/* Parameter Name Selection */}
                     <div style={{ marginBottom: '15px' }}>
                         <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                            Lab Test
+                            Parameter Name
                         </label>
                         <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-                            <select
-                                value={testLabData.selectedDiagnosis}
-                                onChange={(e) => handleInputChange('selectedDiagnosis', e.target.value)}
+                            <input
+                                type="text"
+                                placeholder="Parameter Name"
+                                value={testLabData.parameterName}
+                                onChange={(e) => handleInputChange('parameterName', e.target.value)}
+                                onKeyPress={(e) => {
+                                    if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        handleAddParameter();
+                                    }
+                                }}
                                 style={{
                                     flex: 1,
                                     padding: '6px 10px',
                                     border: '1px solid #ccc',
                                     borderRadius: '4px',
-                                    fontSize: '13px'
+                                    fontSize: '13px',
+                                    backgroundColor: 'white',
+                                    outline: 'none'
                                 }}
-                            >
-                                <option value="">Select Lab Test</option>
-                                <option value="HT">HT</option>
-                                <option value="DM">DM</option>
-                                <option value="Common Cold">Common Cold</option>
-                                <option value="Fever">Fever</option>
-                            </select>
+                            />
                             <button
                                 type="button"
-                                onClick={handleAddLabTest}
+                                onClick={handleAddParameter}
                                 style={{
                                     backgroundColor: '#1976d2',
                                     color: 'white',
@@ -275,39 +482,51 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
                                     padding: '6px 12px',
                                     borderRadius: '4px',
                                     cursor: 'pointer',
-                                    fontSize: '12px'
+                                    fontSize: '12px',
+                                    fontWeight: '500',
+                                    whiteSpace: 'nowrap',
+                                    transition: 'background-color 0.2s'
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.backgroundColor = '#1565c0';
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.backgroundColor = '#1976d2';
                                 }}
                             >
-                                ADD
+                                Add Parameter
                             </button>
                         </div>
                     </div>
 
-                    {/* Lab Test Table */}
-                    {testLabData.labTestRows.length > 0 && (
-                        <div style={{ border: '1px solid #ccc', borderRadius: '4px', overflow: 'hidden', marginBottom: '15px' }}>
-                            <div style={{ 
-                                display: 'grid', 
-                                gridTemplateColumns: '60px 1fr 80px' as const, 
-                                backgroundColor: '#1976d2', 
-                                color: 'white',
-                                fontWeight: 'bold',
-                                fontSize: '11px'
-                            }}>
-                                <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Sr.</div>
-                                <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Parameter Name</div>
-                                <div style={{ padding: '6px' }}>Action</div>
-                            </div>
-                            {testLabData.labTestRows.map((row, index) => (
+                    {/* Parameters Table - Always visible */}
+                    <div style={{ border: '1px solid #ccc', borderRadius: '4px', overflow: 'hidden', marginBottom: '15px' }}>
+                        {/* Table Header */}
+                        <div style={{ 
+                            display: 'grid', 
+                            gridTemplateColumns: '60px 1fr 80px' as const, 
+                            backgroundColor: '#1976d2', 
+                            color: 'white',
+                            fontWeight: 'bold',
+                            fontSize: '12px'
+                        }}>
+                            <div style={{ padding: '8px', borderRight: '1px solid rgba(255,255,255,0.2)', textAlign: 'center' }}>Sr.</div>
+                            <div style={{ padding: '8px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Parameter Name</div>
+                            <div style={{ padding: '8px', textAlign: 'center' }}>Action</div>
+                        </div>
+                        
+                        {/* Table Body */}
+                        {testLabData.labTestRows.length > 0 ? (
+                            testLabData.labTestRows.map((row, index) => (
                                 <div key={row.id} style={{ 
                                     display: 'grid', 
                                     gridTemplateColumns: '60px 1fr 80px' as const,
                                     backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white',
-                                    borderBottom: '1px solid #e0e0e0'
+                                    borderBottom: index < testLabData.labTestRows.length - 1 ? '1px solid #e0e0e0' : 'none'
                                 }}>
-                                    <div style={{ padding: '6px', borderRight: '1px solid #e0e0e0', fontSize: '12px' }}>{index + 1}</div>
-                                    <div style={{ padding: '6px', borderRight: '1px solid #e0e0e0', fontSize: '12px' }}>{row.labTest}</div>
-                                    <div style={{ padding: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <div style={{ padding: '8px', borderRight: '1px solid #e0e0e0', fontSize: '12px', textAlign: 'center' }}>{index + 1}</div>
+                                    <div style={{ padding: '8px', borderRight: '1px solid #e0e0e0', fontSize: '12px' }}>{row.parameterName}</div>
+                                    <div style={{ padding: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                         <div
                                             onClick={() => handleRemoveLabTest(row.id)}
                                             title="Remove"
@@ -318,19 +537,36 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
                                                 width: '24px',
                                                 height: '24px',
                                                 cursor: 'pointer',
-                                                color: '#000000',
-                                                transition: 'color 0.2s'
+                                                color: '#666',
+                                                transition: 'color 0.2s',
+                                                borderRadius: '4px'
                                             }}
-                                            onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.color = '#EF5350'; }}
-                                            onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.color = '#000000'; }}
+                                            onMouseEnter={(e) => { 
+                                                (e.currentTarget as HTMLDivElement).style.color = '#EF5350';
+                                                (e.currentTarget as HTMLDivElement).style.backgroundColor = '#ffebee';
+                                            }}
+                                            onMouseLeave={(e) => { 
+                                                (e.currentTarget as HTMLDivElement).style.color = '#666';
+                                                (e.currentTarget as HTMLDivElement).style.backgroundColor = 'transparent';
+                                            }}
                                         >
                                             <Delete fontSize="small" />
                                         </div>
                                     </div>
                                 </div>
-                            ))}
-                        </div>
-                    )}
+                            ))
+                        ) : (
+                            <div style={{ 
+                                padding: '20px', 
+                                textAlign: 'center', 
+                                color: '#999', 
+                                fontSize: '12px',
+                                backgroundColor: 'white'
+                            }}>
+                                No parameters added yet
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 {/* Popup Footer */}
@@ -345,25 +581,75 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
                 }}>
                     <button
                         onClick={handleSave}
+                        disabled={isSaving}
                         style={{
                             padding: '8px 16px',
-                            backgroundColor: '#1976d2',
+                            backgroundColor: isSaving ? '#ccc' : '#1976d2',
                             color: 'white',
                             border: 'none',
+                            borderRadius: '4px',
+                            cursor: isSaving ? 'not-allowed' : 'pointer',
+                            fontSize: '14px',
+                            fontWeight: '500',
+                            transition: 'background-color 0.2s',
+                            opacity: isSaving ? 0.7 : 1
+                        }}
+                        onMouseEnter={(e) => {
+                            if (!isSaving) {
+                                e.currentTarget.style.backgroundColor = '#1565c0';
+                            }
+                        }}
+                        onMouseLeave={(e) => {
+                            if (!isSaving) {
+                                e.currentTarget.style.backgroundColor = '#1976d2';
+                            }
+                        }}
+                    >
+                        {isSaving ? 'Saving...' : 'Submit'}
+                    </button>
+                    <button
+                        onClick={handleClose}
+                        style={{
+                            padding: '8px 16px',
+                            backgroundColor: 'white',
+                            color: '#1976d2',
+                            border: '1px solid #1976d2',
                             borderRadius: '4px',
                             cursor: 'pointer',
                             fontSize: '14px',
                             fontWeight: '500',
-                            transition: 'background-color 0.2s'
+                            transition: 'all 0.2s'
                         }}
                         onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = '#1565c0';
+                            e.currentTarget.style.backgroundColor = '#f5f5f5';
                         }}
                         onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = '#1976d2';
+                            e.currentTarget.style.backgroundColor = 'white';
                         }}
                     >
-                        Save
+                        Cancel
+                    </button>
+                    <button
+                        onClick={handleClose}
+                        style={{
+                            padding: '8px 16px',
+                            backgroundColor: 'white',
+                            color: '#1976d2',
+                            border: '1px solid #1976d2',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '14px',
+                            fontWeight: '500',
+                            transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = '#f5f5f5';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'white';
+                        }}
+                    >
+                        Back
                     </button>
                 </div>
             </div>

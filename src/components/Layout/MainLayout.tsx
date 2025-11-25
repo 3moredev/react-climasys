@@ -91,9 +91,9 @@ const subMenus: Record<string, Array<SubMenuItem>> = {
   'OPD Master': [
     { label: 'Treatment Master', children: [
       { label: 'Manage Complaints ', path: '/manage-complaints' },
-      { label: 'Manage Diagnosis', path: '/settings?t=sub-category' },
+      { label: 'Manage Diagnosis', path: '/manage-diagnosis' },
       { label: 'Manage Procedure', path: '/settings?t=sub-category' },
-      { label: 'Manage Labs', path: '/settings?t=sub-category' },
+      { label: 'Manage Labs', path: '//manage-labs' },
       { label: 'Manage Medicines', path: '/settings?t=sub-category' },
     ], },
     { label: 'Prescription Master', children: [

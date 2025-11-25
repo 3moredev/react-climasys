@@ -3,15 +3,23 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import { Edit, Delete, Search, Refresh, Add } from "@mui/icons-material";
 import { CircularProgress } from "@mui/material";
 import { labService, LabTestApiResponse } from "../services/labService";
+import { labParameterService } from "../services/labParameterService";
 import { doctorService, Doctor } from "../services/doctorService";
 import { useSession } from "../store/hooks/useSession";
-import AddLabTestPopup from "../components/AddLabTestPopup";
+import AddTestLabPopup, { TestLabData } from "../components/AddTestLabPopup";
 
 // Lab Test type definition
 type LabTest = {
   sr: number;
   labTestName: string;
   priority: number;
+  id?: number | string;
+  ID?: number | string;
+  parameters?: Array<{
+    id: string;
+    parameterName: string;
+    comment: string;
+  }>;
 };
 
 export default function ManageLabs() {
@@ -70,10 +78,7 @@ export default function ManageLabs() {
     setEditData(null);
   };
 
-  const handleSaveLabTest = async (data: {
-    labTestName: string;
-    priority: string;
-  }) => {
+  const handleSaveLabTest = async (data: TestLabData) => {
     if (!clinicId) {
       setError('Clinic ID is required');
       return;
@@ -94,6 +99,7 @@ export default function ManageLabs() {
       const labTestData = {
         labTestName: data.labTestName,
         Lab_Test_Description: data.labTestName,
+        labTestDescription: data.labTestName, // Required field for new endpoint
         priority: data.priority ? parseInt(data.priority, 10) : 0,
         priorityValue: data.priority ? parseInt(data.priority, 10) : 0,
         Priority_Value: data.priority ? parseInt(data.priority, 10) : 0,
@@ -105,14 +111,209 @@ export default function ManageLabs() {
       
       if (editData) {
         // Update existing lab test
-        console.log('Updating lab test:', labTestData);
-        await labService.updateLabTest(doctorIdToUse, clinicId, editData.labTestName, labTestData);
+        // Prepare update data with ID, doctorId, and clinicId (required for update)
+        const updateData = {
+          ...labTestData,
+          ID: editData.ID || editData.id,
+          id: editData.ID || editData.id,
+          doctorId: doctorIdToUse,
+          doctor_id: doctorIdToUse,
+          clinicId: clinicId,
+          clinic_id: clinicId
+        };
+        
+        console.log('Updating lab test:', updateData);
+        await labService.updateLabTest(updateData);
         console.log('Lab test updated successfully');
+        
+        // Handle parameter updates
+        if (data.labTestRows && data.labTestRows.length > 0) {
+          try {
+            // First, get the lab test to find its ID
+            const labTests = await labService.getAllLabTestsForDoctor(doctorIdToUse, clinicId);
+            const updatedLabTest = labTests.find(
+              (test: LabTestApiResponse) => 
+                test.labTestName === data.labTestName || 
+                test.Lab_Test_Description === data.labTestName
+            );
+            
+            if (updatedLabTest && updatedLabTest.ID) {
+              // Get existing parameters
+              const existingParamsResponse = await labParameterService.getLabTestParametersByDoctorClinicAndTestId(
+                doctorIdToUse,
+                clinicId,
+                Number(updatedLabTest.ID)
+              );
+              
+              let existingParams: any[] = [];
+              if (existingParamsResponse.success) {
+                // Handle the actual API response structure: { success: true, labTestParameters: [...] }
+                const paramsData = existingParamsResponse.labTestParameters || 
+                                 existingParamsResponse.data?.labTestParameters ||
+                                 (Array.isArray(existingParamsResponse.data) ? existingParamsResponse.data : []) ||
+                                 existingParamsResponse.parameters || 
+                                 existingParamsResponse.data?.parameters ||
+                                 existingParamsResponse.data?.data ||
+                                 [];
+                existingParams = paramsData;
+              }
+              
+              // Delete parameters that are no longer in the list
+              const newParamNames = data.labTestRows.map(row => row.parameterName.toLowerCase());
+              for (const existingParam of existingParams) {
+                const paramName = (existingParam.Parameter_Name || existingParam.parameterName || existingParam.parameter_name || '').toLowerCase();
+                const paramId = existingParam.ID || existingParam.id;
+                if (!newParamNames.includes(paramName) && paramId) {
+                  try {
+                    await labParameterService.deleteLabTestParameter(Number(paramId));
+                    console.log('Deleted parameter:', paramName);
+                  } catch (delError: any) {
+                    console.error('Error deleting parameter:', delError);
+                  }
+                }
+              }
+              
+              // Create or update parameters
+              for (const row of data.labTestRows) {
+                const existingParam = existingParams.find(
+                  (p: any) => 
+                    (p.Parameter_Name || p.parameterName || p.parameter_name || '').toLowerCase() === row.parameterName.toLowerCase()
+                );
+                
+                const paramData = {
+                  doctorId: doctorIdToUse,
+                  doctor_id: doctorIdToUse,
+                  clinicId: clinicId,
+                  clinic_id: clinicId,
+                  labTestId: Number(updatedLabTest.ID),
+                  lab_test_id: Number(updatedLabTest.ID),
+                  parameterName: row.parameterName,
+                  parameter_name: row.parameterName
+                };
+                
+                const paramId = existingParam?.ID || existingParam?.id;
+                if (existingParam && paramId) {
+                  // Update existing parameter
+                  try {
+                    await labParameterService.updateLabTestParameter(Number(paramId), paramData);
+                    console.log('Updated parameter:', row.parameterName);
+                  } catch (updateError: any) {
+                    console.error('Error updating parameter:', updateError);
+                  }
+                } else {
+                  // Create new parameter
+                  try {
+                    await labParameterService.createLabTestParameter(paramData);
+                    console.log('Created parameter:', row.parameterName);
+                  } catch (createError: any) {
+                    console.error('Error creating parameter:', createError);
+                  }
+                }
+              }
+              
+              console.log('Parameters updated successfully');
+            }
+          } catch (paramError: any) {
+            console.error('Error updating parameters:', paramError);
+            // Don't fail the entire operation if parameter update fails
+            setError('Lab test updated but failed to update some parameters: ' + paramError.message);
+          }
+        } else {
+          // If no parameters in the list, delete all existing parameters
+          try {
+            const labTests = await labService.getAllLabTestsForDoctor(doctorIdToUse, clinicId);
+            const updatedLabTest = labTests.find(
+              (test: LabTestApiResponse) => 
+                test.labTestName === data.labTestName || 
+                test.Lab_Test_Description === data.labTestName
+            );
+            
+            if (updatedLabTest && updatedLabTest.ID) {
+              const existingParamsResponse = await labParameterService.getLabTestParametersByDoctorClinicAndTestId(
+                doctorIdToUse,
+                clinicId,
+                Number(updatedLabTest.ID)
+              );
+              
+              if (existingParamsResponse.success) {
+                // Handle the actual API response structure: { success: true, labTestParameters: [...] }
+                const paramsData = existingParamsResponse.labTestParameters || 
+                                 existingParamsResponse.data?.labTestParameters ||
+                                 (Array.isArray(existingParamsResponse.data) ? existingParamsResponse.data : []) ||
+                                 existingParamsResponse.parameters || 
+                                 existingParamsResponse.data?.parameters ||
+                                 existingParamsResponse.data?.data ||
+                                 [];
+                
+                for (const param of paramsData) {
+                  const paramId = param.ID || param.id;
+                  if (paramId) {
+                    try {
+                      await labParameterService.deleteLabTestParameter(Number(paramId));
+                    } catch (delError: any) {
+                      console.error('Error deleting parameter:', delError);
+                    }
+                  }
+                }
+              }
+            }
+          } catch (paramError: any) {
+            console.error('Error deleting parameters:', paramError);
+          }
+        }
       } else {
         // Create new lab test
         console.log('Creating lab test:', labTestData);
-        await labService.createLabTest(labTestData);
-        console.log('Lab test created successfully');
+        const createResponse = await labService.createLabTest(labTestData);
+        console.log('Lab test created successfully:', createResponse);
+        
+        // Create parameters if labTestRows exist
+        if (data.labTestRows && data.labTestRows.length > 0) {
+          console.log('Creating parameters:', data.labTestRows);
+          
+          // Get the lab test ID from the response or fetch it
+          // For now, we'll need to get the lab test ID to create parameters
+          // This might require fetching the lab test by name or using the ID from createResponse
+          try {
+            // First, try to get the lab test to find its ID
+            const labTests = await labService.getAllLabTestsForDoctor(doctorIdToUse, clinicId);
+            const createdLabTest = labTests.find(
+              (test: LabTestApiResponse) => 
+                test.labTestName === data.labTestName || 
+                test.Lab_Test_Description === data.labTestName
+            );
+            
+            if (createdLabTest && createdLabTest.ID) {
+              // Create parameters using the lab test ID
+              const parameterRequests = data.labTestRows.map((row) => ({
+                doctorId: doctorIdToUse,
+                doctor_id: doctorIdToUse,
+                clinicId: clinicId,
+                clinic_id: clinicId,
+                labTestId: Number(createdLabTest.ID),
+                lab_test_id: Number(createdLabTest.ID),
+                parameterName: row.parameterName,
+                parameter_name: row.parameterName
+              }));
+              
+              // Create parameters in batch if possible, otherwise one by one
+              try {
+                await labParameterService.createLabTestParametersBatch(parameterRequests);
+                console.log('Parameters created successfully');
+              } catch (paramError: any) {
+                console.error('Error creating parameters:', paramError);
+                // Don't fail the entire operation if parameter creation fails
+                setError('Lab test created but failed to create some parameters: ' + paramError.message);
+              }
+            } else {
+              console.warn('Could not find created lab test to create parameters. Lab test ID not available.');
+            }
+          } catch (paramError: any) {
+            console.error('Error fetching lab test for parameter creation:', paramError);
+            // Don't fail the entire operation if parameter creation fails
+            setError('Lab test created but failed to create parameters: ' + paramError.message);
+          }
+        }
       }
       
       // Close popup and clear edit data
@@ -130,14 +331,78 @@ export default function ManageLabs() {
     }
   };
 
-  const handleEdit = (labTest: LabTest) => {
-    setEditData(labTest);
-    setShowAddPopup(true);
+  const handleEdit = async (labTest: LabTest) => {
+    if (!clinicId) {
+      setError('Clinic ID is required to edit lab test');
+      return;
+    }
+
+    // Use selectedDoctorId if available, otherwise fall back to doctorId from session
+    const doctorIdToUse = selectedDoctorId || doctorId;
+    if (!doctorIdToUse) {
+      setError('Doctor ID is required to edit lab test');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Fetch parameters for this lab test
+      let parameters: any[] = [];
+      try {
+        const paramsResponse = await labParameterService.getLabTestParametersByDoctorClinicAndTest(
+          doctorIdToUse,
+          clinicId,
+          labTest.labTestName
+        );
+        
+        console.log('Parameters response:', paramsResponse);
+        
+        // Extract parameters from response - handle the actual API response structure
+        // Response structure: { success: true, labTestParameters: [...], clinicId, doctorId, labTestDescription, totalCount }
+        if (paramsResponse.success) {
+          // The response structure is: { success: true, labTestParameters: [...], ... }
+          const paramsData = paramsResponse.labTestParameters || 
+                           paramsResponse.data?.labTestParameters ||
+                           (Array.isArray(paramsResponse.data) ? paramsResponse.data : []) ||
+                           paramsResponse.parameters || 
+                           paramsResponse.data?.parameters ||
+                           paramsResponse.data?.data ||
+                           [];
+          
+          parameters = paramsData.map((param: any, index: number) => ({
+            id: `param_${param.ID || param.id || index}`,
+            parameterName: param.Parameter_Name || param.parameterName || param.parameter_name || '',
+            comment: param.comment || param.Comment || '',
+            parameterId: param.ID || param.id,
+            labTestId: param.Lab_Test_ID || param.Lab_Test_Master_ID || param.labTestId || param.lab_test_id
+          }));
+          
+          console.log('Mapped parameters:', parameters);
+        }
+      } catch (paramError: any) {
+        console.warn('Could not fetch parameters for lab test:', paramError);
+        // Continue with edit even if parameters can't be fetched
+      }
+
+      // Set edit data with parameters
+      setEditData({
+        ...labTest,
+        parameters: parameters
+      });
+      setShowAddPopup(true);
+    } catch (err: any) {
+      console.error('Error preparing edit data:', err);
+      setError(err.message || 'Failed to load lab test data for editing');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleDelete = async (labTest: LabTest) => {
     // Confirm deletion
-    if (!window.confirm(`Are you sure you want to delete the lab test "${labTest.labTestName}"?`)) {
+    if (!window.confirm(`Are you sure you want to delete the lab test "${labTest.labTestName}"? This will also delete all associated parameters.`)) {
       return;
     }
 
@@ -157,14 +422,113 @@ export default function ManageLabs() {
       setLoading(true);
       setError(null);
       
-      console.log('Deleting lab test:', labTest.labTestName, 'for doctor:', doctorIdToUse, 'and clinic:', clinicId);
-      await labService.deleteLabTest(doctorIdToUse, clinicId, labTest.labTestName);
+      // Get the lab test ID - if not available, fetch it
+      let labTestId = labTest.ID || labTest.id;
+      
+      if (!labTestId) {
+        console.log('Lab test ID not in local state, fetching from API...');
+        // Fetch the lab test to get its ID
+        const labTests = await labService.getAllLabTestsForDoctor(doctorIdToUse, clinicId);
+        console.log('Fetched lab tests:', labTests);
+        console.log('Looking for lab test:', labTest.labTestName);
+        
+        const foundLabTest = labTests.find(
+          (test: LabTestApiResponse) => {
+            const testName = test.labTestName || test.Lab_Test_Description || test.lab_test_description || '';
+            const searchName = labTest.labTestName || '';
+            return testName.toLowerCase() === searchName.toLowerCase();
+          }
+        );
+        
+        console.log('Found lab test:', foundLabTest);
+        labTestId = foundLabTest?.ID || foundLabTest?.id;
+        
+        // If still not found, try to get parameters by test description to find the lab test ID
+        if (!labTestId) {
+          console.log('Lab test ID still not found, trying to get from parameters...');
+          try {
+            const paramsResponse = await labParameterService.getLabTestParametersByDoctorClinicAndTest(
+              doctorIdToUse,
+              clinicId,
+              labTest.labTestName
+            );
+            
+            if (paramsResponse.success && paramsResponse.labTestParameters && paramsResponse.labTestParameters.length > 0) {
+              // Get lab test ID from the first parameter
+              const firstParam = paramsResponse.labTestParameters[0];
+              labTestId = firstParam.Lab_Test_ID || firstParam.Lab_Test_Master_ID || firstParam.labTestId || firstParam.lab_test_id;
+              console.log('Found lab test ID from parameters:', labTestId);
+            }
+          } catch (paramError: any) {
+            console.warn('Could not get lab test ID from parameters:', paramError);
+          }
+        }
+      }
+      
+      if (!labTestId) {
+        // As a last resort, try deleting by name using the legacy endpoint
+        console.warn('Lab test ID not found, attempting to delete by name...');
+        try {
+          await labService.deleteLabTestByName(doctorIdToUse, clinicId, labTest.labTestName);
+          console.log('Lab test deleted by name successfully');
+          await fetchLabTests(doctorIdToUse);
+          return;
+        } catch (nameError: any) {
+          throw new Error('Lab test ID not found and deletion by name also failed: ' + nameError.message);
+        }
+      }
+      
+      console.log('Deleting lab test ID:', labTestId, 'for doctor:', doctorIdToUse, 'and clinic:', clinicId);
+      
+      // First, delete all associated parameters
+      try {
+        console.log('Fetching parameters for lab test before deletion...');
+        const paramsResponse = await labParameterService.getLabTestParametersByDoctorClinicAndTestId(
+          doctorIdToUse,
+          clinicId,
+          Number(labTestId)
+        );
+        
+        if (paramsResponse.success) {
+          // Extract parameters from response
+          const paramsData = paramsResponse.labTestParameters || 
+                           paramsResponse.data?.labTestParameters ||
+                           (Array.isArray(paramsResponse.data) ? paramsResponse.data : []) ||
+                           paramsResponse.parameters || 
+                           paramsResponse.data?.parameters ||
+                           paramsResponse.data?.data ||
+                           [];
+          
+          console.log(`Found ${paramsData.length} parameters to delete`);
+          
+          // Delete each parameter
+          for (const param of paramsData) {
+            const paramId = param.ID || param.id;
+            if (paramId) {
+              try {
+                await labParameterService.deleteLabTestParameter(Number(paramId));
+                console.log('Deleted parameter:', param.Parameter_Name || param.parameterName || param.parameter_name);
+              } catch (paramError: any) {
+                console.error('Error deleting parameter:', paramError);
+                // Continue deleting other parameters even if one fails
+              }
+            }
+          }
+          
+          console.log('All parameters deleted successfully');
+        }
+      } catch (paramError: any) {
+        console.warn('Error fetching/deleting parameters:', paramError);
+        // Continue with lab test deletion even if parameter deletion fails
+        // The backend might handle cascade deletion, but we try to delete them explicitly
+      }
+      
+      // Now delete the lab test itself
+      await labService.deleteLabTest(doctorIdToUse, Number(labTestId), clinicId);
+      console.log('Lab test deleted successfully');
       
       // Refresh the lab tests list after successful deletion
       await fetchLabTests(doctorIdToUse);
-      
-      // Show success message (optional - you can remove this if you prefer)
-      console.log('Lab test deleted successfully');
     } catch (err: any) {
       console.error('Error deleting lab test:', err);
       setError(err.message || 'Failed to delete lab test');
@@ -185,6 +549,12 @@ export default function ManageLabs() {
     setError(null);
 
     try {
+      if (!clinicId) {
+        setError('Clinic ID is required to fetch lab tests');
+        setLoading(false);
+        return;
+      }
+
       // Use provided doctorId, then selectedDoctorId, then fall back to doctorId from session
       const doctorIdToUse = doctorIdToFetch || selectedDoctorId || doctorId;
       if (!doctorIdToUse) {
@@ -193,15 +563,22 @@ export default function ManageLabs() {
         return;
       }
       
-      console.log('Fetching lab tests for doctor:', doctorIdToUse);
-      const response = await labService.getAllLabTestsForDoctor(doctorIdToUse);
+      console.log('Fetching lab tests for doctor:', doctorIdToUse, 'clinic:', clinicId);
+      const response = await labService.getAllLabTestsForDoctor(doctorIdToUse, clinicId);
       
       // Map API response to LabTest type
-      const mappedLabTests: LabTest[] = response.map((item: LabTestApiResponse, index: number) => ({
-        sr: index + 1,
-        labTestName: item.labTestName || item.Lab_Test_Description || '',
-        priority: item.priorityValue || item.Priority_Value || 0
-      }));
+      const mappedLabTests: LabTest[] = response.map((item: LabTestApiResponse, index: number) => {
+        const labTestId = item.ID || item.id || item.Id || item.labTestId || item.lab_test_id;
+        return {
+          sr: index + 1,
+          labTestName: item.labTestName || item.Lab_Test_Description || '',
+          priority: item.priorityValue || item.Priority_Value || 0,
+          id: labTestId,
+          ID: labTestId
+        };
+      });
+      
+      console.log('Mapped lab tests with IDs:', mappedLabTests);
 
       setLabTests(mappedLabTests);
       setCurrentPage(1); // Reset to first page when new data is loaded
@@ -212,7 +589,7 @@ export default function ManageLabs() {
     } finally {
       setLoading(false);
     }
-  }, [selectedDoctorId, doctorId]);
+  }, [selectedDoctorId, doctorId, clinicId]);
 
   // Fetch doctors for the clinic
   const fetchDoctors = useCallback(async () => {
@@ -663,14 +1040,17 @@ export default function ManageLabs() {
       )}
 
       {/* Add Lab Test Popup */}
-      <AddLabTestPopup
+      <AddTestLabPopup
         open={showAddPopup}
         onClose={handleCloseAddPopup}
         onSave={handleSaveLabTest}
         editData={editData ? {
           labTestName: editData.labTestName,
-          priority: editData.priority
+          priority: editData.priority,
+          parameters: editData.parameters || []
         } : null}
+        clinicId={clinicId}
+        doctorId={selectedDoctorId || doctorId}
       />
     </div>
   );
