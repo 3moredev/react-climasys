@@ -92,9 +92,9 @@ const subMenus: Record<string, Array<SubMenuItem>> = {
     { label: 'Treatment Master', children: [
       { label: 'Manage Complaints ', path: '/manage-complaints' },
       { label: 'Manage Diagnosis', path: '/manage-diagnosis' },
-      { label: 'Manage Procedure', path: '/settings?t=sub-category' },
+ { label: 'Manage Procedure', path: '/manage-procedure' },
       { label: 'Manage Labs', path: '//manage-labs' },
-      { label: 'Manage Medicines', path: '/settings?t=sub-category' },
+      { label: 'Manage Medicines', path: '/manage-medicines' },
     ], },
     { label: 'Prescription Master', children: [
       { label: 'Prescription Category ', path: '/settings?t=operation-keyword' },

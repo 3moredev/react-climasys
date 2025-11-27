@@ -2410,33 +2410,75 @@ export default function Treatment() {
         setShowComplaintPopup(true);
     };
 
-    const handleSaveComplaint: (data: AddComplaintFormData) => void = ({
+    const handleSaveComplaint = async ({
         shortDescription,
-        complaintDescription
+        complaintDescription,
+        priority,
+        displayToOperator
     }: AddComplaintFormData) => {
-        const id = `custom_${Date.now()}`;
-        const label = shortDescription
-            ? `${shortDescription} : ${complaintDescription}`
-            : complaintDescription;
+        const doctorId = treatmentData?.doctorId || sessionData?.doctorId;
+        const clinicId = treatmentData?.clinicId || sessionData?.clinicId;
 
-        const newComplaint: ComplaintRow = {
-            id,
-            value: id,
-            label,
-            comment: ''
-        };
-        
-        setComplaintsRows(prev => [...prev, newComplaint]);
-        setComplaintsOptions(prev => [
-            ...prev,
-            {
-                value: id,
+        if (!doctorId || !clinicId) {
+            setComplaintsError('Doctor and clinic information are required to add a complaint.');
+            return;
+        }
+
+        const trimmedShortDescription = shortDescription?.trim() || '';
+        const trimmedComplaintDescription = complaintDescription?.trim() || '';
+        const priorityValue = priority ? parseInt(priority, 10) : 0;
+
+        try {
+            setComplaintsError(null);
+
+            const payload = {
+                shortDescription: trimmedShortDescription,
+                short_description: trimmedShortDescription,
+                complaintDescription: trimmedComplaintDescription,
+                complaint_description: trimmedComplaintDescription,
+                priority: Number.isNaN(priorityValue) ? 0 : priorityValue,
+                priority_value: Number.isNaN(priorityValue) ? 0 : priorityValue,
+                displayToOperator,
+                display_to_operator: displayToOperator,
+                doctorId,
+                clinicId
+            };
+
+            const response = await patientService.createComplaint(payload);
+
+            const responseId = response?.id ? String(response.id) : `custom_${Date.now()}`;
+            const responseShort =
+                response?.shortDescription ||
+                response?.short_description ||
+                trimmedShortDescription;
+            const responseDescription =
+                response?.complaintDescription ||
+                response?.complaint_description ||
+                trimmedComplaintDescription;
+            const label = responseShort || responseDescription || responseId;
+
+            const newComplaint: ComplaintRow = {
+                id: responseId,
+                value: responseId,
                 label,
-                short_description: shortDescription,
-                complaint_description: complaintDescription
-            }
-        ]);
-        setShowComplaintPopup(false);
+                comment: ''
+            };
+
+            setComplaintsRows(prev => [...prev, newComplaint]);
+            setComplaintsOptions(prev => [
+                ...prev,
+                {
+                    value: responseId,
+                    label,
+                    short_description: responseShort,
+                    complaint_description: responseDescription
+                }
+            ]);
+            setShowComplaintPopup(false);
+        } catch (error: any) {
+            console.error('Failed to create complaint from Treatment screen:', error);
+            setComplaintsError(error?.message || 'Failed to create complaint. Please try again.');
+        }
     };
 
     const handleAddCustomDiagnosis = () => {

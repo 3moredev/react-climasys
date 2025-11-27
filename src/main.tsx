@@ -38,6 +38,8 @@ import ManageComplaints from './pages/ManageComplaints'
 import ManageDiagnosis from './pages/ManageDiagnosis'
 import ManageLabs from './pages/ManageLabs'
 import ManageHospitalBill from './pages/ManageHospitalBill'
+import ManageMedicine from './pages/ManageMedicine'
+import ManageProcedure from './pages/ManageProcedure'
 // Import dev helpers for console access
 import './utils/devHelpers'
 const theme = createTheme({
@@ -188,6 +190,7 @@ function App() {
                 </MainLayout>
               </AuthGuard>
             } />
+
             <Route path="/manage-complaints" element={
               <AuthGuard>
                 <MainLayout>
@@ -206,6 +209,20 @@ function App() {
               <AuthGuard>
                 <MainLayout>
                   <ManageLabs />
+                </MainLayout>
+              </AuthGuard>
+            } />
+            <Route path="/manage-procedure" element={
+              <AuthGuard>
+                <MainLayout>
+                  <ManageProcedure />
+                </MainLayout>
+              </AuthGuard>
+            } />
+            <Route path="/manage-medicines" element={
+              <AuthGuard>
+                <MainLayout>
+                  <ManageMedicine />
                 </MainLayout>
               </AuthGuard>
             } />

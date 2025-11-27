@@ -1,102 +1,215 @@
 import React, { useState } from 'react';
 import { Close } from '@mui/icons-material';
 import { Snackbar } from '@mui/material';
+import medicineService, { MedicineMaster } from '../services/medicineService';
+import { sessionService } from '../services/sessionService';
 
 interface AddMedicinePopupProps {
     open: boolean;
     onClose: () => void;
-    onSave: (medicineData: MedicineData) => void;
+    onSave: (data: {
+        shortDescription: string;
+        medicineName: string;
+        priority: string;
+        breakfast: string;
+        lunch: string;
+        dinner: string;
+        days: string;
+        instruction: string;
+        addToActiveList: boolean;
+    }) => void;
+    editData?: {
+        shortDescription: string;
+        medicineName: string;
+        priority: string;
+        breakfast: string;
+        lunch: string;
+        dinner: string;
+        days: string;
+        instruction: string;
+        addToActiveList: boolean;
+    };
 }
 
-interface MedicineData {
-    shortDescription: string;
-    medicineName: string;
-    priority: string;
-    instruction: string;
-    breakfast: string;
-    lunch: string;
-    dinner: string;
-    days: string;
-}
-
-const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSave }) => {
-    const [medicineData, setMedicineData] = useState<MedicineData>({
-        shortDescription: '',
-        medicineName: '',
-        priority: '',
-        instruction: '',
-        breakfast: '',
-        lunch: '',
-        dinner: '',
-        days: ''
-    });
+const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSave, editData }) => {
+    const [shortDescription, setShortDescription] = useState('');
+    const [medicineName, setMedicineName] = useState('');
+    const [priority, setPriority] = useState('');
+    const [breakfast, setBreakfast] = useState('');
+    const [lunch, setLunch] = useState('');
+    const [dinner, setDinner] = useState('');
+    const [days, setDays] = useState('');
+    const [instruction, setInstruction] = useState('');
+    const [addToActiveList, setAddToActiveList] = useState(true);
     
     // Snackbar state management
     const [snackbarOpen, setSnackbarOpen] = useState(false);
     const [snackbarMessage, setSnackbarMessage] = useState('');
+    const [loading, setLoading] = useState(false);
 
-    const handleInputChange = (field: keyof MedicineData, value: string) => {
-        setMedicineData(prev => ({
-            ...prev,
-            [field]: value
-        }));
-    };
+    // Populate form when editData changes or popup opens
+    React.useEffect(() => {
+        if (open && editData) {
+            setShortDescription(editData.shortDescription || '');
+            setMedicineName(editData.medicineName || '');
+            setPriority(editData.priority || '');
+            setBreakfast(editData.breakfast || '');
+            setLunch(editData.lunch || '');
+            setDinner(editData.dinner || '');
+            setDays(editData.days || '');
+            setInstruction(editData.instruction || '');
+            setAddToActiveList(editData.addToActiveList !== undefined ? editData.addToActiveList : true);
+        } else if (open && !editData) {
+            // Reset form for new medicine
+            setShortDescription('');
+            setMedicineName('');
+            setPriority('');
+            setBreakfast('');
+            setLunch('');
+            setDinner('');
+            setDays('');
+            setInstruction('');
+            setAddToActiveList(true);
+        }
+    }, [open, editData]);
 
-    const handleSave = () => {
-        // Validate required fields
-        if (!medicineData.shortDescription.trim()) {
+    const handleSubmit = async () => {
+        if (!shortDescription.trim()) {
             setSnackbarMessage('Short Description is required');
             setSnackbarOpen(true);
             return;
         }
-        if (!medicineData.medicineName.trim()) {
+        
+        if (!medicineName.trim()) {
             setSnackbarMessage('Medicine Name is required');
             setSnackbarOpen(true);
             return;
         }
-        if (!medicineData.priority.trim()) {
-            setSnackbarMessage('Priority is required');
+
+        try {
+            setLoading(true);
+            
+            // Hardcoded values as requested
+            const doctorId = "DR-00010";
+            const clinicId = "CL-00001";
+            
+            // Get user name from session for createdByName/modifiedByName
+            let userName = "System";
+            try {
+                const sessionResult = await sessionService.getSessionInfo();
+                if (sessionResult.success && sessionResult.data) {
+                    userName = sessionResult.data.firstName || sessionResult.data.loginId || "System";
+                }
+            } catch (err) {
+                console.warn('Could not get session info for user name:', err);
+            }
+
+            const isEditMode = !!editData;
+            const originalShortDescription = editData?.shortDescription || '';
+            const newShortDescription = shortDescription.trim();
+
+            // Create/Update medicine data
+            const medicineData: MedicineMaster = {
+                shortDescription: newShortDescription,
+                medicineDescription: medicineName.trim(),
+                doctorId: doctorId,
+                clinicId: clinicId,
+                priorityValue: priority.trim() ? parseInt(priority.trim()) : null,
+                morning: breakfast.trim() ? parseFloat(breakfast.trim()) : null,
+                afternoon: lunch.trim() ? parseFloat(lunch.trim()) : null,
+                night: dinner.trim() ? parseFloat(dinner.trim()) : null,
+                noOfDays: days.trim() ? parseInt(days.trim()) : null,
+                instruction: instruction.trim() || null,
+                active: addToActiveList,
+                modifiedByName: userName
+            };
+
+            if (isEditMode) {
+                const shortDescriptionChanged = originalShortDescription !== newShortDescription;
+                
+                if (shortDescriptionChanged) {
+                    // If short description changed, we need to delete old and create new
+                    // because short description is part of the composite key
+                    try {
+                        // Delete old medicine
+                        await medicineService.deleteMedicine(doctorId, clinicId, originalShortDescription);
+                    } catch (err) {
+                        console.warn('Error deleting old medicine (may not exist):', err);
+                    }
+                    
+                    // Create new medicine with new short description
+                    medicineData.createdByName = userName;
+                    await medicineService.createMedicine(medicineData);
+                } else {
+                    // Update existing medicine (short description didn't change)
+                    await medicineService.updateMedicine(medicineData);
+                }
+            } else {
+                // Create new medicine
+                medicineData.createdByName = userName;
+                await medicineService.createMedicine(medicineData);
+            }
+
+            // Show success snackbar
+            setSnackbarMessage(isEditMode ? 'Medicine updated successfully!' : 'Medicine created successfully!');
             setSnackbarOpen(true);
-            return;
+            
+            // Call parent onSave callback for UI update
+            onSave({
+                shortDescription: newShortDescription,
+                medicineName: medicineName.trim(),
+                priority: priority.trim(),
+                breakfast: breakfast.trim(),
+                lunch: lunch.trim(),
+                dinner: dinner.trim(),
+                days: days.trim(),
+                instruction: instruction.trim(),
+                addToActiveList
+            });
+            
+            // Reset form
+            setShortDescription('');
+            setMedicineName('');
+            setPriority('');
+            setBreakfast('');
+            setLunch('');
+            setDinner('');
+            setDays('');
+            setInstruction('');
+            setAddToActiveList(true);
+            
+            // Close popup after showing success message
+            setTimeout(() => {
+                onClose();
+            }, 1500);
+        } catch (error: any) {
+            console.error('Error saving medicine:', error);
+            setSnackbarMessage(error.message || 'Failed to save medicine');
+            setSnackbarOpen(true);
+        } finally {
+            setLoading(false);
         }
-        
-        // Call the parent onSave callback with the medicine data
-        onSave(medicineData);
-        
-        // Show success snackbar
-        setSnackbarMessage('Medicine added successfully!');
-        setSnackbarOpen(true);
-        
-        // Reset form
-        setMedicineData({
-            shortDescription: '',
-            medicineName: '',
-            priority: '',
-            instruction: '',
-            breakfast: '',
-            lunch: '',
-            dinner: '',
-            days: ''
-        });
-        
-        // Close popup after showing success message
-        setTimeout(() => {
-            onClose();
-        }, 1500);
     };
 
     const handleClose = () => {
-        setMedicineData({
-            shortDescription: '',
-            medicineName: '',
-            priority: '',
-            instruction: '',
-            breakfast: '',
-            lunch: '',
-            dinner: '',
-            days: ''
-        });
+        setShortDescription('');
+        setMedicineName('');
+        setPriority('');
+        setBreakfast('');
+        setLunch('');
+        setDinner('');
+        setDays('');
+        setInstruction('');
+        setAddToActiveList(true);
         onClose();
+    };
+
+    const handleCancel = () => {
+        handleClose();
+    };
+
+    const handleBack = () => {
+        handleClose();
     };
 
     if (!open) return null;
@@ -122,9 +235,9 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                 style={{
                     backgroundColor: 'white',
                     borderRadius: '8px',
-                    maxWidth: '600px',
+                    maxWidth: '700px',
                     width: '90%',
-                    maxHeight: '90vh',
+                    maxHeight: '85vh',
                     overflow: 'auto',
                     boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
                     display: 'flex',
@@ -138,9 +251,7 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                     padding: '15px 20px',
                     borderTopLeftRadius: '8px',
                     borderTopRightRadius: '8px',
-                    fontFamily: "'Roboto', sans-serif",
-                    color: '#212121',
-                    fontSize: '0.9rem'
+                    fontFamily: "'Roboto', sans-serif"
                 }}>
                     <div style={{
                         display: 'flex',
@@ -148,7 +259,7 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                         alignItems: 'center'
                     }}>
                         <h3 style={{ margin: 0, color: '#000000', fontSize: '18px', fontWeight: 'bold' }}>
-                            Add Medicine
+                            {editData ? 'Edit Medicine' : 'Add Medicine'}
                         </h3>
                         <button
                             onClick={handleClose}
@@ -157,7 +268,7 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                                 border: 'none',
                                 cursor: 'pointer',
                                 padding: '5px',
-                                borderRadius: '8px',
+                                borderRadius: '50%',
                                 color: '#fff',
                                 backgroundColor: '#1976d2',
                                 width: '32px',
@@ -174,207 +285,234 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                                 e.currentTarget.style.backgroundColor = '#1976d2';
                             }}
                         >
-                            <Close fontSize="small" />
+                            <Close fontSize="small" style={{ color: '#fff' }} />
                         </button>
                     </div>
                 </div>
 
                 {/* Popup Content */}
                 <div style={{ padding: '20px', flex: 1 }}>
-                    {/* Short Description - Full Width */}
-                    <div style={{ marginBottom: '15px' }}>
-                        <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                            Short Description *
-                        </label>
-                        <input
-                            type="text"
-                            placeholder="Medicine Short Description"
-                            value={medicineData.shortDescription}
-                            onChange={(e) => handleInputChange('shortDescription', e.target.value)}
-                            style={{
-                                width: '100%',
-                                padding: '6px 10px',
-                                border: '1px solid #ccc',
-                                borderRadius: '4px',
-                                fontSize: '13px',
-                                backgroundColor: 'white',
-                                outline: 'none'
-                            }}
-                        />
-                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                        {/* Left Column */}
+                        <div>
+                            <div style={{ marginBottom: '15px' }}>
+                                <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                                    Short Description
+                                </label>
+                                <input
+                                    type="text"
+                                    placeholder="Medicine Short Description"
+                                    value={shortDescription}
+                                    onChange={(e) => setShortDescription(e.target.value)}
+                                    style={{
+                                        width: '100%',
+                                        padding: '8px 12px',
+                                        border: '1px solid #B7B7B7',
+                                        borderRadius: '4px',
+                                        fontSize: '12px',
+                                        fontFamily: "'Roboto', sans-serif",
+                                        backgroundColor: 'white',
+                                        outline: 'none',
+                                        boxSizing: 'border-box'
+                                    }}
+                                />
+                            </div>
 
-                    {/* Medicine Name and Priority - Two fields in one row */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
-                        <div>
-                            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                Medicine Name *
-                            </label>
-                            <input
-                                type="text"
-                                placeholder="Medicine Name"
-                                value={medicineData.medicineName}
-                                onChange={(e) => handleInputChange('medicineName', e.target.value)}
-                                style={{
-                                    width: '100%',
-                                    padding: '6px 10px',
-                                    border: '1px solid #ccc',
-                                    borderRadius: '4px',
-                                    fontSize: '13px',
-                                    backgroundColor: 'white',
-                                    outline: 'none'
-                                }}
-                            />
-                        </div>
-                        <div>
-                            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                Priority *
-                            </label>
-                            <input
-                                type="text"
-                                placeholder="Priority"
-                                value={medicineData.priority}
-                                onChange={(e) => handleInputChange('priority', e.target.value)}
-                                style={{
-                                    width: '100%',
-                                    padding: '6px 10px',
-                                    border: '1px solid #ccc',
-                                    borderRadius: '4px',
-                                    fontSize: '13px',
-                                    backgroundColor: 'white',
-                                    outline: 'none'
-                                }}
-                            />
-                        </div>
-                    </div>
+                            <div style={{ marginBottom: '15px' }}>
+                                <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                                    Medicine Name
+                                </label>
+                                <input
+                                    type="text"
+                                    placeholder="Medicine Name"
+                                    value={medicineName}
+                                    onChange={(e) => setMedicineName(e.target.value)}
+                                    style={{
+                                        width: '100%',
+                                        padding: '8px 12px',
+                                        border: '1px solid #B7B7B7',
+                                        borderRadius: '4px',
+                                        fontSize: '12px',
+                                        fontFamily: "'Roboto', sans-serif",
+                                        backgroundColor: 'white',
+                                        outline: 'none',
+                                        boxSizing: 'border-box'
+                                    }}
+                                />
+                            </div>
 
-                    {/* Breakfast and Lunch - Two fields in one row */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
-                        <div>
-                            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                Breakfast
-                            </label>
-                            <input
-                                type="text"
-                                placeholder="Breakfast"
-                                value={medicineData.breakfast}
-                                onChange={(e) => handleInputChange('breakfast', e.target.value)}
-                                style={{
-                                    width: '100%',
-                                    padding: '6px 10px',
-                                    border: '1px solid #ccc',
-                                    borderRadius: '4px',
-                                    fontSize: '13px',
-                                    backgroundColor: 'white',
-                                    outline: 'none'
-                                }}
-                            />
-                        </div>
-                        <div>
-                            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                Lunch
-                            </label>
-                            <input
-                                type="text"
-                                placeholder="Lunch"
-                                value={medicineData.lunch}
-                                onChange={(e) => handleInputChange('lunch', e.target.value)}
-                                style={{
-                                    width: '100%',
-                                    padding: '6px 10px',
-                                    border: '1px solid #ccc',
-                                    borderRadius: '4px',
-                                    fontSize: '13px',
-                                    backgroundColor: 'white',
-                                    outline: 'none'
-                                }}
-                            />
-                        </div>
-                    </div>
+                            <div style={{ marginBottom: '15px' }}>
+                                <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                                    Priority
+                                </label>
+                                <input
+                                    type="text"
+                                    placeholder="Priority"
+                                    value={priority}
+                                    onChange={(e) => setPriority(e.target.value)}
+                                    style={{
+                                        width: '100%',
+                                        padding: '8px 12px',
+                                        border: '1px solid #B7B7B7',
+                                        borderRadius: '4px',
+                                        fontSize: '12px',
+                                        fontFamily: "'Roboto', sans-serif",
+                                        backgroundColor: 'white',
+                                        outline: 'none',
+                                        boxSizing: 'border-box'
+                                    }}
+                                />
+                            </div>
 
-                    {/* Dinner and Days - Two fields in one row */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
-                        <div>
-                            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                Dinner
-                            </label>
-                            <input
-                                type="text"
-                                placeholder="Dinner"
-                                value={medicineData.dinner}
-                                onChange={(e) => handleInputChange('dinner', e.target.value)}
-                                style={{
-                                    width: '100%',
-                                    padding: '6px 10px',
-                                    border: '1px solid #ccc',
-                                    borderRadius: '4px',
-                                    fontSize: '13px',
-                                    backgroundColor: 'white',
-                                    outline: 'none'
-                                }}
-                            />
-                        </div>
-                        <div>
-                            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                Days
-                            </label>
-                            <input
-                                type="text"
-                                placeholder="Days"
-                                value={medicineData.days}
-                                onChange={(e) => handleInputChange('days', e.target.value)}
-                                style={{
-                                    width: '100%',
-                                    padding: '6px 10px',
-                                    border: '1px solid #ccc',
-                                    borderRadius: '4px',
-                                    fontSize: '13px',
-                                    backgroundColor: 'white',
-                                    outline: 'none'
-                                }}
-                            />
-                        </div>
-                    </div>
+                            <div style={{ marginBottom: '15px' }}>
+                                <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                                    Breakfast
+                                </label>
+                                <input
+                                    type="text"
+                                    placeholder="Breakfast"
+                                    value={breakfast}
+                                    onChange={(e) => setBreakfast(e.target.value)}
+                                    style={{
+                                        width: '100%',
+                                        padding: '8px 12px',
+                                        border: '1px solid #B7B7B7',
+                                        borderRadius: '4px',
+                                        fontSize: '12px',
+                                        fontFamily: "'Roboto', sans-serif",
+                                        backgroundColor: 'white',
+                                        outline: 'none',
+                                        boxSizing: 'border-box'
+                                    }}
+                                />
+                            </div>
 
-                    {/* Instruction - Full Width */}
-                    <div style={{ marginBottom: '15px' }}>
-                        <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                            Instruction
-                        </label>
-                        <input
-                            type="text"
-                            placeholder="Instruction"
-                            value={medicineData.instruction}
-                            onChange={(e) => handleInputChange('instruction', e.target.value)}
-                            style={{
-                                width: '100%',
-                                padding: '6px 10px',
-                                border: '1px solid #ccc',
-                                borderRadius: '4px',
-                                fontSize: '13px',
-                                backgroundColor: 'white',
-                                outline: 'none'
-                            }}
-                        />
-                    </div>
+                            <div style={{ marginBottom: '15px' }}>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                                    <input
+                                        type="checkbox"
+                                        checked={addToActiveList}
+                                        onChange={(e) => setAddToActiveList(e.target.checked)}
+                                        style={{
+                                            width: '18px',
+                                            height: '18px',
+                                            cursor: 'pointer'
+                                        }}
+                                    />
+                                    <span style={{ fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                                        Add to active list of medicine
+                                    </span>
+                                </label>
+                            </div>
+                        </div>
 
-                    {/* Instruction Text */}
-                    <div style={{ 
-                        marginBottom: '15px', 
-                        padding: '10px', 
-                        backgroundColor: '#f5f5f5', 
-                        borderRadius: '4px',
-                        fontSize: '12px',
-                        color: '#666',
-                        textAlign: 'center'
-                    }}>
-                        खाण्यानंतर / AFTER MEAL, खाण्यापूर्वी / BEFORE MEAL
+                        {/* Right Column */}
+                        <div>
+                            <div style={{ marginBottom: '15px' }}>
+                                <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                                    Lunch
+                                </label>
+                                <input
+                                    type="text"
+                                    placeholder="Lunch"
+                                    value={lunch}
+                                    onChange={(e) => setLunch(e.target.value)}
+                                    style={{
+                                        width: '100%',
+                                        padding: '8px 12px',
+                                        border: '1px solid #B7B7B7',
+                                        borderRadius: '4px',
+                                        fontSize: '12px',
+                                        fontFamily: "'Roboto', sans-serif",
+                                        backgroundColor: 'white',
+                                        outline: 'none',
+                                        boxSizing: 'border-box'
+                                    }}
+                                />
+                            </div>
+
+                            <div style={{ marginBottom: '15px' }}>
+                                <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                                    Dinner
+                                </label>
+                                <input
+                                    type="text"
+                                    placeholder="Dinner"
+                                    value={dinner}
+                                    onChange={(e) => setDinner(e.target.value)}
+                                    style={{
+                                        width: '100%',
+                                        padding: '8px 12px',
+                                        border: '1px solid #B7B7B7',
+                                        borderRadius: '4px',
+                                        fontSize: '12px',
+                                        fontFamily: "'Roboto', sans-serif",
+                                        backgroundColor: 'white',
+                                        outline: 'none',
+                                        boxSizing: 'border-box'
+                                    }}
+                                />
+                            </div>
+
+                            <div style={{ marginBottom: '15px' }}>
+                                <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                                    Days
+                                </label>
+                                <input
+                                    type="text"
+                                    placeholder="Days"
+                                    value={days}
+                                    onChange={(e) => setDays(e.target.value)}
+                                    style={{
+                                        width: '100%',
+                                        padding: '8px 12px',
+                                        border: '1px solid #B7B7B7',
+                                        borderRadius: '4px',
+                                        fontSize: '12px',
+                                        fontFamily: "'Roboto', sans-serif",
+                                        backgroundColor: 'white',
+                                        outline: 'none',
+                                        boxSizing: 'border-box'
+                                    }}
+                                />
+                            </div>
+
+                            <div style={{ marginBottom: '15px' }}>
+                                <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                                    Instruction
+                                </label>
+                                <input
+                                    type="text"
+                                    placeholder="Instruction"
+                                    value={instruction}
+                                    onChange={(e) => setInstruction(e.target.value)}
+                                    style={{
+                                        width: '100%',
+                                        padding: '8px 12px',
+                                        border: '1px solid #B7B7B7',
+                                        borderRadius: '4px',
+                                        fontSize: '12px',
+                                        fontFamily: "'Roboto', sans-serif",
+                                        backgroundColor: 'white',
+                                        outline: 'none',
+                                        boxSizing: 'border-box'
+                                    }}
+                                />
+                            </div>
+
+                            <div style={{ marginTop: '15px', marginBottom: '15px' }}>
+                                <div style={{ fontSize: '12px', color: '#666', fontFamily: "'Roboto', sans-serif" }}>
+                                    भोजनानंतर / AFTER MEAL, भोजनापूर्वी / BEFORE MEAL
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
                 {/* Popup Footer */}
                 <div style={{
                     background: 'transparent',
-                    padding: '0 20px 14px',
+                    padding: '0 20px 20px',
                     borderBottomLeftRadius: '8px',
                     borderBottomRightRadius: '8px',
                     display: 'flex',
@@ -382,26 +520,34 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                     gap: '8px'
                 }}>
                     <button
-                        onClick={handleSave}
+                        onClick={handleSubmit}
+                        disabled={loading}
                         style={{
                             padding: '8px 16px',
-                            backgroundColor: '#1976d2',
+                            backgroundColor: loading ? '#ccc' : '#1976d2',
                             color: 'white',
                             border: 'none',
                             borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontSize: '14px',
+                            cursor: loading ? 'not-allowed' : 'pointer',
+                            fontSize: '12px',
+                            fontFamily: "'Roboto', sans-serif",
                             fontWeight: '500',
-                            transition: 'background-color 0.2s'
+                            transition: 'background-color 0.2s',
+                            whiteSpace: 'nowrap',
+                            opacity: loading ? 0.6 : 1
                         }}
                         onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = '#1565c0';
+                            if (!loading) {
+                                e.currentTarget.style.backgroundColor = '#1565c0';
+                            }
                         }}
                         onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = '#1976d2';
+                            if (!loading) {
+                                e.currentTarget.style.backgroundColor = '#1976d2';
+                            }
                         }}
                     >
-                        Save
+                        {loading ? 'Saving...' : 'Submit'}
                     </button>
                 </div>
             </div>
@@ -416,12 +562,11 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
             }}
             message={snackbarMessage}
             anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-            sx={{
-                zIndex: 99999, // Ensure snackbar appears above everything
-                '& .MuiSnackbarContent-root': {
-                    backgroundColor: snackbarMessage.includes('successfully') ? '#4caf50' : '#f44336',
+            ContentProps={{
+                style: {
+                    backgroundColor: snackbarMessage.includes('required') || snackbarMessage.includes('Error') ? '#d32f2f' : '#2e7d32',
                     color: 'white',
-                    fontWeight: 'bold'
+                    fontFamily: "'Roboto', sans-serif"
                 }
             }}
         />
@@ -430,4 +575,3 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
 };
 
 export default AddMedicinePopup;
-export type { MedicineData };
