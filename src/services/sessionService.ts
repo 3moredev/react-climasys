@@ -163,5 +163,23 @@ export const sessionService = {
       console.error('Session timeout update error:', error)
       return false
     }
+  },
+
+  /**
+   * Keep session alive by updating last accessed time on server
+   * This prevents server session timeout during user activity
+   */
+  async keepSessionAlive(): Promise<boolean> {
+    try {
+      const response = await api.post('/auth/session/keepalive')
+      return response.status === 200
+    } catch (error: any) {
+      // Silently handle errors - don't spam console if session is already expired
+      // Only log if it's not a 401 (unauthorized) error
+      if (error.response?.status !== 401) {
+        console.debug('Session keepalive error:', error.message)
+      }
+      return false
+    }
   }
 }

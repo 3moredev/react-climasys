@@ -162,6 +162,12 @@ export default function MainLayout({ children }: MainLayoutProps) {
   // Track user activity to maintain session persistence
   useActivityTracker()
 
+  // Fallback to Redux store user data when session data is null
+  // This prevents showing "null (Clinic)" when backend session expires but frontend still has user data
+  const displayUsername = username || user?.firstName || user?.loginId || 'User'
+  const displayDoctorName = doctorName || user?.doctorName || 'Doctor'
+  const displayClinicName = clinicName || user?.clinicName || 'Clinic'
+
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null)
   const [masterEl, setMasterEl] = React.useState<null | HTMLElement>(null)
   const [tabMenu, setTabMenu] = React.useState<{ index: number; anchor: HTMLElement } | null>(null)
@@ -513,7 +519,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
               </Typography>
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', minWidth: '120px', justifyContent: 'flex-end' }}>
-              <Tooltip title={sessionLoading ? 'Loading...' : `${username} (${doctorName || 'Doctor'})`}>
+              <Tooltip title={sessionLoading ? 'Loading...' : `${displayUsername} (${displayDoctorName})`}>
                 <IconButton
                   size="medium"
                   aria-label="account of current user"
@@ -528,7 +534,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
                       <span style={{ fontSize: '12px' }}>⏳</span>
                     ) : (
                       <span style={{ fontSize: '12px', fontWeight: 'bold' }}>
-                        {username ? username.charAt(0).toUpperCase() : 'U'}
+                        {displayUsername.charAt(0).toUpperCase()}
                       </span>
                     )}
                   </Avatar>
@@ -553,7 +559,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
                   <ListItemIcon>
                     <AccountCircle fontSize="small" />
                   </ListItemIcon>
-                  {sessionLoading ? 'Loading...' : `${username} (${clinicName || 'Clinic'})`}
+                  {sessionLoading ? 'Loading...' : `${displayUsername} (${displayClinicName})`}
                 </MenuItem>
                 <MenuItem onClick={handleLogout} disabled={isLoggingOut}>
                   <ListItemIcon>
