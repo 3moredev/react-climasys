@@ -49,8 +49,8 @@ interface MainLayoutProps {
 
 const menuItems = [
   { text: 'Dashboard', path: '/' },
-  { text: 'OPD',  path: '/appointment' },
-  { text: 'OPD Reports',  path: '/reports' },
+  { text: 'OPD', path: '/appointment' },
+  { text: 'OPD Reports', path: '/reports' },
   { text: 'OPD Master', path: '#' },
   { text: 'IPD', path: '#' },
   { text: 'IPD Report', path: '#' },
@@ -80,30 +80,38 @@ const subMenus: Record<string, Array<SubMenuItem>> = {
     },
     { label: 'OPD - Daily Collection', path: '/reports?type=receipts' },
     { label: 'OPD - Defaulters', path: '/reports?type=dashboard' },
-    { label: 'Dashboard & Reports',  children: [
-      { label: 'Area-Wise Patient Summary ', path: '/settings?t=operation-keyword' },
-      { label: 'Summary Of Lab Suggested', path: '/settings?t=sub-category' },
-      { label: 'Print Patient Details', path: '/settings?t=sub-category' },
-      { label: 'Patient Appointment History', path: '/settings?t=sub-category' },
-    ],},
+    {
+      label: 'Dashboard & Reports', children: [
+        { label: 'Area-Wise Patient Summary ', path: '/settings?t=operation-keyword' },
+        { label: 'Summary Of Lab Suggested', path: '/settings?t=sub-category' },
+        { label: 'Print Patient Details', path: '/settings?t=sub-category' },
+        { label: 'Patient Appointment History', path: '/settings?t=sub-category' },
+      ],
+    },
     { label: 'IIIC Summary (IPD & OPD)', path: '/reports?type=dashboard' },
   ],
   'OPD Master': [
-    { label: 'Treatment Master', children: [
-      { label: 'Manage Complaints ', path: '/manage-complaints' },
-      { label: 'Manage Diagnosis', path: '/manage-diagnosis' },
- { label: 'Manage Procedure', path: '/manage-procedure' },
-      { label: 'Manage Labs', path: '//manage-labs' },
-      { label: 'Manage Medicines', path: '/manage-medicines' },
-    ], },
-    { label: 'Prescription Master', children: [
-      { label: 'Prescription Category ', path: '/settings?t=operation-keyword' },
-      { label: 'Prescription Sub-Category', path: '/settings?t=sub-category' },
-      { label: 'Prescription Details', path: '/settings?t=sub-category' },
-    ], },
-    { label: 'Billing', children: [
-      { label: 'Billing Details', path: '/settings?t=operation-keyword' },
-    ],},
+    {
+      label: 'Treatment Master', children: [
+        { label: 'Manage Complaints ', path: '/manage-complaints' },
+        { label: 'Manage Diagnosis', path: '/manage-diagnosis' },
+        { label: 'Manage Procedure', path: '/manage-procedure' },
+        { label: 'Manage Labs', path: '/manage-labs' },
+        { label: 'Manage Medicines', path: '/manage-medicines' },
+      ],
+    },
+    {
+      label: 'Prescription Master', children: [
+        { label: 'Prescription Category ', path: '/settings?t=operation-keyword' },
+        { label: 'Prescription Sub-Category', path: '/settings?t=sub-category' },
+        { label: 'Prescription Details', path: '/settings?t=sub-category' },
+      ],
+    },
+    {
+      label: 'Billing', children: [
+        { label: 'Billing Details', path: '/settings?t=operation-keyword' },
+      ],
+    },
   ],
   'IPD': [
     { label: 'Manage Admission Card', path: '/manage-admission-card' },
@@ -147,13 +155,13 @@ export default function MainLayout({ children }: MainLayoutProps) {
   const navigate = useNavigate()
   const location = useLocation()
   const dispatch = useAppDispatch()
-  
+
   const { user } = useAppSelector((state) => state.auth)
   const { username, doctorName, clinicName, isLoading: sessionLoading, isValid: sessionValid, logout: sessionLogout, error: sessionError } = useSession()
-  
+
   // Track user activity to maintain session persistence
   useActivityTracker()
-  
+
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null)
   const [masterEl, setMasterEl] = React.useState<null | HTMLElement>(null)
   const [tabMenu, setTabMenu] = React.useState<{ index: number; anchor: HTMLElement } | null>(null)
@@ -183,22 +191,22 @@ export default function MainLayout({ children }: MainLayoutProps) {
     setTabMenu({ index, anchor: event.currentTarget as HTMLElement })
   }
 
-const closeTabMenu = () => setTabMenu(null)
-const closeSubMenus = () => { setSubMenuL2(null); setSubMenuL3(null) }
+  const closeTabMenu = () => setTabMenu(null)
+  const closeSubMenus = () => { setSubMenuL2(null); setSubMenuL3(null) }
 
-const handleSubItemClick = (path?: string) => {
-  if (!path) return
-  console.log('[MainLayout] Navigating to', path)
-  closeSubMenus()
-  closeTabMenu()
-  navigate(path)
-}
+  const handleSubItemClick = (path?: string) => {
+    if (!path) return
+    console.log('[MainLayout] Navigating to', path)
+    closeSubMenus()
+    closeTabMenu()
+    navigate(path)
+  }
 
   const handleLogout = async () => {
     try {
       setIsLoggingOut(true)
       handleMenuClose()
-      
+
       // Use logout with timeout - will force logout after 3 seconds if not complete
       await authService.logoutWithTimeout(3000)
     } catch (error) {
@@ -225,7 +233,7 @@ const handleSubItemClick = (path?: string) => {
         localStorage.removeItem('token')
         navigate('/login', { replace: true })
       }, 2000)
-      
+
       return () => clearTimeout(timeoutId)
     }
   }, [sessionError, navigate])
@@ -239,7 +247,7 @@ const handleSubItemClick = (path?: string) => {
 
     // Listen for custom session timeout events
     window.addEventListener('sessionTimeout', handleSessionTimeout)
-    
+
     return () => {
       window.removeEventListener('sessionTimeout', handleSessionTimeout)
     }
@@ -264,19 +272,19 @@ const handleSubItemClick = (path?: string) => {
     const searchParams = new URLSearchParams(location.search)
     const tParam = searchParams.get('t')
     const contextParam = searchParams.get('context')
-    
+
     // Dashboard (index 0)
     if (currentPath === '/') return 0
-    
+
     // OPD (index 1)
-    if (currentPath.startsWith('/appointment') || 
-        currentPath.startsWith('/quick-registration') ||
-        currentPath.startsWith('/registration') ||
-        (currentPath === '/billing' && contextParam === 'opd-dues')) return 1
-    
+    if (currentPath.startsWith('/appointment') ||
+      currentPath.startsWith('/quick-registration') ||
+      currentPath.startsWith('/registration') ||
+      (currentPath === '/billing' && contextParam === 'opd-dues')) return 1
+
     // OPD Reports (index 2)
     if (currentPath.startsWith('/reports')) return 2
-    
+
     // OPD Master (index 3)
     // Check for manage-complaints and settings path with OPD master query params (but not IPD master params)
     if (currentPath.startsWith('/manage-complaints')) return 3
@@ -284,22 +292,22 @@ const handleSubItemClick = (path?: string) => {
       // IPD Report specific params
       if (tParam === 'treatment' || tParam === 'prescription') return 5
       // IPD Master specific params
-      if (tParam === 'charges' || tParam === 'insurance' || 
-          tParam === 'attach-treatment' || tParam === 'attach-prescription') return 6
+      if (tParam === 'charges' || tParam === 'insurance' ||
+        tParam === 'attach-treatment' || tParam === 'attach-prescription') return 6
       // Default to OPD Master for other settings paths
       return 3
     }
-    
+
     // IPD (index 4)
-    if (currentPath.startsWith('/manage-admission-card') || 
-        currentPath.startsWith('/manage-advance-collection') || 
-        currentPath.startsWith('/manage-discharge-card') || 
-        currentPath.startsWith('/manage-hospital-bill')) return 4
-    
+    if (currentPath.startsWith('/manage-admission-card') ||
+      currentPath.startsWith('/manage-advance-collection') ||
+      currentPath.startsWith('/manage-discharge-card') ||
+      currentPath.startsWith('/manage-hospital-bill')) return 4
+
     // IPD Report (index 5) - handled above in settings check
-    
+
     // IPD Master (index 6) - handled above in settings check
-    
+
     // Default fallback to OPD
     return 1
   }
@@ -497,7 +505,7 @@ const handleSubItemClick = (path?: string) => {
                 {(() => {
                   const d = now
                   const dd = String(d.getDate()).padStart(2, '0')
-                  const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+                  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
                   const mmm = monthNames[d.getMonth()]
                   const yy = String(d.getFullYear()).slice(-2)
                   return `${dd}-${mmm}-${yy}`
@@ -594,9 +602,9 @@ const handleSubItemClick = (path?: string) => {
           )}
           {children}
         </Box>
-        
+
         {/* Session Timeout Handler */}
-        <SessionTimeoutHandler 
+        <SessionTimeoutHandler
           warningTimeMinutes={getSessionConfig().warningTimeMinutes}
           sessionTimeoutMinutes={getSessionConfig().sessionTimeoutMinutes}
           onSessionTimeout={() => {
