@@ -16,7 +16,7 @@ import { getFollowUpTypes, FollowUpTypeItem } from "../services/referenceService
 import PatientFormTest from "../components/Test/PatientFormTest";
 import AddComplaintPopup from "../components/AddComplaintPopup";
 import AddDiagnosisPopup from "../components/AddDiagnosisPopup";
-import AddMedicinePopup, { MedicineData } from "../components/AddMedicinePopup";
+import AddMedicinePopup from "../components/AddMedicinePopup";
 import AddPrescriptionPopup, { PrescriptionData } from "../components/AddPrescriptionPopup";
 import AddBillingPopup from "../components/AddBillingPopup";
 import AddTestLabPopup, { TestLabData } from "../components/AddTestLabPopup";
@@ -209,6 +209,18 @@ interface MedicineRow {
     d: string;
     days: string;
     instruction: string;
+}
+
+interface MedicineData {
+    shortDescription: string;
+    medicineName: string;
+    priority: string;
+    breakfast: string;
+    lunch: string;
+    dinner: string;
+    days: string;
+    instruction: string;
+    addToActiveList: boolean;
 }
 
 interface PrescriptionRow {
@@ -1253,12 +1265,12 @@ export default function Treatment() {
     React.useEffect(() => {
         let cancelled = false;
         async function loadInvestigations() {
-            if (!treatmentData?.doctorId || !sessionData?.clinicId) return;
+            const doctorId = treatmentData?.doctorId || sessionData?.doctorId;
+            const clinicId = treatmentData?.clinicId || sessionData?.clinicId;
+            if (!doctorId || !clinicId) return;
             setInvestigationsLoading(true);
             setInvestigationsError(null);
             try {
-                const doctorId = treatmentData.doctorId;
-                const clinicId = sessionData.clinicId;
                 const options = await investigationService.getInvestigationsForDoctorAndClinic(doctorId, clinicId);
                 if (!cancelled) setInvestigationsOptions(options);
             } catch (error: any) {
@@ -1393,7 +1405,7 @@ export default function Treatment() {
                 const clinicId = sessionData.clinicId;
                 console.log('Loading diagnoses for doctor:', doctorId, 'and clinic:', clinicId);
                 
-                const diagnoses = await diagnosisService.getAllDiagnosesForDoctorAndClinic(doctorId, clinicId);
+                const diagnoses = await diagnosisService.getDiagnosesFromPatientProfile(doctorId, clinicId);
                 if (!cancelled) {
                     setDiagnosesOptions(diagnoses);
                     console.log('Loaded diagnoses:', diagnoses);
@@ -2485,16 +2497,89 @@ export default function Treatment() {
         setShowDiagnosisPopup(true);
     };
 
-    const handleSaveDiagnosis = (diagnosisDescription: string) => {
-        // Add the new diagnosis to the diagnosis rows
-        const newDiagnosis: DiagnosisRow = {
-            id: `custom_${Date.now()}`,
-            diagnosis: diagnosisDescription,
-            comment: ''
-        };
-        
-        setDiagnosisRows(prev => [...prev, newDiagnosis]);
-        setShowDiagnosisPopup(false);
+    const handleSaveDiagnosis = async ({
+        shortDescription,
+        diagnosisDescription,
+        priority
+    }: {
+        shortDescription: string;
+        diagnosisDescription: string;
+        priority: string;
+    }) => {
+        const doctorId = treatmentData?.doctorId || sessionData?.doctorId;
+        const clinicId = treatmentData?.clinicId || sessionData?.clinicId;
+
+        if (!doctorId || !clinicId) {
+            setDiagnosesError('Doctor and clinic information are required to add a diagnosis.');
+            return;
+        }
+
+        const trimmedShortDescription = shortDescription?.trim() || '';
+        const trimmedDiagnosisDescription = diagnosisDescription?.trim() || '';
+        const priorityValue = priority ? parseInt(priority, 10) : 0;
+
+        if (!trimmedShortDescription || !trimmedDiagnosisDescription) {
+            setDiagnosesError('Short description and diagnosis description are required.');
+            return;
+        }
+
+        try {
+            setDiagnosesError(null);
+
+            const normalizedPriority = Number.isNaN(priorityValue) ? 0 : priorityValue;
+            const payload = {
+                shortDescription: trimmedShortDescription,
+                short_description: trimmedShortDescription,
+                diagnosisDescription: trimmedDiagnosisDescription,
+                diagnosis_description: trimmedDiagnosisDescription,
+                priority: normalizedPriority,
+                priorityValue: normalizedPriority,
+                priority_value: normalizedPriority,
+                doctorId,
+                doctor_id: doctorId,
+                clinicId,
+                clinic_id: clinicId
+            };
+
+            const response = await diagnosisService.createDiagnosis(payload);
+            const responseValue =
+                response?.shortDescription ||
+                response?.short_description ||
+                trimmedShortDescription;
+            const responseLabel =
+                response?.diagnosisDescription ||
+                response?.diagnosis_description ||
+                trimmedDiagnosisDescription;
+            const responseId = response?.id
+                ? String(response.id)
+                : `custom_${Date.now()}`;
+
+            const newDiagnosis: DiagnosisRow = {
+                id: responseId,
+                value: responseValue,
+                diagnosis: responseLabel,
+                comment: ''
+            };
+
+            setDiagnosisRows(prev => [...prev, newDiagnosis]);
+            setDiagnosesOptions(prev => {
+                const exists = prev.some(opt => opt.value === responseValue);
+                if (exists) return prev;
+                return [
+                    ...prev,
+                    {
+                        value: responseValue,
+                        label: responseLabel,
+                        short_description: responseValue,
+                        diagnosis_description: responseLabel
+                    }
+                ];
+            });
+            setShowDiagnosisPopup(false);
+        } catch (error: any) {
+            console.error('Failed to create diagnosis from Treatment screen:', error);
+            setDiagnosesError(error?.message || 'Failed to create diagnosis. Please try again.');
+        }
     };
 
     const handleAddCustomMedicine = () => {
@@ -2502,21 +2587,67 @@ export default function Treatment() {
     };
 
     const handleSaveMedicine = (medicineData: MedicineData) => {
-        // Add the new medicine to the medicine rows
+        const doctorId = treatmentData?.doctorId || sessionData?.doctorId;
+        const clinicId = treatmentData?.clinicId || sessionData?.clinicId || '';
+
+        if (!doctorId || !clinicId) {
+            setMedicinesError('Doctor and clinic information are required to add a medicine.');
+            return;
+        }
+        setMedicinesError(null);
+
+        const trimmedShortDescription = medicineData.shortDescription?.trim() || '';
+        const trimmedMedicineName = medicineData.medicineName?.trim() || trimmedShortDescription;
+        const priorityValue = medicineData.priority ? parseInt(medicineData.priority, 10) : 0;
+        const breakfastValue = medicineData.breakfast ? parseFloat(medicineData.breakfast) : 0;
+        const lunchValue = medicineData.lunch ? parseFloat(medicineData.lunch) : 0;
+        const dinnerValue = medicineData.dinner ? parseFloat(medicineData.dinner) : 0;
+
+        const normalizedPriority = Number.isNaN(priorityValue) ? 0 : priorityValue;
+        const normalizedBreakfast = Number.isNaN(breakfastValue) ? 0 : breakfastValue;
+        const normalizedLunch = Number.isNaN(lunchValue) ? 0 : lunchValue;
+        const normalizedDinner = Number.isNaN(dinnerValue) ? 0 : dinnerValue;
+
+        const id = `custom_${Date.now()}`;
+        const optionValue = trimmedShortDescription || id;
+        const optionLabel = trimmedMedicineName || optionValue;
+
         const newMedicine: MedicineRow = {
-            id: `custom_${Date.now()}`,
-            medicine: `${medicineData.medicineName} (${medicineData.shortDescription})`,
-            short_description: medicineData.shortDescription,
-            morning: parseInt(medicineData.breakfast) || 0,
-            afternoon: parseInt(medicineData.lunch) || 0,
-            b: medicineData.breakfast || '',
-            l: medicineData.lunch || '',
-            d: medicineData.dinner || '',
+            id,
+            medicine: `${trimmedMedicineName}${trimmedShortDescription ? ` (${trimmedShortDescription})` : ''}`,
+            short_description: trimmedShortDescription || optionValue,
+            morning: normalizedBreakfast,
+            afternoon: normalizedLunch,
+            b: medicineData.breakfast || String(normalizedBreakfast || ''),
+            l: medicineData.lunch || String(normalizedLunch || ''),
+            d: medicineData.dinner || String(normalizedDinner || ''),
             days: medicineData.days || '',
-            instruction: `${medicineData.instruction} - Priority: ${medicineData.priority}`
+            instruction: medicineData.instruction
+                ? `${medicineData.instruction} - Priority: ${medicineData.priority}`
+                : `Priority: ${medicineData.priority || '0'}`
         };
         
         setMedicineRows(prev => [...prev, newMedicine]);
+        setMedicinesOptions(prev => {
+            const exists = prev.some(opt => opt.value === optionValue);
+            if (exists) return prev;
+            return [
+                ...prev,
+                {
+                    value: optionValue,
+                    label: optionLabel,
+                    short_description: optionValue,
+                    medicine_description: optionLabel,
+                    morning: normalizedBreakfast,
+                    afternoon: normalizedLunch,
+                    priority_value: normalizedPriority,
+                    active: true,
+                    clinic_id: clinicId,
+                    created_on: new Date().toISOString(),
+                    modified_on: null
+                }
+            ];
+        });
         setShowMedicinePopup(false);
     };
 
@@ -2545,8 +2676,45 @@ export default function Treatment() {
     };
 
     const handleSaveTestLab = (testLabData: TestLabData) => {
-        // Add the new test lab data
-        console.log('Test Lab Data:', testLabData);
+        const labTestName = testLabData.labTestName?.trim();
+        if (!labTestName) {
+            setInvestigationsError('Lab test name is required to add an investigation.');
+            return;
+        }
+
+        setInvestigationsError(null);
+        const normalizedName = labTestName;
+        const normalizedNameLower = normalizedName.toLowerCase();
+
+        setInvestigationsOptions(prev => {
+            const exists = prev.some(opt =>
+                opt.label?.toLowerCase() === normalizedNameLower ||
+                opt.value?.toLowerCase() === normalizedNameLower
+            );
+            if (exists) {
+                return prev;
+            }
+            const newOption: InvestigationOption = {
+                value: normalizedName,
+                label: normalizedName,
+                short_description: normalizedName,
+                description: normalizedName
+            };
+            return [...prev, newOption];
+        });
+
+        setInvestigationRows(prev => {
+            const exists = prev.some(row => row.investigation?.toLowerCase() === normalizedNameLower);
+            if (exists) {
+                return prev;
+            }
+            const newRow: InvestigationRow = {
+                id: `custom_inv_${Date.now()}`,
+                investigation: normalizedName
+            };
+            return [...prev, newRow];
+        });
+
         setShowTestLabPopup(false);
     };
 
@@ -5011,11 +5179,15 @@ export default function Treatment() {
                                                             onClick={() => {
                                                                 setDiagnosesError(null);
                                                                 // Trigger reload by updating a dependency
-                                                                const doctorId = treatmentData?.doctorId || '1';
-                                                                const clinicId = sessionData?.clinicId || '1';
-                                                                diagnosisService.getAllDiagnosesForDoctorAndClinic(doctorId, clinicId)
+                                                                const doctorId = treatmentData?.doctorId || sessionData?.doctorId;
+                                                                const clinicId = treatmentData?.clinicId || sessionData?.clinicId;
+                                                                if (!doctorId || !clinicId) {
+                                                                    setDiagnosesError('Doctor and clinic information are required to reload diagnoses.');
+                                                                    return;
+                                                                }
+                                                                diagnosisService.getDiagnosesFromPatientProfile(doctorId, clinicId)
                                                                     .then(setDiagnosesOptions)
-                                                                    .catch(e => setDiagnosesError(e.message));
+                                                                    .catch(e => setDiagnosesError(e.message || 'Failed to load diagnoses.'));
                                                             }}
                                                             style={{
                                                                 marginLeft: '8px', 
@@ -6940,6 +7112,8 @@ export default function Treatment() {
                 open={showTestLabPopup}
                 onClose={() => setShowTestLabPopup(false)}
                 onSave={handleSaveTestLab}
+                doctorId={treatmentData?.doctorId || sessionData?.doctorId}
+                clinicId={treatmentData?.clinicId || sessionData?.clinicId}
             />
 
             {/* Addendum Modal */}

@@ -4,31 +4,23 @@ import { Snackbar } from '@mui/material';
 import medicineService, { MedicineMaster } from '../services/medicineService';
 import { sessionService } from '../services/sessionService';
 
+export interface MedicineData {
+    shortDescription: string;
+    medicineName: string;
+    priority: string;
+    breakfast: string;
+    lunch: string;
+    dinner: string;
+    days: string;
+    instruction: string;
+    addToActiveList: boolean;
+}
+
 interface AddMedicinePopupProps {
     open: boolean;
     onClose: () => void;
-    onSave: (data: {
-        shortDescription: string;
-        medicineName: string;
-        priority: string;
-        breakfast: string;
-        lunch: string;
-        dinner: string;
-        days: string;
-        instruction: string;
-        addToActiveList: boolean;
-    }) => void;
-    editData?: {
-        shortDescription: string;
-        medicineName: string;
-        priority: string;
-        breakfast: string;
-        lunch: string;
-        dinner: string;
-        days: string;
-        instruction: string;
-        addToActiveList: boolean;
-    };
+    onSave: (data: MedicineData) => void;
+    editData?: MedicineData;
 }
 
 const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSave, editData }) => {

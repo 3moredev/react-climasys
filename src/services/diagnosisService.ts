@@ -63,54 +63,102 @@ export interface UpdateDiagnosisRequest extends CreateDiagnosisRequest {}
 // Update diagnosis response interface (same as create)
 export interface UpdateDiagnosisResponse extends CreateDiagnosisResponse {}
 
+interface PatientProfileDiagnosisResponse {
+  diagnosis?: Array<{
+    id?: string | number;
+    short_description?: string;
+    diagnosis_description?: string;
+    priority_value?: number;
+    [key: string]: any;
+  }>;
+  diagnosisList?: PatientProfileDiagnosisResponse['diagnosis'];
+  diagnoses?: PatientProfileDiagnosisResponse['diagnosis'];
+  diagnosisMaster?: PatientProfileDiagnosisResponse['diagnosis'];
+  [key: string]: any;
+}
+
 export const diagnosisService = {
-  // /**
-  //  * Get all diagnoses for a doctor and clinic
-  //  * @param doctorId - Doctor ID
-  //  * @param clinicId - Clinic ID
-  //  * @returns Promise<DiagnosisOption[]> - Array of diagnosis options
-  //  */
-  // async getAllDiagnosesForDoctorAndClinic(doctorId: string, clinicId: string): Promise<DiagnosisOption[]> {
-  //   try {
-  //     console.log('Fetching diagnoses for doctor:', doctorId, 'and clinic:', clinicId);
-      
-  //     const response = await api.get(`/medicine/master-data/diseases/${doctorId}/clinic/${clinicId}`);
-  //     console.log('Diagnoses API response:', response.data);
-      
-  //     // Transform API response to dropdown options format
-  //     const diagnoses: DiagnosisOption[] = response.data.map((diagnosis: DiagnosisApiResponse) => ({
-  //       value: diagnosis.short_description, // Use short_description as unique identifier
-  //       label: diagnosis.diagnosis_description, // Show diagnosis_description in dropdown
-  //       short_description: diagnosis.short_description,
-  //       diagnosis_description: diagnosis.diagnosis_description
-  //     }));
-      
-  //     return diagnoses;
-  //   } catch (error: any) {
-  //     console.error('Diagnoses API Error:', error);
-      
-  //     // Handle CORS and network errors
-  //     if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
-  //       throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
-  //     }
-      
-  //     // Handle HTTP errors
-  //     if (error.response?.status === 400) {
-  //       throw new Error('Invalid request. Please check your doctor ID and clinic ID.');
-  //     } else if (error.response?.status === 404) {
-  //       throw new Error('Diagnoses endpoint not found. Please check your backend configuration.');
-  //     } else if (error.response?.status === 500) {
-  //       throw new Error('Server error occurred while fetching diagnoses.');
-  //     }
-      
-  //     // Handle backend-specific errors
-  //     if (error.response?.data?.error) {
-  //       throw new Error(error.response.data.error);
-  //     }
-      
-  //     throw new Error(error.response?.data?.message || 'Failed to fetch diagnoses');
-  //   }
-  // },
+  /**
+   * Backwards compatible alias for legacy code paths.
+   * Delegates to getDiagnosesFromPatientProfile.
+   */
+  async getAllDiagnosesForDoctorAndClinic(doctorId: string, clinicId: string): Promise<DiagnosisOption[]> {
+    return this.getDiagnosesFromPatientProfile(doctorId, clinicId);
+  },
+
+  /**
+   * Get diagnosis options from patient-profile ref data
+   * @param doctorId - Doctor ID
+   * @param clinicId - Clinic ID
+   */
+  async getDiagnosesFromPatientProfile(doctorId: string, clinicId: string): Promise<DiagnosisOption[]> {
+    if (!doctorId) {
+      throw new Error('Doctor ID is required to load diagnoses.');
+    }
+    if (!clinicId) {
+      throw new Error('Clinic ID is required to load diagnoses.');
+    }
+
+    try {
+      console.log('Fetching diagnoses via patient-profile ref data for:', { doctorId, clinicId });
+      const response = await api.get<PatientProfileDiagnosisResponse>(`/refdata/patient-profile`, {
+        params: { doctorId, clinicId }
+      });
+      const data = response.data || {};
+
+      const candidates = [
+        data.diagnosis,
+        data.diagnoses,
+        data.diagnosisList,
+        data.diagnosisMaster
+      ];
+      const source = candidates.find(list => Array.isArray(list) && list.length > 0) || [];
+
+      if (!Array.isArray(source) || source.length === 0) {
+        console.warn('No diagnoses found in patient profile response.');
+        return [];
+      }
+
+      return source.map((item: any, idx: number) => {
+        const value =
+          item.short_description ||
+          item.diagnosis_description ||
+          item.id ||
+          `diagnosis_${idx}`;
+        const label =
+          item.diagnosis_description ||
+          item.short_description ||
+          value;
+
+        return {
+          value: String(value),
+          label: String(label),
+          short_description: item.short_description,
+          diagnosis_description: item.diagnosis_description
+        };
+      });
+    } catch (error: any) {
+      console.error('Patient profile diagnoses API Error:', error);
+
+      if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
+        throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
+      }
+
+      if (error.response?.status === 400) {
+        throw new Error('Invalid request. Please check your doctor and clinic IDs.');
+      } else if (error.response?.status === 404) {
+        throw new Error('Patient profile diagnoses endpoint not found. Please check your backend configuration.');
+      } else if (error.response?.status === 500) {
+        throw new Error('Server error occurred while fetching diagnoses.');
+      }
+
+      if (error.response?.data?.error) {
+        throw new Error(error.response.data.error);
+      }
+
+      throw new Error(error.response?.data?.message || 'Failed to fetch diagnoses');
+    }
+  },
 
   /**
    * Get all diagnoses for a doctor (for management page)
