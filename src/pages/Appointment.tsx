@@ -3810,7 +3810,7 @@ export default function AppointmentTable() {
                     style={{ ...buttonStyle }}
                     onClick={handleBookAppointment}
                 >
-                    Book Appointment {selectedPatients.length > 0 && `(1)`}
+                    Book Appointment
                 </button>
                 <button
                     className="btn"
