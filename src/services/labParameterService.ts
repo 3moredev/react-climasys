@@ -88,6 +88,49 @@ export interface DeleteLabTestParameterResponse {
   [key: string]: any;
 }
 
+// Lab Test and Parameter Request interface
+// This replaces the USP_Insert_LabTest_And_Parameters stored procedure functionality
+export interface LabTestAndParameterRequest {
+  doctorId?: string;
+  doctor_id?: string;
+  clinicId?: string;
+  clinic_id?: string;
+  groupName?: string;
+  group_name?: string;
+  Group_Name?: string;
+  oldDescription?: string;
+  old_description?: string;
+  Old_Description?: string;
+  newDescription?: string;
+  new_description?: string;
+  New_Description?: string;
+  description?: string;
+  Description?: string;
+  priority?: number;
+  Priority?: number;
+  Priority_Value?: number;
+  priorityValue?: number;
+  parameters?: Array<{
+    parameterName?: string;
+    parameter_name?: string;
+    Parameter_Name?: string;
+    [key: string]: any;
+  }> | string[];
+  [key: string]: any;
+}
+
+// Lab Test and Parameter Response interface
+export interface LabTestAndParameterResponse {
+  success?: boolean;
+  labTestId?: number;
+  lab_test_id?: number;
+  id?: number;
+  message?: string;
+  error?: string;
+  data?: any;
+  [key: string]: any;
+}
+
 export const labParameterService = {
   /**
    * Get lab test parameters for a specific doctor, clinic and lab test description
@@ -521,6 +564,55 @@ export const labParameterService = {
       }
       
       throw new Error(error.response?.data?.message || 'Failed to create lab test parameters');
+    }
+  },
+
+  /**
+   * Insert/Update lab test and parameters
+   * This endpoint replaces the USP_Insert_LabTest_And_Parameters stored procedure functionality
+   * 
+   * The stored procedure logic:
+   * 1. MERGE operation on Lab_Test_Master (update if exists with old description, insert if not)
+   * 2. Gets the lab test ID from the inserted/updated lab test
+   * 3. Inserts parameters from the request into Lab_Test_Parameter table
+   * 
+   * POST /api/lab/master/test-and-parameters
+   * @param request - Request containing doctor ID, clinic ID, group name, old description, new description, priority, and parameter data
+   * @returns Promise<LabTestAndParameterResponse> - Created/updated lab test and parameters
+   */
+  async insertLabTestAndParameters(
+    request: LabTestAndParameterRequest
+  ): Promise<LabTestAndParameterResponse> {
+    try {
+      console.log('Inserting/updating lab test and parameters:', request);
+      
+      const resp = await api.post<LabTestAndParameterResponse>(
+        `/lab/master/parameters`,
+        request
+      );
+      console.log('Insert lab test and parameters response:', resp.data);
+      return resp.data;
+    } catch (error: any) {
+      console.error('Insert lab test and parameters API Error:', error);
+      
+      if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
+        throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
+      }
+      
+      if (error.response?.status === 400) {
+        const msg = error.response?.data?.error || error.response?.data?.message || 'Invalid request parameters.';
+        throw new Error(msg);
+      } else if (error.response?.status === 404) {
+        throw new Error('Insert lab test and parameters endpoint not found. Please confirm backend route.');
+      } else if (error.response?.status === 500) {
+        throw new Error('Server error occurred while inserting/updating lab test and parameters.');
+      }
+      
+      if (error.response?.data?.error) {
+        throw new Error(error.response.data.error);
+      }
+      
+      throw new Error(error.response?.data?.message || 'Failed to insert/update lab test and parameters');
     }
   },
 
