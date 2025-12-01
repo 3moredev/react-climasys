@@ -1799,6 +1799,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
       message={snackbarMessage}
       anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       sx={{
+        zIndex: 11001,
         '& .MuiSnackbarContent-root': {
           backgroundColor: '#4caf50',
           color: 'white',
