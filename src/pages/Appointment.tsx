@@ -883,6 +883,17 @@ export default function AppointmentTable() {
 
 
 
+    const updateSearchMenuPosition = () => {
+        if (searchInputRef.current) {
+            const rect = searchInputRef.current.getBoundingClientRect();
+            setSearchMenuPosition({
+                top: rect.bottom + window.scrollY,
+                left: rect.left + window.scrollX,
+                width: rect.width,
+            });
+        }
+    };
+
     const handleSearchChange = (value: string) => {
         setSearchTerm(value);
     
@@ -890,9 +901,13 @@ export default function AppointmentTable() {
         if (!search) {
             setSearchResults([]);
             setShowDropdown(false);
+            setSearchMenuPosition(null);
             return;
         }
     
+        // Recalculate dropdown position whenever user types
+        updateSearchMenuPosition();
+
         // Use the existing searchPatients function for API-based search
         searchPatients(value);
     };
@@ -1335,7 +1350,7 @@ export default function AppointmentTable() {
     }, [showPatientFormDialog]);
 
     // Remove selected patient
-    const removeSelectedPatient = (patientId: number) => {
+    const removeSelectedPatient = (patientId: string) => {
         setSelectedPatients(prev => prev.filter(p => p.id !== patientId));
     };
 
@@ -1844,6 +1859,7 @@ export default function AppointmentTable() {
         const handleClickOutside = (event: MouseEvent) => {
             if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
                 setShowDropdown(false);
+                setSearchMenuPosition(null);
             }
             if (openStatusIndex !== null) {
                 const target = event.target as HTMLElement;
@@ -1869,6 +1885,19 @@ export default function AppointmentTable() {
             document.removeEventListener('mousedown', handleClickOutside);
         };
     }, [openStatusIndex, openActionIndex]);
+
+    // Keep dropdown aligned with search input on scroll/resize while open
+    useEffect(() => {
+        if (!showDropdown) return;
+        const handler = () => updateSearchMenuPosition();
+        window.addEventListener('resize', handler);
+        window.addEventListener('scroll', handler, true);
+        handler();
+        return () => {
+            window.removeEventListener('resize', handler);
+            window.removeEventListener('scroll', handler, true);
+        };
+    }, [showDropdown]);
 
     // Measure Filter button to size filter inputs the same
     useEffect(() => {
@@ -2438,14 +2467,16 @@ export default function AppointmentTable() {
                         />
 
                         {/* Search Dropdown for Doctor Screen */}
-                        {showDropdown && (
+                        {showDropdown && searchMenuPosition && (
                             <div
-                                className="position-absolute w-100 bg-white border border-secondary rounded shadow-lg"
+                                className="bg-white border border-secondary rounded shadow-lg"
                                 style={{
-                                    top: "100%",
-                                    left: 0,
+                                    position: "fixed",
+                                    top: searchMenuPosition.top,
+                                    left: searchMenuPosition.left,
+                                    width: searchMenuPosition.width,
                                     zIndex: 1051,
-                                    maxHeight: "300px",
+                                    maxHeight: "70vh",
                                     overflowY: "auto",
                                     fontFamily: "'Roboto', sans-serif"
                                 }}
@@ -3300,9 +3331,6 @@ export default function AppointmentTable() {
                                 visitDates={visitDates}
                                 currentVisitIndex={currentVisitIndex}
                                 onVisitDateChange={handleVisitDateChange}
-                                patientId={selectedPatientForForm?.id}
-                                doctorId={doctorId}
-                                clinicId={clinicId}
                             />
                         </div>
                     </div>
@@ -3707,14 +3735,16 @@ export default function AppointmentTable() {
                     />
 
                     {/* Search Dropdown */}
-                    {showDropdown && (
+                    {showDropdown && searchMenuPosition && (
                         <div
-                            className="position-absolute w-100 bg-white border border-secondary rounded shadow-lg"
+                            className="bg-white border border-secondary rounded shadow-lg"
                             style={{
-                                top: "100%",
-                                left: 0,
+                                position: "fixed",
+                                top: searchMenuPosition.top,
+                                left: searchMenuPosition.left,
+                                width: searchMenuPosition.width,
                                 zIndex: 1051,
-                                maxHeight: "300px",
+                                maxHeight: "70vh",
                                 overflowY: "auto",
                                 fontFamily: "'Roboto', sans-serif"
                             }}
@@ -5682,9 +5712,6 @@ export default function AppointmentTable() {
                             visitDates={visitDates}
                             currentVisitIndex={currentVisitIndex}
                             onVisitDateChange={handleVisitDateChange}
-                            patientId={selectedPatientForForm?.id}
-                            doctorId={doctorId}
-                            clinicId={clinicId}
                         />
                     </div>
                 </div>
