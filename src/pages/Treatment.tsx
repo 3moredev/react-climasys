@@ -29,6 +29,9 @@ import LabTrendPopup from "../components/LabTrendPopup";
 import VitalsTrendPopup from "../components/VitalsTrendPopup";
 import AddPatientPage from "./AddPatientPage";
 import { buildPrescriptionPrintHTML, buildLabTestsPrintHTML, getHeaderImageUrl } from "../utils/printTemplates";
+import prescriptionDetailsService, {
+    PrescriptionTemplate as PrescriptionTemplateApiModel,
+} from "../services/prescriptionDetailsService";
 
 // Specific styles for Duration/Comment input in table
 const durationCommentStyles = `
@@ -2655,20 +2658,57 @@ export default function Treatment() {
         setShowPrescriptionPopup(true);
     };
 
-    const handleSavePrescription = (prescriptionData: PrescriptionData) => {
-        // Add the new prescription to the prescription rows
-        const newPrescription: PrescriptionRow = {
-            id: `custom_${Date.now()}`,
-            prescription: `${prescriptionData.brandName} (${prescriptionData.genericName})`,
-            b: prescriptionData.breakfast,
-            l: prescriptionData.lunch,
-            d: prescriptionData.dinner,
-            days: prescriptionData.days,
-            instruction: `${prescriptionData.instruction} - Priority: ${prescriptionData.priority} - Category: ${prescriptionData.categoryName} - SubCategory: ${prescriptionData.subCategoryName} - Marketed By: ${prescriptionData.marketedBy}`
+    const handleSavePrescription = async (prescriptionData: PrescriptionData) => {
+        const doctorId = treatmentData?.doctorId || sessionData?.doctorId;
+        const clinicIdForPayload = treatmentData?.clinicId || sessionData?.clinicId || "";
+
+        if (!doctorId) {
+            setSnackbarMessage("Doctor information is required to add a prescription.");
+            setSnackbarOpen(true);
+            return;
+        }
+
+        // Build payload for master Prescription API so it appears in search lists
+        const payload: PrescriptionTemplateApiModel = {
+            catShortName: prescriptionData.categoryName.trim(),
+            catsubDescription: prescriptionData.subCategoryName.trim(),
+            brandName: prescriptionData.brandName.trim(),
+            medicineName: prescriptionData.genericName.trim(),
+            clinicId: clinicIdForPayload,
+            marketedBy: prescriptionData.marketedBy || "",
+            priorityValue: prescriptionData.priority ? parseInt(prescriptionData.priority, 10) || 0 : 0,
+            morning: prescriptionData.breakfast ? parseInt(prescriptionData.breakfast, 10) || 0 : 0,
+            afternoon: prescriptionData.lunch ? parseInt(prescriptionData.lunch, 10) || 0 : 0,
+            night: prescriptionData.dinner ? parseInt(prescriptionData.dinner, 10) || 0 : 0,
+            noOfDays: prescriptionData.days ? parseInt(prescriptionData.days, 10) || 0 : 0,
+            instruction: prescriptionData.instruction || "",
+            doctorId,
+            active: true,
         };
-        
-        setPrescriptionRows(prev => [...prev, newPrescription]);
-        setShowPrescriptionPopup(false);
+
+        try {
+            // Persist in master table so it shows up on refresh/search screens
+            await prescriptionDetailsService.createPrescription(payload);
+
+            // Also add to current visit's prescription table
+            const newPrescription: PrescriptionRow = {
+                id: `custom_${Date.now()}`,
+                prescription: prescriptionData.genericName || "",
+                b: prescriptionData.breakfast,
+                l: prescriptionData.lunch,
+                d: prescriptionData.dinner,
+                days: prescriptionData.days,
+                instruction: prescriptionData.instruction || "",
+            };
+
+            setPrescriptionRows((prev) => [...prev, newPrescription]);
+        } catch (error: any) {
+            console.error("Failed to create prescription from Treatment screen:", error);
+            setSnackbarMessage(error?.message || "Failed to create prescription. Please try again.");
+            setSnackbarOpen(true);
+        } finally {
+            setShowPrescriptionPopup(false);
+        }
     };
 
     const handleAddCustomTestLab = () => {
@@ -7025,6 +7065,8 @@ export default function Treatment() {
                 open={showPrescriptionPopup}
                 onClose={() => setShowPrescriptionPopup(false)}
                 onSave={handleSavePrescription}
+                doctorId={treatmentData?.doctorId || sessionData?.doctorId}
+                clinicId={treatmentData?.clinicId || sessionData?.clinicId}
             />
 
             {/* Instruction Groups Popup */}

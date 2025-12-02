@@ -41,6 +41,9 @@ import ManageHospitalBill from './pages/ManageHospitalBill'
 import ManageMedicine from './pages/ManageMedicine'
 import ManageProcedure from './pages/ManageProcedure'
 import ManageBillingDetails from './pages/ManageBillingDetails'
+import PrescriptionCategory from './pages/PrescriptionCategory'
+import PrescriptionSubCategory from './pages/PrescriptionSubCategory'
+import PrescriptionDetails from './pages/PrescriptionDetails'
 // Import dev helpers for console access
 import './utils/devHelpers'
 const theme = createTheme({
@@ -231,6 +234,27 @@ function App() {
               <AuthGuard>
                 <MainLayout>
                   <ManageBillingDetails />
+                    </MainLayout>
+              </AuthGuard>
+            } />
+            <Route path="/prescription-category" element={
+              <AuthGuard>
+                <MainLayout>
+                  <PrescriptionCategory />
+                </MainLayout>
+              </AuthGuard>
+            } />
+            <Route path="/prescription-sub-category" element={
+              <AuthGuard>
+                <MainLayout>
+                  <PrescriptionSubCategory />
+                </MainLayout>
+              </AuthGuard>
+            } />
+            <Route path="/prescription-details" element={
+              <AuthGuard>
+                <MainLayout>
+                  <PrescriptionDetails />
                 </MainLayout>
               </AuthGuard>
             } />
