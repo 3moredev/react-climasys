@@ -5,6 +5,8 @@ export interface DiagnosisOption {
   label: string;
   short_description?: string;
   diagnosis_description?: string;
+  priority?: number;
+  priority_value?: number;
 }
 
 export interface DiagnosisApiResponse {
@@ -134,7 +136,9 @@ export const diagnosisService = {
           value: String(value),
           label: String(label),
           short_description: item.short_description,
-          diagnosis_description: item.diagnosis_description
+          diagnosis_description: item.diagnosis_description,
+          priority: item.priority_value ?? item.priority ?? 0,
+          priority_value: item.priority_value ?? item.priority ?? 0
         };
       });
     } catch (error: any) {

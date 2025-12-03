@@ -102,10 +102,11 @@ export default function ManageProcedure() {
   });
 
   // Pagination calculations
-  const totalPages = Math.ceil(filteredProcedures.length / pageSize);
+  const totalPages = Math.max(1, Math.ceil(filteredProcedures.length / pageSize));
   const startIndex = (currentPage - 1) * pageSize;
   const endIndex = startIndex + pageSize;
   const currentProcedures = filteredProcedures.slice(startIndex, endIndex);
+  const shouldEnableTableScroll = filteredProcedures.length > pageSize;
 
   const handleSearch = async () => {
     if (!selectedDoctorId) {
@@ -452,10 +453,8 @@ export default function ManageProcedure() {
         fontWeight: 'bold', 
         fontSize: '1.8rem', 
         color: '#000000',
-        marginBottom: '50px',
-        marginTop: '0',
-        paddingBottom: '20px',
-        borderBottom: '2px solid #e0e0e0'
+        marginBottom: '30px',
+        marginTop: '0'
       }}>
         Manage Procedures
       </h1>
@@ -464,7 +463,7 @@ export default function ManageProcedure() {
       {error && (
         <div style={{
           padding: '12px',
-          margin: '0 50px 20px 50px',
+          margin: '0 0 20px 0',
           backgroundColor: '#fee',
           color: '#c33',
           border: '1px solid #fcc',
@@ -488,7 +487,7 @@ export default function ManageProcedure() {
       )}
 
       {/* Search and Action Section */}
-      <div className="search-section" style={{ paddingLeft: '50px', paddingRight: '50px' }}>
+      <div className="search-section">
         <div className="search-input-wrapper">
           <input
             type="text"
@@ -565,7 +564,10 @@ export default function ManageProcedure() {
       </div>
 
       {/* Procedures Table */}
-      <div className="table-responsive" style={{ paddingLeft: '50px', paddingRight: '50px' }}>
+      <div
+        className="table-responsive"
+        style={shouldEnableTableScroll ? { maxHeight: '510px', overflowY: 'auto' } : undefined}
+      >
         <table className="procedures-table">
           <thead>
             <tr>

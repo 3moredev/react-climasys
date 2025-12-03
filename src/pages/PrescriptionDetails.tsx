@@ -147,6 +147,7 @@ export default function PrescriptionDetails() {
   const totalPages = Math.max(1, Math.ceil(filteredPrescriptions.length / pageSize))
   const startIndex = (currentPage - 1) * pageSize
   const paginatedRows = filteredPrescriptions.slice(startIndex, startIndex + pageSize)
+  const shouldEnableTableScroll = filteredPrescriptions.length > pageSize
 
   useEffect(() => {
     setCurrentPage(1)
@@ -491,10 +492,8 @@ export default function PrescriptionDetails() {
         fontWeight: 'bold', 
         fontSize: '1.8rem', 
         color: '#000000',
-        marginBottom: '50px',
-        marginTop: '0',
-        paddingBottom: '20px',
-        borderBottom: '2px solid #e0e0e0'
+        marginBottom: '30px',
+        marginTop: '0'
       }}>
         Prescription Details
       </h1>
@@ -504,7 +503,7 @@ export default function PrescriptionDetails() {
         <div
           style={{
             padding: '12px 20px',
-            margin: '0 50px 20px 50px',
+            margin: '0 0 20px 0',
             backgroundColor: '#fee',
             color: '#c33',
             border: '1px solid #fcc',
@@ -517,7 +516,7 @@ export default function PrescriptionDetails() {
       )}
 
       {/* Search and Action Section */}
-      <div className="search-section" style={{ paddingLeft: '50px', paddingRight: '50px' }}>
+      <div className="search-section">
         <div className="search-input-wrapper">
           <input
             type="text"
@@ -594,7 +593,10 @@ export default function PrescriptionDetails() {
       </div>
 
       {/* Prescriptions Table */}
-      <div className="table-responsive" style={{ paddingLeft: '50px', paddingRight: '50px' }}>
+      <div
+        className="table-responsive"
+        style={shouldEnableTableScroll ? { maxHeight: '580px', overflowY: 'auto' } : undefined}
+      >
         <table className="prescription-table">
           <thead>
             <tr>

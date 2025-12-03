@@ -185,6 +185,7 @@ interface ComplaintRow {
     value: string;
     label: string;
     comment: string;
+    priority?: number;
 }
 
 interface AddComplaintFormData {
@@ -199,6 +200,7 @@ interface DiagnosisRow {
     value?: string;
     diagnosis: string;
     comment: string;
+    priority?: number;
 }
 
 interface MedicineRow {
@@ -212,6 +214,7 @@ interface MedicineRow {
     d: string;
     days: string;
     instruction: string;
+    priority?: number;
 }
 
 interface MedicineData {
@@ -414,19 +417,34 @@ export default function Treatment() {
     const filteredComplaints = React.useMemo(() => {
         const term = complaintSearch.trim().toLowerCase();
         
+        // Helper function to sort by priority (lower priority number = higher priority)
+        const sortByPriority = (a: ComplaintOption, b: ComplaintOption) => {
+            const priorityA = a.priority ?? a.priority_value ?? 999;
+            const priorityB = b.priority ?? b.priority_value ?? 999;
+            return priorityA - priorityB;
+        };
+        
         if (!term) {
-            // No search term - show all options with selected ones first
-            const selectedOptions = complaintsOptions.filter(opt => selectedComplaints.includes(opt.value));
-            const unselectedOptions = complaintsOptions.filter(opt => !selectedComplaints.includes(opt.value));
+            // No search term - show all options with selected ones first, sorted by priority
+            const selectedOptions = complaintsOptions
+                .filter(opt => selectedComplaints.includes(opt.value))
+                .sort(sortByPriority);
+            const unselectedOptions = complaintsOptions
+                .filter(opt => !selectedComplaints.includes(opt.value))
+                .sort(sortByPriority);
             return [...selectedOptions, ...unselectedOptions];
         } else {
-            // Search term provided - show selected items first, then search results
-            const selectedOptions = complaintsOptions.filter(opt => 
-                selectedComplaints.includes(opt.value) && opt.label.toLowerCase().includes(term)
-            );
-            const unselectedSearchResults = complaintsOptions.filter(opt => 
-                !selectedComplaints.includes(opt.value) && opt.label.toLowerCase().includes(term)
-            );
+            // Search term provided - show selected items first, then search results, both sorted by priority
+            const selectedOptions = complaintsOptions
+                .filter(opt => 
+                    selectedComplaints.includes(opt.value) && opt.label.toLowerCase().includes(term)
+                )
+                .sort(sortByPriority);
+            const unselectedSearchResults = complaintsOptions
+                .filter(opt => 
+                    !selectedComplaints.includes(opt.value) && opt.label.toLowerCase().includes(term)
+                )
+                .sort(sortByPriority);
             return [...selectedOptions, ...unselectedSearchResults];
         }
     }, [complaintsOptions, complaintSearch, selectedComplaints]);
@@ -443,19 +461,34 @@ export default function Treatment() {
     const filteredMedicines = React.useMemo(() => {
         const term = medicineSearch.trim().toLowerCase();
         
+        // Helper function to sort by priority (lower priority number = higher priority)
+        const sortByPriority = (a: MedicineOption, b: MedicineOption) => {
+            const priorityA = a.priority ?? a.priority_value ?? 999;
+            const priorityB = b.priority ?? b.priority_value ?? 999;
+            return priorityA - priorityB;
+        };
+        
         if (!term) {
-            // No search term - show all options with selected ones first
-            const selectedOptions = medicinesOptions.filter(opt => selectedMedicines.includes(opt.value));
-            const unselectedOptions = medicinesOptions.filter(opt => !selectedMedicines.includes(opt.value));
+            // No search term - show all options with selected ones first, sorted by priority
+            const selectedOptions = medicinesOptions
+                .filter(opt => selectedMedicines.includes(opt.value))
+                .sort(sortByPriority);
+            const unselectedOptions = medicinesOptions
+                .filter(opt => !selectedMedicines.includes(opt.value))
+                .sort(sortByPriority);
             return [...selectedOptions, ...unselectedOptions];
         } else {
-            // Search term provided - show selected items first, then search results
-            const selectedOptions = medicinesOptions.filter(opt => 
-                selectedMedicines.includes(opt.value) && opt.label.toLowerCase().includes(term)
-            );
-            const unselectedSearchResults = medicinesOptions.filter(opt => 
-                !selectedMedicines.includes(opt.value) && opt.label.toLowerCase().includes(term)
-            );
+            // Search term provided - show selected items first, then search results, both sorted by priority
+            const selectedOptions = medicinesOptions
+                .filter(opt => 
+                    selectedMedicines.includes(opt.value) && opt.label.toLowerCase().includes(term)
+                )
+                .sort(sortByPriority);
+            const unselectedSearchResults = medicinesOptions
+                .filter(opt => 
+                    !selectedMedicines.includes(opt.value) && opt.label.toLowerCase().includes(term)
+                )
+                .sort(sortByPriority);
             return [...selectedOptions, ...unselectedSearchResults];
         }
     }, [medicinesOptions, medicineSearch, selectedMedicines]);
@@ -472,19 +505,34 @@ export default function Treatment() {
     const filteredDiagnoses = React.useMemo(() => {
         const term = diagnosisSearch.trim().toLowerCase();
         
+        // Helper function to sort by priority (lower priority number = higher priority)
+        const sortByPriority = (a: DiagnosisOption, b: DiagnosisOption) => {
+            const priorityA = a.priority ?? a.priority_value ?? 999;
+            const priorityB = b.priority ?? b.priority_value ?? 999;
+            return priorityA - priorityB;
+        };
+        
         if (!term) {
-            // No search term - show all options with selected ones first
-            const selectedOptions = diagnosesOptions.filter(opt => selectedDiagnoses.includes(opt.value));
-            const unselectedOptions = diagnosesOptions.filter(opt => !selectedDiagnoses.includes(opt.value));
+            // No search term - show all options with selected ones first, sorted by priority
+            const selectedOptions = diagnosesOptions
+                .filter(opt => selectedDiagnoses.includes(opt.value))
+                .sort(sortByPriority);
+            const unselectedOptions = diagnosesOptions
+                .filter(opt => !selectedDiagnoses.includes(opt.value))
+                .sort(sortByPriority);
             return [...selectedOptions, ...unselectedOptions];
         } else {
-            // Search term provided - show selected items first, then search results
-            const selectedOptions = diagnosesOptions.filter(opt => 
-                selectedDiagnoses.includes(opt.value) && opt.label.toLowerCase().includes(term)
-            );
-            const unselectedSearchResults = diagnosesOptions.filter(opt => 
-                !selectedDiagnoses.includes(opt.value) && opt.label.toLowerCase().includes(term)
-            );
+            // Search term provided - show selected items first, then search results, both sorted by priority
+            const selectedOptions = diagnosesOptions
+                .filter(opt => 
+                    selectedDiagnoses.includes(opt.value) && opt.label.toLowerCase().includes(term)
+                )
+                .sort(sortByPriority);
+            const unselectedSearchResults = diagnosesOptions
+                .filter(opt => 
+                    !selectedDiagnoses.includes(opt.value) && opt.label.toLowerCase().includes(term)
+                )
+                .sort(sortByPriority);
             return [...selectedOptions, ...unselectedSearchResults];
         }
     }, [diagnosesOptions, diagnosisSearch, selectedDiagnoses]);
@@ -2409,12 +2457,19 @@ export default function Treatment() {
                 if (!existingValues.has(val)) {
                     const opt = complaintsOptions.find(o => o.value === val);
                     if (opt) {
-                        newRows.push({ id: `${val}`, value: val, label: opt.label, comment: '' });
+                        newRows.push({ 
+                            id: `${val}`, 
+                            value: val, 
+                            label: opt.label, 
+                            comment: '',
+                            priority: opt.priority ?? opt.priority_value ?? 999
+                        });
                     }
                 }
             });
             const next = [...prev, ...newRows];
-            return next;
+            // Sort by priority (lower priority number = higher priority)
+            return next.sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999));
         });
         // Clear selections and close menu after adding
         setSelectedComplaints([]);
@@ -2476,10 +2531,15 @@ export default function Treatment() {
                 id: responseId,
                 value: responseId,
                 label,
-                comment: ''
+                comment: '',
+                priority: response?.priority ?? response?.priority_value ?? 999
             };
 
-            setComplaintsRows(prev => [...prev, newComplaint]);
+            setComplaintsRows(prev => {
+                const next = [...prev, newComplaint];
+                // Sort by priority (lower priority number = higher priority)
+                return next.sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999));
+            });
             setComplaintsOptions(prev => [
                 ...prev,
                 {
@@ -2561,10 +2621,15 @@ export default function Treatment() {
                 id: responseId,
                 value: responseValue,
                 diagnosis: responseLabel,
-                comment: ''
+                comment: '',
+                priority: response?.priority ?? response?.priority_value ?? 999
             };
 
-            setDiagnosisRows(prev => [...prev, newDiagnosis]);
+            setDiagnosisRows(prev => {
+                const next = [...prev, newDiagnosis];
+                // Sort by priority (lower priority number = higher priority)
+                return next.sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999));
+            });
             setDiagnosesOptions(prev => {
                 const exists = prev.some(opt => opt.value === responseValue);
                 if (exists) return prev;
@@ -2625,12 +2690,15 @@ export default function Treatment() {
             l: medicineData.lunch || String(normalizedLunch || ''),
             d: medicineData.dinner || String(normalizedDinner || ''),
             days: medicineData.days || '',
-            instruction: medicineData.instruction
-                ? `${medicineData.instruction} - Priority: ${medicineData.priority}`
-                : `Priority: ${medicineData.priority || '0'}`
+            instruction: medicineData.instruction || '',
+            priority: normalizedPriority || 999
         };
         
-        setMedicineRows(prev => [...prev, newMedicine]);
+        setMedicineRows(prev => {
+            const next = [...prev, newMedicine];
+            // Sort by priority (lower priority number = higher priority)
+            return next.sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999));
+        });
         setMedicinesOptions(prev => {
             const exists = prev.some(opt => opt.value === optionValue);
             if (exists) return prev;
@@ -3117,13 +3185,20 @@ export default function Treatment() {
                     ? appointmentData.complaintsRows
                     : (Array.isArray(appointmentData.complaints) ? appointmentData.complaints : null);
                 if (complaintsSource && complaintsSource.length > 0) {
-                    const mappedComplaintsRows: ComplaintRow[] = complaintsSource.map((row: any, index: number) => ({
-                        id: `complaint-${index}-${Date.now()}`,
-                        value: row.value || row.complaint_description || row.short_description || row.complaint || '',
-                        label: row.label || row.complaint_description || row.complaint || row.short_description || '',
-                        comment: row.comment || row.duration || ''
-                    }));
-                    setComplaintsRows(mappedComplaintsRows);
+                    const mappedComplaintsRows: ComplaintRow[] = complaintsSource.map((row: any, index: number) => {
+                        const value = row.value || row.complaint_description || row.short_description || row.complaint || '';
+                        const opt = complaintsOptions.find(o => o.value === value);
+                        return {
+                            id: `complaint-${index}-${Date.now()}`,
+                            value,
+                            label: row.label || row.complaint_description || row.complaint || row.short_description || '',
+                            comment: row.comment || row.complaint_comment || row.duration || '',
+                            priority: opt?.priority ?? opt?.priority_value ?? row.priority ?? row.priority_value ?? 999
+                        };
+                    });
+                    // Sort by priority (lower priority number = higher priority)
+                    const sortedRows = mappedComplaintsRows.sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999));
+                    setComplaintsRows(sortedRows);
                     complaintsRowsBuiltFromApiRef.current = true; // Mark as built from API
                     console.log('Loaded complaints rows from API:', mappedComplaintsRows);
                 } else if (Array.isArray(complaintsSource)) {
@@ -3155,13 +3230,20 @@ export default function Treatment() {
                     ? appointmentData.diagnosisRows
                     : (Array.isArray(appointmentData.diagnosis) ? appointmentData.diagnosis : null);
                 if (diagnosisSource && diagnosisSource.length > 0) {
-                    const mappedDiagnosisRows: DiagnosisRow[] = diagnosisSource.map((row: any, index: number) => ({
-                        id: `diag-${index}-${Date.now()}`,
-                        value: row.short_description || row.diagnosis_description || row.desease_description || '',
-                        diagnosis: row.diagnosis || row.desease_description || row.diagnosis_description || '',
-                        comment: ''
-                    }));
-                    setDiagnosisRows(mappedDiagnosisRows);
+                    const mappedDiagnosisRows: DiagnosisRow[] = diagnosisSource.map((row: any, index: number) => {
+                        const value = row.short_description || row.diagnosis_description || row.desease_description || '';
+                        const opt = diagnosesOptions.find(o => o.value === value);
+                        return {
+                            id: `diag-${index}-${Date.now()}`,
+                            value,
+                            diagnosis: row.diagnosis || row.desease_description || row.diagnosis_description || '',
+                            comment: '',
+                            priority: opt?.priority ?? opt?.priority_value ?? row.priority ?? row.priority_value ?? 999
+                        };
+                    });
+                    // Sort by priority (lower priority number = higher priority)
+                    const sortedRows = mappedDiagnosisRows.sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999));
+                    setDiagnosisRows(sortedRows);
                     console.log('Loaded diagnosis rows from API:', mappedDiagnosisRows);
                 } else if (Array.isArray(diagnosisSource)) {
                     // Empty array - clear existing rows
@@ -3179,19 +3261,32 @@ export default function Treatment() {
                     ? appointmentData.medicineRows
                     : (Array.isArray(appointmentData.medicines) ? appointmentData.medicines : null);
                 if (medicineSource && medicineSource.length > 0) {
-                    const mappedMedicineRows: MedicineRow[] = medicineSource.map((row: any, index: number) => ({
-                        id: `med-${index}-${Date.now()}`,
-                        medicine: row.medicine || row.medicine_description || row.short_description || '',
-                        short_description: row.short_description || row.medicine_description || '',
-                        morning: row.morning || 0,
-                        afternoon: row.afternoon || 0,
-                        b: String(row.morning || ''),
-                        l: String(row.afternoon || ''),
-                        d: String(row.night || ''),
-                        days: String(row.days || row.no_of_days || ''),
-                        instruction: row.instruction || ''
-                    }));
-                    setMedicineRows(mappedMedicineRows);
+                    const mappedMedicineRows: MedicineRow[] = medicineSource.map((row: any, index: number) => {
+                        const shortDesc = row.short_description || row.medicine_description || '';
+                        const opt = medicinesOptions.find(o => o.short_description === shortDesc);
+                        // Handle various field name variations from API
+                        const morning = row.morning ?? row.morning_value ?? 0;
+                        const afternoon = row.afternoon ?? row.afternoon_value ?? 0;
+                        const night = row.night ?? row.night_value ?? row.d ?? 0;
+                        const days = row.days ?? row.no_of_days ?? row.days_value ?? '';
+                        const instruction = row.instruction ?? row.medicine_instruction ?? '';
+                        return {
+                            id: `med-${index}-${Date.now()}`,
+                            medicine: row.medicine || row.medicine_description || row.short_description || '',
+                            short_description: shortDesc,
+                            morning: morning,
+                            afternoon: afternoon,
+                            b: String(morning || ''),
+                            l: String(afternoon || ''),
+                            d: String(night || ''),
+                            days: String(days || ''),
+                            instruction: instruction,
+                            priority: opt?.priority ?? opt?.priority_value ?? row.priority ?? row.priority_value ?? 999
+                        };
+                    });
+                    // Sort by priority (lower priority number = higher priority)
+                    const sortedRows = mappedMedicineRows.sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999));
+                    setMedicineRows(sortedRows);
                     console.log('Loaded medicine rows from API:', mappedMedicineRows);
                 } else if (Array.isArray(medicineSource)) {
                     setMedicineRows([]);
@@ -3470,16 +3565,32 @@ export default function Treatment() {
                 
                 // Medicine rows - map to API format (ensure numeric days)
                 medicineRows: medicineRows.map(row => {
+                    // Use user input values (b, l, d) instead of default morning/afternoon values
+                    let morning = 0;
+                    if (row.b && !isNaN(parseFloat(row.b))) {
+                        morning = parseFloat(row.b) || 0;
+                    } else if (row.morning) {
+                        morning = row.morning;
+                    }
+                    
+                    let afternoon = 0;
+                    if (row.l && !isNaN(parseFloat(row.l))) {
+                        afternoon = parseFloat(row.l) || 0;
+                    } else if (row.afternoon) {
+                        afternoon = row.afternoon;
+                    }
+                    
                     let night = 0;
                     if (row.d && !isNaN(parseFloat(row.d))) {
-                        night = parseInt(row.d) || 0;
+                        night = parseFloat(row.d) || 0;
                     }
+                    
                     const daysNum = isNaN(Number(row.days)) ? 0 : Number(row.days);
                     return {
                         short_description: row.short_description || '',
                         medicine: row.medicine || '',
-                        morning: row.morning || 0,
-                        afternoon: row.afternoon || 0,
+                        morning: morning,
+                        afternoon: afternoon,
                         night: night,
                         days: daysNum,
                         instruction: row.instruction || ''
@@ -3582,13 +3693,20 @@ export default function Treatment() {
                 // Load complaints rows from save response first (to preserve deletions)
                 if (result.complaintsRows && Array.isArray(result.complaintsRows)) {
                     if (result.complaintsRows.length > 0) {
-                        const mappedComplaintsRows: ComplaintRow[] = result.complaintsRows.map((row: any, index: number) => ({
-                            id: `complaint-${index}-${Date.now()}`,
-                            value: row.value || row.complaint_description || row.short_description || row.complaint || '',
-                            label: row.label || row.complaint_description || row.complaint || row.short_description || '',
-                            comment: row.comment || row.complaint_comment || row.duration || ''
-                        }));
-                        setComplaintsRows(mappedComplaintsRows);
+                        const mappedComplaintsRows: ComplaintRow[] = result.complaintsRows.map((row: any, index: number) => {
+                            const value = row.value || row.complaint_description || row.short_description || row.complaint || '';
+                            const opt = complaintsOptions.find(o => o.value === value);
+                            return {
+                                id: `complaint-${index}-${Date.now()}`,
+                                value,
+                                label: row.label || row.complaint_description || row.complaint || row.short_description || '',
+                                comment: row.comment || row.complaint_comment || row.duration || '',
+                                priority: opt?.priority ?? opt?.priority_value ?? row.priority ?? row.priority_value ?? 999
+                            };
+                        });
+                        // Sort by priority (lower priority number = higher priority)
+                        const sortedRows = mappedComplaintsRows.sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999));
+                        setComplaintsRows(sortedRows);
                         complaintsRowsBuiltFromApiRef.current = true; // Mark as built from API
                         complaintsRowsLoadedFromSaveResponseRef.current = true; // Mark as loaded from save response
                         console.log('Loaded complaints rows from save response:', mappedComplaintsRows);
@@ -3604,13 +3722,20 @@ export default function Treatment() {
                 // Load diagnosis rows from save response (to preserve deletions)
                 if (result.diagnosisRows && Array.isArray(result.diagnosisRows)) {
                     if (result.diagnosisRows.length > 0) {
-                        const mappedDiagnosisRows: DiagnosisRow[] = result.diagnosisRows.map((row: any, index: number) => ({
-                            id: `diag-${index}-${Date.now()}`,
-                            value: row.short_description || '',
-                            diagnosis: row.diagnosis || row.desease_description || '',
-                            comment: ''
-                        }));
-                        setDiagnosisRows(mappedDiagnosisRows);
+                        const mappedDiagnosisRows: DiagnosisRow[] = result.diagnosisRows.map((row: any, index: number) => {
+                            const value = row.short_description || '';
+                            const opt = diagnosesOptions.find(o => o.value === value);
+                            return {
+                                id: `diag-${index}-${Date.now()}`,
+                                value,
+                                diagnosis: row.diagnosis || row.desease_description || '',
+                                comment: '',
+                                priority: opt?.priority ?? opt?.priority_value ?? row.priority ?? row.priority_value ?? 999
+                            };
+                        });
+                        // Sort by priority (lower priority number = higher priority)
+                        const sortedRows = mappedDiagnosisRows.sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999));
+                        setDiagnosisRows(sortedRows);
                         diagnosisRowsLoadedFromSaveResponseRef.current = true;
                         console.log('Loaded diagnosis rows from save response:', mappedDiagnosisRows);
                     } else {
@@ -3624,19 +3749,32 @@ export default function Treatment() {
                 // Load medicine rows from save response (to preserve deletions)
                 if (result.medicineRows && Array.isArray(result.medicineRows)) {
                     if (result.medicineRows.length > 0) {
-                        const mappedMedicineRows: MedicineRow[] = result.medicineRows.map((row: any, index: number) => ({
-                            id: `med-${index}-${Date.now()}`,
-                            medicine: row.medicine || row.medicine_description || '',
-                            short_description: row.short_description || '',
-                            morning: row.morning || 0,
-                            afternoon: row.afternoon || 0,
-                            b: String(row.morning || ''),
-                            l: String(row.afternoon || ''),
-                            d: String(row.night || ''),
-                            days: String(row.days || row.no_of_days || ''),
-                            instruction: row.instruction || ''
-                        }));
-                        setMedicineRows(mappedMedicineRows);
+                        const mappedMedicineRows: MedicineRow[] = result.medicineRows.map((row: any, index: number) => {
+                            const shortDesc = row.short_description || '';
+                            const opt = medicinesOptions.find(o => o.short_description === shortDesc);
+                            // Handle various field name variations from API
+                            const morning = row.morning ?? row.morning_value ?? 0;
+                            const afternoon = row.afternoon ?? row.afternoon_value ?? 0;
+                            const night = row.night ?? row.night_value ?? row.d ?? 0;
+                            const days = row.days ?? row.no_of_days ?? row.days_value ?? '';
+                            const instruction = row.instruction ?? row.medicine_instruction ?? '';
+                            return {
+                                id: `med-${index}-${Date.now()}`,
+                                medicine: row.medicine || row.medicine_description || '',
+                                short_description: shortDesc,
+                                morning: morning,
+                                afternoon: afternoon,
+                                b: String(morning || ''),
+                                l: String(afternoon || ''),
+                                d: String(night || ''),
+                                days: String(days || ''),
+                                instruction: instruction,
+                                priority: opt?.priority ?? opt?.priority_value ?? row.priority ?? row.priority_value ?? 999
+                            };
+                        });
+                        // Sort by priority (lower priority number = higher priority)
+                        const sortedRows = mappedMedicineRows.sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999));
+                        setMedicineRows(sortedRows);
                         medicineRowsLoadedFromSaveResponseRef.current = true;
                         console.log('Loaded medicine rows from save response:', mappedMedicineRows);
                     } else {
@@ -3803,11 +3941,14 @@ export default function Treatment() {
                 id: `${val}`,
                 value: val,
                 label: opt?.label || val,
-                comment: ''
+                comment: '',
+                priority: opt?.priority ?? opt?.priority_value ?? 999
             };
         });
         
-        setComplaintsRows(newRows);
+        // Sort by priority (lower priority number = higher priority)
+        const sortedRows = newRows.sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999));
+        setComplaintsRows(sortedRows);
         complaintsRowsBuiltFromApiRef.current = true; // Mark as built
         selectedComplaintsPatchedFromApiRef.current = false; // Reset so manual changes do not auto-build
         console.log('Built complaintsRows from selectedComplaints:', newRows);
@@ -3846,9 +3987,14 @@ export default function Treatment() {
             const newDiagnosis: DiagnosisRow = {
                 id: Date.now().toString(),
                 diagnosis: selectedDiagnosis,
-                comment: ''
+                comment: '',
+                priority: 999 // Default priority for custom diagnoses
             };
-            setDiagnosisRows(prev => [...prev, newDiagnosis]);
+            setDiagnosisRows(prev => {
+                const next = [...prev, newDiagnosis];
+                // Sort by priority (lower priority number = higher priority)
+                return next.sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999));
+            });
             setSelectedDiagnosis('');
         }
     };
@@ -3869,11 +4015,14 @@ export default function Treatment() {
                         id: Date.now().toString() + Math.random(),
                         value: val,
                         diagnosis: diagnosisOption?.label || val,
-                        comment: ''
+                        comment: '',
+                        priority: diagnosisOption?.priority ?? diagnosisOption?.priority_value ?? 999
                     });
                 }
             });
-            return [...prev, ...newRows];
+            const next = [...prev, ...newRows];
+            // Sort by priority (lower priority number = higher priority)
+            return next.sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999));
         });
         setSelectedDiagnoses([]);
     };
@@ -3896,10 +4045,11 @@ export default function Treatment() {
 
     const handleAddMedicine = () => {
         if (selectedMedicines.length > 0) {
+            const newRows: MedicineRow[] = [];
             selectedMedicines.forEach(medicineValue => {
                 const medicineOption = medicinesOptions.find(opt => opt.value === medicineValue);
                 if (medicineOption) {
-                    const newMedicine: MedicineRow = {
+                    newRows.push({
                         id: Date.now().toString() + Math.random(),
                         medicine: medicineOption.short_description,
                         short_description: medicineOption.short_description,
@@ -3907,12 +4057,17 @@ export default function Treatment() {
                         afternoon: medicineOption.afternoon,
                         b: medicineOption.morning.toString(),
                         l: medicineOption.afternoon.toString(),
-                        d: '0',
-                        days: '1',
-                        instruction: ''
-                    };
-                    setMedicineRows(prev => [...prev, newMedicine]);
+                        d: (medicineOption.night ?? 0).toString(),
+                        days: (medicineOption.no_of_days ?? 1).toString(),
+                        instruction: medicineOption.instruction || '',
+                        priority: medicineOption.priority ?? medicineOption.priority_value ?? 999
+                    });
                 }
+            });
+            setMedicineRows(prev => {
+                const next = [...prev, ...newRows];
+                // Sort by priority (lower priority number = higher priority)
+                return next.sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999));
             });
             setSelectedMedicines([]);
         }
@@ -4896,7 +5051,7 @@ export default function Treatment() {
                                         <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Duration / Comment</div>
                                         <div style={{ padding: '6px' }}>Action</div>
                                     </div>
-                                    {complaintsRows.map((row, index) => (
+                                    {[...complaintsRows].sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999)).map((row, index) => (
                                         <div key={row.id} style={{ 
                                             display: 'grid', 
                                             gridTemplateColumns: '60px 1.5fr 1.5fr 80px' as const,
@@ -5376,7 +5531,7 @@ export default function Treatment() {
                                         <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Provisional Diagnosis</div>
                                         <div style={{ padding: '6px' }}>Action</div>
                                     </div>
-                                    {diagnosisRows.map((row, index) => (
+                                    {[...diagnosisRows].sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999)).map((row, index) => (
                                         <div key={row.id} style={{ 
                                             display: 'grid', 
                                             gridTemplateColumns: '60px 1fr 80px' as const,
@@ -5662,7 +5817,7 @@ export default function Treatment() {
                                         <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Instruction</div>
                                         <div style={{ padding: '6px' }}>Action</div>
                                     </div>
-                                    {medicineRows.map((row, index) => (
+                                    {[...medicineRows].sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999)).map((row, index) => (
                                         <div key={row.id} style={{ 
                                             display: 'grid', 
                                             gridTemplateColumns: '50px 1fr 50px 50px 50px 50px 1fr 80px' as const,

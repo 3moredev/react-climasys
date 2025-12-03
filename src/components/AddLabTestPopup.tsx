@@ -160,7 +160,7 @@ const AddLabTestPopup: React.FC<AddLabTestPopupProps> = ({ open, onClose, onSave
                 <div style={{ padding: '20px', flex: 1 }}>
                     <div style={{ marginBottom: '15px' }}>
                         <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                            Lab Test Name *
+                            Lab Test Name <span style={{ color: '#d32f2f' }}>*</span>
                         </label>
                         <input
                             type="text"

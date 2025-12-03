@@ -115,10 +115,13 @@ export default function ManageMedicine() {
   });
 
   // Pagination calculations
-  const totalPages = Math.ceil(filteredMedicines.length / pageSize);
+  const totalPages = Math.max(1, Math.ceil(filteredMedicines.length / pageSize));
   const startIndex = (currentPage - 1) * pageSize;
   const endIndex = startIndex + pageSize;
   const currentMedicines = filteredMedicines.slice(startIndex, endIndex);
+  // Enable table scroll whenever total records are more than 10,
+  // regardless of the currently selected page size
+  const shouldEnableTableScroll = filteredMedicines.length > 10;
 
   const handleSearch = async () => {
     if (!selectedDoctorId) {
@@ -441,10 +444,8 @@ export default function ManageMedicine() {
         fontWeight: 'bold', 
         fontSize: '1.8rem', 
         color: '#000000',
-        marginBottom: '50px',
-        marginTop: '0',
-        paddingBottom: '20px',
-        borderBottom: '2px solid #e0e0e0'
+        marginBottom: '30px',
+        marginTop: '0'
       }}>
         Manage Medicine
       </h1>
@@ -453,7 +454,7 @@ export default function ManageMedicine() {
       {error && (
         <div style={{
           padding: '12px 20px',
-          margin: '0 50px 20px 50px',
+          margin: '0 0 20px 0',
           backgroundColor: '#fee',
           color: '#c33',
           border: '1px solid #fcc',
@@ -468,7 +469,7 @@ export default function ManageMedicine() {
       {loading && (
         <div style={{
           padding: '12px 20px',
-          margin: '0 50px 20px 50px',
+          margin: '0 0 20px 0',
           backgroundColor: '#e3f2fd',
           color: '#1976d2',
           border: '1px solid #90caf9',
@@ -481,7 +482,7 @@ export default function ManageMedicine() {
       )}
 
       {/* Search and Action Section */}
-      <div className="search-section" style={{ paddingLeft: '50px', paddingRight: '50px' }}>
+      <div className="search-section">
         <div className="search-input-wrapper">
           <input
             type="text"
@@ -558,7 +559,10 @@ export default function ManageMedicine() {
       </div>
 
       {/* Medicines Table */}
-      <div className="table-responsive" style={{ paddingLeft: '50px', paddingRight: '50px' }}>
+      <div
+        className="table-responsive"
+        style={shouldEnableTableScroll ? { maxHeight: '510px', overflowY: 'auto' } : undefined}
+      >
         <table className="medicines-table">
           <thead>
             <tr>

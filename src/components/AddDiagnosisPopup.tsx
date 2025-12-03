@@ -174,7 +174,7 @@ const AddDiagnosisPopup: React.FC<AddDiagnosisPopupProps> = ({ open, onClose, on
                 <div style={{ padding: '20px', flex: 1 }}>
                     <div style={{ marginBottom: '15px' }}>
                         <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                            Short Description *
+                            Short Description <span style={{ color: '#d32f2f' }}>*</span>
                         </label>
                         <input
                             type="text"
@@ -198,7 +198,7 @@ const AddDiagnosisPopup: React.FC<AddDiagnosisPopupProps> = ({ open, onClose, on
 
                     <div style={{ marginBottom: '15px' }}>
                         <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                            Diagnosis Description *
+                            Diagnosis Description <span style={{ color: '#d32f2f' }}>*</span>
                         </label>
                         <input
                             type="text"

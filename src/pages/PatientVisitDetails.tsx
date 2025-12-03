@@ -25,6 +25,12 @@ interface AppointmentRow {
     labs: string;
     actions: boolean;
     gender_description?: string;
+    // Optional fields that are present on real appointment objects
+    doctorId?: string | number;
+    clinicId?: string | number;
+    shiftId?: string | number;
+    visitDate?: string;
+    visitNumber?: number | string;
 }
 
 interface PatientVisitDetailsProps {
@@ -459,10 +465,10 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                 
                 const appointmentParams = {
                     patientId: String(patientData.patientId),
-                    doctorId: String(patientData.doctorId || sessionData?.doctorId || 'DR-00010'), // Use actual doctor ID from appointment or session
-                    shiftId: Number(patientData.shiftId || sessionData?.shiftId || 1), // Use actual shift ID from appointment or session
-                    clinicId: String(patientData.clinicId || sessionData?.clinicId || 'CL-00001'), // Use actual clinic ID from appointment or session
-                    patientVisitNo: Number(patientData.visitNumber || 1), // Use actual visit number from appointment
+                    doctorId: String((patientData as any).doctorId || sessionData?.doctorId || 'DR-00010'), // Use actual doctor ID from appointment or session
+                    shiftId: Number((patientData as any).shiftId || (sessionData as any)?.shiftId || 1), // Use actual shift ID from appointment or session
+                    clinicId: String((patientData as any).clinicId || sessionData?.clinicId || 'CL-00001'), // Use actual clinic ID from appointment or session
+                    patientVisitNo: Number((patientData as any).visitNumber || 1), // Use actual visit number from appointment
                     languageId: 1
                 };
                 
@@ -869,9 +875,10 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
             }
             
             // Validate required fields are present
-            const doctorId = patientData?.doctorId || sessionData?.doctorId;
-            const clinicId = patientData?.clinicId || sessionData?.clinicId;
-            const shiftId = patientData?.shiftId || sessionData?.shiftId;
+            const doctorId = (patientData as any)?.doctorId || sessionData?.doctorId;
+            const clinicId = (patientData as any)?.clinicId || sessionData?.clinicId;
+            // sessionData type may not declare shiftId, so access it via any
+            const shiftId = (patientData as any)?.shiftId || (sessionData as any)?.shiftId;
             const userId = sessionData?.userId;
             
             if (!doctorId) {
@@ -888,7 +895,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
             }
             
             // Validate patient visit number
-            const patientVisitNo = patientData?.visitNumber;
+            const patientVisitNo = (patientData as any)?.visitNumber;
             if (!patientVisitNo) {
                 throw new Error('Patient Visit Number is required but not found in appointment data');
             }
@@ -993,7 +1000,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                 
                 // Status and user - Use appropriate status for submitted visit details
                 statusId: 2, // WITH DOCTOR status for submitted visit details
-                userId: userId, // Use validated user ID
+                userId: String(userId), // Use validated user ID as string
                 isSubmitPatientVisitDetails: true
             };
 
@@ -2348,7 +2355,6 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                     <div style={{ padding: '8px 10px', borderTop: '1px solid #e0e0e0' }}>
                                                         <div
                                                             onClick={() => !readOnly && handleRemoveComplaint(row.value)}
-                                                            disabled={readOnly}
                                                             title="Remove"
                                                             style={{
                                                                 display: 'inline-flex',
@@ -2356,9 +2362,11 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                                 justifyContent: 'center',
                                                                 width: '24px',
                                                                 height: '24px',
-                                                                cursor: 'pointer',
-                                                                color: '#000000',
-                                                                backgroundColor: 'transparent'
+                                                                cursor: readOnly ? 'not-allowed' : 'pointer',
+                                                                color: readOnly ? '#9e9e9e' : '#000000',
+                                                                backgroundColor: 'transparent',
+                                                                opacity: readOnly ? 0.6 : 1,
+                                                                pointerEvents: readOnly ? 'none' : 'auto'
                                                             }}
                                                             onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.color = '#EF5350'; }}
                                                             onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.color = '#000000'; }}

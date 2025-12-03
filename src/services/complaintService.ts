@@ -5,6 +5,8 @@ export interface ComplaintOption {
   label: string;
   short_description?: string;
   complaint_description?: string;
+  priority?: number;
+  priority_value?: number;
 }
 
 export interface ComplaintApiResponse {
@@ -67,7 +69,9 @@ export const complaintService = {
           value: String(value),
           label: String(label),
           short_description: complaint.short_description,
-          complaint_description: complaint.complaint_description
+          complaint_description: complaint.complaint_description,
+          priority: complaint.priority_value ?? complaint.priority ?? 0,
+          priority_value: complaint.priority_value ?? complaint.priority ?? 0
         };
       });
       
@@ -118,7 +122,9 @@ export const complaintService = {
         value: complaint.id, // Use the concatenated ID as unique identifier
         label: complaint.short_description || complaint.complaint_description,
         short_description: complaint.short_description,
-        complaint_description: complaint.complaint_description
+        complaint_description: complaint.complaint_description,
+        priority: complaint.priority_value ?? 0,
+        priority_value: complaint.priority_value ?? 0
       }));
       
       return complaints;
@@ -165,7 +171,9 @@ export const complaintService = {
         value: complaint.id, // Use the concatenated ID as unique identifier
         label: complaint.short_description || complaint.complaint_description,
         short_description: complaint.short_description,
-        complaint_description: complaint.complaint_description
+        complaint_description: complaint.complaint_description,
+        priority: complaint.priority_value ?? 0,
+        priority_value: complaint.priority_value ?? 0
       }));
       
       return complaints;

@@ -125,7 +125,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
           setLoading(true)
           console.log('📥 Fetching patient data for ID:', patientId)
           // The backend accepts both id (number) and folder_no (string) formats
-          const patient = await patientService.getPatient(patientId)
+          const patient: any = await patientService.getPatient(patientId)
           console.log('📦 Patient data received:', patient)
           
           // Convert date_of_birth to dayjs object for DateField
@@ -1274,12 +1274,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         maxHeight: '300px'
                       }
                     }}
-                    PopperProps={{
-                      style: {
-                        zIndex: 11001
-                      },
-                      placement: 'bottom-start'
-                    }}
                     slotProps={{
                       popper: {
                         style: {
@@ -1348,9 +1342,11 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                       }
                     }}
                     filterOptions={(options) => options}
-                    PopperProps={{
-                      style: {
-                        zIndex: 11001
+                    slotProps={{
+                      popper: {
+                        style: {
+                          zIndex: 11001
+                        }
                       }
                     }}
                     renderInput={(params) => (

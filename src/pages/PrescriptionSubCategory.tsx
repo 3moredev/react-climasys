@@ -164,6 +164,7 @@ export default function PrescriptionSubCategory() {
   const totalPages = Math.max(1, Math.ceil(filteredSubCategories.length / pageSize))
   const startIndex = (currentPage - 1) * pageSize
   const paginatedRows = filteredSubCategories.slice(startIndex, startIndex + pageSize)
+  const shouldEnableTableScroll = filteredSubCategories.length > pageSize
 
   useEffect(() => {
     setCurrentPage(1)
@@ -546,10 +547,8 @@ export default function PrescriptionSubCategory() {
         fontWeight: 'bold', 
         fontSize: '1.8rem', 
         color: '#000000',
-        marginBottom: '50px',
-        marginTop: '0',
-        paddingBottom: '20px',
-        borderBottom: '2px solid #e0e0e0'
+        marginBottom: '30px',
+        marginTop: '0'
       }}>
         Prescription Sub-Category
       </h1>
@@ -558,7 +557,7 @@ export default function PrescriptionSubCategory() {
       {error && (
         <div style={{
           padding: '12px 20px',
-          margin: '0 50px 20px 50px',
+          margin: '0 0 20px 0',
           backgroundColor: '#fee',
           color: '#c33',
           border: '1px solid #fcc',
@@ -570,7 +569,7 @@ export default function PrescriptionSubCategory() {
       )}
 
       {/* Category Management Form */}
-      <div className="form-row" style={{ paddingLeft: '50px', paddingRight: '50px' }}>
+      <div className="form-row">
         <div className="form-field">
           <label>Category Name</label>
           <select
@@ -606,7 +605,7 @@ export default function PrescriptionSubCategory() {
       </div>
 
       {/* Search Section */}
-      <div className="search-section" style={{ paddingLeft: '50px', paddingRight: '50px' }}>
+      <div className="search-section">
         <div className="search-input-wrapper">
           <input
             type="text"
@@ -676,7 +675,10 @@ export default function PrescriptionSubCategory() {
       </div>
 
       {/* SubCategories Table */}
-      <div className="table-responsive" style={{ paddingLeft: '50px', paddingRight: '50px' }}>
+      <div
+        className="table-responsive"
+        style={shouldEnableTableScroll ? { maxHeight: '510px', overflowY: 'auto' } : undefined}
+      >
         <table className="subcategory-table">
           <thead>
             <tr>

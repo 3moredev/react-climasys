@@ -336,7 +336,7 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
                     {/* Lab Test Name - Full Width */}
                     <div style={{ marginBottom: '15px' }}>
                         <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                            Lab Test Name*
+                            Lab Test Name <span style={{ color: '#d32f2f' }}>*</span>
                         </label>
                         <input
                             type="text"
@@ -358,7 +358,7 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
                     {/* Priority - Full Width */}
                     <div style={{ marginBottom: '15px' }}>
                         <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                            Priority *
+                            Priority <span style={{ color: '#d32f2f' }}>*</span>
                         </label>
                         <input
                             type="text"
