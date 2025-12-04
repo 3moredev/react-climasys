@@ -495,6 +495,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                 setInitialComplaintsFromApi(complaintsFromApi);
 
                 // Map appointment data to form fields
+                // Note: previousVisitPlan and chiefComplaint should come from previous visit, not current appointment
                 const normalized = {
                     referByRaw: appointmentData.referBy ?? '',
                     referralName: appointmentData.referralName ?? '',
@@ -508,8 +509,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                     sugar: appointmentData.sugar ?? '',
                     tft: appointmentData.tft ?? '',
                     pastSurgicalHistory: appointmentData.surgicalHistory ?? '',
-                    previousVisitPlan: appointmentData.plan ?? '',
-                    chiefComplaint: appointmentData.currentComplaint ?? '',
+                    // previousVisitPlan and chiefComplaint will be loaded from previous visit separately
                     visitComments: appointmentData.visitComments ?? '',
                     currentMedicines: appointmentData.currentMedicines ?? '',
                     inPerson: appointmentData.inPerson ?? undefined,
@@ -548,8 +548,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                     maybeSet('sugar', normalized.sugar);
                     maybeSet('tft', normalized.tft);
                     maybeSet('pastSurgicalHistory', normalized.pastSurgicalHistory);
-                    maybeSet('previousVisitPlan', normalized.previousVisitPlan);
-                    maybeSet('chiefComplaint', normalized.chiefComplaint);
+                    // previousVisitPlan and chiefComplaint will be loaded from previous visit separately
                     maybeSet('visitComments', normalized.visitComments);
                     maybeSet('currentMedicines', normalized.currentMedicines);
 
@@ -676,6 +675,88 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                 } catch (fallbackError) {
                     console.error('Failed to load last visit details as fallback:', fallbackError);
                 }
+            }
+            
+            // Always load previous visit data for "Previous Visit Plan" and "Chief complaint entered by patient"
+            // These fields should come from the last visit, not the current appointment
+            try {
+                if (!cancelled && patientData?.patientId) {
+                    console.log('=== LOADING PREVIOUS VISIT DATA FOR PLAN AND COMPLAINT ===');
+                    const pid = String(patientData.patientId);
+                    const lastVisitResult: any = await visitService.getLastVisitDetails(pid);
+                    if (cancelled) return;
+
+                    if (lastVisitResult) {
+                        // Try multiple possible response structures
+                        const lastVisitPayload = lastVisitResult.data 
+                            || lastVisitResult.lastVisit 
+                            || lastVisitResult.visit 
+                            || lastVisitResult.payload 
+                            || (lastVisitResult as any).mainData?.[0]  // Check if it's in mainData array
+                            || lastVisitResult;
+                        
+                        if (lastVisitPayload) {
+                            console.log('=== PREVIOUS VISIT DATA DEBUG ===');
+                            console.log('Full lastVisitResult:', JSON.stringify(lastVisitResult, null, 2));
+                            console.log('Extracted lastVisitPayload:', lastVisitPayload);
+                            console.log('All keys in lastVisitPayload:', Object.keys(lastVisitPayload));
+                            
+                            // Log all possible plan-related fields
+                            console.log('plan:', lastVisitPayload.plan);
+                            console.log('previousVisitPlan:', lastVisitPayload.previousVisitPlan);
+                            console.log('treatmentPlan:', (lastVisitPayload as any).treatmentPlan);
+                            console.log('instructions:', (lastVisitPayload as any).instructions);
+                            console.log('advice:', (lastVisitPayload as any).advice);
+                            console.log('followUp:', lastVisitPayload.followUp);
+                            console.log('followUpComment:', (lastVisitPayload as any).followUpComment);
+                            
+                            // Extract plan from previous visit - check multiple possible field names
+                            const previousPlan = lastVisitPayload.plan 
+                                || lastVisitPayload.previousVisitPlan 
+                                || (lastVisitPayload as any).treatmentPlan
+                                || (lastVisitPayload as any).instructions
+                                || (lastVisitPayload as any).advice
+                                || lastVisitPayload.followUp
+                                || (lastVisitPayload as any).followUpComment
+                                || (lastVisitPayload as any).Plan
+                                || (lastVisitPayload as any).PLAN
+                                || '';
+                            
+                            // Extract chief complaint from previous visit
+                            const previousComplaint = lastVisitPayload.currentComplaint 
+                                || lastVisitPayload.chiefComplaint 
+                                || '';
+                            
+                            console.log('Previous Visit Plan (extracted):', previousPlan);
+                            console.log('Previous Visit Plan (stringified):', previousPlan ? String(previousPlan).trim() : '(empty)');
+                            console.log('Previous Chief Complaint:', previousComplaint);
+                            console.log('=== END PREVIOUS VISIT DATA DEBUG ===');
+                            
+                            // Update only these two fields from previous visit
+                            // Only update if we found a non-empty value
+                            const planValue = previousPlan ? String(previousPlan).trim() : '';
+                            const complaintValue = previousComplaint ? String(previousComplaint).trim() : '';
+                            
+                            setFormData(prev => {
+                                const updated = {
+                                    ...prev,
+                                    ...(planValue && { previousVisitPlan: planValue }),
+                                    ...(complaintValue && { chiefComplaint: complaintValue })
+                                };
+                                console.log('Updating form data - previousVisitPlan:', planValue || '(keeping existing)');
+                                console.log('Updating form data - chiefComplaint:', complaintValue || '(keeping existing)');
+                                return updated;
+                            });
+                        } else {
+                            console.warn('lastVisitPayload is null or undefined');
+                        }
+                    } else {
+                        console.warn('lastVisitResult is null or undefined');
+                    }
+                }
+            } catch (previousVisitError) {
+                console.error('Failed to load previous visit data for plan and complaint:', previousVisitError);
+                // Don't throw - this is not critical, just log the error
             } finally {
                 if (!cancelled) {
                     setIsLoadingAppointmentDetails(false);
@@ -856,7 +937,10 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
             console.log('Visit type:', visitType);
             console.log('Patient data:', patientData);
             console.log('Original visitDate from patientData:', patientData?.visitDate);
-            console.log('Converted visitDate:', toYyyyMmDd(patientData?.visitDate) + ' ' + new Date().toTimeString().slice(0, 8));
+            // Use today's date instead of patientData visitDate to avoid creating records with future dates
+            const todayDate = new Date();
+            const todayDateString = todayDate.toISOString().slice(0, 10) + 'T' + todayDate.toTimeString().slice(0, 8);
+            console.log('Using today\'s date for visitDate:', todayDateString);
             
             setIsLoading(true);
             setError(null);
@@ -914,7 +998,11 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                 doctorId: String(doctorId), // Use validated doctor ID
                 clinicId: String(clinicId), // Use validated clinic ID
                 shiftId: String(shiftId), // Use validated shift ID
-                visitDate: toYyyyMmDd(patientData?.visitDate) + 'T' + new Date().toTimeString().slice(0, 8), // Convert date format and add time in ISO format
+                // Use today's date instead of patientData visitDate to avoid creating records with future dates
+                visitDate: (() => {
+                    const now = new Date();
+                    return now.toISOString().slice(0, 10) + 'T' + now.toTimeString().slice(0, 8);
+                })(),
                 patientVisitNo: String(patientVisitNo), // Use validated visit number
                 
                 // Referral information
@@ -1005,8 +1093,30 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
             };
 
             console.log('=== SUBMITTING VISIT DATA TO API ===');
-            console.log('Visit data object:', visitData);
-            console.log('Visit data JSON:', JSON.stringify(visitData, null, 2));
+            console.log('=== CURRENT FORM DATA (ENTERED BY USER) ===');
+            console.log('Form Data - Height:', formData.height);
+            console.log('Form Data - Weight:', formData.weight);
+            console.log('Form Data - BP:', formData.bp);
+            console.log('Form Data - Sugar:', formData.sugar);
+            console.log('Form Data - TFT:', formData.tft);
+            console.log('Form Data - Pulse:', formData.pulse);
+            console.log('Form Data - Past Surgical History:', formData.pastSurgicalHistory);
+            console.log('Form Data - Visit Comments:', formData.visitComments);
+            console.log('Form Data - Current Medicines:', formData.currentMedicines);
+            console.log('Form Data - Previous Visit Plan (read-only):', formData.previousVisitPlan);
+            console.log('Form Data - Chief Complaint (read-only):', formData.chiefComplaint);
+            console.log('=== DATA BEING SENT TO API ===');
+            console.log('API - Height (Cm):', visitData.heightInCms, '(from formData.height:', formData.height, ')');
+            console.log('API - Weight (Kg):', visitData.weightInKgs, '(from formData.weight:', formData.weight, ')');
+            console.log('API - BP:', visitData.bloodPressure, '(from formData.bp:', formData.bp, ')');
+            console.log('API - Sugar:', visitData.sugar, '(from formData.sugar:', formData.sugar, ')');
+            console.log('API - TFT:', visitData.tft, '(from formData.tft:', formData.tft, ')');
+            console.log('API - Pulse:', visitData.pulse, '(from formData.pulse:', formData.pulse, ')');
+            console.log('API - Past Surgical History:', visitData.pastSurgicalHistory);
+            console.log('API - Visit Comments:', visitData.visitComments);
+            console.log('API - Current Medicines:', visitData.currentMedicines);
+            console.log('API - Previous Visit Plan (should not be saved):', visitData.previousVisitPlan);
+            console.log('API - Chief Complaint (should not be saved):', visitData.chiefComplaint);
             console.log('=== VALIDATION PARAMETERS ===');
             console.log('Patient ID:', visitData.patientId);
             console.log('Doctor ID:', visitData.doctorId);
@@ -1017,6 +1127,8 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
             console.log('Patient Visit No:', visitData.patientVisitNo);
             console.log('User ID:', visitData.userId);
             console.log('Discount:', visitData.discount);
+            console.log('=== FULL VISIT DATA JSON ===');
+            console.log(JSON.stringify(visitData, null, 2));
             
             // Check for null/undefined values that might cause validation errors
             const nullFields = [];

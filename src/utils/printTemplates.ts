@@ -171,11 +171,9 @@ export const buildPrescriptionPrintHTML = ({
                 font-size: 14px;
                 font-weight: bold;
                 text-align: left;
-                margin: 5px 0;
+                
             }
             .instructions-content {
-                margin-top: 5px;
-                white-space: pre-wrap;
                 font-size: 12px;
                 line-height: 1.6;
             }
@@ -219,7 +217,6 @@ export const buildPrescriptionPrintHTML = ({
 
         ${instructionsHTML ? `
         <div class="instructions-section">
-            <div class="instructions-line-top"></div>
             <div class="instructions-text">Instructions for Patient:</div>
             <div class="instructions-content">${instructionsHTML}</div>
             <div class="instructions-line-bottom"></div>

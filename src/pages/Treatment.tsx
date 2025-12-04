@@ -801,7 +801,7 @@ export default function Treatment() {
                     .map(opt => escapeHtml(opt.label)).join(', ')
                 : '-');
         
-        const examinationFindings = escapeHtml(formData.examinationFindings || '-');
+        const examinationFindings = escapeHtml(formData.importantFindings || formData.examinationFindings || '-');
         const diagnosis = diagnosisRows.length > 0 
             ? diagnosisRows.map(d => escapeHtml(d.diagnosis)).join(', ')
             : (selectedDiagnoses.length > 0
@@ -2988,7 +2988,7 @@ export default function Treatment() {
                 pallorHb: appointmentData.pallor ?? '',
                 detailedHistory: appointmentData.symptomComment ?? '',
                 examinationFindings: appointmentData.observation ?? appointmentData.importantFindings ?? '',
-                importantFindings: appointmentData.importantFindings ?? '',
+                importantFindings: appointmentData.importantFindings ?? appointmentData.observation ?? '',
                 additionalComments: appointmentData.additionalComments ?? appointmentData.impression ?? '',
                 habitDetails: appointmentData.habitDetails ?? '',
                 procedurePerformed: appointmentData.observation ?? '',
@@ -3506,7 +3506,7 @@ export default function Treatment() {
                 
                 // Clinical fields
                 tpr: '',
-                importantFindings: formData.examinationFindings,
+                importantFindings: formData.importantFindings,
                 additionalComments: formData.additionalComments,
                 systemic: '',
                 odeama: '',
@@ -6952,7 +6952,7 @@ export default function Treatment() {
                                     <div style={{ position: 'relative', width: '100%' }}>
                                         <input
                                             type="text"
-                                            value={billingData.acBalance}
+                                            value={Math.abs(parseFloat(billingData.acBalance) || 0).toFixed(2)}
                                             onChange={(e) => handleBillingChange('acBalance', e.target.value)}
                                             disabled
                                             placeholder="0.00"
@@ -6967,7 +6967,12 @@ export default function Treatment() {
                                                 borderRadius: '4px',
                                                 fontSize: '13px',
                                                 backgroundColor: '#f5f5f5',
-                                                color: '#666',
+                                                color: folderAmountData?.totalAcBalance !== undefined && 
+                                                       folderAmountData?.totalAcBalance !== null && 
+                                                       folderAmountData?.rows && 
+                                                       folderAmountData.rows.length > 0
+                                                       ? (folderAmountData.totalAcBalance < 0 ? '#d32f2f' : '#2e7d32')
+                                                       : '#666',
                                                 cursor: 'not-allowed'
                                             }}
                                         />
