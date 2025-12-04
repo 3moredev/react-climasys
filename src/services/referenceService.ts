@@ -105,6 +105,16 @@ export async function searchCities(query?: string): Promise<CityItem[]> {
     })
 }
 
+export async function getCities(stateId?: string): Promise<CityItem[]> {
+  const url = stateId ? `/reference/cities?stateId=${stateId}` : '/reference/cities'
+  const response = await api.get(url)
+  const data = Array.isArray(response?.data) ? response.data : []
+  return data.map((item: any) => ({
+    id: String(item?.id?.cityId ?? ''),
+    name: String(item?.cityName ?? item?.name ?? ''),
+  }))
+}
+
 
 export interface ClinicItem {
   id: string
@@ -149,10 +159,17 @@ export interface CountryItem {
 export async function getCountries(): Promise<CountryItem[]> {
   const response = await api.get('/reference/countries')
   const data = Array.isArray(response?.data) ? response.data : []
-  return data.map((item: any) => ({
-    id: String(item?.id ?? item?.countryId ?? item?.code ?? ''),
-    name: String(item?.name ?? item?.countryName ?? '')
+  const countries = data.map(item => ({
+    id: String(item?.id?.countryId ?? ''),
+    name: String(item?.countryName ?? '')
   }))
+  const seen = new Set();
+
+  return countries.filter(item => {
+    if (seen.has(item.id)) return false;
+    seen.add(item.id);
+    return true;
+  });
 }
 
 export interface StateItem {
@@ -166,8 +183,7 @@ export async function getStates(countryId?: string): Promise<StateItem[]> {
   const response = await api.get(url)
   const data = Array.isArray(response?.data) ? response.data : []
   return data.map((item: any) => ({
-    id: String(item?.id ?? item?.stateId ?? item?.code ?? ''),
-    name: String(item?.name ?? item?.stateName ?? ''),
-    countryId: item?.countryId ? String(item.countryId) : undefined
+    id: String(item?.id?.stateId ?? ''),
+    name: String(item?.stateName ?? ''),
   }))
 }

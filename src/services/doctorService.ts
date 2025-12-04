@@ -108,7 +108,7 @@ export const doctorService = {
 
         // Mapped for ManageDoctors table
         mobileNo: item.mobile1 || item.mobile_1 || item.phone || '',
-        opdIpd: (item.ipdDr || item.is_ipd) && (item.opdDr || item.is_opd) ? 'Both' : (item.ipdDr || item.is_ipd) ? 'IPD' : (item.opdDr || item.is_opd) ? 'OPD' : '-'
+        opdIpd: item.opd_ipd || ''
       }));
     } catch (error: any) {
       console.error('Error fetching doctors:', error);

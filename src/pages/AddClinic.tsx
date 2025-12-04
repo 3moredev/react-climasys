@@ -4,6 +4,7 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import {
     getCountries,
     getStates,
+    getCities,
     searchCities,
     searchAreas,
     CountryItem,
@@ -95,6 +96,21 @@ export default function AddClinic() {
             }
         } else {
             setStates([]);
+        }
+    };
+
+    const handleStateChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const stateId = e.target.value;
+        setFormData(prev => ({ ...prev, stateId, cityId: "", areaId: "" }));
+        if (stateId) {
+            try {
+                const citiesData = await getCities(stateId);
+                setCities(citiesData);
+            } catch (err) {
+                console.error("Error fetching cities:", err);
+            }
+        } else {
+            setCities([]);
         }
     };
 
@@ -272,7 +288,7 @@ export default function AddClinic() {
                                     className="form-control"
                                     name="stateId"
                                     value={formData.stateId}
-                                    onChange={handleInputChange}
+                                    onChange={handleStateChange}
                                     disabled={!formData.countryId}
                                 >
                                     <option value="">--Select State--</option>
@@ -286,15 +302,17 @@ export default function AddClinic() {
                         <div className="form-row">
                             <div className="form-group">
                                 <label className="form-label">City</label>
-                                {/* Simplified as text/dropdown for now as city search logic is complex */}
                                 <select
                                     className="form-control"
                                     name="cityId"
                                     value={formData.cityId}
                                     onChange={handleInputChange}
+                                    disabled={!formData.stateId}
                                 >
                                     <option value="">--Select City--</option>
-                                    {/* Populate if cities available */}
+                                    {cities.map(c => (
+                                        <option key={c.id} value={c.id}>{c.name}</option>
+                                    ))}
                                 </select>
                             </div>
                             <div className="form-group">

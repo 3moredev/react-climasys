@@ -35,11 +35,11 @@ export const clinicService = {
             return data.map((item: any) => ({
                 id: item.id || item.clinicId || '',
                 name: item.name || item.clinicName || '',
-                city: item.city || '',
+                city: item.cityName || '',
                 phoneNo: item.phoneNo || item.phone_no || item.mobile || '',
                 status: item.status || 'Active', // Default to Active if not provided
                 since: item.since || item.createdOn || '',
-                licenseTill: item.licenseTill || item.license_till || '',
+                licenseTill: item.licenseValidTo || '',
                 address: item.address || '',
                 countryId: item.countryId || item.country_id || '',
                 stateId: item.stateId || item.state_id || '',
