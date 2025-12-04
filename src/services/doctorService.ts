@@ -64,6 +64,43 @@ export const doctorService = {
       console.error('Error fetching all doctors:', error);
       throw new Error('Failed to fetch doctors from server');
     }
+  },
+
+  /**
+   * Get only doctors that are marked as OPD doctors (opd_dr == true)
+   * Used for provider/doctor dropdowns across the app.
+   */
+  async getOpdDoctors(): Promise<Doctor[]> {
+    try {
+      console.log('Fetching OPD doctors from /doctors/all endpoint...');
+      const response = await api.get('/doctors/all');
+      const doctors = response.data || [];
+
+      // Filter for OPD doctors based on common representations
+      const opdDoctors = doctors.filter((doctor: any) => {
+        const flag = doctor.opd_dr ?? doctor.OPD_DR ?? doctor.opdDoctor ?? doctor.opd_doctor;
+        if (flag === true || flag === 1 || flag === '1') return true;
+        if (typeof flag === 'string' && flag.trim().toLowerCase() === 'true') return true;
+        return false;
+      });
+
+      // Transform the response to match our Doctor interface
+      const transformedDoctors = opdDoctors.map((doctor: any) => ({
+        id: doctor.id || doctor.doctorId || doctor.doctor_id || '',
+        name: doctor.name || doctor.doctorName || doctor.doctor_name || 
+              `${doctor.firstName || doctor.first_name || ''} ${doctor.lastName || doctor.last_name || ''}`.trim() ||
+              `${doctor.specialty || ''} - ${doctor.firstName || doctor.first_name || ''}`.trim(),
+        specialty: doctor.specialty || doctor.specialization || doctor.department,
+        firstName: doctor.firstName || doctor.first_name,
+        lastName: doctor.lastName || doctor.last_name
+      }));
+
+      console.log('Transformed OPD doctors:', transformedDoctors);
+      return transformedDoctors;
+    } catch (error) {
+      console.error('Error fetching OPD doctors:', error);
+      throw new Error('Failed to fetch OPD doctors from server');
+    }
   }
 };
 

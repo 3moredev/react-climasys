@@ -243,8 +243,8 @@ export default function ManageBillingDetails() {
 
     setLoadingDoctors(true);
     try {
-      console.log('Fetching doctors for clinic:', clinicId);
-      const allDoctors = await doctorService.getAllDoctors();
+      console.log('Fetching OPD doctors for clinic:', clinicId);
+      const allDoctors = await doctorService.getOpdDoctors();
       
       // Filter doctors by clinic if clinicId is available in doctor data
       // If clinicId is not in the response, show all doctors
@@ -574,7 +574,10 @@ export default function ManageBillingDetails() {
       )}
 
       {/* Billing Details Table */}
-      <div className="table-responsive">
+      <div
+        className="table-responsive"
+        style={pageSize > 10 ? { maxHeight: '60vh', overflowY: 'auto' } : undefined}
+      >
         {loading ? (
           <div style={{ textAlign: 'center', padding: '40px' }}>
             <CircularProgress style={{ color: 'rgb(0, 123, 255)' }} />

@@ -502,8 +502,8 @@ export default function ManageLabs() {
 
     setLoadingDoctors(true);
     try {
-      console.log('Fetching doctors for clinic:', clinicId);
-      const allDoctors = await doctorService.getAllDoctors();
+      console.log('Fetching OPD doctors for clinic:', clinicId);
+      const allDoctors = await doctorService.getOpdDoctors();
       
       // Filter doctors by clinic if clinicId is available in doctor data
       // If clinicId is not in the response, show all doctors

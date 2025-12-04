@@ -134,12 +134,6 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
             setSnackbarOpen(true);
             return;
         }
-        if (!testLabData.priority.trim()) {
-            setSnackbarMessage('Priority is required');
-            setSnackbarOpen(true);
-            return;
-        }
-        
         if (!finalClinicId) {
             setSnackbarMessage('Clinic ID is required');
             setSnackbarOpen(true);
@@ -177,6 +171,11 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
                 // Explicitly exclude 'id' field - database will auto-generate it
             }));
             
+            // Determine priority (optional field, default to 9 if not provided)
+            const priorityNumber = testLabData.priority.trim()
+                ? parseInt(testLabData.priority.trim(), 10)
+                : 9;
+
             // Build the request object
             const request: LabTestAndParameterRequest = {
                 doctorId: finalDoctorId,
@@ -195,10 +194,10 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
                 New_Description: testLabData.labTestName.trim(),
                 description: testLabData.labTestName.trim(),
                 Description: testLabData.labTestName.trim(),
-                priority: testLabData.priority ? parseInt(testLabData.priority, 10) : 0,
-                Priority: testLabData.priority ? parseInt(testLabData.priority, 10) : 0,
-                Priority_Value: testLabData.priority ? parseInt(testLabData.priority, 10) : 0,
-                priorityValue: testLabData.priority ? parseInt(testLabData.priority, 10) : 0,
+                priority: priorityNumber,
+                Priority: priorityNumber,
+                Priority_Value: priorityNumber,
+                priorityValue: priorityNumber,
                 // Parameters array - will be inserted for the lab test
                 parameters: parameters.length > 0 ? parameters : undefined
             };
@@ -380,7 +379,7 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
                     {/* Parameter Name Selection */}
                     <div style={{ marginBottom: '15px' }}>
                         <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                            Parameter Name
+                            Parameter Name *
                         </label>
                         <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
                             <input

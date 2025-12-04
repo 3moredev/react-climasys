@@ -4,6 +4,7 @@ import { Snackbar } from '@mui/material';
 import { Calendar } from 'lucide-react';
 import { patientService } from '../services/patientService';
 import { SessionInfo } from '../services/sessionService';
+import { doctorService, Doctor } from '../services/doctorService';
 import AddPatientPage from '../pages/AddPatientPage';
 
 interface AppointmentRow {
@@ -79,6 +80,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
     const [showSelectedTable, setShowSelectedTable] = useState(false);
     const [showQuickRegistration, setShowQuickRegistration] = useState(false);
     const lastFetchParamsRef = useRef<string | null>(null);
+    const [allDoctors, setAllDoctors] = useState<Doctor[]>([]);
 
     // Resolve provider/doctor name for display (fallbacks in priority order)
     const formatProviderLabel = (name?: string): string => {
@@ -90,19 +92,67 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
         return `Dr. ${cleaned}`;
     };
 
-    const doctorDisplayName = useMemo(() => {
-        const providerFromData = (patientData as any)?.provider || (appointment as any)?.provider;
-        if (providerFromData && String(providerFromData).trim()) {
-            return formatProviderLabel(String(providerFromData));
+    // Fetch all doctors when modal opens
+    useEffect(() => {
+        if (!open) return;
+        let cancelled = false;
+        async function fetchDoctors() {
+            try {
+                const doctors = await doctorService.getAllDoctors();
+                if (!cancelled) {
+                    setAllDoctors(doctors);
+                }
+            } catch (error) {
+                console.error('Error fetching doctors:', error);
+                if (!cancelled) {
+                    setAllDoctors([]);
+                }
+            }
         }
+        fetchDoctors();
+        return () => { cancelled = true; };
+    }, [open]);
+
+    const doctorDisplayName = useMemo(() => {        
+        // If no provider name, try to get doctor name from allDoctors using doctorId
         const id = (patientData as any)?.doctorId || (appointment as any)?.doctorId || (sessionData as any)?.doctorId;
+        console.log('checking id:', id);
+        if (id && allDoctors.length > 0) {
+            // First try to find by ID
+            let doctor = allDoctors.find(d => d.id === id);
+            
+            // If not found by ID, try to find by doctor_name (in case doctorId is actually a name)
+            if (!doctor) {
+                const idStr = String(id).trim();
+                doctor = allDoctors.find(d => {
+                    const doctorName = (d as any).doctor_name || d.name || '';
+                    return doctorName && String(doctorName).trim().toLowerCase() === idStr.toLowerCase();
+                });
+            }
+            
+            if (doctor) {
+                console.log('checking doctor:', doctor);
+                // Check for doctor name in multiple possible fields (raw API field or transformed field)
+                const doctorName = (doctor as any).doctor_name || 
+                                   doctor.name || 
+                                   (doctor.firstName && doctor.lastName ? `${doctor.firstName} ${doctor.lastName}`.trim() : 
+                                    doctor.firstName || doctor.lastName || '');
+                if (doctorName) {
+                    return formatProviderLabel(doctorName);
+                }
+            }
+        }
+        
+        // Fallback: if we have an ID but no doctor found, format the ID itself
         if (id) {
+            console.log('checking id 2:', id);
             const raw = String(id);
             if (raw.startsWith('DR-')) return `Dr. ${raw.slice(3)}`;
             return formatProviderLabel(raw);
         }
+        
         return 'Doctor';
-    }, [patientData, appointment, sessionData]);
+    }, [patientData, appointment, sessionData, allDoctors]);
 
     // Debug: log incoming context for this modal
     useEffect(() => {
@@ -273,14 +323,52 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                 setLabTestResults(mappedResults);
                 
                 // Populate form fields from first result (assuming all results share same metadata)
+                // Also check if metadata is at response root level (for array responses with metadata)
                 const firstResult = results[0];
-                if (firstResult) {
+                const responseMetadata = (results as any).metadata || (results as any).meta || {};
+                
+                if (firstResult || responseMetadata) {
+                    // Try multiple field name variations for lab doctor name
+                    // Check all possible field names from both firstResult and responseMetadata
+                    const labDoctorName = 
+                        firstResult?.labDoctorName ?? 
+                        firstResult?.lab_doctor_name ?? 
+                        firstResult?.doctorName ?? 
+                        firstResult?.doctor_name ?? 
+                        firstResult?.labDoctor ?? 
+                        firstResult?.lab_doctor ??
+                        responseMetadata?.labDoctorName ??
+                        responseMetadata?.lab_doctor_name ??
+                        responseMetadata?.doctorName ??
+                        responseMetadata?.doctor_name ??
+                        undefined;
+                    
+                    const labName = 
+                        firstResult?.labName ?? 
+                        firstResult?.lab_name ?? 
+                        responseMetadata?.labName ??
+                        responseMetadata?.lab_name ??
+                        undefined;
+                    
+                    const reportDate = 
+                        firstResult?.reportDate ?? 
+                        firstResult?.report_date ?? 
+                        responseMetadata?.reportDate ??
+                        responseMetadata?.report_date ??
+                        undefined;
+                    
+                    const comment = 
+                        firstResult?.comment ?? 
+                        responseMetadata?.comment ??
+                        undefined;
+                    
                     setFormData(prev => ({
                         ...prev,
-                        labName: firstResult.labName || firstResult.lab_name || '',
-                        labDoctorName: firstResult.doctorName || firstResult.doctor_name || '',
-                        reportDate: firstResult.reportDate || firstResult.report_date || '',
-                        comment: firstResult.comment || ''
+                        // Update only if field was found in response (using nullish coalescing to preserve empty strings)
+                        labName: labName !== undefined ? String(labName) : prev.labName,
+                        labDoctorName: labDoctorName !== undefined ? String(labDoctorName) : prev.labDoctorName,
+                        reportDate: reportDate !== undefined ? String(reportDate) : prev.reportDate,
+                        comment: comment !== undefined ? String(comment) : prev.comment
                     }));
                 }
                 
@@ -512,12 +600,20 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
         }
 
         // Build request payload
-        const doctorId = (sessionData as any)?.doctorId || (patientData as any)?.doctorId || '';
+        // Prefer doctor/provider coming from the Appointment screen/patient row,
+        // and only fall back to the session doctor id if nothing else is available.
+        const resolvedDoctorId =
+            (appointment as any)?.doctorId ||
+            (patientData as any)?.doctorId ||
+            // In some flows provider may actually carry the doctor id/code
+            (patientData as any)?.provider ||
+            (sessionData as any)?.doctorId ||
+            '';
         const clinicId = (patientData as any)?.clinicId || '';
         const shiftId = (patientData as any)?.shiftId || 0;
         const patientVisitNo = (patientData as any)?.patient_visit_no || (patientData as any)?.visitNumber || 0;
         const userId = (sessionData as any)?.userId || '';
-        const doctorName = (sessionData as any)?.doctorName || '';
+        // const doctorName = (sessionData as any)?.doctorName || '';
         const patientId = String((patientData as any)?.patientId || '');
 
         const visitDateString = (patientData as any)?.visitDate || new Date().toISOString().slice(0, 10);
@@ -528,11 +624,11 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
         const requestPayload: import('../services/patientService').LabTestResultRequest = {
             patientId,
             patientVisitNo: Number(patientVisitNo || 0),
-            doctorId: String(doctorId || ''),
+            doctorId: String(resolvedDoctorId || ''),
             clinicId: String(clinicId || ''),
             shiftId: Number(shiftId || 0),
             userId: String(userId || ''),
-            doctorName: String(doctorName || ''),
+            doctorName: formData.labDoctorName,
             labName: formData.labName,
             reportDate: reportDateYMD,
             comment: formData.comment,
@@ -541,7 +637,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                 patientVisitNo: Number(patientVisitNo || 0),
                 shiftId: Number(shiftId || 0),
                 clinicId: String(clinicId || ''),
-                doctorId: String(doctorId || ''),
+                doctorId: String(resolvedDoctorId || ''),
                 patientId: patientId,
                 labTestDescription: r.labTestName,
                 parameterName: r.parameterName || 'Result',
@@ -557,18 +653,16 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
             throw new Error(msg);
         }
 
-        // Success: reset and close dialog first
+        // Success: reset, show snackbar, then close dialog shortly after
         handleReset();
-        setSuccess(submitResponse?.message || 'Lab test entry submitted successfully!');
-
-        // Close dialog first
-        onClose();
-
-        // Then show snackbar after short delay
+        const successMsg = submitResponse?.message || 'Lab test entry submitted successfully!';
+        setSuccess(successMsg);
+        setSnackbarMessage('Lab added successfully');
+        setSnackbarOpen(true);
+        // Allow a brief moment for snackbar to be visible before closing
         setTimeout(() => {
-            setSnackbarMessage('Lab added successfully');
-            setSnackbarOpen(true);
-        }, 500); // 0.5s delay for smooth transition
+            onClose();
+        }, 800);
 
     } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'An error occurred';
@@ -784,7 +878,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                     fontSize: '14px',
                                     textAlign: 'right'
                                 }}>
-                                    <div>Dr.{sessionData?.doctorName}</div>
+                                    <div>{doctorDisplayName}</div>
                                 </div>
                                 <button
                                     onClick={onClose}
@@ -894,25 +988,8 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                         }}>
                                             Report Date *
                                         </label>
-
-                                        {/* Text Input (formatted date) */}
-                                        <input
-                                            type="text"
-                                            value={formData.reportDate}
-                                            onChange={(e) => handleInputChange('reportDate', e.target.value)}
-                                            placeholder="dd-mmm-yy"
-                                            style={{
-                                                width: '100%',
-                                                padding: '12px 40px 12px 12px',
-                                                border: '1px solid #ddd',
-                                                borderRadius: '4px',
-                                                fontSize: '14px',
-                                                boxSizing: 'border-box'
-                                            }}
-                                        />
-
-                                        {/* Calendar Icon */}
-                                        <Calendar
+                                         {/* Calendar Icon */}
+                                         <Calendar
                                             size={20}
                                             color="#666"
                                             style={{
@@ -940,6 +1017,21 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                 height: 0
                                             }}
                                         />
+                                        {/* Text Input (formatted date) */}
+                                        <input
+                                            type="text"
+                                            value={formData.reportDate}
+                                            onChange={(e) => handleInputChange('reportDate', e.target.value)}
+                                            placeholder="dd-mmm-yy"
+                                            style={{
+                                                width: '100%',
+                                                padding: '12px 40px 12px 12px',
+                                                border: '1px solid #ddd',
+                                                borderRadius: '4px',
+                                                fontSize: '14px',
+                                                boxSizing: 'border-box'
+                                            }}
+                                        />                            
                                     </div>
                                 </div>
 
