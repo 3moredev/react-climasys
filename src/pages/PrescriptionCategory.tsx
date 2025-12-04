@@ -107,6 +107,7 @@ export default function PrescriptionCategory() {
   const totalPages = Math.max(1, Math.ceil(filteredCategories.length / pageSize))
   const startIndex = (currentPage - 1) * pageSize
   const paginatedCategories = filteredCategories.slice(startIndex, startIndex + pageSize)
+  const shouldEnableTableScroll = filteredCategories.length > pageSize
 
   useEffect(() => {
     setCurrentPage(1)
@@ -459,10 +460,8 @@ export default function PrescriptionCategory() {
         fontWeight: 'bold', 
         fontSize: '1.8rem', 
         color: '#000000',
-        marginBottom: '50px',
-        marginTop: '0',
-        paddingBottom: '20px',
-        borderBottom: '2px solid #e0e0e0'
+        marginBottom: '30px',
+        marginTop: '0'
       }}>
         Prescription Category
       </h1>
@@ -483,7 +482,7 @@ export default function PrescriptionCategory() {
       )}
 
       {/* Category Management Form */}
-      <div className="form-row" style={{ paddingLeft: '50px', paddingRight: '50px' }}>
+      <div className="form-row">
         <div className="form-field">
           <label>Category Name</label>
           <input
@@ -516,7 +515,7 @@ export default function PrescriptionCategory() {
       </div>
 
       {/* Search Section */}
-      <div className="search-section" style={{ paddingLeft: '50px', paddingRight: '50px' }}>
+      <div className="search-section">
         <div className="search-input-wrapper">
           <input
             type="text"
@@ -586,7 +585,10 @@ export default function PrescriptionCategory() {
       </div>
 
       {/* Categories Table */}
-      <div className="table-responsive" style={{ paddingLeft: '50px', paddingRight: '50px' }}>
+      <div
+        className="table-responsive"
+        style={shouldEnableTableScroll ? { maxHeight: '510px', overflowY: 'auto' } : undefined}
+      >
         <table className="category-table">
           <thead>
             <tr>

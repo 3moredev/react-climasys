@@ -181,8 +181,8 @@ export default function AppointmentTable() {
         const fetchAllDoctors = async () => {
             setLoadingDoctors(true);
             try {
-                console.log('Fetching all doctors...');
-                const doctors = await doctorService.getAllDoctors();
+                console.log('Fetching OPD doctors for provider dropdown...');
+                const doctors = await doctorService.getOpdDoctors();
                 setAllDoctors(doctors);
 
                 // Set the first doctor as default selection if none is selected

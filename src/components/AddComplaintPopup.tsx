@@ -51,18 +51,25 @@ const AddComplaintPopup: React.FC<AddComplaintPopupProps> = ({ open, onClose, on
             setSnackbarOpen(true);
             return;
         }
-        
+
         if (!complaintDescription.trim()) {
             setSnackbarMessage('Complaint Description is required');
             setSnackbarOpen(true);
             return;
         }
+
+        // Normalize text fields to uppercase before saving
+        const shortDescUpper = shortDescription.trim().toUpperCase();
+        const complaintDescUpper = complaintDescription.trim().toUpperCase();
         
+        // Determine priority (optional; default to "9" if not provided)
+        const priorityValue = priority.trim() || '9';
+
         // Call the parent onSave callback with all form data
         onSave({
-            shortDescription: shortDescription.trim(),
-            complaintDescription: complaintDescription.trim(),
-            priority: priority.trim(),
+            shortDescription: shortDescUpper,
+            complaintDescription: complaintDescUpper,
+            priority: priorityValue,
             displayToOperator
         });
         
@@ -182,7 +189,7 @@ const AddComplaintPopup: React.FC<AddComplaintPopupProps> = ({ open, onClose, on
                 <div style={{ padding: '20px', flex: 1 }}>
                     <div style={{ marginBottom: '15px' }}>
                         <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                            Short Description *
+                            Short Description <span style={{ color: '#d32f2f' }}>*</span>
                         </label>
                         <input
                             type="text"
@@ -206,7 +213,7 @@ const AddComplaintPopup: React.FC<AddComplaintPopupProps> = ({ open, onClose, on
 
                     <div style={{ marginBottom: '15px' }}>
                         <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                            Complaint Description *
+                            Complaint Description <span style={{ color: '#d32f2f' }}>*</span>
                         </label>
                         <input
                             type="text"

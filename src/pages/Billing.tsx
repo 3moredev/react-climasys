@@ -1243,7 +1243,7 @@ export default function Treatment() {
                                     receiptNo: uiFields?.receiptNo !== undefined && uiFields?.receiptNo !== null ? String(uiFields.receiptNo) : prev.receiptNo,
                                     feesCollected: collectedStr,
                                     paymentRemark: uiFields?.paymentRemark !== undefined && uiFields?.paymentRemark !== null ? String(uiFields.paymentRemark) : prev.paymentRemark,
-                                    paymentBy: uiFields?.paymentById !== undefined && uiFields?.paymentById !== null ? String(uiFields.paymentById) : prev.paymentBy
+                                    paymentBy: uiFields?.paymentBy !== undefined && uiFields?.paymentBy !== null ? String(uiFields.paymentBy) : prev.paymentBy
                                 };
                             });
                             

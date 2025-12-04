@@ -25,7 +25,11 @@ export interface MedicineOption {
   medicine_description: string;
   morning: number;
   afternoon: number;
+  night?: number;
+  no_of_days?: number;
+  instruction?: string;
   priority_value: number;
+  priority?: number;
   active: boolean;
   clinic_id: string;
   created_on: string;
@@ -42,6 +46,9 @@ export interface MedicineApiResponse {
   active: boolean;
   clinic_id: string;
   morning: number;
+  night?: number;
+  no_of_days?: number;
+  instruction?: string;
 }
 
 export const medicineService = {
@@ -261,7 +268,11 @@ export const medicineService = {
         medicine_description: medicine.medicine_description,
         morning: medicine.morning,
         afternoon: medicine.afternoon,
+        night: medicine.night,
+        no_of_days: medicine.no_of_days,
+        instruction: medicine.instruction,
         priority_value: medicine.priority_value,
+        priority: medicine.priority_value,
         active: medicine.active,
         clinic_id: medicine.clinic_id,
         created_on: medicine.created_on,

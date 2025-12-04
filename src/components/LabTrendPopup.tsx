@@ -100,15 +100,36 @@ export default function LabTrendPopup({
 
     const formatDate = (dateStr: string) => {
         if (!dateStr) return '';
-        try {
-            const date = new Date(dateStr);
-            const day = date.getDate().toString().padStart(2, '0');
-            const month = date.toLocaleDateString('en-US', { month: 'short' });
-            const year = date.getFullYear();
-            return `${day} ${month} ${year}`;
-        } catch {
-            return dateStr;
+        const str = String(dateStr).trim();
+
+        // Backend style example: "21-Nov-2025 - 04:40:00 - M"
+        if (str.includes(' - ')) {
+            const firstPart = str.split(' - ')[0].trim(); // "21-Nov-2025"
+            const parts = firstPart.split('-'); // ["21", "Nov", "2025"]
+            if (parts.length === 3) {
+                const [day, mon, year] = parts;
+                const yy = year ? year.slice(-2) : '';
+                const dd = day.padStart(2, '0');
+                const monShort = mon.slice(0, 3);
+                return `${dd}-${monShort}-${yy}`; // e.g. "21-Nov-25"
+            }
+            return firstPart;
         }
+
+        // ISO / JS-parsable date fallback
+        try {
+            const date = new Date(str);
+            if (!isNaN(date.getTime())) {
+                const dd = String(date.getDate()).padStart(2, '0');
+                const monShort = date.toLocaleString('en-GB', { month: 'short' });
+                const yy = String(date.getFullYear()).slice(-2);
+                return `${dd}-${monShort}-${yy}`;
+            }
+        } catch {
+            // ignore and return raw
+        }
+
+        return str;
     };
 
     if (!open) return null;
@@ -208,13 +229,7 @@ export default function LabTrendPopup({
                         </div>
                     )}
 
-                    {!loading && !error && labTrends.length === 0 && (
-                        <div style={{ textAlign: 'center', padding: '20px', color: '#666' }}>
-                            No lab trend data available
-                        </div>
-                    )}
-
-                    {!loading && !error && labTrends.length > 0 && (
+                    {!loading && !error && (
                         <div style={{ border: '1px solid #ccc', borderRadius: '4px', overflow: 'hidden' }}>
                             <div style={{
                                 maxHeight: labTrends.length > 5 ? '280px' : 'none',
@@ -232,33 +247,49 @@ export default function LabTrendPopup({
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {labTrends.map((item, idx) => (
-                                            <tr
-                                                key={idx}
-                                                style={{
-                                                    borderBottom: '1px solid #e0e0e0',
-                                                    backgroundColor: idx % 2 === 0 ? '#f8f9fa' : 'white'
-                                                }}
-                                                onMouseEnter={(e) => { (e.currentTarget as HTMLTableRowElement).style.backgroundColor = '#f5f5f5'; }}
-                                                onMouseLeave={(e) => { (e.currentTarget as HTMLTableRowElement).style.backgroundColor = idx % 2 === 0 ? '#f8f9fa' : 'white'; }}
-                                            >
-                                                <td style={{ padding: '6px', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>
-                                                    {formatDate(item.visitDate)}
-                                                </td>
-                                                <td style={{ padding: '6px', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>
-                                                    {item.patientVisitNo}
-                                                </td>
-                                                <td style={{ padding: '6px', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>
-                                                    {item.labTestDescription || '-'}
-                                                </td>
-                                                <td style={{ padding: '6px', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>
-                                                    {item.parameterName || '-'}
-                                                </td>
-                                                <td style={{ padding: '6px', color: '#333', fontSize: '12px' }}>
-                                                    {item.parameterValue || '-'}
+                                        {labTrends.length === 0 ? (
+                                            <tr>
+                                                <td
+                                                    colSpan={5}
+                                                    style={{
+                                                        padding: '20px',
+                                                        textAlign: 'center',
+                                                        color: '#666',
+                                                        fontSize: '13px'
+                                                    }}
+                                                >
+                                                    No lab trend data available
                                                 </td>
                                             </tr>
-                                        ))}
+                                        ) : (
+                                            labTrends.map((item, idx) => (
+                                                <tr
+                                                    key={idx}
+                                                    style={{
+                                                        borderBottom: '1px solid #e0e0e0',
+                                                        backgroundColor: idx % 2 === 0 ? '#f8f9fa' : 'white'
+                                                    }}
+                                                    onMouseEnter={(e) => { (e.currentTarget as HTMLTableRowElement).style.backgroundColor = '#f5f5f5'; }}
+                                                    onMouseLeave={(e) => { (e.currentTarget as HTMLTableRowElement).style.backgroundColor = idx % 2 === 0 ? '#f8f9fa' : 'white'; }}
+                                                >
+                                                    <td style={{ padding: '6px', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>
+                                                        {formatDate(item.visitDate)}
+                                                    </td>
+                                                    <td style={{ padding: '6px', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>
+                                                        {item.patientVisitNo}
+                                                    </td>
+                                                    <td style={{ padding: '6px', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>
+                                                        {item.labTestDescription || '-'}
+                                                    </td>
+                                                    <td style={{ padding: '6px', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>
+                                                        {item.parameterName || '-'}
+                                                    </td>
+                                                    <td style={{ padding: '6px', color: '#333', fontSize: '12px' }}>
+                                                        {item.parameterValue || '-'}
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
                                     </tbody>
                                 </table>
                             </div>

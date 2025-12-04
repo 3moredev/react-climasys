@@ -289,7 +289,7 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                         <div>
                             <div style={{ marginBottom: '15px' }}>
                                 <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                    Short Description
+                                    Short Description <span style={{ color: '#d32f2f' }}>*</span>
                                 </label>
                                 <input
                                     type="text"
@@ -312,7 +312,7 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
 
                             <div style={{ marginBottom: '15px' }}>
                                 <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                    Medicine Name
+                                    Medicine Name <span style={{ color: '#d32f2f' }}>*</span>
                                 </label>
                                 <input
                                     type="text"
