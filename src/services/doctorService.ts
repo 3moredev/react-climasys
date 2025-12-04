@@ -4,10 +4,38 @@ export type DoctorDetail = Record<string, any>;
 
 export interface Doctor {
   id: string;
-  name: string;
-  specialty?: string;
-  firstName?: string;
+  firstName: string;
+  middleName?: string;
   lastName?: string;
+  clinicId?: string;
+  clinicName?: string;
+  registrationNo: string;
+  speciality: string;
+  residentialNo?: string;
+  practisingYear?: string;
+  mobile1: string;
+  mobile2?: string;
+  emergencyNumber?: string;
+  wappNo?: string;
+  emailid?: string;
+  doctorQual?: string;
+  residentialAdd1?: string;
+  residentialAdd2?: string;
+  countryId?: string;
+  stateId?: string;
+  cityId?: string;
+  areaId?: string;
+  profileImage?: string; // URL or base64
+  doctorPhoto?: string; // URL or base64
+  baseLocation?: string;
+  ipdDr: boolean;
+  opdDr: boolean;
+  defaultFees?: string;
+
+  // Legacy/Mapped fields for display
+  name?: string; // Composite name
+  mobileNo?: string; // Mapped to mobile1
+  opdIpd?: string; // Display string
 }
 
 export const doctorService = {
@@ -37,32 +65,198 @@ export const doctorService = {
     return null;
   },
   /**
-   * Get all available doctors in the system
+   * Get all doctors
    */
   async getAllDoctors(): Promise<Doctor[]> {
     try {
-      console.log('Fetching doctors from /doctors/all endpoint...');
+      console.log('Fetching all doctors...');
       const response = await api.get('/doctors/all');
-      console.log('Raw API response:', response.data);
-      
-      const doctors = response.data || [];
-      
-      // Transform the response to match our Doctor interface
-      const transformedDoctors = doctors.map((doctor: any) => ({
-        id: doctor.id || doctor.doctorId || doctor.doctor_id || '',
-        name: doctor.name || doctor.doctorName || doctor.doctor_name || 
-              `${doctor.firstName || doctor.first_name || ''} ${doctor.lastName || doctor.last_name || ''}`.trim() ||
-              `${doctor.specialty || ''} - ${doctor.firstName || doctor.first_name || ''}`.trim(),
-        specialty: doctor.specialty || doctor.specialization || doctor.department,
-        firstName: doctor.firstName || doctor.first_name,
-        lastName: doctor.lastName || doctor.last_name
+      console.log('Get all doctors response:', response.data);
+
+      const data = Array.isArray(response.data) ? response.data : [];
+
+      return data.map((item: any) => ({
+        id: item.doctor_id || item.id || '',
+        firstName: item.firstName || item.first_name || '', // Fallback if split names not available
+        middleName: item.middleName || item.middle_name || '',
+        lastName: item.lastName || item.last_name || '',
+        name: item.doctor_name || `${item.firstName || item.first_name || ''} ${item.lastName || item.last_name || ''}`.trim(),
+        clinicId: item.clinicId || item.clinic_id || '',
+        clinicName: item.clinicName || item.clinic_name || '',
+        registrationNo: item.registrationNo || item.registration_no || '',
+        speciality: item.speciality || item.specialization || '',
+        residentialNo: item.residentialNo || item.residential_no || '',
+        practisingYear: item.practisingYear || item.practising_year || '',
+        mobile1: item.mobile1 || item.mobile_1 || item.phone || '',
+        mobile2: item.mobile2 || item.mobile_2 || '',
+        emergencyNumber: item.emergencyNumber || item.emergency_no || '',
+        wappNo: item.wappNo || item.wapp_no || '',
+        emailid: item.emailid || item.email || '',
+        doctorQual: item.doctorQual || item.qualification || '',
+        residentialAdd1: item.residentialAdd1 || item.residential_add_1 || '',
+        residentialAdd2: item.residentialAdd2 || item.residential_add_2 || '',
+        countryId: item.countryId || item.country_id || '',
+        stateId: item.stateId || item.state_id || '',
+        cityId: item.cityId || item.city_id || '',
+        areaId: item.areaId || item.area_id || '',
+        profileImage: item.profileImage || item.profile_image || '',
+        doctorPhoto: item.doctorPhoto || item.doctor_photo || '',
+        baseLocation: item.baseLocation || item.base_location || '',
+        ipdDr: !!(item.ipdDr || item.is_ipd),
+        opdDr: !!(item.opdDr || item.is_opd),
+        defaultFees: item.defaultFees || item.default_fees || '',
+
+        // Mapped for ManageDoctors table
+        mobileNo: item.mobile1 || item.mobile_1 || item.phone || '',
+        opdIpd: (item.ipdDr || item.is_ipd) && (item.opdDr || item.is_opd) ? 'Both' : (item.ipdDr || item.is_ipd) ? 'IPD' : (item.opdDr || item.is_opd) ? 'OPD' : '-'
       }));
-      
-      console.log('Transformed doctors:', transformedDoctors);
-      return transformedDoctors;
-    } catch (error) {
-      console.error('Error fetching all doctors:', error);
-      throw new Error('Failed to fetch doctors from server');
+    } catch (error: any) {
+      console.error('Error fetching doctors:', error);
+      throw new Error(error.response?.data?.message || 'Failed to fetch doctors');
+    }
+  },
+
+  /**
+   * Get doctor details by ID
+   */
+  async getDoctorById(id: string): Promise<Doctor> {
+    try {
+      const response = await api.get(`/doctors/${id}/details`);
+      const item = response.data;
+      return {
+        id: item.doctorId || item.id || '',
+        firstName: item.firstName || item.first_name || '',
+        middleName: item.middleName || item.middle_name || '',
+        lastName: item.lastName || item.last_name || '',
+        name: item.doctor_name || `${item.firstName || item.first_name || ''} ${item.lastName || item.last_name || ''}`.trim(),
+        clinicId: item.clinicId || item.clinic_id || '',
+        clinicName: item.clinicName || item.clinic_name || '',
+        registrationNo: item.registrationNo || item.registration_no || '',
+        speciality: item.speciality || item.specialization || '',
+        residentialNo: item.residentialNo || item.residential_no || '',
+        practisingYear: item.practisingYear || item.practising_year || '',
+        mobile1: item.mobile1 || item.mobile_1 || item.phone || '',
+        mobile2: item.mobile2 || item.mobile_2 || '',
+        emergencyNumber: item.emergencyNumber || item.emergency_no || '',
+        wappNo: item.wappNo || item.wapp_no || '',
+        emailid: item.emailid || item.email || '',
+        doctorQual: item.doctorQual || item.qualification || '',
+        residentialAdd1: item.residentialAdd1 || item.residential_add_1 || '',
+        residentialAdd2: item.residentialAdd2 || item.residential_add_2 || '',
+        countryId: item.countryId || item.country_id || '',
+        stateId: item.stateId || item.state_id || '',
+        cityId: item.cityId || item.city_id || '',
+        areaId: item.areaId || item.area_id || '',
+        profileImage: item.profileImage || item.profile_image || '',
+        doctorPhoto: item.doctorPhoto || item.doctor_photo || '',
+        baseLocation: item.baseLocation || item.base_location || '',
+        ipdDr: !!(item.ipdDr || item.is_ipd),
+        opdDr: !!(item.opdDr || item.is_opd),
+        defaultFees: item.defaultFees || item.default_fees || '',
+
+        // Mapped for ManageDoctors table
+        mobileNo: item.mobile1 || item.mobile_1 || item.phone || '',
+        opdIpd: (item.ipdDr || item.is_ipd) && (item.opdDr || item.is_opd) ? 'Both' : (item.ipdDr || item.is_ipd) ? 'IPD' : (item.opdDr || item.is_opd) ? 'OPD' : '-'
+      };
+    } catch (error: any) {
+      console.error('Error fetching doctor details:', error);
+      throw new Error(error.response?.data?.message || 'Failed to fetch doctor details');
+    }
+  },
+
+  /**
+   * Create a new doctor
+   */
+  async createDoctor(doctorData: Partial<Doctor>): Promise<Doctor> {
+    try {
+      const payload = {
+        firstName: doctorData.firstName,
+        middleName: doctorData.middleName,
+        lastName: doctorData.lastName,
+        clinicId: doctorData.clinicId,
+        registrationNo: doctorData.registrationNo,
+        speciality: doctorData.speciality,
+        residentialNo: doctorData.residentialNo,
+        practisingYear: doctorData.practisingYear,
+        mobile1: doctorData.mobile1,
+        mobile2: doctorData.mobile2,
+        emergencyNumber: doctorData.emergencyNumber,
+        wappNo: doctorData.wappNo,
+        emailid: doctorData.emailid,
+        doctorQual: doctorData.doctorQual,
+        residentialAdd1: doctorData.residentialAdd1,
+        residentialAdd2: doctorData.residentialAdd2,
+        countryId: doctorData.countryId,
+        stateId: doctorData.stateId,
+        cityId: doctorData.cityId,
+        areaId: doctorData.areaId,
+        baseLocation: doctorData.baseLocation,
+        ipdDr: doctorData.ipdDr,
+        opdDr: doctorData.opdDr,
+        defaultFees: doctorData.defaultFees,
+        profileImage: doctorData.profileImage,
+        doctorPhoto: doctorData.doctorPhoto
+      };
+
+      const response = await api.post('/doctors/save', payload);
+      return response.data;
+    } catch (error: any) {
+      console.error('Error creating doctor:', error);
+      throw new Error(error.response?.data?.message || 'Failed to create doctor');
+    }
+  },
+
+  /**
+   * Update an existing doctor
+   */
+  async updateDoctor(id: string, doctorData: Partial<Doctor>): Promise<Doctor> {
+    try {
+      const payload = {
+        firstName: doctorData.firstName,
+        middleName: doctorData.middleName,
+        lastName: doctorData.lastName,
+        clinicId: doctorData.clinicId,
+        registrationNo: doctorData.registrationNo,
+        speciality: doctorData.speciality,
+        residentialNo: doctorData.residentialNo,
+        practisingYear: doctorData.practisingYear,
+        mobile1: doctorData.mobile1,
+        mobile2: doctorData.mobile2,
+        emergencyNumber: doctorData.emergencyNumber,
+        wappNo: doctorData.wappNo,
+        emailid: doctorData.emailid,
+        doctorQual: doctorData.doctorQual,
+        residentialAdd1: doctorData.residentialAdd1,
+        residentialAdd2: doctorData.residentialAdd2,
+        countryId: doctorData.countryId,
+        stateId: doctorData.stateId,
+        cityId: doctorData.cityId,
+        areaId: doctorData.areaId,
+        baseLocation: doctorData.baseLocation,
+        ipdDr: doctorData.ipdDr,
+        opdDr: doctorData.opdDr,
+        defaultFees: doctorData.defaultFees,
+        profileImage: doctorData.profileImage,
+        doctorPhoto: doctorData.doctorPhoto
+      };
+
+      const response = await api.put(`/doctors/update/${id}`, payload);
+      return response.data;
+    } catch (error: any) {
+      console.error('Error updating doctor:', error);
+      throw new Error(error.response?.data?.message || 'Failed to update doctor');
+    }
+  },
+
+  /**
+   * Delete a doctor
+   */
+  async deleteDoctor(id: string): Promise<void> {
+    try {
+      await api.delete(`/doctors/delete/${id}`);
+    } catch (error: any) {
+      console.error('Error deleting doctor:', error);
+      throw new Error(error.response?.data?.message || 'Failed to delete doctor');
     }
   }
 };

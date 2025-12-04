@@ -118,7 +118,7 @@ function mapClinicItem(item: any): ClinicItem {
 }
 
 export async function getClinics(): Promise<ClinicItem[]> {
-  const response = await api.get('/clinics')
+  const response = await api.get('/clinics/all')
   const data = Array.isArray(response?.data) ? response.data : []
   return data.map(mapClinicItem)
 }
@@ -140,3 +140,34 @@ export async function getFollowUpTypes(): Promise<FollowUpTypeItem[]> {
   return data.map(mapFollowUpTypeItem)
 }
 
+
+export interface CountryItem {
+  id: string
+  name: string
+}
+
+export async function getCountries(): Promise<CountryItem[]> {
+  const response = await api.get('/reference/countries')
+  const data = Array.isArray(response?.data) ? response.data : []
+  return data.map((item: any) => ({
+    id: String(item?.id ?? item?.countryId ?? item?.code ?? ''),
+    name: String(item?.name ?? item?.countryName ?? '')
+  }))
+}
+
+export interface StateItem {
+  id: string
+  name: string
+  countryId?: string
+}
+
+export async function getStates(countryId?: string): Promise<StateItem[]> {
+  const url = countryId ? `/reference/states?countryId=${countryId}` : '/reference/states'
+  const response = await api.get(url)
+  const data = Array.isArray(response?.data) ? response.data : []
+  return data.map((item: any) => ({
+    id: String(item?.id ?? item?.stateId ?? item?.code ?? ''),
+    name: String(item?.name ?? item?.stateName ?? ''),
+    countryId: item?.countryId ? String(item.countryId) : undefined
+  }))
+}

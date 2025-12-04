@@ -41,6 +41,10 @@ import ManageHospitalBill from './pages/ManageHospitalBill'
 import ManageMedicine from './pages/ManageMedicine'
 import ManageProcedure from './pages/ManageProcedure'
 import ManageBillingDetails from './pages/ManageBillingDetails'
+import ManageClinics from './pages/ManageClinics'
+import ManageDoctors from './pages/ManageDoctors'
+import AddClinic from './pages/AddClinic'
+import AddDoctor from './pages/AddDoctor'
 import PrescriptionCategory from './pages/PrescriptionCategory'
 import PrescriptionSubCategory from './pages/PrescriptionSubCategory'
 import PrescriptionDetails from './pages/PrescriptionDetails'
@@ -234,7 +238,35 @@ function App() {
               <AuthGuard>
                 <MainLayout>
                   <ManageBillingDetails />
-                    </MainLayout>
+                </MainLayout>
+              </AuthGuard>
+            } />
+            <Route path="/manage-clinics" element={
+              <AuthGuard>
+                <MainLayout>
+                  <ManageClinics />
+                </MainLayout>
+              </AuthGuard>
+            } />
+            <Route path="/manage-doctors" element={
+              <AuthGuard>
+                <MainLayout>
+                  <ManageDoctors />
+                </MainLayout>
+              </AuthGuard>
+            } />
+            <Route path="/add-clinic" element={
+              <AuthGuard>
+                <MainLayout>
+                  <AddClinic />
+                </MainLayout>
+              </AuthGuard>
+            } />
+            <Route path="/add-doctor" element={
+              <AuthGuard>
+                <MainLayout>
+                  <AddDoctor />
+                </MainLayout>
               </AuthGuard>
             } />
             <Route path="/prescription-category" element={
