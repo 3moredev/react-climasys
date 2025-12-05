@@ -468,6 +468,8 @@ export default function Treatment() {
     const [mlTestsTable, setMlTestsTable] = useState<string[]>([]);
     // Store labTestsAsked from master-lists API for print
     const labTestsAskedRef = React.useRef<any[]>([]);
+    // Store billing array from master-lists API to use collected_fees for receipt details
+    const masterListsBillingRef = React.useRef<any[]>([]);
 
     const [billingData, setBillingData] = useState({
         billed: '',
@@ -1360,6 +1362,15 @@ export default function Treatment() {
                         } else {
                             labTestsAskedRef.current = [];
                         }
+                        
+                        // Store billing array from master-lists API to use collected_fees for receipt details
+                        const billingArray = Array.isArray(dataRoot?.billing) ? dataRoot.billing : [];
+                        if (Array.isArray(billingArray) && billingArray.length > 0) {
+                            masterListsBillingRef.current = billingArray;
+                            console.log('Stored billing array from master-lists:', billingArray);
+                        } else {
+                            masterListsBillingRef.current = [];
+                        }
                     } catch (e2) {
                         console.warn('Billing: could not map table data from master lists', e2);
                         // Clear prescriptionRows if mapping fails
@@ -1375,6 +1386,63 @@ export default function Treatment() {
 
         fetchMasterLists();
     }, [treatmentData?.patientId, treatmentData?.visitNumber, sessionData?.clinicId, sessionData?.doctorId, (sessionData as any)?.shiftId, treatmentData?.doctorId]);
+
+    // Match and pre-select billing items after billing options are loaded
+    React.useEffect(() => {
+        // Only proceed if we have both billing options and master-lists billing data
+        if (billingDetailsOptions.length === 0 || masterListsBillingRef.current.length === 0) {
+            return;
+        }
+
+        const billingArray = masterListsBillingRef.current;
+        console.log('Matching billing items. Options:', billingDetailsOptions.length, 'Master-lists:', billingArray.length);
+
+        // Match billing items from master-lists to existing billing options by fields
+        const matchedIds: string[] = [];
+        
+        billingArray.forEach((billingItem: any) => {
+            // Find matching option by comparing billing fields (case-insensitive, trimmed)
+            const match = billingDetailsOptions.find(opt => {
+                const optGroup = (opt.billing_group_name || '').trim().toLowerCase();
+                const optSubgroup = (opt.billing_subgroup_name || '').trim().toLowerCase();
+                const optDetails = (opt.billing_details || '').trim().toLowerCase();
+                
+                const itemGroup = (billingItem.billing_group_name || '').trim().toLowerCase();
+                const itemSubgroup = (billingItem.billing_subgroup_name || '').trim().toLowerCase();
+                const itemDetails = (billingItem.billing_details || '').trim().toLowerCase();
+                
+                return optGroup === itemGroup && optSubgroup === itemSubgroup && optDetails === itemDetails;
+            });
+
+            if (match) {
+                matchedIds.push(match.id);
+                console.log('✓ Matched billing item:', billingItem.billing_details, '→ ID:', match.id);
+            } else {
+                console.warn('✗ Could not match billing item:', billingItem.billing_details, 
+                    'Group:', billingItem.billing_group_name, 
+                    'Subgroup:', billingItem.billing_subgroup_name);
+            }
+        });
+
+        // Pre-select the matched billing items (only if we have matches and not already selected)
+        if (matchedIds.length > 0) {
+            setSelectedBillingDetailIds(prev => {
+                // Check if we already have these selected
+                const allAlreadySelected = matchedIds.every(id => prev.includes(id));
+                if (allAlreadySelected) {
+                    console.log('Billing items already selected');
+                    return prev;
+                }
+                
+                // Merge with existing selections, avoiding duplicates
+                const combined = [...new Set([...prev, ...matchedIds])];
+                console.log('Pre-selected billing IDs:', combined);
+                return combined;
+            });
+        } else {
+            console.warn('No billing items matched for pre-selection');
+        }
+    }, [billingDetailsOptions]);
 
     // Get treatment data from location state
     useEffect(() => {
@@ -1667,15 +1735,53 @@ export default function Treatment() {
     }, [paymentByOptions, billingData.paymentBy]);
 
     const receiptDetailsText = React.useMemo(() => {
-        if (selectedBillingDetailIds.length === 0) return '';
-        const parts = selectedBillingDetailIds
-            .map(id => billingDetailsOptions.find(opt => opt.id === id))
-            .filter(Boolean)
-            .map(opt => {
-                if (!opt) return '';
-                const amount = typeof opt.default_fees === 'number' && !isNaN(opt.default_fees)
-                    ? ` Rs.${opt.default_fees.toFixed(2)}`
+        const billingArray = masterListsBillingRef.current || [];
+        
+        // If we have billing items from master-lists API, use those directly to ensure all items are included
+        if (billingArray.length > 0) {
+            const parts = billingArray.map((item: any) => {
+                const billingDetails = item.billing_details || item.billingDetails || '';
+                const collectedFees = item.collected_fees ?? item.collectedFees ?? item.default_fees ?? item.defaultFees;
+                const amount = typeof collectedFees === 'number' && !isNaN(collectedFees) && collectedFees > 0
+                    ? ` Rs.${collectedFees.toFixed(2)}`
                     : '';
+                
+                return billingDetails ? `${billingDetails}${amount}` : '';
+            }).filter(Boolean);
+            
+            if (parts.length > 0) {
+                return parts.join(', ');
+            }
+        }
+        
+        // Fallback: Use selected billing detail IDs if no billing array available
+        if (selectedBillingDetailIds.length === 0) return '';
+        
+        const parts = selectedBillingDetailIds
+            .map(id => {
+                // Find the billing option
+                const opt = billingDetailsOptions.find(opt => opt.id === id);
+                if (!opt) return '';
+                
+                // Try to find matching billing item from master-lists API to get collected_fees
+                const billingItem = billingArray.find((item: any) => {
+                    const optGroup = (opt.billing_group_name || '').trim().toLowerCase();
+                    const optSubgroup = (opt.billing_subgroup_name || '').trim().toLowerCase();
+                    const optDetails = (opt.billing_details || '').trim().toLowerCase();
+                    
+                    const itemGroup = (item.billing_group_name || '').trim().toLowerCase();
+                    const itemSubgroup = (item.billing_subgroup_name || '').trim().toLowerCase();
+                    const itemDetails = (item.billing_details || '').trim().toLowerCase();
+                    
+                    return optGroup === itemGroup && optSubgroup === itemSubgroup && optDetails === itemDetails;
+                });
+                
+                // Use collected_fees from billing item if available, otherwise use default_fees from option
+                const fees = billingItem?.collected_fees ?? billingItem?.collectedFees ?? opt.default_fees;
+                const amount = typeof fees === 'number' && !isNaN(fees) && fees > 0
+                    ? ` Rs.${fees.toFixed(2)}`
+                    : '';
+                
                 return `${opt.billing_details}${amount}`;
             })
             .filter(Boolean);
