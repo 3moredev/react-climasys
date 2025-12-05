@@ -4,8 +4,8 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import {
     getCountries,
     getStates,
-    searchCities,
-    searchAreas,
+    getCities,
+    getAreas,
     getClinics,
     CountryItem,
     StateItem,
@@ -105,6 +105,14 @@ export default function AddDoctor() {
                         const statesData = await getStates(editingDoctor.countryId);
                         setStates(statesData);
                     }
+                    if (editingDoctor.stateId) {
+                        const citiesData = await getCities(editingDoctor.stateId);
+                        setCities(citiesData);
+                    }
+                    if (editingDoctor.cityId && editingDoctor.stateId) {
+                        const areasData = await getAreas(editingDoctor.cityId, editingDoctor.stateId);
+                        setAreas(areasData);
+                    }
                 }
             } catch (err: any) {
                 console.error("Error loading initial data:", err);
@@ -129,6 +137,36 @@ export default function AddDoctor() {
             }
         } else {
             setStates([]);
+        }
+    };
+
+    const handleStateChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const stateId = e.target.value;
+        setFormData(prev => ({ ...prev, stateId, cityId: "", areaId: "" }));
+        if (stateId) {
+            try {
+                const citiesData = await getCities(stateId);
+                setCities(citiesData);
+            } catch (err) {
+                console.error("Error fetching cities:", err);
+            }
+        } else {
+            setCities([]);
+        }
+    }
+
+    const handleCityChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const cityId = e.target.value;
+        setFormData(prev => ({ ...prev, cityId, areaId: "" }));
+        if (cityId && formData.stateId) {
+            try {
+                const areasData = await getAreas(cityId, formData.stateId);
+                setAreas(areasData);
+            } catch (err) {
+                console.error("Error fetching areas:", err);
+            }
+        } else {
+            setAreas([]);
         }
     };
 
@@ -196,6 +234,8 @@ export default function AddDoctor() {
             profileImage: ""
         });
         setStates([]);
+        setCities([]);
+        setAreas([]);
         setError(null);
     };
 
@@ -287,24 +327,6 @@ export default function AddDoctor() {
                                 {error}
                             </div>
                         )}
-
-                        {/* Clinic Selection - Added as requested */}
-                        <div className="form-row">
-                            <div className="form-group" style={{ maxWidth: 'calc(33.33% - 27px)' }}>
-                                <label className="form-label">Clinic</label>
-                                <select
-                                    className="form-control"
-                                    name="clinicId"
-                                    value={formData.clinicId}
-                                    onChange={handleInputChange}
-                                >
-                                    <option value="">--Select Clinic--</option>
-                                    {clinics.map(c => (
-                                        <option key={c.id} value={c.id}>{c.name}</option>
-                                    ))}
-                                </select>
-                            </div>
-                        </div>
 
                         <div className="form-row">
                             <div className="form-group">
@@ -513,7 +535,7 @@ export default function AddDoctor() {
                                     className="form-control"
                                     name="stateId"
                                     value={formData.stateId}
-                                    onChange={handleInputChange}
+                                    onChange={handleStateChange}
                                     disabled={!formData.countryId}
                                 >
                                     <option value="">--Select State--</option>
@@ -531,10 +553,13 @@ export default function AddDoctor() {
                                     className="form-control"
                                     name="cityId"
                                     value={formData.cityId}
-                                    onChange={handleInputChange}
+                                    onChange={handleCityChange}
+                                    disabled={!formData.stateId}
                                 >
                                     <option value="">--Select City--</option>
-                                    {/* Populate if cities available */}
+                                    {cities.map(c => (
+                                        <option key={c.id} value={c.id}>{c.name}</option>
+                                    ))}
                                 </select>
                             </div>
                             <div className="form-group">
@@ -546,7 +571,9 @@ export default function AddDoctor() {
                                     onChange={handleInputChange}
                                 >
                                     <option value="">--Select Area--</option>
-                                    {/* Populate if areas available */}
+                                    {areas.map(a => (
+                                        <option key={a.id} value={a.id}>{a.name}</option>
+                                    ))}
                                 </select>
                             </div>
                             <div className="form-group">

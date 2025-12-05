@@ -80,6 +80,16 @@ export async function searchAreas(query?: string): Promise<AreaItem[]> {
   })
 }
 
+export async function getAreas(cityId: string, stateId: string): Promise<AreaItem[]> {
+  if (!cityId || !stateId) return []
+  const response = await api.get(`/reference/areas?cityId=${cityId}&stateId=${stateId}`)
+  const data = Array.isArray(response?.data) ? response.data : []
+  return data.map((item: any) => ({
+    id: String(item?.id?.areaId ?? item?.areaId ?? ''),
+    name: String(item?.areaName ?? item?.name ?? ''),
+  }))
+}
+
 export interface CityItem {
   id: string
   name: string

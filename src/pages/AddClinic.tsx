@@ -5,14 +5,14 @@ import {
     getCountries,
     getStates,
     getCities,
-    searchCities,
-    searchAreas,
+    getAreas,
     CountryItem,
     StateItem,
     CityItem,
     AreaItem
 } from "../services/referenceService";
 import { clinicService, Clinic } from "../services/clinicService";
+import { doctorService, Doctor } from "../services/doctorService";
 import { CircularProgress } from "@mui/material";
 
 export default function AddClinic() {
@@ -21,6 +21,7 @@ export default function AddClinic() {
     const editingClinic = location.state as Clinic | null;
 
     const [formData, setFormData] = useState({
+        doctorId: "",
         name: "",
         address: "",
         countryId: "",
@@ -38,6 +39,7 @@ export default function AddClinic() {
     const [states, setStates] = useState<StateItem[]>([]);
     const [cities, setCities] = useState<CityItem[]>([]);
     const [areas, setAreas] = useState<AreaItem[]>([]);
+    const [doctors, setDoctors] = useState<Doctor[]>([]);
 
     const [loading, setLoading] = useState(false);
     const [submitting, setSubmitting] = useState(false);
@@ -50,28 +52,60 @@ export default function AddClinic() {
                 const countriesData = await getCountries();
                 setCountries(countriesData);
 
-                if (editingClinic) {
-                    setFormData({
-                        name: editingClinic.name || "",
-                        address: editingClinic.address || "",
-                        countryId: editingClinic.countryId || "",
-                        stateId: editingClinic.stateId || "",
-                        cityId: editingClinic.city || "", // Assuming city name is stored in city field for now, or ID if available
-                        areaId: editingClinic.areaId || "",
-                        pincode: editingClinic.pincode || "",
-                        tips: editingClinic.tips || "",
-                        news: editingClinic.news || "",
-                        phoneNo: editingClinic.phoneNo || "",
-                        faxNo: editingClinic.faxNo || ""
-                    });
+                const doctorsData = await doctorService.getAllDoctors();
+                setDoctors(doctorsData);
 
-                    // Fetch dependent data if IDs are present
-                    if (editingClinic.countryId) {
-                        const statesData = await getStates(editingClinic.countryId);
-                        setStates(statesData);
+                if (editingClinic) {
+                    try {
+                        // Fetch fresh details
+                        const clinicDetails = await clinicService.getClinicById(editingClinic.id);
+
+                        setFormData({
+                            doctorId: clinicDetails.doctorId || "",
+                            name: clinicDetails.name || "",
+                            address: clinicDetails.address || "",
+                            countryId: clinicDetails.countryId || "",
+                            stateId: clinicDetails.stateId || "",
+                            cityId: clinicDetails.cityId || "",
+                            areaId: clinicDetails.areaId || "",
+                            pincode: clinicDetails.pincode || "",
+                            tips: clinicDetails.tips || "",
+                            news: clinicDetails.news || "",
+                            phoneNo: clinicDetails.phoneNo || "",
+                            faxNo: clinicDetails.faxNo || ""
+                        });
+
+                        // Fetch dependent data if IDs are present
+                        if (clinicDetails.countryId) {
+                            const statesData = await getStates(clinicDetails.countryId);
+                            setStates(statesData);
+                        }
+                        if (clinicDetails.stateId) {
+                            const citiesData = await getCities(clinicDetails.stateId);
+                            setCities(citiesData);
+                        }
+                        if (clinicDetails.cityId && clinicDetails.stateId) {
+                            const areasData = await getAreas(clinicDetails.cityId, clinicDetails.stateId);
+                            setAreas(areasData);
+                        }
+                    } catch (err) {
+                        console.error("Error fetching clinic details:", err);
+                        // Fallback to passed state if fetch fails
+                        setFormData({
+                            doctorId: editingClinic.doctorId || "",
+                            name: editingClinic.name || "",
+                            address: editingClinic.address || "",
+                            countryId: editingClinic.countryId || "",
+                            stateId: editingClinic.stateId || "",
+                            cityId: editingClinic.cityId || "", // Assuming city name is stored in city field for now, or ID if available
+                            areaId: editingClinic.areaId || "",
+                            pincode: editingClinic.pincode || "",
+                            tips: editingClinic.tips || "",
+                            news: editingClinic.news || "",
+                            phoneNo: editingClinic.phoneNo || "",
+                            faxNo: editingClinic.faxNo || ""
+                        });
                     }
-                    // Note: City and Area usually require search or specific IDs. 
-                    // For now we'll just load what we can or rely on search.
                 }
             } catch (err: any) {
                 console.error("Error loading initial data:", err);
@@ -112,6 +146,22 @@ export default function AddClinic() {
         } else {
             setCities([]);
         }
+    }
+
+
+    const handleCityChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const cityId = e.target.value;
+        setFormData(prev => ({ ...prev, cityId, areaId: "" }));
+        if (cityId && formData.stateId) {
+            try {
+                const areasData = await getAreas(cityId, formData.stateId);
+                setAreas(areasData);
+            } catch (err) {
+                console.error("Error fetching areas:", err);
+            }
+        } else {
+            setAreas([]);
+        }
     };
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -150,6 +200,7 @@ export default function AddClinic() {
 
     const handleClear = () => {
         setFormData({
+            doctorId: "",
             name: "",
             address: "",
             countryId: "",
@@ -269,6 +320,20 @@ export default function AddClinic() {
 
                         <div className="form-row">
                             <div className="form-group">
+                                <label className="form-label">Doctor</label>
+                                <select
+                                    className="form-control"
+                                    name="doctorId"
+                                    value={formData.doctorId}
+                                    onChange={handleInputChange}
+                                >
+                                    <option value="">--Select Doctor--</option>
+                                    {doctors.map(d => (
+                                        <option key={d.id} value={d.id}>{d.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="form-group">
                                 <label className="form-label">Country</label>
                                 <select
                                     className="form-control"
@@ -282,6 +347,9 @@ export default function AddClinic() {
                                     ))}
                                 </select>
                             </div>
+                        </div>
+
+                        <div className="form-row">
                             <div className="form-group">
                                 <label className="form-label">State</label>
                                 <select
@@ -297,16 +365,13 @@ export default function AddClinic() {
                                     ))}
                                 </select>
                             </div>
-                        </div>
-
-                        <div className="form-row">
                             <div className="form-group">
                                 <label className="form-label">City</label>
                                 <select
                                     className="form-control"
                                     name="cityId"
                                     value={formData.cityId}
-                                    onChange={handleInputChange}
+                                    onChange={handleCityChange}
                                     disabled={!formData.stateId}
                                 >
                                     <option value="">--Select City--</option>
@@ -315,6 +380,9 @@ export default function AddClinic() {
                                     ))}
                                 </select>
                             </div>
+                        </div>
+
+                        <div className="form-row">
                             <div className="form-group">
                                 <label className="form-label">Area</label>
                                 <select
@@ -323,13 +391,13 @@ export default function AddClinic() {
                                     value={formData.areaId}
                                     onChange={handleInputChange}
                                 >
+
                                     <option value="">--Select Area--</option>
-                                    {/* Populate if areas available */}
+                                    {areas.map(a => (
+                                        <option key={a.id} value={a.id}>{a.name}</option>
+                                    ))}
                                 </select>
                             </div>
-                        </div>
-
-                        <div className="form-row">
                             <div className="form-group">
                                 <label className="form-label">Pincode</label>
                                 <input
@@ -341,6 +409,9 @@ export default function AddClinic() {
                                     placeholder="Enter Your Pincode"
                                 />
                             </div>
+                        </div>
+
+                        <div className="form-row">
                             <div className="form-group">
                                 <label className="form-label">Tips</label>
                                 <input
@@ -351,9 +422,6 @@ export default function AddClinic() {
                                     onChange={handleInputChange}
                                 />
                             </div>
-                        </div>
-
-                        <div className="form-row">
                             <div className="form-group">
                                 <label className="form-label">News</label>
                                 <input
@@ -364,6 +432,9 @@ export default function AddClinic() {
                                     onChange={handleInputChange}
                                 />
                             </div>
+                        </div>
+
+                        <div className="form-row">
                             <div className="form-group">
                                 <label className="form-label">Phone No</label>
                                 <input
@@ -375,9 +446,6 @@ export default function AddClinic() {
                                     placeholder="Enter Your Phone No"
                                 />
                             </div>
-                        </div>
-
-                        <div className="form-row">
                             <div className="form-group" style={{ maxWidth: 'calc(50% - 20px)' }}>
                                 <label className="form-label">Fax No</label>
                                 <input
@@ -418,6 +486,6 @@ export default function AddClinic() {
                     </div>
                 )}
             </div>
-        </div>
+        </div >
     );
 }

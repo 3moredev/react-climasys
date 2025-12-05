@@ -10,12 +10,14 @@ export interface Clinic {
     licenseTill: string;
     address?: string;
     countryId?: string;
+    cityId?: string;
     stateId?: string;
     areaId?: string;
     pincode?: string;
     tips?: string;
     news?: string;
     faxNo?: string;
+    doctorId?: string;
 }
 
 export const clinicService = {
@@ -36,18 +38,18 @@ export const clinicService = {
                 id: item.id || item.clinicId || '',
                 name: item.name || item.clinicName || '',
                 city: item.cityName || '',
-                phoneNo: item.phoneNo || item.phone_no || item.mobile || '',
+                phoneNo: item.phoneNo || '',
                 status: item.status || 'Active', // Default to Active if not provided
                 since: item.since || item.createdOn || '',
                 licenseTill: item.licenseValidTo || '',
                 address: item.address || '',
-                countryId: item.countryId || item.country_id || '',
-                stateId: item.stateId || item.state_id || '',
-                areaId: item.areaId || item.area_id || '',
+                countryId: item.countryId || '',
+                stateId: item.stateId || '',
+                areaId: item.areaId || '',
                 pincode: item.pincode || '',
                 tips: item.tips || '',
                 news: item.news || '',
-                faxNo: item.faxNo || item.fax_no || ''
+                faxNo: item.faxNo || ''
             }));
         } catch (error: any) {
             console.error('Error fetching clinics:', error);
@@ -56,11 +58,58 @@ export const clinicService = {
     },
 
     /**
+     * Get clinic by ID
+     */
+    async getClinicById(id: string): Promise<Clinic> {
+        try {
+            const response = await api.get(`/clinics/${id}`);
+            const item = response.data;
+            return {
+                id: item.clinicId || '',
+                name: item.clinicName || '',
+                city: item.cityName || '',
+                phoneNo: item.phoneNo || '',
+                status: item.status || 'Active',
+                since: item.since || item.createdOn || '',
+                licenseTill: item.licenseValidTo || '',
+                address: item.clinicAddress || '',
+                countryId: item.countryId || '',
+                stateId: item.stateId || '',
+                cityId: item.cityId || '',
+                areaId: item.areaId ||'',
+                pincode: item.pincode || '',
+                tips: item.tips || '',
+                news: item.news || '',
+                faxNo: item.faxNo || '',
+                doctorId: item.doctorId || ''
+            };
+        } catch (error: any) {
+            console.error('Error fetching clinic details:', error);
+            throw new Error(error.response?.data?.message || 'Failed to fetch clinic details');
+        }
+    },
+
+    /**
      * Create a new clinic
      */
     async createClinic(clinicData: Partial<Clinic>): Promise<Clinic> {
         try {
-            const response = await api.post('/clinics', clinicData);
+            const payload = {
+                clinicId: 'CL-00003',
+                doctorId: clinicData.doctorId,
+                clinicName: clinicData.name,
+                clinicAddress: clinicData.address,
+                countryId: clinicData.countryId,
+                stateId: clinicData.stateId,
+                cityId: clinicData.cityId,
+                areaId: clinicData.areaId,
+                pincode: clinicData.pincode,
+                tips: clinicData.tips,
+                news: clinicData.news,
+                phoneNo: clinicData.phoneNo,
+                faxNo: clinicData.faxNo
+            };
+            const response = await api.post('/clinics/save', payload);
             return response.data;
         } catch (error: any) {
             console.error('Error creating clinic:', error);
@@ -73,7 +122,22 @@ export const clinicService = {
      */
     async updateClinic(id: string, clinicData: Partial<Clinic>): Promise<Clinic> {
         try {
-            const response = await api.put(`/clinics/${id}`, clinicData);
+            const payload = {
+                doctorId: clinicData.doctorId,
+                clinicId: id,
+                clinicName: clinicData.name,
+                clinicAddress: clinicData.address,
+                countryId: clinicData.countryId,
+                stateId: clinicData.stateId,
+                cityId: clinicData.cityId,
+                areaId: clinicData.areaId,
+                pincode: clinicData.pincode,
+                tips: clinicData.tips,
+                news: clinicData.news,
+                phoneNo: clinicData.phoneNo,
+                faxNo: clinicData.faxNo
+            };
+            const response = await api.put(`/clinics/update/${id}`, payload);
             return response.data;
         } catch (error: any) {
             console.error('Error updating clinic:', error);
@@ -86,7 +150,7 @@ export const clinicService = {
      */
     async deleteClinic(id: string): Promise<void> {
         try {
-            await api.delete(`/clinics/${id}`);
+            await api.delete(`/clinics/delete/${id}`);
         } catch (error: any) {
             console.error('Error deleting clinic:', error);
             throw new Error(error.response?.data?.message || 'Failed to delete clinic');
