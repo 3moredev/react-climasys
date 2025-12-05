@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { Edit, Delete, Search, Refresh } from "@mui/icons-material";
+import { Snackbar } from "@mui/material";
 import AddProcedurePopup from "../components/AddProcedurePopup";
 import procedureService, { ProcedureMaster } from "../services/procedureService";
 import { doctorService, Doctor } from "../services/doctorService";
@@ -26,6 +27,10 @@ export default function ManageProcedure() {
   const [selectedDoctorId, setSelectedDoctorId] = useState<string>("");
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [loadingDoctors, setLoadingDoctors] = useState<boolean>(false);
+  
+  // Snackbar state management
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
 
   const { clinicId, doctorId: sessionDoctorId, userId } = useSession();
 
@@ -189,9 +194,11 @@ export default function ManageProcedure() {
       if (editingProcedure) {
         // Update existing procedure
         await procedureService.updateProcedure(procedureData);
+        setSnackbarMessage('Procedure updated successfully!');
       } else {
         // Create new procedure
         await procedureService.createProcedure(procedureData);
+        setSnackbarMessage('Procedure created successfully!');
       }
       
       // Reload procedures after save
@@ -199,9 +206,12 @@ export default function ManageProcedure() {
       
       setShowAddPopup(false);
       setEditingProcedure(null);
+      setSnackbarOpen(true);
     } catch (err: any) {
       console.error('Error saving procedure:', err);
       setError(err.message || 'Failed to save procedure');
+      setSnackbarMessage(err.message || (editingProcedure ? 'Failed to update procedure' : 'Failed to create procedure'));
+      setSnackbarOpen(true);
     } finally {
       setLoading(false);
     }
@@ -229,9 +239,14 @@ export default function ManageProcedure() {
         
         // Reload procedures after delete
         await loadProcedures(selectedDoctorId);
+        
+        setSnackbarMessage('Procedure deleted successfully!');
+        setSnackbarOpen(true);
       } catch (err: any) {
         console.error('Error deleting procedure:', err);
         setError(err.message || 'Failed to delete procedure');
+        setSnackbarMessage(err.message || 'Failed to delete procedure');
+        setSnackbarOpen(true);
       } finally {
         setLoading(false);
       }
@@ -260,20 +275,18 @@ export default function ManageProcedure() {
           border-collapse: collapse;
         }
         .procedures-table thead th {
-          background-color: #1976d2;
+          background-color: rgb(0, 123, 255);
           color: #ffffff;
           padding: 12px;
           text-align: left;
-          font-weight: bold;
-          font-size: 11px;
-          font-family: 'Roboto', sans-serif;
+          font-weight: 600;
+          font-size: 0.9rem;
           border: 1px solid #dee2e6;
         }
         .procedures-table tbody td {
           padding: 12px;
           border: 1px solid #dee2e6;
-          font-size: 12px;
-          font-family: 'Roboto', sans-serif;
+          font-size: 0.9rem;
           background-color: #ffffff;
         }
         .procedures-table tbody tr:nth-child(even) {
@@ -301,14 +314,15 @@ export default function ManageProcedure() {
           transition: color 0.2s;
         }
         .action-icons > div:hover svg {
-          color: #1976d2;
+          color: rgb(0, 123, 255);
         }
         .search-section {
           display: flex;
           align-items: center;
           gap: 12px;
           margin-bottom: 20px;
-          flex-wrap: wrap;
+          flex-wrap: nowrap;
+          overflow-x: auto;
         }
         .search-input-wrapper {
           position: relative;
@@ -332,27 +346,29 @@ export default function ManageProcedure() {
           color: #666;
         }
         .btn-primary-custom {
-          background-color: #1976d2;
+          background-color: rgb(0, 123, 255);
           color: #ffffff;
           border: none;
-          padding: 6px 14px;
-          border-radius: 6px;
-          font-size: 12px;
+          padding: 8px 16px;
+          border-radius: 4px;
+          font-size: 0.9rem;
           font-weight: 500;
-          font-family: 'Roboto', sans-serif;
           cursor: pointer;
           display: flex;
           align-items: center;
           gap: 6px;
           transition: background-color 0.2s;
           white-space: nowrap;
-          height: 32px;
+        }
+        .btn-primary-custom label {
+          white-space: nowrap;
+          cursor: pointer;
         }
         .btn-primary-custom:hover {
-          background-color: #1565c0;
+          background-color: rgb(0, 100, 200);
         }
         .btn-icon {
-          background: #1976d2;
+          background: rgb(0, 123, 255);
           border: none;
           cursor: pointer;
           color: #ffffff;
@@ -360,21 +376,18 @@ export default function ManageProcedure() {
           display: flex;
           align-items: center;
           transition: background-color 0.2s;
-          border-radius: 6px;
-          width: 32px;
-          height: 32px;
+          border-radius: 4px;
         }
         .btn-icon:hover {
-          background-color: #1565c0;
+          background-color: rgb(0, 100, 200);
         }
         .provider-dropdown {
           padding: 8px 12px;
           border: 1px solid #ced4da;
           border-radius: 4px;
-          font-size: 12px;
-          font-family: 'Roboto', sans-serif;
-          width: 250px;
-          background-color: #fff;
+          font-size: 0.9rem;
+          width: 300px;
+          max-width: 300px;
         }
         /* Pagination styles */
         .pagination-container {
@@ -452,9 +465,8 @@ export default function ManageProcedure() {
       <h1 style={{ 
         fontWeight: 'bold', 
         fontSize: '1.8rem', 
-        color: '#000000',
-        marginBottom: '30px',
-        marginTop: '0'
+        color: '#212121',
+        marginBottom: '24px'
       }}>
         Manage Procedures
       </h1>
@@ -503,36 +515,13 @@ export default function ManageProcedure() {
           <Search className="search-icon" style={{ fontSize: '20px' }} />
         </div>
 
-        <button className="btn-primary-custom" onClick={handleSearch}>
-          <Search style={{ fontSize: '18px' }} />
-          Search
-        </button>
-
         <button className="btn-primary-custom" onClick={handleAddNew}>
-          Add New Procedure
+          <label>Add New Procedure</label>
         </button>
 
-        <div 
-          onClick={handleRefresh} 
-          title="Refresh"
-          style={{
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#1976d2',
-            transition: 'color 0.2s',
-            padding: '4px'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.color = '#1565c0';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.color = '#1976d2';
-          }}
-        >
+        <button className="btn-icon" onClick={handleRefresh} title="Refresh">
           <Refresh style={{ fontSize: '20px' }} />
-        </div>
+        </button>
         
         {userId !== 7 && (
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -686,6 +675,25 @@ export default function ManageProcedure() {
           priority: editingProcedure.priority,
           findings: editingProcedure.findings || []
         } : undefined}
+      />
+
+      {/* Success/Error Snackbar */}
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={2000}
+        onClose={() => {
+          setSnackbarOpen(false);
+        }}
+        message={snackbarMessage}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        sx={{
+          zIndex: 99999, // Ensure snackbar appears above everything
+          '& .MuiSnackbarContent-root': {
+            backgroundColor: snackbarMessage.includes('successfully') ? '#4caf50' : '#f44336',
+            color: 'white',
+            fontWeight: 'bold'
+          }
+        }}
       />
     </div>
   );

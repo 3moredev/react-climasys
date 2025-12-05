@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { Add, Delete, Edit, Refresh, Search } from '@mui/icons-material'
+import { Snackbar } from '@mui/material'
 import AddPrescriptionPopup, { PrescriptionData } from '../components/AddPrescriptionPopup'
 import { doctorService, Doctor } from '../services/doctorService'
 import { useSession } from '../store/hooks/useSession'
@@ -50,6 +51,10 @@ export default function PrescriptionDetails() {
   const [loadingDoctors, setLoadingDoctors] = useState(false)
   const [loadingPrescriptions, setLoadingPrescriptions] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  
+  // Snackbar state management
+  const [snackbarOpen, setSnackbarOpen] = useState(false)
+  const [snackbarMessage, setSnackbarMessage] = useState('')
 
   const fetchDoctors = useCallback(async () => {
     try {
@@ -182,10 +187,13 @@ export default function PrescriptionDetails() {
       setLoadingPrescriptions(true)
       setError(null)
 
-      const newCatShortName = data.categoryName.trim()
-      const newCatsubDescription = data.subCategoryName.trim()
-      const newBrandName = data.brandName.trim()
-      const newMedicineName = data.genericName.trim()
+      // Normalize text fields to uppercase before saving
+      const newCatShortName = data.categoryName.trim().toUpperCase()
+      const newCatsubDescription = data.subCategoryName.trim().toUpperCase()
+      const newBrandName = data.brandName.trim().toUpperCase()
+      const newMedicineName = data.genericName.trim().toUpperCase()
+      const newMarketedBy = (data.marketedBy || '').trim().toUpperCase()
+      const newInstruction = (data.instruction || '').trim().toUpperCase()
 
       const payload: PrescriptionTemplateApiModel = {
         catShortName: newCatShortName,
@@ -193,13 +201,13 @@ export default function PrescriptionDetails() {
         brandName: newBrandName,
         medicineName: newMedicineName,
         clinicId: data.clinicId || clinicId || '',
-        marketedBy: data.marketedBy,
+        marketedBy: newMarketedBy,
         priorityValue: data.priority ? parseInt(data.priority, 10) || 0 : 0,
         morning: data.breakfast ? parseInt(data.breakfast, 10) || 0 : 0,
         afternoon: data.lunch ? parseInt(data.lunch, 10) || 0 : 0,
         night: data.dinner ? parseInt(data.dinner, 10) || 0 : 0,
         noOfDays: data.days ? parseInt(data.days, 10) || 0 : 0,
-        instruction: data.instruction,
+        instruction: newInstruction,
         doctorId: selectedDoctorId,
       }
 
@@ -217,6 +225,7 @@ export default function PrescriptionDetails() {
 
         if (keysUnchanged) {
           await prescriptionDetailsService.updatePrescription(payload)
+          setSnackbarMessage('Prescription updated successfully!')
         } else {
           await prescriptionDetailsService.deletePrescription(
             selectedDoctorId,
@@ -226,17 +235,22 @@ export default function PrescriptionDetails() {
             originalBrand,
           )
           await prescriptionDetailsService.createPrescription(payload)
+          setSnackbarMessage('Prescription updated successfully!')
         }
       } else {
         await prescriptionDetailsService.createPrescription(payload)
+        setSnackbarMessage('Prescription created successfully!')
       }
 
       await loadPrescriptions(selectedDoctorId)
       setShowPopup(false)
       setEditingRow(null)
+      setSnackbarOpen(true)
     } catch (err: any) {
       console.error('Error saving prescription:', err)
       setError(err.message || 'Failed to save prescription')
+      setSnackbarMessage(err.message || (editingRow ? 'Failed to update prescription' : 'Failed to create prescription'))
+      setSnackbarOpen(true)
     } finally {
       setLoadingPrescriptions(false)
     }
@@ -250,6 +264,8 @@ export default function PrescriptionDetails() {
   const handleDelete = async (row: PrescriptionRow) => {
     if (!selectedDoctorId) {
       setError('Doctor ID not available')
+      setSnackbarMessage('Doctor ID not available')
+      setSnackbarOpen(true)
       return
     }
 
@@ -268,9 +284,13 @@ export default function PrescriptionDetails() {
         row.brandName,
       )
       await loadPrescriptions(selectedDoctorId)
+      setSnackbarMessage('Prescription deleted successfully!')
+      setSnackbarOpen(true)
     } catch (err: any) {
       console.error('Error deleting prescription:', err)
       setError(err.message || 'Failed to delete prescription')
+      setSnackbarMessage(err.message || 'Failed to delete prescription')
+      setSnackbarOpen(true)
     } finally {
       setLoadingPrescriptions(false)
     }
@@ -311,13 +331,8 @@ export default function PrescriptionDetails() {
           align-items: center;
           gap: 12px;
           margin-bottom: 20px;
-          flex-wrap: wrap;
-        }
-        .search-label {
-          font-weight: bold;
-          color: #333;
-          font-size: 13px;
-          margin-bottom: 4px;
+          flex-wrap: nowrap;
+          overflow-x: auto;
         }
         .search-input-wrapper {
           position: relative;
@@ -341,53 +356,66 @@ export default function PrescriptionDetails() {
           color: #666;
         }
         .btn-primary-custom {
-          background-color: #1976d2;
+          background-color: rgb(0, 123, 255);
           color: #ffffff;
           border: none;
-          padding: 6px 14px;
-          border-radius: 6px;
-          font-size: 12px;
+          padding: 8px 16px;
+          border-radius: 4px;
+          font-size: 0.9rem;
           font-weight: 500;
-          font-family: 'Roboto', sans-serif;
           cursor: pointer;
           display: flex;
           align-items: center;
           gap: 6px;
           transition: background-color 0.2s;
           white-space: nowrap;
-          height: 32px;
+        }
+        .btn-primary-custom label {
+          white-space: nowrap;
+          cursor: pointer;
         }
         .btn-primary-custom:hover {
-          background-color: #1565c0;
+          background-color: rgb(0, 100, 200);
+        }
+        .btn-icon {
+          background: rgb(0, 123, 255);
+          border: none;
+          cursor: pointer;
+          color: #ffffff;
+          padding: 4px;
+          display: flex;
+          align-items: center;
+          transition: background-color 0.2s;
+          border-radius: 4px;
+        }
+        .btn-icon:hover {
+          background-color: rgb(0, 100, 200);
         }
         .provider-select {
           padding: 8px 12px;
           border: 1px solid #ced4da;
           border-radius: 4px;
-          font-size: 12px;
-          font-family: 'Roboto', sans-serif;
-          width: 250px;
-          background-color: #fff;
+          font-size: 0.9rem;
+          width: 300px;
+          max-width: 300px;
         }
         .prescription-table {
           width: 100%;
           border-collapse: collapse;
         }
         .prescription-table thead th {
-          background-color: #1976d2;
+          background-color: rgb(0, 123, 255);
           color: #ffffff;
           padding: 12px;
           text-align: left;
-          font-weight: bold;
-          font-size: 11px;
-          font-family: 'Roboto', sans-serif;
+          font-weight: 600;
+          font-size: 0.9rem;
           border: 1px solid #dee2e6;
         }
         .prescription-table tbody td {
           padding: 12px;
           border: 1px solid #dee2e6;
-          font-size: 12px;
-          font-family: 'Roboto', sans-serif;
+          font-size: 0.9rem;
           background-color: #ffffff;
         }
         .prescription-table tbody tr:nth-child(even) {
@@ -415,7 +443,7 @@ export default function PrescriptionDetails() {
           transition: color 0.2s;
         }
         .action-icons > div:hover svg {
-          color: #1976d2;
+          color: rgb(0, 123, 255);
         }
         .pagination-container {
           display: flex;
@@ -491,9 +519,8 @@ export default function PrescriptionDetails() {
       <h1 style={{ 
         fontWeight: 'bold', 
         fontSize: '1.8rem', 
-        color: '#000000',
-        marginBottom: '30px',
-        marginTop: '0'
+        color: '#212121',
+        marginBottom: '24px'
       }}>
         Prescription Details
       </h1>
@@ -527,45 +554,17 @@ export default function PrescriptionDetails() {
               setSearchQuery(value)
             }}
             placeholder="Enter Category / Sub Category / Medicine / Brand / Priority"
-            onKeyPress={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault()
-              }
-            }}
           />
           <Search className="search-icon" style={{ fontSize: '20px' }} />
         </div>
 
-        <button className="btn-primary-custom" onClick={handleSearch}>
-          <Search style={{ fontSize: '18px' }} />
-          Search
-        </button>
-
         <button className="btn-primary-custom" onClick={openAddPopup}>
-          Add New Prescription
+          <label>Add New Prescription</label>
         </button>
 
-        <div 
-          onClick={handleRefresh} 
-          title="Refresh"
-          style={{
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#1976d2',
-            transition: 'color 0.2s',
-            padding: '4px'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.color = '#1565c0';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.color = '#1976d2';
-          }}
-        >
+        <button className="btn-icon" onClick={handleRefresh} title="Refresh">
           <Refresh style={{ fontSize: '20px' }} />
-        </div>
+        </button>
         
         {userId !== 7 && (
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -735,6 +734,25 @@ export default function PrescriptionDetails() {
         primaryActionLabel={editingRow ? 'Update' : 'Save'}
         doctorId={selectedDoctorId}
         clinicId={clinicId}
+      />
+
+      {/* Success/Error Snackbar */}
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={2000}
+        onClose={() => {
+          setSnackbarOpen(false);
+        }}
+        message={snackbarMessage}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        sx={{
+          zIndex: 99999, // Ensure snackbar appears above everything
+          '& .MuiSnackbarContent-root': {
+            backgroundColor: snackbarMessage.includes('successfully') ? '#4caf50' : '#f44336',
+            color: 'white',
+            fontWeight: 'bold'
+          }
+        }}
       />
     </div>
   )

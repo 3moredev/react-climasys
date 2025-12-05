@@ -14,7 +14,7 @@ import { sessionPersistence } from "../utils/sessionPersistence";
 import PatientFormTest from "../components/Test/PatientFormTest";
 import LabTestEntry from "../components/LabTestEntry";
 
-type AppointmentRow = {
+export type AppointmentRow = {
     reports_received: any;
     appointmentId?: string;
     sr: number;
@@ -767,38 +767,77 @@ export default function AppointmentTable() {
         })();
     }, [sessionData?.doctorId, allDoctors]);
 
-    // Load today's appointments based on selected doctor via SP-based endpoint
+    // Load today's appointments for ALL doctors (when isDoctor is true) or selected doctor (for receptionist)
     useEffect(() => {
-        if (!selectedDoctorId || !sessionData?.clinicId) return;
+        if (!sessionData?.clinicId) return;
+        
+        // For doctor view: fetch all doctors' appointments
+        // For receptionist view: fetch selected doctor's appointments
+        if (isDoctor && allDoctors.length === 0) return;
+        if (!isDoctor && !selectedDoctorId) return;
 
         (async () => {
             setLoadingAppointments(true);
             try {
                 const today = new Date().toISOString().split('T')[0];
-                const doctorId = selectedDoctorId; // Use selected doctor from dropdown
                 const clinicId = sessionData.clinicId;
 
-                console.log('📅 Loading appointments for selected doctor:', doctorId, 'clinic:', clinicId);
+                if (isDoctor) {
+                    // Fetch appointments for ALL doctors in parallel
+                    console.log('📅 Loading appointments for ALL doctors:', allDoctors.length, 'doctors');
 
-                const resp: TodayAppointmentsResponse = await appointmentService.getAppointmentsForDateSP({
-                    doctorId,
-                    clinicId,
-                    futureDate: today,
-                    languageId: 1
-                });
-                console.log('📅 Today\'s appointments loaded for doctor', doctorId, ':', (resp?.resultSet1 || []).length, 'appointments');
-                console.log('📋 Raw resultSet1 data:', resp?.resultSet1);
-                const rows = convertSPResultToRows(resp?.resultSet1 || []);
-                console.log('✅ Converted rows:', rows);
-                console.log('✅ Converted rows count:', rows.length);
-                setAppointments(rows);
+                    const appointmentPromises = allDoctors.map(async (doctor) => {
+                        try {
+                            const resp: TodayAppointmentsResponse = await appointmentService.getAppointmentsForDateSP({
+                                doctorId: doctor.id,
+                                clinicId,
+                                futureDate: today,
+                                languageId: 1
+                            });
+                            const rows = convertSPResultToRows(resp?.resultSet1 || []);
+                            // Ensure each row has the correct doctorId and provider name
+                            return rows.map(row => ({
+                                ...row,
+                                doctorId: doctor.id,
+                                provider: doctor.name
+                            }));
+                        } catch (error) {
+                            console.error(`Failed to load appointments for doctor ${doctor.id}:`, error);
+                            return [];
+                        }
+                    });
+
+                    // Wait for all requests to complete and combine results
+                    const allAppointmentArrays = await Promise.all(appointmentPromises);
+                    const combinedAppointments = allAppointmentArrays.flat();
+                    
+                    console.log('✅ Combined appointments from all doctors:', combinedAppointments.length, 'appointments');
+                    setAppointments(combinedAppointments);
+                } else {
+                    // Receptionist view: fetch for selected doctor only
+                    const doctorId = selectedDoctorId;
+                    console.log('📅 Loading appointments for selected doctor:', doctorId, 'clinic:', clinicId);
+
+                    const resp: TodayAppointmentsResponse = await appointmentService.getAppointmentsForDateSP({
+                        doctorId,
+                        clinicId,
+                        futureDate: today,
+                        languageId: 1
+                    });
+                    console.log('📅 Today\'s appointments loaded for doctor', doctorId, ':', (resp?.resultSet1 || []).length, 'appointments');
+                    console.log('📋 Raw resultSet1 data:', resp?.resultSet1);
+                    const rows = convertSPResultToRows(resp?.resultSet1 || []);
+                    console.log('✅ Converted rows:', rows);
+                    console.log('✅ Converted rows count:', rows.length);
+                    setAppointments(rows);
+                }
             } catch (e) {
                 console.error('Failed to load today\'s appointments (SP endpoint)', e);
             } finally {
                 setLoadingAppointments(false);
             }
         })();
-    }, [selectedDoctorId, sessionData?.clinicId]);
+    }, [isDoctor, allDoctors, selectedDoctorId, sessionData?.clinicId]);
 
     // Load status reference for dynamic statuses
     useEffect(() => {
@@ -1592,25 +1631,64 @@ export default function AppointmentTable() {
 
     // Refresh appointments for the selected doctor
     const refreshAppointmentsForSelectedDoctor = async () => {
-        if (!selectedDoctorId || !sessionData?.clinicId) return;
+        if (!sessionData?.clinicId) return;
+        
+        // For doctor view: refresh all doctors' appointments
+        // For receptionist view: refresh selected doctor's appointments
+        if (isDoctor && allDoctors.length === 0) return;
+        if (!isDoctor && !selectedDoctorId) return;
 
         setLoadingAppointments(true);
         try {
             const today = new Date().toISOString().split('T')[0];
-            console.log('🔄 Refreshing appointments for selected doctor:', selectedDoctorId);
 
-            const resp: TodayAppointmentsResponse = await appointmentService.getAppointmentsForDateSP({
-                doctorId: selectedDoctorId,
-                clinicId: sessionData.clinicId,
-                futureDate: today,
-                languageId: 1
-            });
+            if (isDoctor) {
+                // Refresh appointments for ALL doctors in parallel
+                console.log('🔄 Refreshing appointments for ALL doctors');
 
-            const rows = convertSPResultToRows(resp?.resultSet1 || []);
-            setAppointments(rows);
-            console.log('✅ Appointments refreshed for doctor', selectedDoctorId, ':', rows.length, 'appointments');
+                const appointmentPromises = allDoctors.map(async (doctor) => {
+                    try {
+                        const resp: TodayAppointmentsResponse = await appointmentService.getAppointmentsForDateSP({
+                            doctorId: doctor.id,
+                            clinicId: sessionData.clinicId,
+                            futureDate: today,
+                            languageId: 1
+                        });
+                        const rows = convertSPResultToRows(resp?.resultSet1 || []);
+                        // Ensure each row has the correct doctorId and provider name
+                        return rows.map(row => ({
+                            ...row,
+                            doctorId: doctor.id,
+                            provider: doctor.name
+                        }));
+                    } catch (error) {
+                        console.error(`Failed to refresh appointments for doctor ${doctor.id}:`, error);
+                        return [];
+                    }
+                });
+
+                const allAppointmentArrays = await Promise.all(appointmentPromises);
+                const combinedAppointments = allAppointmentArrays.flat();
+                
+                setAppointments(combinedAppointments);
+                console.log('✅ Appointments refreshed for all doctors:', combinedAppointments.length, 'appointments');
+            } else {
+                // Receptionist view: refresh selected doctor only
+                console.log('🔄 Refreshing appointments for selected doctor:', selectedDoctorId);
+
+                const resp: TodayAppointmentsResponse = await appointmentService.getAppointmentsForDateSP({
+                    doctorId: selectedDoctorId!,
+                    clinicId: sessionData.clinicId,
+                    futureDate: today,
+                    languageId: 1
+                });
+
+                const rows = convertSPResultToRows(resp?.resultSet1 || []);
+                setAppointments(rows);
+                console.log('✅ Appointments refreshed for doctor', selectedDoctorId, ':', rows.length, 'appointments');
+            }
         } catch (error) {
-            console.error('Failed to refresh appointments for selected doctor:', error);
+            console.error('Failed to refresh appointments:', error);
         } finally {
             setLoadingAppointments(false);
         }
@@ -2037,14 +2115,14 @@ export default function AppointmentTable() {
     // Doctor Screen Component - Same UI but different functionality
     const DoctorScreen = () => {
         // Show loader until all essential API calls complete for doctor view
+        // Note: selectedDoctorId is no longer required since we show all doctors' appointments
         const isDoctorLoading = (
             loadingSessionData ||
             loadingDoctors ||
             loadingStatuses ||
             loadingAppointments ||
             !sessionData ||
-            allDoctors.length === 0 ||
-            !selectedDoctorId
+            allDoctors.length === 0
         );
 
         return (
@@ -2673,6 +2751,7 @@ export default function AppointmentTable() {
                                             <th className="age-col text-start">Age</th>
                                             <th className="contact-col text-start">Contact</th>
                                             <th className="time-col text-start">Time</th>
+                                            <th className="provider-col text-start">Provider</th>
                                             <th className="online-col text-start">Online</th>
                                             <th className="status-col text-start">Status</th>
                                             <th className="last-col text-start">Last Visit</th>
@@ -2702,6 +2781,7 @@ export default function AppointmentTable() {
                                                     <td className="age-col">{a.age}</td>
                                                     <td className="contact-col">{(a.contact || '').toString().slice(0, 12)}</td>
                                                     <td className="time-col">{extractTime(a.time)}</td>
+                                                    <td className="provider-col">{formatProviderLabel(a.provider)}</td>
                                                     <td className="online-cell">
                                                         <input
                                                             type="text"
@@ -3022,6 +3102,7 @@ export default function AppointmentTable() {
                                                 <div className="card-details">
                                                     <div className="kv"><span className="k">Contact:</span><span className="v">{appointment.contact}</span></div>
                                                     <div className="kv"><span className="k">Age:</span><span className="v">{appointment.age}</span></div>
+                                                    <div className="kv"><span className="k">Provider:</span><span className="v">{formatProviderLabel(appointment.provider)}</span></div>
                                                     <div className="kv">
                                                         <span className="k">Last Visit:</span>
                                                         <span className="v">
