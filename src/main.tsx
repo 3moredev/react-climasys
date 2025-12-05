@@ -265,6 +265,37 @@ function App() {
   )
 }
 
+// Suppress harmless Chrome extension errors
+if (typeof window !== 'undefined') {
+  const originalError = console.error;
+  console.error = (...args: any[]) => {
+    // Filter out Chrome extension runtime errors
+    const errorMessage = args[0]?.toString() || '';
+    if (
+      errorMessage.includes('runtime.lastError') ||
+      errorMessage.includes('Could not establish connection') ||
+      errorMessage.includes('Receiving end does not exist')
+    ) {
+      // Silently ignore these extension errors
+      return;
+    }
+    // Log all other errors normally
+    originalError.apply(console, args);
+  };
+
+  // Also suppress unhandled promise rejections from extensions
+  window.addEventListener('unhandledrejection', (event) => {
+    const errorMessage = event.reason?.toString() || '';
+    if (
+      errorMessage.includes('runtime.lastError') ||
+      errorMessage.includes('Could not establish connection') ||
+      errorMessage.includes('Receiving end does not exist')
+    ) {
+      event.preventDefault(); // Suppress the error
+    }
+  });
+}
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <App />

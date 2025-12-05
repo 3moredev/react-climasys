@@ -477,7 +477,9 @@ export default function Treatment() {
         receiptNo: '',
         paymentBy: '',
         feesCollected: '',
-        paymentRemark: ''
+        paymentRemark: '',
+        receiptDate: '',
+        reason: ''
     });
     
     // Folder amount API response data
@@ -1234,6 +1236,39 @@ export default function Treatment() {
                                 const collectedValue = dataRoot?.collectedRs ?? uiFields?.feesCollected ?? uiFields?.collectedRs ?? prev.feesCollected;
                                 const collectedStr = collectedValue !== undefined && collectedValue !== null ? String(collectedValue) : prev.feesCollected;
                                 
+                                // Format receiptDate from ISO string to readable format if available
+                                let receiptDateStr = prev.receiptDate;
+                                if (uiFields?.receiptDate !== undefined && uiFields?.receiptDate !== null) {
+                                    try {
+                                        const receiptDate = new Date(uiFields.receiptDate);
+                                        if (!isNaN(receiptDate.getTime())) {
+                                            receiptDateStr = receiptDate.toLocaleDateString('en-GB', {
+                                                day: '2-digit',
+                                                month: '2-digit',
+                                                year: 'numeric'
+                                            });
+                                        } else {
+                                            receiptDateStr = String(uiFields.receiptDate);
+                                        }
+                                    } catch (e) {
+                                        receiptDateStr = String(uiFields.receiptDate);
+                                    }
+                                }
+                                
+                                // Handle paymentBy - convert to string if it's a number
+                                const paymentByValue = uiFields?.paymentBy !== undefined && uiFields?.paymentBy !== null 
+                                    ? String(uiFields.paymentBy) 
+                                    : prev.paymentBy;
+                                
+                                // Handle paymentRemark - allow null/empty string to clear the field
+                                const paymentRemarkValue = uiFields?.paymentRemark !== undefined 
+                                    ? (uiFields.paymentRemark !== null ? String(uiFields.paymentRemark) : '')
+                                    : prev.paymentRemark;
+                                
+                                // Handle reason - check multiple possible field names
+                                const reasonValue = uiFields?.reason ?? uiFields?.Reason ?? dataRoot?.reason ?? dataRoot?.Reason ?? prev.reason;
+                                const reasonStr = reasonValue !== undefined && reasonValue !== null ? String(reasonValue) : prev.reason;
+                                
                                 return {
                                     ...prev,
                                     billed: billedStr,
@@ -1241,9 +1276,11 @@ export default function Treatment() {
                                     dues: uiFields?.duesRs !== undefined && uiFields?.duesRs !== null ? String(uiFields.duesRs) : prev.dues,
                                     acBalance: acBalanceValue,
                                     receiptNo: uiFields?.receiptNo !== undefined && uiFields?.receiptNo !== null ? String(uiFields.receiptNo) : prev.receiptNo,
+                                    receiptDate: receiptDateStr,
                                     feesCollected: collectedStr,
-                                    paymentRemark: uiFields?.paymentRemark !== undefined && uiFields?.paymentRemark !== null ? String(uiFields.paymentRemark) : prev.paymentRemark,
-                                    paymentBy: uiFields?.paymentBy !== undefined && uiFields?.paymentBy !== null ? String(uiFields.paymentBy) : prev.paymentBy
+                                    paymentRemark: paymentRemarkValue,
+                                    paymentBy: paymentByValue,
+                                    reason: reasonStr
                                 };
                             });
                             
@@ -1729,6 +1766,7 @@ export default function Treatment() {
         setBillingData(prev => ({
             ...prev,
             receiptNo: values.receiptNo || prev.receiptNo,
+            receiptDate: values.receiptDate || prev.receiptDate,
         }));
         setShowPrintReceiptPopup(false);
     };
@@ -4121,6 +4159,8 @@ export default function Treatment() {
                                 <label style={{ display: 'block', marginBottom: 4, fontWeight: 600, fontSize: 12 }}>Reason</label>
                                 <input 
                                     type="text" 
+                                    value={billingData.reason}
+                                    onChange={(e) => handleBillingChange('reason', e.target.value)}
                                     disabled={isFormDisabled}
                                     style={{ 
                                         width: '100%', 
@@ -4181,7 +4221,12 @@ export default function Treatment() {
                             {/* Receipt Date (disabled) */}
                             <div>
                                 <label style={{ display: 'block', marginBottom: 4, fontWeight: 600, fontSize: 12 }}>Receipt Date</label>
-                                <input type="text" disabled value={'-'} style={{ width: '100%', border: '1px solid #ddd', padding: '6px 8px', fontSize: 12, background: '#D5D5D8' }} />
+                                <input 
+                                    type="text" 
+                                    disabled 
+                                    value={billingData.receiptDate || '-'} 
+                                    style={{ width: '100%', border: '1px solid #ddd', padding: '6px 8px', fontSize: 12, background: '#D5D5D8' }} 
+                                />
                             </div>
                         </div>
 
