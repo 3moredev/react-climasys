@@ -98,20 +98,26 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
 
             const isEditMode = !!editData;
             const originalShortDescription = editData?.shortDescription || '';
-            const newShortDescription = shortDescription.trim();
+            
+            // Normalize text fields to uppercase before saving
+            const newShortDescription = shortDescription.trim().toUpperCase();
+            const newMedicineName = medicineName.trim().toUpperCase();
+            
+            // Determine priority (optional; default to "9" if not provided)
+            const priorityValue = priority.trim() || '9';
 
             // Create/Update medicine data
             const medicineData: MedicineMaster = {
                 shortDescription: newShortDescription,
-                medicineDescription: medicineName.trim(),
+                medicineDescription: newMedicineName,
                 doctorId: doctorId,
                 clinicId: clinicId,
-                priorityValue: priority.trim() ? parseInt(priority.trim()) : null,
+                priorityValue: parseInt(priorityValue),
                 morning: breakfast.trim() ? parseFloat(breakfast.trim()) : null,
                 afternoon: lunch.trim() ? parseFloat(lunch.trim()) : null,
                 night: dinner.trim() ? parseFloat(dinner.trim()) : null,
                 noOfDays: days.trim() ? parseInt(days.trim()) : null,
-                instruction: instruction.trim() || null,
+                instruction: instruction.trim().toUpperCase() || null,
                 active: addToActiveList,
                 modifiedByName: userName
             };
@@ -149,13 +155,13 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
             // Call parent onSave callback for UI update
             onSave({
                 shortDescription: newShortDescription,
-                medicineName: medicineName.trim(),
-                priority: priority.trim(),
+                medicineName: newMedicineName,
+                priority: priorityValue,
                 breakfast: breakfast.trim(),
                 lunch: lunch.trim(),
                 dinner: dinner.trim(),
                 days: days.trim(),
-                instruction: instruction.trim(),
+                instruction: instruction.trim().toUpperCase(),
                 addToActiveList
             });
             
@@ -554,11 +560,12 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
             }}
             message={snackbarMessage}
             anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-            ContentProps={{
-                style: {
-                    backgroundColor: snackbarMessage.includes('required') || snackbarMessage.includes('Error') ? '#d32f2f' : '#2e7d32',
+            sx={{
+                zIndex: 99999, // Ensure snackbar appears above everything
+                '& .MuiSnackbarContent-root': {
+                    backgroundColor: snackbarMessage.includes('successfully') ? '#4caf50' : '#f44336',
                     color: 'white',
-                    fontFamily: "'Roboto', sans-serif"
+                    fontWeight: 'bold'
                 }
             }}
         />

@@ -94,7 +94,7 @@ const AddProcedurePopup: React.FC<AddProcedurePopupProps> = ({ open, onClose, on
         
         const newFinding: Finding = {
             id: Date.now().toString(),
-            description: findingsDescription.trim()
+            description: findingsDescription.trim().toUpperCase()
         };
         
         setFindings([...findings, newFinding]);
@@ -132,14 +132,19 @@ const AddProcedurePopup: React.FC<AddProcedurePopupProps> = ({ open, onClose, on
 
             const isEditMode = !!editData;
             const originalProcedureDescription = editData?.procedureDescription || '';
-            const newProcedureDescription = procedureDescription.trim();
+            
+            // Normalize text fields to uppercase before saving
+            const newProcedureDescription = procedureDescription.trim().toUpperCase();
+            
+            // Determine priority (optional; default to "9" if not provided)
+            const priorityValue = priority.trim() || '9';
 
             // Create/Update procedure data
             const procedureData: ProcedureMaster = {
                 procedureDescription: newProcedureDescription,
                 doctorId: doctorId,
                 clinicId: clinicId,
-                priorityValue: priority.trim() ? parseInt(priority.trim()) : null,
+                priorityValue: parseInt(priorityValue),
                 modifiedByName: userName
             };
 
@@ -188,8 +193,8 @@ const AddProcedurePopup: React.FC<AddProcedurePopupProps> = ({ open, onClose, on
                         await procedureService.addFinding({
                             doctorId: doctorId,
                             procedureDescription: newProcedureDescription,
-                            findingsDescription: finding.description.trim(),
-                            priorityValue: priority.trim() ? parseInt(priority.trim()) : null,
+                            findingsDescription: finding.description.trim().toUpperCase(),
+                            priorityValue: parseInt(priorityValue),
                             createdByName: userName,
                             modifiedByName: userName
                         });
@@ -230,7 +235,7 @@ const AddProcedurePopup: React.FC<AddProcedurePopupProps> = ({ open, onClose, on
             // Call parent onSave callback for UI update
             onSave({
                 procedureDescription: newProcedureDescription,
-                priority: priority.trim(),
+                priority: priorityValue,
                 findings: findings
             });
             
@@ -627,11 +632,12 @@ const AddProcedurePopup: React.FC<AddProcedurePopupProps> = ({ open, onClose, on
             }}
             message={snackbarMessage}
             anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-            ContentProps={{
-                style: {
-                    backgroundColor: snackbarMessage.includes('required') || snackbarMessage.includes('Error') ? '#d32f2f' : '#2e7d32',
+            sx={{
+                zIndex: 99999, // Ensure snackbar appears above everything
+                '& .MuiSnackbarContent-root': {
+                    backgroundColor: snackbarMessage.includes('successfully') ? '#4caf50' : '#f44336',
                     color: 'white',
-                    fontFamily: "'Roboto', sans-serif"
+                    fontWeight: 'bold'
                 }
             }}
         />
