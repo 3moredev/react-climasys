@@ -121,42 +121,44 @@ export const doctorService = {
    */
   async getDoctorById(id: string): Promise<Doctor> {
     try {
-      const response = await api.get(`/doctors/${id}/details`);
+      // Use the new endpoint that returns the entity directly
+      const response = await api.get(`/doctors/${id}`);
       const item = response.data;
+
       return {
         id: item.doctorId || item.id || '',
-        firstName: item.firstName || item.first_name || '',
-        middleName: item.middleName || item.middle_name || '',
-        lastName: item.lastName || item.last_name || '',
-        name: item.doctor_name || `${item.firstName || item.first_name || ''} ${item.lastName || item.last_name || ''}`.trim(),
-        clinicId: item.clinicId || item.clinic_id || '',
-        clinicName: item.clinicName || item.clinic_name || '',
-        registrationNo: item.registrationNo || item.registration_no || '',
-        speciality: item.speciality || item.specialization || '',
-        residentialNo: item.residentialNo || item.residential_no || '',
-        practisingYear: item.practisingYear || item.practising_year || '',
-        mobile1: item.mobile1 || item.mobile_1 || item.phone || '',
-        mobile2: item.mobile2 || item.mobile_2 || '',
-        emergencyNumber: item.emergencyNumber || item.emergency_no || '',
-        wappNo: item.wappNo || item.wapp_no || '',
-        emailid: item.emailid || item.email || '',
-        doctorQual: item.doctorQual || item.qualification || '',
-        residentialAdd1: item.residentialAdd1 || item.residential_add_1 || '',
-        residentialAdd2: item.residentialAdd2 || item.residential_add_2 || '',
-        countryId: item.countryId || item.country_id || '',
-        stateId: item.stateId || item.state_id || '',
-        cityId: item.cityId || item.city_id || '',
-        areaId: item.areaId || item.area_id || '',
-        profileImage: item.profileImage || item.profile_image || '',
-        doctorPhoto: item.doctorPhoto || item.doctor_photo || '',
-        baseLocation: item.baseLocation || item.base_location || '',
-        ipdDr: !!(item.ipdDr || item.is_ipd),
-        opdDr: !!(item.opdDr || item.is_opd),
-        defaultFees: item.defaultFees || item.default_fees || '',
+        firstName: item.firstName || '',
+        middleName: item.middleName || '',
+        lastName: item.lastName || '',
+        name: `${item.firstName || ''} ${item.lastName || ''}`.trim(),
+        clinicId: item.clinicId || '', // Note: Entity might not have clinicId directly populated if it's a relation, but proceeding based on assumed usage
+        clinicName: '', // New API might not return this, client may need to resolve
+        registrationNo: item.registrationNo || '',
+        speciality: item.speciality || '',
+        residentialNo: item.residentialNo || '',
+        practisingYear: item.practisingYear || '',
+        mobile1: item.mobile1 || '',
+        mobile2: item.mobile2 || '',
+        emergencyNumber: item.emergencyNumber || '',
+        wappNo: item.wappNo || '',
+        emailid: item.emailid || '',
+        doctorQual: item.doctorQual || '',
+        residentialAdd1: item.residentialAdd1 || '',
+        residentialAdd2: item.residentialAdd2 || '',
+        countryId: item.countryId || '',
+        stateId: item.stateId || '',
+        cityId: item.cityId || '',
+        areaId: item.areaId || '',
+        profileImage: item.profileImage || '',
+        doctorPhoto: item.doctorPhoto || '',
+        baseLocation: item.baseLocation || '',
+        ipdDr: item.ipdDr,
+        opdDr: item.opdDr,
+        defaultFees: item.defaultFees || '',
 
-        // Mapped for ManageDoctors table
-        mobileNo: item.mobile1 || item.mobile_1 || item.phone || '',
-        opdIpd: (item.ipdDr || item.is_ipd) && (item.opdDr || item.is_opd) ? 'Both' : (item.ipdDr || item.is_ipd) ? 'IPD' : (item.opdDr || item.is_opd) ? 'OPD' : '-'
+        // Mapped for ManageDoctors table (display only)
+        mobileNo: item.mobile1 || '',
+        opdIpd: (item.ipdDr) && (item.opdDr) ? 'Both' : (item.ipdDr) ? 'IPD' : (item.opdDr) ? 'OPD' : '-'
       };
     } catch (error: any) {
       console.error('Error fetching doctor details:', error);
@@ -281,9 +283,9 @@ export const doctorService = {
       // Transform the response to match our Doctor interface
       const transformedDoctors = opdDoctors.map((doctor: any) => ({
         id: doctor.id || doctor.doctorId || doctor.doctor_id || '',
-        name: doctor.name || doctor.doctorName || doctor.doctor_name || 
-              `${doctor.firstName || doctor.first_name || ''} ${doctor.lastName || doctor.last_name || ''}`.trim() ||
-              `${doctor.specialty || ''} - ${doctor.firstName || doctor.first_name || ''}`.trim(),
+        name: doctor.name || doctor.doctorName || doctor.doctor_name ||
+          `${doctor.firstName || doctor.first_name || ''} ${doctor.lastName || doctor.last_name || ''}`.trim() ||
+          `${doctor.specialty || ''} - ${doctor.firstName || doctor.first_name || ''}`.trim(),
         specialty: doctor.specialty || doctor.specialization || doctor.department,
         firstName: doctor.firstName || doctor.first_name,
         lastName: doctor.lastName || doctor.last_name

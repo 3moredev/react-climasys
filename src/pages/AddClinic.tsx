@@ -390,6 +390,7 @@ export default function AddClinic() {
                                     name="areaId"
                                     value={formData.areaId}
                                     onChange={handleInputChange}
+                                    disabled={!formData.cityId}
                                 >
 
                                     <option value="">--Select Area--</option>

@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { Edit, Delete, Search, Download } from "@mui/icons-material";
 import { CircularProgress } from "@mui/material";
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
 import { doctorService, Doctor } from "../services/doctorService";
 
 export default function ManageDoctors() {
@@ -78,6 +80,44 @@ export default function ManageDoctors() {
             setLoading(false);
         }
     }, []);
+
+    const handleDownloadExcel = () => {
+        const excelData = filteredDoctors.map(doctor => ({
+            "Doctor Name": doctor.name,
+            "Clinic Name": doctor.clinicName,
+            "Registration No": doctor.registrationNo,
+            "Speciality": doctor.speciality,
+            "Mobile No": doctor.mobileNo,
+            "OPD / IPD": doctor.opdIpd || '-'
+        }));
+
+        const worksheet = XLSX.utils.json_to_sheet(excelData);
+
+        // Auto-size columns
+        const maxWidth = (rows: any[], key: string) => {
+            return Math.max(
+                key.length,
+                ...rows.map(row => (row[key] ? row[key].toString().length : 0))
+            );
+        };
+
+        const wscols = [
+            { wch: maxWidth(excelData, "Doctor Name") + 2 },
+            { wch: maxWidth(excelData, "Clinic Name") + 2 },
+            { wch: maxWidth(excelData, "Registration No") + 2 },
+            { wch: maxWidth(excelData, "Speciality") + 2 },
+            { wch: maxWidth(excelData, "Mobile No") + 2 },
+            { wch: maxWidth(excelData, "OPD / IPD") + 2 }
+        ];
+
+        worksheet['!cols'] = wscols;
+
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Doctors");
+        const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+        const data = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8' });
+        saveAs(data, "doctors.xlsx");
+    };
 
     useEffect(() => {
         fetchDoctors();
@@ -309,7 +349,7 @@ export default function ManageDoctors() {
                     Add Doctor
                 </button>
 
-                <button className="btn-icon" title="Download">
+                <button className="btn-icon" title="Download" onClick={handleDownloadExcel}>
                     <Download style={{ fontSize: '24px' }} />
                 </button>
             </div>

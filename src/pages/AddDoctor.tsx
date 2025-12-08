@@ -72,46 +72,83 @@ export default function AddDoctor() {
                 setClinics(clinicsData);
 
                 if (editingDoctor) {
-                    setFormData({
-                        firstName: editingDoctor.firstName || "",
-                        middleName: editingDoctor.middleName || "",
-                        lastName: editingDoctor.lastName || "",
-                        clinicId: editingDoctor.clinicId || "",
-                        registrationNo: editingDoctor.registrationNo || "",
-                        speciality: editingDoctor.speciality || "",
-                        practisingYear: editingDoctor.practisingYear || "",
-                        mobile1: editingDoctor.mobile1 || "",
-                        mobile2: editingDoctor.mobile2 || "",
-                        residentialNo: editingDoctor.residentialNo || "",
-                        emergencyNumber: editingDoctor.emergencyNumber || "",
-                        wappNo: editingDoctor.wappNo || "",
-                        emailid: editingDoctor.emailid || "",
-                        doctorQual: editingDoctor.doctorQual || "",
-                        residentialAdd1: editingDoctor.residentialAdd1 || "",
-                        residentialAdd2: editingDoctor.residentialAdd2 || "",
-                        countryId: editingDoctor.countryId || "",
-                        stateId: editingDoctor.stateId || "",
-                        cityId: editingDoctor.cityId || "",
-                        areaId: editingDoctor.areaId || "",
-                        baseLocation: editingDoctor.baseLocation || "",
-                        defaultFees: editingDoctor.defaultFees || "",
-                        ipdDr: editingDoctor.ipdDr || false,
-                        opdDr: editingDoctor.opdDr || false,
-                        doctorPhoto: editingDoctor.doctorPhoto || "",
-                        profileImage: editingDoctor.profileImage || ""
-                    });
+                    try {
+                        // Fetch fresh details from API
+                        const doctorDetails = await doctorService.getDoctorById(editingDoctor.id);
 
-                    if (editingDoctor.countryId) {
-                        const statesData = await getStates(editingDoctor.countryId);
-                        setStates(statesData);
-                    }
-                    if (editingDoctor.stateId) {
-                        const citiesData = await getCities(editingDoctor.stateId);
-                        setCities(citiesData);
-                    }
-                    if (editingDoctor.cityId && editingDoctor.stateId) {
-                        const areasData = await getAreas(editingDoctor.cityId, editingDoctor.stateId);
-                        setAreas(areasData);
+                        setFormData({
+                            firstName: doctorDetails.firstName || "",
+                            middleName: doctorDetails.middleName || "",
+                            lastName: doctorDetails.lastName || "",
+                            clinicId: doctorDetails.clinicId || "",
+                            registrationNo: doctorDetails.registrationNo || "",
+                            speciality: doctorDetails.speciality || "",
+                            practisingYear: doctorDetails.practisingYear || "",
+                            mobile1: doctorDetails.mobile1 || "",
+                            mobile2: doctorDetails.mobile2 || "",
+                            residentialNo: doctorDetails.residentialNo || "",
+                            emergencyNumber: doctorDetails.emergencyNumber || "",
+                            wappNo: doctorDetails.wappNo || "",
+                            emailid: doctorDetails.emailid || "",
+                            doctorQual: doctorDetails.doctorQual || "",
+                            residentialAdd1: doctorDetails.residentialAdd1 || "",
+                            residentialAdd2: doctorDetails.residentialAdd2 || "",
+                            countryId: doctorDetails.countryId || "",
+                            stateId: doctorDetails.stateId || "",
+                            cityId: doctorDetails.cityId || "",
+                            areaId: doctorDetails.areaId || "",
+                            baseLocation: doctorDetails.baseLocation || "",
+                            defaultFees: doctorDetails.defaultFees || "",
+                            ipdDr: doctorDetails.ipdDr || false,
+                            opdDr: doctorDetails.opdDr || false,
+                            doctorPhoto: doctorDetails.doctorPhoto || "",
+                            profileImage: doctorDetails.profileImage || ""
+                        });
+
+                        // Populate dependent dropdowns
+                        if (doctorDetails.countryId) {
+                            const statesData = await getStates(doctorDetails.countryId);
+                            setStates(statesData);
+                        }
+                        if (doctorDetails.stateId) {
+                            const citiesData = await getCities(doctorDetails.stateId);
+                            setCities(citiesData);
+                        }
+                        if (doctorDetails.cityId && doctorDetails.stateId) {
+                            const areasData = await getAreas(doctorDetails.cityId, doctorDetails.stateId);
+                            setAreas(areasData);
+                        }
+                    } catch (err) {
+                        console.error("Error fetching fresh doctor details:", err);
+                        // Fallback to state if fetch fails
+                        setFormData({
+                            firstName: editingDoctor.firstName || "",
+                            middleName: editingDoctor.middleName || "",
+                            lastName: editingDoctor.lastName || "",
+                            clinicId: editingDoctor.clinicId || "",
+                            registrationNo: editingDoctor.registrationNo || "",
+                            speciality: editingDoctor.speciality || "",
+                            practisingYear: editingDoctor.practisingYear || "",
+                            mobile1: editingDoctor.mobile1 || "",
+                            mobile2: editingDoctor.mobile2 || "",
+                            residentialNo: editingDoctor.residentialNo || "",
+                            emergencyNumber: editingDoctor.emergencyNumber || "",
+                            wappNo: editingDoctor.wappNo || "",
+                            emailid: editingDoctor.emailid || "",
+                            doctorQual: editingDoctor.doctorQual || "",
+                            residentialAdd1: editingDoctor.residentialAdd1 || "",
+                            residentialAdd2: editingDoctor.residentialAdd2 || "",
+                            countryId: editingDoctor.countryId || "",
+                            stateId: editingDoctor.stateId || "",
+                            cityId: editingDoctor.cityId || "",
+                            areaId: editingDoctor.areaId || "",
+                            baseLocation: editingDoctor.baseLocation || "",
+                            defaultFees: editingDoctor.defaultFees || "",
+                            ipdDr: editingDoctor.ipdDr || false,
+                            opdDr: editingDoctor.opdDr || false,
+                            doctorPhoto: editingDoctor.doctorPhoto || "",
+                            profileImage: editingDoctor.profileImage || ""
+                        });
                     }
                 }
             } catch (err: any) {
@@ -569,6 +606,7 @@ export default function AddDoctor() {
                                     name="areaId"
                                     value={formData.areaId}
                                     onChange={handleInputChange}
+                                    disabled={!formData.cityId}
                                 >
                                     <option value="">--Select Area--</option>
                                     {areas.map(a => (

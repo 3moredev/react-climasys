@@ -95,7 +95,7 @@ export const clinicService = {
     async createClinic(clinicData: Partial<Clinic>): Promise<Clinic> {
         try {
             const payload = {
-                clinicId: 'CL-00003',
+                clinicId: '',
                 doctorId: clinicData.doctorId,
                 clinicName: clinicData.name,
                 clinicAddress: clinicData.address,

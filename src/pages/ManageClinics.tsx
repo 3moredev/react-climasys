@@ -3,87 +3,127 @@ import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { Edit, Delete, Search, Add, Download } from "@mui/icons-material";
 import { CircularProgress } from "@mui/material";
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
 import { clinicService, Clinic } from "../services/clinicService";
 
 export default function ManageClinics() {
-    const [searchTerm, setSearchTerm] = useState<string>("");
-    const [clinics, setClinics] = useState<Clinic[]>([]);
-    const [loading, setLoading] = useState<boolean>(false);
-    const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [clinics, setClinics] = useState<Clinic[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
-    // Pagination state
-    const [currentPage, setCurrentPage] = useState<number>(1);
-    const [pageSize, setPageSize] = useState<number>(10);
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(10);
 
-    // Filter clinics based on search term
-    const filteredClinics = clinics.filter(clinic => {
-        if (!searchTerm.trim()) return true;
-        const search = searchTerm.toLowerCase();
-        return (
-            clinic.name.toLowerCase().includes(search) ||
-            clinic.city.toLowerCase().includes(search) ||
-            clinic.phoneNo.includes(search) ||
-            clinic.status.toLowerCase().includes(search)
-        );
-    });
-
-    const navigate = useNavigate();
-
-    const handleSearch = () => {
-        // Search is handled by filtering the local state
-        setCurrentPage(1); // Reset to first page on search
-    };
-
-    const handlePageSizeChange = (newPageSize: number) => {
-        setPageSize(newPageSize);
-        setCurrentPage(1);
-    };
-
-    const handleAddClinic = () => {
-        navigate("/add-clinic");
-    };
-
-    const handleEdit = (clinic: Clinic) => {
-        navigate("/add-clinic", { state: clinic });
-    };
-
-    const handleDelete = async (clinic: Clinic) => {
-        if (!window.confirm(`Are you sure you want to delete the clinic "${clinic.name}"?`)) {
-            return;
-        }
-        try {
-            setLoading(true);
-            await clinicService.deleteClinic(clinic.id);
-            await fetchClinics();
-        } catch (err: any) {
-            console.error("Error deleting clinic:", err);
-            setError(err.message || "Failed to delete clinic");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const fetchClinics = useCallback(async () => {
-        setLoading(true);
-        setError(null);
-        try {
-            const data = await clinicService.getAllClinics();
-            setClinics(data);
-        } catch (err: any) {
-            console.error("Error fetching clinics:", err);
-            setError(err.message || "Failed to fetch clinics");
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
-    useEffect(() => {
-        fetchClinics();
-    }, [fetchClinics]);
-
+  // Filter clinics based on search term
+  const filteredClinics = clinics.filter(clinic => {
+    if (!searchTerm.trim()) return true;
+    const search = searchTerm.toLowerCase();
     return (
-        <div className="container-fluid" style={{ fontFamily: "'Roboto', sans-serif", padding: "20px" }}>
-            <style>{`
+      clinic.name.toLowerCase().includes(search) ||
+      clinic.city.toLowerCase().includes(search) ||
+      clinic.phoneNo.includes(search) ||
+      clinic.status.toLowerCase().includes(search)
+    );
+  });
+
+  const navigate = useNavigate();
+
+  const handleSearch = () => {
+    // Search is handled by filtering the local state
+    setCurrentPage(1); // Reset to first page on search
+  };
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1);
+  };
+
+  const handleAddClinic = () => {
+    navigate("/add-clinic");
+  };
+
+  const handleEdit = (clinic: Clinic) => {
+    navigate("/add-clinic", { state: clinic });
+  };
+
+  const handleDelete = async (clinic: Clinic) => {
+    if (!window.confirm(`Are you sure you want to delete the clinic "${clinic.name}"?`)) {
+      return;
+    }
+    try {
+      setLoading(true);
+      await clinicService.deleteClinic(clinic.id);
+      await fetchClinics();
+    } catch (err: any) {
+      console.error("Error deleting clinic:", err);
+      setError(err.message || "Failed to delete clinic");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchClinics = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await clinicService.getAllClinics();
+      setClinics(data);
+    } catch (err: any) {
+      console.error("Error fetching clinics:", err);
+      setError(err.message || "Failed to fetch clinics");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const handleDownloadExcel = () => {
+    const excelData = filteredClinics.map(clinic => ({
+      "Clinic Name": clinic.name,
+      "City": clinic.city,
+      "Phone No": clinic.phoneNo,
+      "Status": clinic.status,
+      "Since": clinic.since,
+      "License Till": clinic.licenseTill
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(excelData);
+
+    // Auto-size columns
+    const maxWidth = (rows: any[], key: string) => {
+      return Math.max(
+        key.length,
+        ...rows.map(row => (row[key] ? row[key].toString().length : 0))
+      );
+    };
+
+    const wscols = [
+      { wch: maxWidth(excelData, "Clinic Name") + 2 },
+      { wch: maxWidth(excelData, "City") + 2 },
+      { wch: maxWidth(excelData, "Phone No") + 2 },
+      { wch: maxWidth(excelData, "Status") + 2 },
+      { wch: maxWidth(excelData, "Since") + 2 },
+      { wch: maxWidth(excelData, "License Till") + 2 }
+    ];
+
+    worksheet['!cols'] = wscols;
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Clinics");
+    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+    const data = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8' });
+    saveAs(data, "clinics.xlsx");
+  };
+
+  useEffect(() => {
+    fetchClinics();
+  }, [fetchClinics]);
+
+  return (
+    <div className="container-fluid" style={{ fontFamily: "'Roboto', sans-serif", padding: "20px" }}>
+      <style>{`
         .clinics-table {
           width: 100%;
           border-collapse: collapse;
@@ -274,120 +314,120 @@ export default function ManageClinics() {
         }
       `}</style>
 
-            {/* Page Title */}
-            <h1 className="header-title">
-                Manage Clinic
-            </h1>
+      {/* Page Title */}
+      <h1 className="header-title">
+        Manage Clinic
+      </h1>
 
-            {/* Search and Action Section */}
-            <div className="search-section">
-                <label style={{ fontWeight: 500, marginRight: '8px' }}>Search</label>
-                <div className="search-input-wrapper">
-                    <input
-                        type="text"
-                        value={searchTerm}
-                        onChange={(e) => {
-                            setSearchTerm(e.target.value);
-                            setCurrentPage(1); // Reset to first page on search change
-                        }}
-                        onKeyPress={(e) => {
-                            if (e.key === 'Enter') {
-                                handleSearch();
-                            }
-                        }}
-                    />
-                    <Search className="search-icon" style={{ fontSize: '20px' }} />
-                </div>
+      {/* Search and Action Section */}
+      <div className="search-section">
+        <label style={{ fontWeight: 500, marginRight: '8px' }}>Search</label>
+        <div className="search-input-wrapper">
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1); // Reset to first page on search change
+            }}
+            onKeyPress={(e) => {
+              if (e.key === 'Enter') {
+                handleSearch();
+              }
+            }}
+          />
+          <Search className="search-icon" style={{ fontSize: '20px' }} />
+        </div>
 
-                <button className="btn-primary-custom" onClick={handleSearch}>
-                    Search
-                </button>
+        <button className="btn-primary-custom" onClick={handleSearch}>
+          Search
+        </button>
 
-                <button className="btn-primary-custom" onClick={handleAddClinic}>
-                    Add Clinic
-                </button>
+        <button className="btn-primary-custom" onClick={handleAddClinic}>
+          Add Clinic
+        </button>
 
-                <button className="btn-icon" title="Download">
-                    <Download style={{ fontSize: '24px' }} />
-                </button>
-            </div>
+        <button className="btn-icon" title="Download" onClick={handleDownloadExcel}>
+          <Download style={{ fontSize: '24px' }} />
+        </button>
+      </div>
 
-            {/* Error Message */}
-            {error && (
-                <div style={{
-                    padding: '12px',
-                    marginBottom: '20px',
-                    backgroundColor: '#f8d7da',
-                    color: '#721c24',
-                    border: '1px solid #f5c6cb',
-                    borderRadius: '4px'
-                }}>
-                    {error}
-                </div>
-            )}
+      {/* Error Message */}
+      {error && (
+        <div style={{
+          padding: '12px',
+          marginBottom: '20px',
+          backgroundColor: '#f8d7da',
+          color: '#721c24',
+          border: '1px solid #f5c6cb',
+          borderRadius: '4px'
+        }}>
+          {error}
+        </div>
+      )}
 
-            {/* Clinics Table */}
-            <div className="table-responsive">
-                {loading ? (
-                    <div style={{ textAlign: 'center', padding: '40px' }}>
-                        <CircularProgress style={{ color: 'rgb(0, 123, 255)' }} />
-                        <p style={{ marginTop: '16px', color: '#666' }}>Loading clinics...</p>
-                    </div>
-                ) : (
-                    <table className="clinics-table">
-                        <thead>
-                            <tr>
-                                <th style={{ width: '20%' }}>Clinic Name</th>
-                                <th style={{ width: '15%' }}>City</th>
-                                <th style={{ width: '15%' }}>Phone No</th>
-                                <th style={{ width: '10%' }}>Status</th>
-                                <th style={{ width: '15%' }}>Since</th>
-                                <th style={{ width: '15%' }}>License Till</th>
-                                <th className='center-text' style={{ width: '10%', textAlign: 'center' }}>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredClinics.slice((currentPage - 1) * pageSize, currentPage * pageSize).length > 0 ? (
-                                filteredClinics.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((clinic) => (
-                                    <tr key={clinic.id}>
-                                        <td>{clinic.name}</td>
-                                        <td>{clinic.city}</td>
-                                        <td>{clinic.phoneNo}</td>
-                                        <td>{clinic.status}</td>
-                                        <td>{clinic.since}</td>
-                                        <td>{clinic.licenseTill}</td>
-                                        <td>
-                                            <div className="action-icons">
-                                                <div title="Edit" onClick={() => handleEdit(clinic)}>
-                                                    <Edit style={{ fontSize: '20px' }} />
-                                                </div>
-                                                <div title="Delete" onClick={() => handleDelete(clinic)}>
-                                                    <Delete style={{ fontSize: '20px' }} />
-                                                </div>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            ) : (
-                                <tr>
-                                    <td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
-                                        {error ? 'Error loading clinics' : 'No clinics found'}
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                )}
-            </div>
+      {/* Clinics Table */}
+      <div className="table-responsive">
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '40px' }}>
+            <CircularProgress style={{ color: 'rgb(0, 123, 255)' }} />
+            <p style={{ marginTop: '16px', color: '#666' }}>Loading clinics...</p>
+          </div>
+        ) : (
+          <table className="clinics-table">
+            <thead>
+              <tr>
+                <th style={{ width: '20%' }}>Clinic Name</th>
+                <th style={{ width: '15%' }}>City</th>
+                <th style={{ width: '15%' }}>Phone No</th>
+                <th style={{ width: '10%' }}>Status</th>
+                <th style={{ width: '15%' }}>Since</th>
+                <th style={{ width: '15%' }}>License Till</th>
+                <th className='center-text' style={{ width: '10%', textAlign: 'center' }}>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredClinics.slice((currentPage - 1) * pageSize, currentPage * pageSize).length > 0 ? (
+                filteredClinics.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((clinic) => (
+                  <tr key={clinic.id}>
+                    <td>{clinic.name}</td>
+                    <td>{clinic.city}</td>
+                    <td>{clinic.phoneNo}</td>
+                    <td>{clinic.status}</td>
+                    <td>{clinic.since}</td>
+                    <td>{clinic.licenseTill}</td>
+                    <td>
+                      <div className="action-icons">
+                        <div title="Edit" onClick={() => handleEdit(clinic)}>
+                          <Edit style={{ fontSize: '20px' }} />
+                        </div>
+                        <div title="Delete" onClick={() => handleDelete(clinic)}>
+                          <Delete style={{ fontSize: '20px' }} />
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
+                    {error ? 'Error loading clinics' : 'No clinics found'}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        )}
+      </div>
 
-            {/* Pagination */}            
-            {filteredClinics.length > 0 && (
-                <div className="pagination-container">
-                    <div className="pagination-info">
-                        <span>
-                            Showing {currentPage * pageSize - pageSize + 1} to {Math.min(currentPage * pageSize, filteredClinics.length)} of {filteredClinics.length} clinics
-                        </span>
-                        <div className="page-size-selector">
+      {/* Pagination */}
+      {filteredClinics.length > 0 && (
+        <div className="pagination-container">
+          <div className="pagination-info">
+            <span>
+              Showing {currentPage * pageSize - pageSize + 1} to {Math.min(currentPage * pageSize, filteredClinics.length)} of {filteredClinics.length} clinics
+            </span>
+            <div className="page-size-selector">
               <span>Show:</span>
               <select
                 className="page-size-select"
@@ -445,8 +485,8 @@ export default function ManageClinics() {
             </button>
           </div>
         </div>
-            )}
+      )}
 
-        </div>
-    );
+    </div>
+  );
 }
