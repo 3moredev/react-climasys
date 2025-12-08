@@ -160,6 +160,12 @@ export default function AppointmentTable() {
                     console.log('User role determined:', userRole, 'isReceptionist:', isReceptionist, 'isDoctor:', isDoctor);
                     console.log('Doctor ID set to:', sessionData.doctorId);
                     console.log('Clinic ID set to:', sessionData.clinicId);
+                    
+                    // Set default doctor ID from session if available and not already set
+                    if (sessionData.doctorId && !selectedDoctorId) {
+                        setSelectedDoctorId(sessionData.doctorId);
+                        console.log('Set selectedDoctorId from session:', sessionData.doctorId);
+                    }
                 } else {
                     // Session expired or invalid - redirect to login
                     console.warn('Session expired or invalid, redirecting to login');
@@ -176,18 +182,48 @@ export default function AppointmentTable() {
         fetchSessionData();
     }, []);
 
-    // Fetch all doctors when component mounts
+    // Fetch all doctors when component mounts or when session data becomes available
     useEffect(() => {
         const fetchAllDoctors = async () => {
+            // Wait for session data to be loaded before fetching doctors
+            if (loadingSessionData || !sessionData) {
+                return;
+            }
+            
             setLoadingDoctors(true);
             try {
                 console.log('Fetching OPD doctors for provider dropdown...');
+                // Backend will automatically use default_doctor from user_master table based on session
                 const doctors = await doctorService.getOpdDoctors();
                 setAllDoctors(doctors);
 
-                // Set the first doctor as default selection if none is selected
-                if (doctors.length > 0 && !selectedDoctorId) {
-                    setSelectedDoctorId(doctors[0].id);
+                // Always set the default doctor when doctors are loaded
+                // Backend sorts doctors with default_doctor from user_master first
+                if (doctors.length > 0) {
+                    const currentSelectedId = selectedDoctorId;
+                    console.log('Current selectedDoctorId:', currentSelectedId);
+                    console.log('Available doctors:', doctors.map(d => ({ id: d.id, name: d.name })));
+                    console.log('First doctor (should be default):', doctors[0]?.id, doctors[0]?.name);
+                    
+                    // Determine which doctor should be selected
+                    let doctorToSelect = null;
+                    
+                    // First priority: use existing selection if it's valid
+                    if (currentSelectedId && currentSelectedId !== '' && doctors.find(d => d.id === currentSelectedId)) {
+                        doctorToSelect = doctors.find(d => d.id === currentSelectedId);
+                        console.log('Keeping existing selection:', currentSelectedId);
+                    } 
+                    // Second priority: use first doctor (should be default doctor sorted by backend from user_master.default_doctor)
+                    else {
+                        doctorToSelect = doctors[0];
+                        console.log('Selecting first doctor (default from user_master):', doctorToSelect.id, doctorToSelect.name);
+                    }
+                    
+                    // Set the selected doctor
+                    if (doctorToSelect && doctorToSelect.id !== currentSelectedId) {
+                        setSelectedDoctorId(doctorToSelect.id);
+                        console.log('✅ Default doctor selected:', doctorToSelect.id, doctorToSelect.name);
+                    }
                 }
 
                 console.log('All doctors loaded:', doctors);
@@ -199,7 +235,27 @@ export default function AppointmentTable() {
         };
 
         fetchAllDoctors();
-    }, [selectedDoctorId]);
+    }, [sessionData, loadingSessionData]); // Removed selectedDoctorId from dependencies to avoid infinite loop
+
+    // Ensure default doctor is selected when both sessionData and doctors are available
+    // This is a fallback in case the main useEffect didn't set it
+    // Backend sorts doctors with default_doctor from user_master first, so we use the first doctor
+    useEffect(() => {
+        if (!loadingSessionData && !loadingDoctors && sessionData && allDoctors.length > 0) {
+            const currentSelectedId = selectedDoctorId;
+            
+            // Only set if no doctor is currently selected
+            if (!currentSelectedId || currentSelectedId === '' || !allDoctors.find(d => d.id === currentSelectedId)) {
+                // Use first doctor (should be default doctor sorted by backend from user_master.default_doctor)
+                const defaultDoctor = allDoctors[0];
+                
+                if (defaultDoctor) {
+                    console.log('🔄 Fallback: Setting default doctor from useEffect (first in list):', defaultDoctor.id, defaultDoctor.name);
+                    setSelectedDoctorId(defaultDoctor.id);
+                }
+            }
+        }
+    }, [sessionData, allDoctors, loadingSessionData, loadingDoctors]); // Removed selectedDoctorId to avoid loops
 
     const [availableStatuses, setAvailableStatuses] = useState<string[]>([]);
     const [previousVisits, setPreviousVisits] = useState<Record<string, PatientVisit[]>>({});
@@ -767,13 +823,13 @@ export default function AppointmentTable() {
         })();
     }, [sessionData?.doctorId, allDoctors]);
 
-    // Load today's appointments for ALL doctors (when isDoctor is true) or selected doctor (for receptionist)
+    // Load today's appointments for logged-in doctor (when isDoctor is true) or selected doctor (for receptionist)
     useEffect(() => {
         if (!sessionData?.clinicId) return;
         
-        // For doctor view: fetch all doctors' appointments
+        // For doctor view: fetch only the logged-in doctor's appointments
         // For receptionist view: fetch selected doctor's appointments
-        if (isDoctor && allDoctors.length === 0) return;
+        if (isDoctor && !sessionData?.doctorId) return;
         if (!isDoctor && !selectedDoctorId) return;
 
         (async () => {
@@ -783,36 +839,33 @@ export default function AppointmentTable() {
                 const clinicId = sessionData.clinicId;
 
                 if (isDoctor) {
-                    // Fetch appointments for ALL doctors in parallel
-                    console.log('📅 Loading appointments for ALL doctors:', allDoctors.length, 'doctors');
-
-                    const appointmentPromises = allDoctors.map(async (doctor) => {
-                        try {
-                            const resp: TodayAppointmentsResponse = await appointmentService.getAppointmentsForDateSP({
-                                doctorId: doctor.id,
-                                clinicId,
-                                futureDate: today,
-                                languageId: 1
-                            });
-                            const rows = convertSPResultToRows(resp?.resultSet1 || []);
-                            // Ensure each row has the correct doctorId and provider name
-                            return rows.map(row => ({
-                                ...row,
-                                doctorId: doctor.id,
-                                provider: doctor.name
-                            }));
-                        } catch (error) {
-                            console.error(`Failed to load appointments for doctor ${doctor.id}:`, error);
-                            return [];
-                        }
-                    });
-
-                    // Wait for all requests to complete and combine results
-                    const allAppointmentArrays = await Promise.all(appointmentPromises);
-                    const combinedAppointments = allAppointmentArrays.flat();
+                    // Fetch appointments ONLY for the logged-in doctor
+                    const doctorId = sessionData?.doctorId || '';
+                    console.log('📅 Loading appointments for logged-in doctor:', doctorId, 'clinic:', clinicId);
                     
-                    console.log('✅ Combined appointments from all doctors:', combinedAppointments.length, 'appointments');
-                    setAppointments(combinedAppointments);
+                    if (!doctorId) {
+                        console.warn('Doctor ID not available in session data');
+                        setAppointments([]);
+                        return;
+                    }
+
+                    const resp: TodayAppointmentsResponse = await appointmentService.getAppointmentsForDateSP({
+                        doctorId: doctorId,
+                        clinicId,
+                        futureDate: today,
+                        languageId: 1
+                    });
+                    
+                    const rows = convertSPResultToRows(resp?.resultSet1 || []);
+                    // Ensure each row has the correct doctorId and provider name
+                    const appointmentsWithProvider = rows.map(row => ({
+                        ...row,
+                        doctorId: doctorId,
+                        provider: getDoctorLabelById(doctorId) || sessionData?.doctorName || 'Doctor'
+                    }));
+                    
+                    setAppointments(appointmentsWithProvider);
+                    console.log('✅ Appointments loaded for logged-in doctor', doctorId, ':', appointmentsWithProvider.length, 'appointments');
                 } else {
                     // Receptionist view: fetch for selected doctor only
                     const doctorId = selectedDoctorId;
@@ -837,7 +890,7 @@ export default function AppointmentTable() {
                 setLoadingAppointments(false);
             }
         })();
-    }, [isDoctor, allDoctors, selectedDoctorId, sessionData?.clinicId]);
+    }, [isDoctor, selectedDoctorId, sessionData?.clinicId, sessionData?.doctorId]);
 
     // Load status reference for dynamic statuses
     useEffect(() => {
@@ -1629,56 +1682,55 @@ export default function AppointmentTable() {
         return options.sort((a, b) => (a.id === selectedId ? -1 : b.id === selectedId ? 1 : a.label.localeCompare(b.label)));
     };
 
-    // Refresh appointments for the selected doctor
+    // Refresh appointments for the logged-in doctor (when isDoctor is true) or selected doctor (for receptionist)
     const refreshAppointmentsForSelectedDoctor = async () => {
         if (!sessionData?.clinicId) return;
         
-        // For doctor view: refresh all doctors' appointments
+        // For doctor view: refresh only the logged-in doctor's appointments
         // For receptionist view: refresh selected doctor's appointments
-        if (isDoctor && allDoctors.length === 0) return;
+        if (isDoctor && !sessionData?.doctorId) return;
         if (!isDoctor && !selectedDoctorId) return;
 
         setLoadingAppointments(true);
         try {
             const today = new Date().toISOString().split('T')[0];
+            const clinicId = sessionData.clinicId;
 
             if (isDoctor) {
-                // Refresh appointments for ALL doctors in parallel
-                console.log('🔄 Refreshing appointments for ALL doctors');
+                // Refresh appointments ONLY for the logged-in doctor
+                const doctorId = sessionData?.doctorId || '';
+                console.log('🔄 Refreshing appointments for logged-in doctor:', doctorId);
 
-                const appointmentPromises = allDoctors.map(async (doctor) => {
-                    try {
-                        const resp: TodayAppointmentsResponse = await appointmentService.getAppointmentsForDateSP({
-                            doctorId: doctor.id,
-                            clinicId: sessionData.clinicId,
-                            futureDate: today,
-                            languageId: 1
-                        });
-                        const rows = convertSPResultToRows(resp?.resultSet1 || []);
-                        // Ensure each row has the correct doctorId and provider name
-                        return rows.map(row => ({
-                            ...row,
-                            doctorId: doctor.id,
-                            provider: doctor.name
-                        }));
-                    } catch (error) {
-                        console.error(`Failed to refresh appointments for doctor ${doctor.id}:`, error);
-                        return [];
-                    }
+                if (!doctorId) {
+                    console.warn('Doctor ID not available in session data');
+                    setAppointments([]);
+                    return;
+                }
+
+                const resp: TodayAppointmentsResponse = await appointmentService.getAppointmentsForDateSP({
+                    doctorId: doctorId,
+                    clinicId: clinicId,
+                    futureDate: today,
+                    languageId: 1
                 });
 
-                const allAppointmentArrays = await Promise.all(appointmentPromises);
-                const combinedAppointments = allAppointmentArrays.flat();
+                const rows = convertSPResultToRows(resp?.resultSet1 || []);
+                // Ensure each row has the correct doctorId and provider name
+                const appointmentsWithProvider = rows.map(row => ({
+                    ...row,
+                    doctorId: doctorId,
+                    provider: getDoctorLabelById(doctorId) || sessionData?.doctorName || 'Doctor'
+                }));
                 
-                setAppointments(combinedAppointments);
-                console.log('✅ Appointments refreshed for all doctors:', combinedAppointments.length, 'appointments');
+                setAppointments(appointmentsWithProvider);
+                console.log('✅ Appointments refreshed for logged-in doctor', doctorId, ':', appointmentsWithProvider.length, 'appointments');
             } else {
                 // Receptionist view: refresh selected doctor only
                 console.log('🔄 Refreshing appointments for selected doctor:', selectedDoctorId);
 
                 const resp: TodayAppointmentsResponse = await appointmentService.getAppointmentsForDateSP({
                     doctorId: selectedDoctorId!,
-                    clinicId: sessionData.clinicId,
+                    clinicId: clinicId,
                     futureDate: today,
                     languageId: 1
                 });
@@ -3886,34 +3938,41 @@ export default function AppointmentTable() {
                 </div>
 
                 {/* 2) Provider (enabled with all doctors) - Changes filter appointments by selected doctor */}
-                <select
-                    className="form-select"
-                    value={selectedDoctorId}
-                    onChange={(e) => setSelectedDoctorId(e.target.value)}
-                    disabled={loadingDoctors}
-                    style={{
-                        height: 38,
-                        width: 255,
-                        color: '#212121',
-                        backgroundColor: loadingDoctors ? '#ECEFF1' : '#FFFFFF',
-                        padding: '6px 12px',
-                        lineHeight: '1.5',
-                        fontSize: '1rem',
-                        flex: '0 0 255px'
-                    }}
-                >
-                    {loadingDoctors ? (
-                        <option>Loading doctors...</option>
-                    ) : allDoctors.length > 0 ? (
-                        allDoctors.map((doctor) => (
-                            <option key={doctor.id} value={doctor.id}>
-                                {formatProviderLabel(doctor.name)}
-                            </option>
-                        ))
-                    ) : (
-                        <option>No doctors available</option>
-                    )}
-                </select>
+                {/* Hide dropdown for doctors since they can only see their own appointments */}
+                {!isDoctor && (
+                    <select
+                        className="form-select"
+                        value={selectedDoctorId || ''}
+                        onChange={(e) => {
+                            console.log('Doctor dropdown changed to:', e.target.value);
+                            setSelectedDoctorId(e.target.value);
+                        }}
+                        disabled={loadingDoctors}
+                        key={`doctor-select-${allDoctors.length}-${selectedDoctorId}`} // Force re-render when doctors or selection changes
+                        style={{
+                            height: 38,
+                            width: 255,
+                            color: '#212121',
+                            backgroundColor: loadingDoctors ? '#ECEFF1' : '#FFFFFF',
+                            padding: '6px 12px',
+                            lineHeight: '1.5',
+                            fontSize: '1rem',
+                            flex: '0 0 255px'
+                        }}
+                    >
+                        {loadingDoctors ? (
+                            <option value="">Loading doctors...</option>
+                        ) : allDoctors.length > 0 ? (
+                            allDoctors.map((doctor) => (
+                                <option key={doctor.id} value={doctor.id}>
+                                    {formatProviderLabel(doctor.name)}
+                                </option>
+                            ))
+                        ) : (
+                            <option value="">No doctors available</option>
+                        )}
+                    </select>
+                )}
 
                 {/* 3) Book and 4) Add buttons */}
                 <button

@@ -265,6 +265,7 @@ export const doctorService = {
   /**
    * Get only doctors that are marked as OPD doctors (opd_dr == true)
    * Used for provider/doctor dropdowns across the app.
+   * The backend will automatically use the default_doctor from user_master table based on the logged-in user's session.
    */
   async getOpdDoctors(): Promise<Doctor[]> {
     try {

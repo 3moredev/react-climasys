@@ -198,6 +198,25 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                         const num = parseFloat(String(v));
                         return isNaN(num) ? '0' : num.toFixed(2);
                     };
+                    
+                    // Format receipt date from UTC to local time in dd-MMM-yy format
+                    const formatReceiptDate = (dateValue: any): string => {
+                        if (!dateValue) return '';
+                        try {
+                            // Parse the date (handles ISO strings, timestamps, etc.)
+                            const date = new Date(dateValue);
+                            if (isNaN(date.getTime())) return String(dateValue);
+                            
+                            // Convert to local time and format as dd-MMM-yy
+                            const day = String(date.getDate()).padStart(2, '0');
+                            const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                            const month = monthNames[date.getMonth()];
+                            const year = String(date.getFullYear()).slice(-2);
+                            return `${day}-${month}-${year}`;
+                        } catch (error) {
+                            return String(dateValue);
+                        }
+                    };
 
                     console.log('billingFields from response:', billingFields);
                     console.log('uiFields from response:', uiFields);
@@ -218,7 +237,7 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                         feesCollected: toNumStr(billingFields?.collectedRs ?? uiFields?.collectedRs ?? uiFields?.feesCollected ?? uiFields?.FeesCollected ?? uiFields?.collected ?? uiFields?.Collected ?? prev.feesCollected),
                         paymentRemark: toStr(paymentRemarkFromVitals ?? billingFields?.paymentRemark ?? uiFields?.paymentRemark ?? uiFields?.PaymentRemark ?? prev.paymentRemark),
                         paymentBy: toStr(paymentByFromVitals ?? billingFields?.paymentById ?? billingFields?.paymentBy ?? uiFields?.paymentById ?? uiFields?.paymentBy ?? uiFields?.PaymentById ?? prev.paymentBy),
-                        receiptDate: toStr(billingFields?.receiptDate ?? uiFields?.receiptDate ?? uiFields?.ReceiptDate ?? prev.receiptDate),
+                        receiptDate: formatReceiptDate(billingFields?.receiptDate ?? uiFields?.receiptDate ?? uiFields?.ReceiptDate ?? prev.receiptDate),
                         receiptAmount: toNumStr(billingFields?.receiptAmount ?? uiFields?.receiptAmount ?? uiFields?.ReceiptAmount ?? prev.receiptAmount),
                         reason: toStr(billingFields?.reason ?? uiFields?.reason ?? prev.reason),
                         referredBy: toStr(billingFields?.referredBy ?? uiFields?.referredBy ?? uiFields?.referred_by ?? prev.referredBy)
