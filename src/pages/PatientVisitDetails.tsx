@@ -103,6 +103,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
     const [complaintsError, setComplaintsError] = useState<string | null>(null);
     const [showQuickRegistration, setShowQuickRegistration] = useState(false);
     const [sessionDataForQuickReg, setSessionDataForQuickReg] = useState<any>(null);
+    const [currentClinicId, setCurrentClinicId] = useState<string>('');
     
     const filteredComplaints = React.useMemo(() => {
         const term = complaintSearch.trim().toLowerCase();
@@ -310,6 +311,31 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
         }
     }, [showQuickRegistration, sessionDataForQuickReg]);
 
+    // Load clinicId from patientData or session when dialog opens
+    React.useEffect(() => {
+        if (open) {
+            const loadClinicId = async () => {
+                try {
+                    // First try to get from patientData
+                    const clinicIdFromPatient = (patientData as any)?.clinicId;
+                    if (clinicIdFromPatient) {
+                        setCurrentClinicId(String(clinicIdFromPatient));
+                        return;
+                    }
+                    
+                    // If not in patientData, try to get from session
+                    const sessionResult = await sessionService.getSessionInfo();
+                    if (sessionResult.success && sessionResult.data?.clinicId) {
+                        setCurrentClinicId(String(sessionResult.data.clinicId));
+                    }
+                } catch (error) {
+                    console.error('Error loading clinicId:', error);
+                }
+            };
+            loadClinicId();
+        }
+    }, [open, patientData]);
+
     // Close complaints dropdown on outside click
     React.useEffect(() => {
         if (!isComplaintsOpen) return;
@@ -499,9 +525,11 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                 const normalized = {
                     referByRaw: appointmentData.referBy ?? '',
                     referralName: appointmentData.referralName ?? '',
-                    referralContact: appointmentData.referralContact ?? '',
-                    referralEmail: appointmentData.referralEmail ?? '',
-                    referralAddress: appointmentData.referralAddress ?? '',
+                    // Check for correct field names first, then fallback to alternative names
+                    // Backend might return doctorMobile/doctorEmail/doctorAddress or referralContact/referralEmail/referralAddress
+                    referralContact: appointmentData.referralContact ?? appointmentData.doctorMobile ?? '',
+                    referralEmail: appointmentData.referralEmail ?? appointmentData.doctorEmail ?? '',
+                    referralAddress: appointmentData.referralAddress ?? appointmentData.doctorAddress ?? '',
                     pulse: appointmentData.pulse ?? '',
                     height: appointmentData.heightInCms ?? '',
                     weight: appointmentData.weightInKgs ?? '',
@@ -518,6 +546,18 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                 } as any;
 
                 console.log('Normalized appointment data:', normalized);
+                console.log('=== REFERRAL FIELDS DEBUG ===');
+                console.log('Raw appointmentData.referralContact:', appointmentData.referralContact);
+                console.log('Raw appointmentData.doctorMobile:', appointmentData.doctorMobile);
+                console.log('Raw appointmentData.referralEmail:', appointmentData.referralEmail);
+                console.log('Raw appointmentData.doctorEmail:', appointmentData.doctorEmail);
+                console.log('Raw appointmentData.referralAddress:', appointmentData.referralAddress);
+                console.log('Raw appointmentData.doctorAddress:', appointmentData.doctorAddress);
+                console.log('Normalized referralContact:', normalized.referralContact);
+                console.log('Normalized referralEmail:', normalized.referralEmail);
+                console.log('Normalized referralAddress:', normalized.referralAddress);
+                console.log('Normalized referralName:', normalized.referralName);
+                console.log('=== END REFERRAL FIELDS DEBUG ===');
 
                 // Patch form fields with appointment data
                 setFormData(prev => {
@@ -525,6 +565,11 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                     const maybeSet = (key: keyof typeof patched, value: any) => {
                         if (value === undefined || value === null || value === '') return;
                         if (patched[key] === '' || patched[key] === undefined || patched[key] === null) {
+                            patched[key] = String(value);
+                        }
+                    };
+                    const alwaysSet = (key: keyof typeof patched, value: any) => {
+                        if (value !== undefined && value !== null && value !== '') {
                             patched[key] = String(value);
                         }
                     };
@@ -538,9 +583,29 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                         patched.referralBy = 'Self';
                     }
                     
-                    maybeSet('referralName', normalized.referralName);
-                    // Don't patch referralContact, referralEmail, referralAddress from API
-                    // These fields should only be populated when a doctor is selected
+                    // Patch referral name and contact fields from API if it's a doctor referral
+                    // Always set these from API when available (they were saved when doctor was selected)
+                    if (patched.referralBy === 'D' || normalized.referByRaw === 'D') {
+                        // If it's a doctor referral, always load all referral details from API
+                        alwaysSet('referralName', normalized.referralName);
+                        // Only set contact/email/address if they are different from referral name
+                        // (Backend bug: sometimes returns doctor name in these fields instead of actual values)
+                        if (normalized.referralContact && normalized.referralContact.trim() !== '' && 
+                            normalized.referralContact.trim() !== normalized.referralName.trim()) {
+                            alwaysSet('referralContact', normalized.referralContact);
+                        }
+                        if (normalized.referralEmail && normalized.referralEmail.trim() !== '' && 
+                            normalized.referralEmail.trim() !== normalized.referralName.trim()) {
+                            alwaysSet('referralEmail', normalized.referralEmail);
+                        }
+                        if (normalized.referralAddress && normalized.referralAddress.trim() !== '' && 
+                            normalized.referralAddress.trim() !== normalized.referralName.trim()) {
+                            alwaysSet('referralAddress', normalized.referralAddress);
+                        }
+                    } else {
+                        // For non-doctor referrals, use maybeSet to avoid overwriting user input
+                        maybeSet('referralName', normalized.referralName);
+                    }
                     maybeSet('pulse', normalized.pulse);
                     maybeSet('height', normalized.height);
                     maybeSet('weight', normalized.weight);
@@ -603,9 +668,11 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                         const normalized = {
                             referByRaw: payload.referBy ?? payload.referralBy ?? '',
                             referralName: payload.referralName ?? '',
-                            referralContact: payload.referralContact ?? '',
-                            referralEmail: payload.referralEmail ?? '',
-                            referralAddress: payload.referralAddress ?? '',
+                            // Check for correct field names first, then fallback to alternative names
+                            // Backend might return doctorMobile/doctorEmail/doctorAddress or referralContact/referralEmail/referralAddress
+                            referralContact: payload.referralContact ?? payload.doctorMobile ?? '',
+                            referralEmail: payload.referralEmail ?? payload.doctorEmail ?? '',
+                            referralAddress: payload.referralAddress ?? payload.doctorAddress ?? '',
                             pulse: payload.pulse ?? payload.pulsePerMin ?? '',
                             height: payload.heightInCms ?? payload.height ?? '',
                             weight: payload.weightInKgs ?? payload.weight ?? '',
@@ -631,6 +698,11 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     patched[key] = String(value);
                                 }
                             };
+                            const alwaysSet = (key: keyof typeof patched, value: any) => {
+                                if (value !== undefined && value !== null && value !== '') {
+                                    patched[key] = String(value);
+                                }
+                            };
                             // Set referralBy based on payload and available options, default to 'Self'
                             if (normalized.referByRaw) {
                                 const referIdStr = String(normalized.referByRaw);
@@ -639,9 +711,29 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                             } else if (!patched.referralBy) {
                                 patched.referralBy = 'Self';
                             }
-                            maybeSet('referralName', normalized.referralName);
-                            // Don't patch referralContact, referralEmail, referralAddress from API
-                            // These fields should only be populated when a doctor is selected
+                            // Patch referral name and contact fields from API if it's a doctor referral
+                            // Always set these from API when available (they were saved when doctor was selected)
+                            if (patched.referralBy === 'D' || normalized.referByRaw === 'D') {
+                                // If it's a doctor referral, always load all referral details from API
+                                alwaysSet('referralName', normalized.referralName);
+                                // Only set contact/email/address if they are different from referral name
+                                // (Backend bug: sometimes returns doctor name in these fields instead of actual values)
+                                if (normalized.referralContact && normalized.referralContact.trim() !== '' && 
+                                    normalized.referralContact.trim() !== normalized.referralName.trim()) {
+                                    alwaysSet('referralContact', normalized.referralContact);
+                                }
+                                if (normalized.referralEmail && normalized.referralEmail.trim() !== '' && 
+                                    normalized.referralEmail.trim() !== normalized.referralName.trim()) {
+                                    alwaysSet('referralEmail', normalized.referralEmail);
+                                }
+                                if (normalized.referralAddress && normalized.referralAddress.trim() !== '' && 
+                                    normalized.referralAddress.trim() !== normalized.referralName.trim()) {
+                                    alwaysSet('referralAddress', normalized.referralAddress);
+                                }
+                            } else {
+                                // For non-doctor referrals, use maybeSet to avoid overwriting user input
+                                maybeSet('referralName', normalized.referralName);
+                            }
                             maybeSet('pulse', normalized.pulse);
                             maybeSet('height', normalized.height);
                             maybeSet('weight', normalized.weight);
@@ -767,13 +859,30 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
         return () => { cancelled = true; };
     }, [open, patientData?.patientId, referByOptions]);
 
-    // Auto-match referralName from last visit with referral doctors and patch fields
+    // Sync referralNameSearch with formData.referralName when data is loaded
+    React.useEffect(() => {
+        if (formData.referralName && formData.referralName.trim() !== '' && referralNameSearch !== formData.referralName) {
+            setReferralNameSearch(formData.referralName);
+        }
+    }, [formData.referralName]);
+
+    // Auto-match referralName from saved data with referral doctors and patch fields
     React.useEffect(() => {
         let cancelled = false;
         async function tryAutofillDoctorFromReferralName() {
             if (!open) return;
             const name = (formData.referralName || '').trim();
             if (!name) return;
+            // Only auto-match if referralBy is 'D' (Doctor) or if we have referral contact details
+            const isDoctorReferral = formData.referralBy === 'D';
+            const hasReferralDetails = formData.referralContact || formData.referralEmail || formData.referralAddress;
+            
+            // If it's not a doctor referral and we don't have details, skip
+            if (!isDoctorReferral && !hasReferralDetails) return;
+            
+            // If selectedDoctor is already set, don't re-run
+            if (selectedDoctor !== null) return;
+            
             try {
                 const { getReferralDoctors } = await import('../services/referralService');
                 const doctors = await getReferralDoctors(1);
@@ -782,13 +891,25 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                     setSelectedDoctor(match as any);
                     setFormData(prev => ({
                         ...prev,
-                        referralBy: 'D',
+                        referralBy: 'D', // Ensure it's set to 'D'
                         referralName: match.doctorName || prev.referralName,
-                        referralContact: match.doctorMob || '',
-                        referralEmail: (match as any).doctorMail || match.doctorEmail || '',
-                        referralAddress: (match as any).doctorAddress || match.doctorAddress || ''
+                        // Use saved values from API if they exist, otherwise use doctor's default values
+                        referralContact: prev.referralContact || match.doctorMob || '',
+                        referralEmail: prev.referralEmail || (match as any).doctorMail || match.doctorEmail || '',
+                        referralAddress: prev.referralAddress || (match as any).doctorAddress || match.doctorAddress || ''
                     }));
                     setReferralNameSearch(match.doctorName || name);
+                } else if (!cancelled && isDoctorReferral && hasReferralDetails) {
+                    // If we have a doctor referral with details but no match found, 
+                    // still set selectedDoctor to indicate it's a doctor (even if not in the list)
+                    // This allows the fields to remain populated from saved data and shows regular text field
+                    setSelectedDoctor({
+                        doctorName: name,
+                        doctorMob: formData.referralContact,
+                        doctorMail: formData.referralEmail,
+                        doctorAddress: formData.referralAddress
+                    } as any);
+                    setReferralNameSearch(name);
                 }
             } catch (e) {
                 console.error('Failed to auto-match referralName to doctor', e);
@@ -796,7 +917,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
         }
         tryAutofillDoctorFromReferralName();
         return () => { cancelled = true; };
-    }, [open, formData.referralName]);
+    }, [open, formData.referralName, formData.referralBy, formData.referralContact, formData.referralEmail, formData.referralAddress]);
 
     if (!open || !patientData) return null;
 
@@ -819,15 +940,20 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
             
             // Reset referral name search when referral type changes
             if (field === 'referralBy') {
-                setReferralNameSearch('');
-                setReferralNameOptions([]);
-                // Clear selected doctor if not a doctor referral
                 if (value !== 'D') {
+                    // Clear selected doctor if not a doctor referral
                     setSelectedDoctor(null);
+                    setReferralNameSearch('');
+                    setReferralNameOptions([]);
                     // Clear referral contact fields when not a doctor referral
                     newData.referralContact = '';
                     newData.referralEmail = '';
                     newData.referralAddress = '';
+                } else {
+                    // If changing to 'D', sync referralNameSearch with referralName if it exists
+                    if (newData.referralName && newData.referralName.trim() !== '') {
+                        setReferralNameSearch(newData.referralName);
+                    }
                 }
             }
             
@@ -1580,142 +1706,179 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     Referral Name
                                 </label>
                                 {isDoctorReferral() ? (
-                                    <div style={{ position: 'relative' }}>
+                                    // Show regular text field if referral name exists (data was patched/loaded)
+                                    // Show search field with add button only if no referral name exists yet
+                                    (formData.referralName && formData.referralName.trim() !== '') || selectedDoctor !== null ? (
                                         <input
                                             type="text"
-                                            placeholder="Search Doctor Name"
-                                            value={referralNameSearch}
-                                            onChange={(e) => handleReferralNameSearch(e.target.value)}
-                                            disabled={readOnly}
+                                            placeholder="Referral Name"
+                                            value={formData.referralName}
+                                            onChange={(e) => handleInputChange('referralName', e.target.value)}
+                                            disabled={readOnly || selectedDoctor !== null}
                                             style={{
                                                 width: '100%',
                                                 height: '32px',
                                                 padding: '4px 8px',
-                                                paddingRight: '40px',
                                                 border: '2px solid #B7B7B7',
                                                 borderRadius: '6px',
                                                 fontSize: '0.9rem',
                                                 fontFamily: "'Roboto', sans-serif",
                                                 fontWeight: '500',
-                                                backgroundColor: readOnly ? '#f5f5f5' : 'white',
+                                                backgroundColor: (readOnly || selectedDoctor !== null) ? '#f5f5f5' : 'white',
                                                 outline: 'none',
                                                 transition: 'border-color 0.2s',
-                                                cursor: readOnly ? 'not-allowed' : 'text'
+                                                cursor: selectedDoctor !== null ? 'not-allowed' : 'text'
                                             }}
                                             onFocus={(e) => {
-                                                if (!readOnly) {
+                                                if (selectedDoctor === null) {
                                                     e.target.style.borderColor = '#1E88E5';
                                                     e.target.style.boxShadow = 'none';
                                                 }
                                             }}
                                             onBlur={(e) => {
-                                                if (!readOnly) {
+                                                if (selectedDoctor === null) {
                                                     e.target.style.borderColor = '#B7B7B7';
                                                 }
                                             }}
                                         />
-                                        <button
-                                            type="button"
-                                            className="referral-add-icon"
-                                            onClick={() => !readOnly && setShowReferralPopup(true)}
-                                            disabled={readOnly}
-                                            style={{
-                                                position: 'absolute',
-                                                right: '4px',
-                                                top: '50%',
-                                                transform: 'translateY(-50%)',
-                                                backgroundColor: readOnly ? '#9e9e9e' : '#1976d2',
-                                                border: 'none',
-                                                cursor: readOnly ? 'not-allowed' : 'pointer',
-                                                padding: '2px',
-                                                borderRadius: '3px',
-                                                color: 'white',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                width: '16px',
-                                                opacity: readOnly ? 0.6 : 1,
-                                                height: '20px',
-                                                transition: 'background-color 0.2s'
-                                            }}
-                                            onMouseEnter={(e) => {
-                                                if (!readOnly) {
-                                                    e.currentTarget.style.backgroundColor = '#1565c0';
-                                                }
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                if (!readOnly) {
-                                                    e.currentTarget.style.backgroundColor = '#1976d2';
-                                                }
-                                            }}
-                                        >
-                                            <Add style={{ fontSize: '12px' }} />
-                                        </button>
-                                        
-                                        {/* Search Results Dropdown */}
-                                        {referralNameOptions.length > 0 && (
-                                            <div style={{
-                                                position: 'absolute',
-                                                top: '100%',
-                                                left: 0,
-                                                right: 0,
-                                                backgroundColor: 'white',
-                                                border: '1px solid #B7B7B7',
-                                                borderRadius: '6px',
-                                                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                                                zIndex: 1000,
-                                                maxHeight: '200px',
-                                                overflowY: 'auto'
-                                            }}>
-                                                {referralNameOptions.map((option) => (
-                                                    <div
-                                                        key={option.id}
-                                                        onClick={() => {
-                                                            // Store the selected doctor data
-                                                            setSelectedDoctor((option as any).fullData);
-                                                            
-                                                            // Update form data with doctor information
-                                                            setFormData(prev => ({ 
-                                                                ...prev, 
-                                                                referralName: option.name,
-                                                                referralContact: (option as any).fullData?.doctorMob || '',
-                                                                referralEmail: (option as any).fullData?.doctorMail || '',
-                                                                referralAddress: (option as any).fullData?.doctorAddress || ''
-                                                            }));
-                                                            
-                                                            setReferralNameSearch(option.name);
-                                                            setReferralNameOptions([]);
-                                                            
-                                                            console.log('=== DOCTOR SELECTED ===');
-                                                            console.log('Selected doctor data:', (option as any).fullData);
-                                                            console.log('Updated form data:', {
-                                                                referralName: option.name,
-                                                                referralContact: (option as any).fullData?.doctorMob || '',
-                                                                referralEmail: (option as any).fullData?.doctorMail || '',
-                                                                referralAddress: (option as any).fullData?.doctorAddress || ''
-                                                            });
-                                                            console.log('=== END DOCTOR SELECTED ===');
-                                                        }}
-                                                        style={{
-                                                            padding: '8px 12px',
-                                                            cursor: 'pointer',
-                                                            fontSize: '0.9rem',
-                                                            borderBottom: '1px solid #f0f0f0',
-                                                            transition: 'background-color 0.2s'
-                                                        }}
-                                                        onMouseEnter={(e) => {
-                                                            e.currentTarget.style.backgroundColor = '#f5f5f5';
-                                                        }}
-                                                        onMouseLeave={(e) => {
-                                                            e.currentTarget.style.backgroundColor = 'white';
-                                                        }}
-                                                    >
-                                                        {option.name}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
+                                    ) : (
+                                        <div style={{ position: 'relative' }}>
+                                            <input
+                                                type="text"
+                                                placeholder="Search Doctor Name"
+                                                value={referralNameSearch}
+                                                onChange={(e) => handleReferralNameSearch(e.target.value)}
+                                                disabled={readOnly}
+                                                style={{
+                                                    width: '100%',
+                                                    height: '32px',
+                                                    padding: '4px 8px',
+                                                    paddingRight: '40px',
+                                                    border: '2px solid #B7B7B7',
+                                                    borderRadius: '6px',
+                                                    fontSize: '0.9rem',
+                                                    fontFamily: "'Roboto', sans-serif",
+                                                    fontWeight: '500',
+                                                    backgroundColor: readOnly ? '#f5f5f5' : 'white',
+                                                    outline: 'none',
+                                                    transition: 'border-color 0.2s',
+                                                    cursor: readOnly ? 'not-allowed' : 'text'
+                                                }}
+                                                onFocus={(e) => {
+                                                    if (!readOnly) {
+                                                        e.target.style.borderColor = '#1E88E5';
+                                                        e.target.style.boxShadow = 'none';
+                                                    }
+                                                }}
+                                                onBlur={(e) => {
+                                                    if (!readOnly) {
+                                                        e.target.style.borderColor = '#B7B7B7';
+                                                    }
+                                                }}
+                                            />
+                                            <button
+                                                type="button"
+                                                className="referral-add-icon"
+                                                onClick={() => !readOnly && setShowReferralPopup(true)}
+                                                disabled={readOnly}
+                                                style={{
+                                                    position: 'absolute',
+                                                    right: '4px',
+                                                    top: '50%',
+                                                    transform: 'translateY(-50%)',
+                                                    backgroundColor: readOnly ? '#9e9e9e' : '#1976d2',
+                                                    border: 'none',
+                                                    cursor: readOnly ? 'not-allowed' : 'pointer',
+                                                    padding: '2px',
+                                                    borderRadius: '3px',
+                                                    color: 'white',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    width: '16px',
+                                                    opacity: readOnly ? 0.6 : 1,
+                                                    height: '20px',
+                                                    transition: 'background-color 0.2s'
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                    if (!readOnly) {
+                                                        e.currentTarget.style.backgroundColor = '#1565c0';
+                                                    }
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    if (!readOnly) {
+                                                        e.currentTarget.style.backgroundColor = '#1976d2';
+                                                    }
+                                                }}
+                                            >
+                                                <Add style={{ fontSize: '12px' }} />
+                                            </button>
+                                            
+                                            {/* Search Results Dropdown */}
+                                            {referralNameOptions.length > 0 && (
+                                                <div style={{
+                                                    position: 'absolute',
+                                                    top: '100%',
+                                                    left: 0,
+                                                    right: 0,
+                                                    backgroundColor: 'white',
+                                                    border: '1px solid #B7B7B7',
+                                                    borderRadius: '6px',
+                                                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                                                    zIndex: 1000,
+                                                    maxHeight: '200px',
+                                                    overflowY: 'auto'
+                                                }}>
+                                                    {referralNameOptions.map((option) => (
+                                                        <div
+                                                            key={option.id}
+                                                            onClick={() => {
+                                                                // Store the selected doctor data
+                                                                setSelectedDoctor((option as any).fullData);
+                                                                
+                                                                // Update form data with doctor information
+                                                                setFormData(prev => ({ 
+                                                                    ...prev, 
+                                                                    referralName: option.name,
+                                                                    referralContact: (option as any).fullData?.doctorMob || '',
+                                                                    referralEmail: (option as any).fullData?.doctorMail || '',
+                                                                    referralAddress: (option as any).fullData?.doctorAddress || ''
+                                                                }));
+                                                                
+                                                                setReferralNameSearch(option.name);
+                                                                setReferralNameOptions([]);
+                                                                
+                                                                console.log('=== DOCTOR SELECTED ===');
+                                                                console.log('Selected doctor data:', (option as any).fullData);
+                                                                console.log('Updated form data:', {
+                                                                    referralName: option.name,
+                                                                    referralContact: (option as any).fullData?.doctorMob || '',
+                                                                    referralEmail: (option as any).fullData?.doctorMail || '',
+                                                                    referralAddress: (option as any).fullData?.doctorAddress || ''
+                                                                });
+                                                                console.log('=== END DOCTOR SELECTED ===');
+                                                            }}
+                                                            style={{
+                                                                padding: '8px 12px',
+                                                                cursor: 'pointer',
+                                                                fontSize: '0.9rem',
+                                                                borderBottom: '1px solid #f0f0f0',
+                                                                transition: 'background-color 0.2s'
+                                                            }}
+                                                            onMouseEnter={(e) => {
+                                                                e.currentTarget.style.backgroundColor = '#f5f5f5';
+                                                            }}
+                                                            onMouseLeave={(e) => {
+                                                                e.currentTarget.style.backgroundColor = 'white';
+                                                            }}
+                                                        >
+                                                            {option.name}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )
                                 ) : (
                                     <input
                                         type="text"
@@ -3011,9 +3174,12 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
             onSave={(referralData: ReferralData) => {
                 // Handle save new referral logic here
                 console.log('New referral data:', referralData);
-                // You can add API call to save the new referral
-                // Example: await referralService.createReferral(referralData);
+                // Refresh referral name options after saving
+                if (isDoctorReferral()) {
+                    handleReferralNameSearch(referralData.doctorName || '');
+                }
             }}
+            clinicId={currentClinicId || String((patientData as any)?.clinicId || sessionDataForQuickReg?.clinicId || '')}
         />
 
         {/* Quick Registration Modal - appears on top of Patient Visit Details window */}

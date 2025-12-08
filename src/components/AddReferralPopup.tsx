@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Close } from '@mui/icons-material';
 import { Snackbar } from '@mui/material';
 import api from '../services/api';
@@ -7,6 +8,7 @@ interface AddReferralPopupProps {
     open: boolean;
     onClose: () => void;
     onSave: (referralData: ReferralData) => void;
+    clinicId?: string; // Required for saving referral doctor
 }
 
 interface ReferralData {
@@ -21,7 +23,7 @@ interface ReferralData {
     deleteFlag: boolean;
 }
 
-const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSave }) => {
+const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSave, clinicId }) => {
     const [formData, setFormData] = useState<ReferralData>({
         rdId: 0,
         doctorName: '',
@@ -52,9 +54,21 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
             return;
         }
         
+        if (!clinicId || clinicId.trim() === '') {
+            setSnackbarMessage('Clinic ID is required. Please ensure you are logged in with a valid clinic.');
+            setSnackbarOpen(true);
+            return;
+        }
+        
         try {
+            // Include clinicId in the payload
+            const payload = {
+                ...formData,
+                clinicId: clinicId
+            };
+            
             // Call the API to save the referral doctor
-            const response = await api.post('/referrals', formData);
+            const response = await api.post('/referrals', payload);
             console.log('Referral doctor saved successfully:', response.data);
             
             // Show success snackbar
@@ -81,9 +95,13 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
             setTimeout(() => {
                 onClose();
             }, 2000);
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error saving referral doctor:', error);
-            setSnackbarMessage('Failed to save referral doctor. Please try again.');
+            // Extract error message from API response
+            const errorMessage = error?.response?.data?.error || 
+                                error?.message || 
+                                'Failed to save referral doctor. Please try again.';
+            setSnackbarMessage(errorMessage);
             setSnackbarOpen(true);
         }
     };
@@ -105,7 +123,7 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
 
     if (!open) return null;
 
-    return (
+    const popupContent = (
         <>
         <div
             style={{
@@ -118,7 +136,8 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                zIndex: 10001,
+                zIndex: 13000, // Much higher than patient form dialog (11000)
+                pointerEvents: 'auto', // Ensure clicks work
             }}
             onClick={handleClose}
         >
@@ -133,6 +152,9 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
                     boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
                     display: 'flex',
                     flexDirection: 'column',
+                    pointerEvents: 'auto', // Ensure all interactions work
+                    position: 'relative', // Ensure proper stacking
+                    zIndex: 13001, // Higher than backdrop
                 }}
                 onClick={(e) => e.stopPropagation()}
             >
@@ -206,7 +228,10 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
                                     fontWeight: '500',
                                     backgroundColor: 'white',
                                     outline: 'none',
-                                    transition: 'border-color 0.2s'
+                                    transition: 'border-color 0.2s',
+                                    pointerEvents: 'auto',
+                                    zIndex: 13001,
+                                    position: 'relative'
                                 }}
                                 onFocus={(e) => {
                                     e.target.style.borderColor = '#1E88E5';
@@ -237,7 +262,10 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
                                     fontWeight: '500',
                                     backgroundColor: 'white',
                                     outline: 'none',
-                                    transition: 'border-color 0.2s'
+                                    transition: 'border-color 0.2s',
+                                    pointerEvents: 'auto',
+                                    zIndex: 13001,
+                                    position: 'relative'
                                 }}
                                 onFocus={(e) => {
                                     e.target.style.borderColor = '#1E88E5';
@@ -270,7 +298,10 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
                                     fontWeight: '500',
                                     backgroundColor: 'white',
                                     outline: 'none',
-                                    transition: 'border-color 0.2s'
+                                    transition: 'border-color 0.2s',
+                                    pointerEvents: 'auto',
+                                    zIndex: 13001,
+                                    position: 'relative'
                                 }}
                                 onFocus={(e) => {
                                     e.target.style.borderColor = '#1E88E5';
@@ -301,7 +332,10 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
                                     fontWeight: '500',
                                     backgroundColor: 'white',
                                     outline: 'none',
-                                    transition: 'border-color 0.2s'
+                                    transition: 'border-color 0.2s',
+                                    pointerEvents: 'auto',
+                                    zIndex: 13001,
+                                    position: 'relative'
                                 }}
                                 onFocus={(e) => {
                                     e.target.style.borderColor = '#1E88E5';
@@ -333,7 +367,10 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
                                 backgroundColor: 'white',
                                 outline: 'none',
                                 resize: 'vertical',
-                                transition: 'border-color 0.2s'
+                                transition: 'border-color 0.2s',
+                                pointerEvents: 'auto',
+                                zIndex: 13001,
+                                position: 'relative'
                             }}
                             onFocus={(e) => {
                                 e.target.style.borderColor = '#1E88E5';
@@ -414,7 +451,7 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
             message={snackbarMessage}
             anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
             sx={{
-                zIndex: 99999, // Ensure snackbar appears above everything
+                zIndex: 13001, // Ensure snackbar appears above referral popup (13000)
                 '& .MuiSnackbarContent-root': {
                     backgroundColor: snackbarMessage.includes('successfully') ? '#4caf50' : '#f44336',
                     color: 'white',
@@ -424,6 +461,9 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
         />
         </>
     );
+
+    // Use Portal to render outside Dialog's DOM hierarchy
+    return createPortal(popupContent, document.body);
 };
 
 export default AddReferralPopup;

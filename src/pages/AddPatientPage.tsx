@@ -75,10 +75,11 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
   const [genderOptions, setGenderOptions] = useState<{ id: string; name: string }[]>([])
   const [occupationOptions, setOccupationOptions] = useState<{ id: string; name: string }[]>([])
   const [maritalStatusOptions, setMaritalStatusOptions] = useState<{ id: string; name: string }[]>([])
-  const [areaOptions, setAreaOptions] = useState<{ id: string; name: string }[]>([])
+  const [areaOptions, setAreaOptions] = useState<{ id: string; name: string; cityId?: string }[]>([])
   const [areaInput, setAreaInput] = useState('')
   const [areaLoading, setAreaLoading] = useState(false)
   const [areaOpen, setAreaOpen] = useState(false)
+  const [selectedAreaCityId, setSelectedAreaCityId] = useState<string | null>(null)
   const [cityOptions, setCityOptions] = useState<{ id: string; name: string }[]>([])
   const [cityInput, setCityInput] = useState('')
   const [cityLoading, setCityLoading] = useState(false)
@@ -173,13 +174,29 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
               
               if (matchingArea) {
                 areaName = matchingArea.name
-                setAreaInput(areaName)
+                // Preserve cityId if available from API response
+                const areaWithCityId = {
+                  ...matchingArea,
+                  cityId: (matchingArea as any).cityId || undefined
+                }
+                // Add area to options first, then set input
                 setAreaOptions(prev => {
                   if (!prev.find(o => o.id === matchingArea.id)) {
-                    return [...prev, matchingArea]
+                    return [...prev, areaWithCityId]
                   }
                   return prev
                 })
+                // Set areaInput after a small delay to ensure options are updated
+                // Close dropdown when patching data
+                setTimeout(() => {
+                  setAreaInput(areaName)
+                  setAreaOpen(false) // Ensure dropdown is closed when patching
+                  // Store cityId for filtering cities
+                  if (areaWithCityId.cityId) {
+                    setSelectedAreaCityId(areaWithCityId.cityId)
+                    console.log('📋 Stored area cityId for filtering:', areaWithCityId.cityId)
+                  }
+                }, 0)
               } else {
                 console.warn('⚠️ Could not find area with ID:', patient.area_id, '- will try to fetch later when user searches')
               }
@@ -219,12 +236,9 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
               if (matchingCity) {
                 cityName = matchingCity.name
                 setCityInput(cityName)
-                setCityOptions(prev => {
-                  if (!prev.find(o => o.id === matchingCity.id)) {
-                    return [...prev, matchingCity]
-                  }
-                  return prev
-                })
+                // Filter cities to only show the one matching patient.city_id
+                setCityOptions([matchingCity])
+                console.log('📋 Set city options to filtered city:', matchingCity)
               } else {
                 console.warn('⚠️ Could not find city with ID:', patient.city_id, '- will try to fetch later when user searches')
                 // Set city_id as fallback if we can't find the name
@@ -244,6 +258,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
             if (patient.address_2) addressParts.push(patient.address_2)
             const fullAddress = addressParts.join(', ') || ''
             
+            // Set formData with area and city names (they should be in options by now)
             setFormData(prev => ({
               ...prev,
               patientId: patientId,
@@ -264,10 +279,21 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
               email: patient.email_id || '',
               occupation: patient.occupation_id ? String(patient.occupation_id) : '',
               maritalStatus: patient.marital_status_id ? String(patient.marital_status_id) : '',
-              // Referral fields might not be in basic patient data
+              // Referral fields from patient_master table
+              referredBy: patient.refer_id || prev.referredBy || 'Self',
+              referralName: patient.refer_doctor_details || prev.referralName || '',
+              referralContact: patient.doctor_mobile || prev.referralContact || '',
+              referralEmail: patient.doctor_email || prev.referralEmail || '',
+              referralAddress: patient.doctor_address || prev.referralAddress || '',
             }))
             
+            // Ensure areaInput is synced with the area name
+            if (areaName) {
+              setAreaInput(areaName)
+            }
+            
             console.log('✅ Patient data mapped to form successfully')
+            console.log('📍 Area name:', areaName, 'Area input:', areaInput)
           } catch (mappingError) {
             console.error('❌ Error mapping patient data:', mappingError)
             throw mappingError
@@ -318,15 +344,15 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
       regYear: '5', // Match Swagger format
       registrationStatus: 'P', // Default to 'P' for Pending
       userId: 'Recep2', // You might want to get this from session
-      referBy: selectedReferBy ? selectedReferBy.id : '',
-      referDoctorDetails: '',
+      referBy: selectedReferBy ? selectedReferBy.id : (formData.referredBy || ''),
+      referDoctorDetails: formData.referralName || '',
       maritalStatus: selectedMaritalStatus ? selectedMaritalStatus.id : '',
       occupation: selectedOccupation ? parseInt(selectedOccupation.id) : undefined,
       address: formData.address || '',
       patientEmail: formData.email || '',
-      doctorAddress: '',
-      doctorMobile: formData.mobileNumber, // Use patient's mobile as doctor mobile
-      doctorEmail: '',
+      doctorAddress: formData.referralAddress || '',
+      doctorMobile: formData.referralContact || '',
+      doctorEmail: formData.referralEmail || '',
       clinicId: currentClinicId
     }
 
@@ -385,15 +411,100 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
     }
   }, [])
 
+  // Sync referralNameSearch with formData.referralName when data is loaded
+  useEffect(() => {
+    if (formData.referralName && formData.referralName.trim() !== '' && referralNameSearch !== formData.referralName) {
+      setReferralNameSearch(formData.referralName)
+    }
+  }, [formData.referralName])
+
+  // Auto-match referralName from saved data with referral doctors and patch fields
+  useEffect(() => {
+    let cancelled = false
+    async function tryAutofillDoctorFromReferralName() {
+      if (!open) return
+      const name = (formData.referralName || '').trim()
+      if (!name) return
+      // Only auto-match if referralBy is 'D' (Doctor) or if we have referral contact details
+      const isDoctorReferral = formData.referredBy === 'D'
+      const hasReferralDetails = formData.referralContact || formData.referralEmail || formData.referralAddress
+      
+      // If it's not a doctor referral and we don't have details, skip
+      if (!isDoctorReferral && !hasReferralDetails) return
+      
+      // If selectedDoctor is already set, don't re-run
+      if (selectedDoctor !== null) return
+      
+      try {
+        const { getReferralDoctors } = await import('../services/referralService')
+        const doctors = await getReferralDoctors(1)
+        const match = doctors.find(d => (d.doctorName || '').trim().toLowerCase() === name.toLowerCase())
+        if (!cancelled && match) {
+          setSelectedDoctor(match as any)
+          setFormData(prev => ({
+            ...prev,
+            referredBy: 'D', // Ensure it's set to 'D'
+            referralName: match.doctorName || prev.referralName,
+            // Use saved values from API if they exist, otherwise use doctor's default values
+            referralContact: prev.referralContact || match.doctorMob || '',
+            referralEmail: prev.referralEmail || (match as any).doctorMail || match.doctorEmail || '',
+            referralAddress: prev.referralAddress || (match as any).doctorAddress || match.doctorAddress || ''
+          }))
+          setReferralNameSearch(match.doctorName || name)
+        } else if (!cancelled && isDoctorReferral && hasReferralDetails) {
+          // If we have a doctor referral with details but no match found, 
+          // still set selectedDoctor to indicate it's a doctor (even if not in the list)
+          // This allows the fields to remain populated from saved data and shows regular text field
+          setSelectedDoctor({
+            doctorName: name,
+            doctorMob: formData.referralContact,
+            doctorMail: formData.referralEmail,
+            doctorAddress: formData.referralAddress
+          } as any)
+          setReferralNameSearch(name)
+        }
+      } catch (e) {
+        console.error('Failed to auto-match referralName to doctor', e)
+      }
+    }
+    tryAutofillDoctorFromReferralName()
+    return () => { cancelled = true }
+  }, [open, formData.referralName, formData.referredBy, formData.referralContact, formData.referralEmail, formData.referralAddress])
+
   // Sync areaInput with formData.area when dialog opens or formData.area is set externally
   useEffect(() => {
-    if (open && formData.area && formData.area !== 'pune') {
+    if (open && formData.area && formData.area.trim() !== '' && formData.area !== 'pune') {
       // Only sync if areaInput is empty or doesn't match formData.area
       if (!areaInput || areaInput !== formData.area) {
         setAreaInput(formData.area)
+        setAreaOpen(false) // Close dropdown when syncing patched data
+        // Also ensure the area is in options if it's not already there
+        if (areaOptions.length > 0 && !areaOptions.find(o => o.name === formData.area)) {
+          // If area is not in options, try to search for it
+          const searchArea = async () => {
+            try {
+              const { searchAreas } = await import('../services/referenceService')
+              const results = await searchAreas(formData.area)
+              const match = results.find(a => a.name === formData.area)
+              if (match) {
+                setAreaOptions(prev => {
+                  if (!prev.find(o => o.id === match.id)) {
+                    return [...prev, match]
+                  }
+                  return prev
+                })
+                // Don't open dropdown when adding option for patched data
+                setAreaOpen(false)
+              }
+            } catch (e) {
+              console.error('Error searching for area:', e)
+            }
+          }
+          searchArea()
+        }
       }
     }
-  }, [open, formData.area])
+  }, [open, formData.area, areaInput, areaOptions])
 
   useEffect(() => {
     let active = true
@@ -405,10 +516,24 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
         const results = await searchAreas(areaInput)
         console.log('✅ Area search results:', results)
         if (active) {
-          setAreaOptions(results)
-          // Open dropdown if we have results
-          if (results.length > 0) {
-            setAreaOpen(true)
+          // Map results to include cityId from API response
+          const mappedResults = results.map((item: any) => ({
+            id: item.id || item.areaId || '',
+            name: item.name || item.areaName || '',
+            cityId: item.cityId || undefined
+          }))
+          setAreaOptions(mappedResults)
+          // Only open dropdown if we have results AND input doesn't match selected value
+          // (Prevent opening when data is patched and input matches selected area)
+          if (mappedResults.length > 0) {
+            const selectedAreaName = formData.area?.trim() || ''
+            const currentInput = areaInput?.trim() || ''
+            // Only open if user is actively searching (input doesn't match selected value)
+            if (selectedAreaName === '' || currentInput !== selectedAreaName) {
+              setAreaOpen(true)
+            } else {
+              setAreaOpen(false)
+            }
           }
         }
       } catch (e) {
@@ -441,16 +566,67 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
         active = false
       }
     }
-  }, [areaInput])
+  }, [areaInput, formData.area])
 
   useEffect(() => {
     let active = true
+    
+    // Get the area's cityId - check selectedAreaCityId first, then areaOptions, then formData.area
+    const getAreaCityId = (): string | null => {
+      if (selectedAreaCityId) {
+        return selectedAreaCityId
+      }
+      if (formData.area && areaOptions.length > 0) {
+        const selectedArea = areaOptions.find(a => a.name === formData.area)
+        if (selectedArea?.cityId) {
+          // Store it for future use
+          setSelectedAreaCityId(selectedArea.cityId)
+          return selectedArea.cityId
+        }
+      }
+      return null
+    }
+    
     const fetchCities = async () => {
       try {
         setCityLoading(true)
         const { searchCities } = await import('../services/referenceService')
-        const results = await searchCities(cityInput)
-        if (active) setCityOptions(results)
+        
+        // Get area's cityId
+        const areaCityId = getAreaCityId()
+        
+        // If there's input, search with that input
+        // If no input but area is selected, use a broad search to get cities
+        const searchTerm = cityInput && cityInput.trim().length > 0 
+          ? cityInput.trim() 
+          : (areaCityId ? 'a' : '') // Use 'a' to get cities if area is selected but no input
+        
+        if (!searchTerm && !areaCityId) {
+          // No search term and no area selected - clear options
+          if (active) setCityOptions([])
+          return
+        }
+        
+        // Search cities
+        const allResults = await searchCities(searchTerm)
+        
+        // Always filter by area's cityId if an area is selected
+        let filteredResults = allResults
+        if (areaCityId) {
+          filteredResults = allResults.filter(city => {
+            const matches = city.id === areaCityId || 
+                          city.id?.toUpperCase() === areaCityId.toUpperCase() ||
+                          String(city.id) === String(areaCityId)
+            return matches
+          })
+          console.log('🔍 Filtering cities by area cityId:', areaCityId)
+          console.log('📊 Search term:', searchTerm, 'Total results:', allResults.length, 'Filtered:', filteredResults.length)
+          console.log('📋 Filtered cities:', filteredResults)
+        } else {
+          console.log('⚠️ No area selected, showing all cities')
+        }
+        
+        if (active) setCityOptions(filteredResults)
       } catch (e) {
         console.error('Failed to search cities', e)
         if (active) setCityOptions([])
@@ -459,7 +635,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
       }
     }
 
-    // Only search if there's input (at least 1 character)
+    // Search if there's input OR if area is selected (to load related cities)
     if (cityInput && cityInput.trim().length > 0) {
       // Debounce user input
       const handle = setTimeout(() => {
@@ -470,14 +646,96 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
         active = false
         clearTimeout(handle)
       }
+    } else if (selectedAreaCityId || (formData.area && areaOptions.length > 0)) {
+      // If area is selected but no city input, load cities for that area
+      // Try multiple search terms to get more cities, then filter by area's cityId
+      const handle = setTimeout(() => {
+        const loadCitiesForArea = async () => {
+          try {
+            setCityLoading(true)
+            const { searchCities } = await import('../services/referenceService')
+            // Try multiple common search terms to get more cities
+            const searchTerms = ['a', 'e', 'i', 'o', 'u', 'p', 'm', 'd']
+            const allResultsSet = new Set<string>()
+            const allResults: { id: string; name: string }[] = []
+            
+            // Search with multiple terms and combine results
+            for (const term of searchTerms) {
+              try {
+                const results = await searchCities(term)
+                results.forEach(city => {
+                  const key = `${city.id}-${city.name}`
+                  if (!allResultsSet.has(key)) {
+                    allResultsSet.add(key)
+                    allResults.push(city)
+                  }
+                })
+              } catch (e) {
+                console.warn(`Failed to search cities with term "${term}":`, e)
+              }
+            }
+            
+            console.log('📋 Total cities found:', allResults.length)
+            
+            // Filter cities based on selected area's cityId
+            let filteredResults = allResults
+            if (selectedAreaCityId) {
+              filteredResults = allResults.filter(city => {
+                const matches = city.id === selectedAreaCityId || 
+                               city.id?.toUpperCase() === selectedAreaCityId.toUpperCase() ||
+                               String(city.id) === String(selectedAreaCityId)
+                return matches
+              })
+              console.log('🔍 Filtered cities for area (cityId:', selectedAreaCityId, '):', filteredResults)
+              console.log('📊 Filter details:', {
+                selectedAreaCityId,
+                totalCities: allResults.length,
+                filteredCount: filteredResults.length,
+                sampleCityIds: allResults.slice(0, 5).map(c => c.id)
+              })
+            } else if (formData.area) {
+              // Try to get cityId from areaOptions
+              const selectedArea = areaOptions.find(a => a.name === formData.area)
+              const areaCityId = selectedArea?.cityId
+              if (areaCityId) {
+                setSelectedAreaCityId(areaCityId)
+                filteredResults = allResults.filter(city => {
+                  const matches = city.id === areaCityId || 
+                                 city.id?.toUpperCase() === areaCityId.toUpperCase() ||
+                                 String(city.id) === String(areaCityId)
+                  return matches
+                })
+                console.log('🔍 Loaded cities for area (from options, cityId:', areaCityId, '):', filteredResults)
+              } else {
+                // If no cityId, show all cities (fallback)
+                filteredResults = allResults
+                console.log('⚠️ No cityId found for area, showing all cities')
+              }
+            }
+            
+            if (active) setCityOptions(filteredResults)
+          } catch (e) {
+            console.error('Failed to load cities for area', e)
+            if (active) setCityOptions([])
+          } finally {
+            if (active) setCityLoading(false)
+          }
+        }
+        loadCitiesForArea()
+      }, 300)
+
+      return () => {
+        active = false
+        clearTimeout(handle)
+      }
     } else {
-      // Clear options when input is empty
+      // Clear options when input is empty and no area selected
       if (active) setCityOptions([])
       return () => {
         active = false
       }
     }
-  }, [cityInput])
+  }, [cityInput, selectedAreaCityId, formData.area, areaOptions])
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => {
@@ -519,11 +777,16 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
       
       // Reset referral name search when referral type changes
       if (field === 'referredBy') {
-        setReferralNameSearch('')
-        setReferralNameOptions([])
-        // Clear selected doctor if not a doctor referral
         if (value !== 'D') {
+          // Clear selected doctor if not a doctor referral
           setSelectedDoctor(null)
+          setReferralNameSearch('')
+          setReferralNameOptions([])
+        } else {
+          // If changing to 'D', sync referralNameSearch with referralName if it exists
+          if (next.referralName && next.referralName.trim() !== '') {
+            setReferralNameSearch(next.referralName)
+          }
         }
       }
       
@@ -774,8 +1037,8 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
             field1: '',
             field2: '',
             gender: '',
-            area: 'pune',
-            city: 'Pune',
+            area: '',
+            city: '',
             patientId: '',
             maritalStatus: '',
             occupation: '',
@@ -790,6 +1053,13 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
             referralAddress: '',
             addToTodaysAppointment: true
           })
+          // Clear area and city related states
+          setAreaInput('')
+          setCityInput('')
+          setSelectedAreaCityId(null)
+          setAreaOptions([])
+          setCityOptions([])
+          setAreaOpen(false)
           // Clear doctor referral states
           setReferralNameSearch('')
           setReferralNameOptions([])
@@ -855,9 +1125,14 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
       }}
       BackdropProps={{
         sx: {
-          zIndex: 10999
+          zIndex: 10999,
+          // Disable backdrop pointer events when referral popup is open
+          pointerEvents: showReferralPopup ? 'none' : 'auto'
         }
       }}
+      // Disable Dialog's focus trap when referral popup is open to allow interactions
+      disableEnforceFocus={showReferralPopup}
+      disableAutoFocus={showReferralPopup}
     >
       <DialogTitle sx={{ 
         display: 'flex', 
@@ -1242,8 +1517,11 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         handleInputChange('area', '')
                         setAreaOpen(false)
                       } else if (newInput && newInput.trim().length > 0) {
-                        // Keep dropdown open when typing (it will be controlled by open prop)
-                        // Don't setAreaOpen(true) here, let the useEffect handle it when results arrive
+                        // If input matches selected value, don't open dropdown (patching scenario)
+                        if (formData.area && newInput.trim() === formData.area.trim()) {
+                          setAreaOpen(false)
+                        }
+                        // Otherwise, let the useEffect handle opening when results arrive
                       }
                     }}
                     onChange={(event, newValue, reason) => {
@@ -1251,19 +1529,89 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                       if (typeof newValue === 'string') {
                         handleInputChange('area', newValue)
                         setAreaInput(newValue)
+                        setAreaOpen(false) // Close dropdown when value is selected
+                        setSelectedAreaCityId(null) // Clear cityId for string input
+                        // Clear city when area changes
+                        handleInputChange('city', '')
+                        setCityInput('')
+                        setCityOptions([])
                       } else if (newValue) {
                         handleInputChange('area', newValue.name)
                         setAreaInput(newValue.name)
+                        setAreaOpen(false) // Close dropdown when value is selected
+                        // Store the area's cityId for filtering cities
+                        const areaCityId = newValue.cityId || null
+                        setSelectedAreaCityId(areaCityId)
+                        // Automatically fetch and set city when area is selected
+                        if (areaCityId) {
+                          // Fetch city name based on cityId
+                          const fetchCityForArea = async () => {
+                            try {
+                              const { searchCities } = await import('../services/referenceService')
+                              // Try multiple search terms to find the city
+                              const searchTerms = ['a', 'e', 'i', 'o', 'u', 'p', 'm', 'd']
+                              let matchingCity = null
+                              
+                              for (const term of searchTerms) {
+                                try {
+                                  const results = await searchCities(term)
+                                  matchingCity = results.find(city => {
+                                    const matches = city.id === areaCityId || 
+                                                   city.id?.toUpperCase() === areaCityId.toUpperCase() ||
+                                                   String(city.id) === String(areaCityId)
+                                    return matches
+                                  })
+                                  if (matchingCity) {
+                                    console.log(`✅ Found city for area (cityId: ${areaCityId}):`, matchingCity.name)
+                                    break
+                                  }
+                                } catch (e) {
+                                  console.warn(`Search failed for term "${term}":`, e)
+                                }
+                              }
+                              
+                              if (matchingCity) {
+                                handleInputChange('city', matchingCity.name)
+                                setCityInput(matchingCity.name)
+                              } else {
+                                // Clear city if not found
+                                handleInputChange('city', '')
+                                setCityInput('')
+                              }
+                            } catch (e) {
+                              console.error('Error fetching city for area:', e)
+                              handleInputChange('city', '')
+                              setCityInput('')
+                            }
+                          }
+                          fetchCityForArea()
+                        } else {
+                          // Clear city when area changes if no cityId
+                          handleInputChange('city', '')
+                          setCityInput('')
+                        }
+                        console.log('🔍 Area selected with cityId:', areaCityId)
                       } else if (reason === 'clear') {
                         handleInputChange('area', '')
                         setAreaInput('')
+                        setAreaOpen(false)
+                        setSelectedAreaCityId(null) // Clear selected area cityId
+                        // Clear city when area is cleared
+                        handleInputChange('city', '')
+                        setCityInput('')
+                        setCityOptions([])
                       }
                     }}
                     filterOptions={(options) => options}
-                    open={areaOpen && areaOptions.length > 0 && !areaLoading}
+                    open={areaOpen && areaOptions.length > 0 && !areaLoading && 
+                      // Don't open if input matches the selected value (patching scenario)
+                      !(formData.area && areaInput && areaInput.trim() === formData.area.trim())}
                     onOpen={() => {
-                      console.log('🔓 Area autocomplete opened, options:', areaOptions.length)
-                      setAreaOpen(true)
+                      // Only open if user is actively searching (input doesn't match selected value)
+                      if (!formData.area || !areaInput || areaInput.trim() !== formData.area.trim()) {
+                        console.log('🔓 Area autocomplete opened, options:', areaOptions.length)
+                        setAreaOpen(true)
+                      }
                     }}
                     onClose={(event, reason) => {
                       console.log('🔒 Area autocomplete closed:', reason)
@@ -1320,52 +1668,68 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                   <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
                     City
                   </Typography>
-                  <Autocomplete
-                    options={cityOptions}
-                    loading={cityLoading}
-                    disabled={loading || readOnly}
-                    getOptionLabel={(opt) => opt.name || ''}
-                    value={cityOptions.find(o => o.name === formData.city) || null}
-                    inputValue={cityInput}
-                    onInputChange={(_, newInput, reason) => {
-                      setCityInput(newInput)
-                      // Clear formData.city when user clears the input
-                      if (reason === 'clear' || !newInput) {
-                        handleInputChange('city', '')
-                      }
-                    }}
-                    onChange={(_, newValue) => {
-                      handleInputChange('city', newValue?.name || '')
-                      // Update input to show selected value
-                      if (newValue) {
-                        setCityInput(newValue.name)
-                      }
-                    }}
-                    filterOptions={(options) => options}
-                    slotProps={{
-                      popper: {
-                        style: {
-                          zIndex: 11001
+                  {formData.area && formData.area.trim() !== '' ? (
+                    // If area is selected, show regular TextField (no dropdown)
+                    <TextField
+                      fullWidth
+                      placeholder="City"
+                      value={formData.city}
+                      disabled={loading || readOnly}
+                      sx={{
+                        '& .MuiInputBase-input': {
+                          backgroundColor: readOnly ? '#f5f5f5' : 'white'
                         }
-                      }
-                    }}
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        fullWidth
-                        placeholder="Search City"
-                        disabled={loading || readOnly}
-                        InputProps={{
-                          ...params.InputProps,
-                          endAdornment: (
-                        <InputAdornment position="end" sx={{ pr: 1 }}>
-                              <Search sx={{ color: '#666' }} />
-                            </InputAdornment>
-                          )
-                        }}
-                      />
-                    )}
-                  />
+                      }}
+                    />
+                  ) : (
+                    // If no area is selected, show Autocomplete for searching
+                    <Autocomplete
+                      options={cityOptions}
+                      loading={cityLoading}
+                      disabled={loading || readOnly}
+                      getOptionLabel={(opt) => opt.name || ''}
+                      value={cityOptions.find(o => o.name === formData.city) || null}
+                      inputValue={cityInput}
+                      onInputChange={(_, newInput, reason) => {
+                        setCityInput(newInput)
+                        // Clear formData.city when user clears the input
+                        if (reason === 'clear' || !newInput) {
+                          handleInputChange('city', '')
+                        }
+                      }}
+                      onChange={(_, newValue) => {
+                        handleInputChange('city', newValue?.name || '')
+                        // Update input to show selected value
+                        if (newValue) {
+                          setCityInput(newValue.name)
+                        }
+                      }}
+                      filterOptions={(options) => options}
+                      slotProps={{
+                        popper: {
+                          style: {
+                            zIndex: 11001
+                          }
+                        }
+                      }}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          fullWidth
+                          placeholder="Search City"
+                          disabled={loading || readOnly}
+                          InputProps={{
+                            ...params.InputProps,
+                            endAdornment: (
+                          <InputAdornment position="end" sx={{ pr: 1 }}>
+                                <Search sx={{ color: '#666' }} />
+                              </InputAdornment>
+                            )
+                          }}
+                        />
+                      )}
+                    />
+                  )}
                 </Box>
               </Grid>
               <Grid item xs={12} md={3}>
@@ -1536,94 +1900,112 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     Referral Name
                   </Typography>
                   {isDoctorReferral() ? (
-                    <Box sx={{ position: 'relative' }}>
+                    // Show regular text field if referral name exists (data was patched/loaded)
+                    // Show search field with add button only if no referral name exists yet
+                    (formData.referralName && formData.referralName.trim() !== '') || selectedDoctor !== null ? (
                       <TextField
                         fullWidth
-                        placeholder="Search Doctor Name"
-                        value={referralNameSearch}
-                        onChange={(e) => handleReferralNameSearch(e.target.value)}
-                        disabled={loading || readOnly}
-                        InputProps={{
-                          endAdornment: (
-                            <InputAdornment position="end">
-                              <IconButton
-                                size="small"
-                                onClick={() => setShowReferralPopup(true)}
-                                sx={{
-                                  backgroundColor: '#1976d2',
-                                  color: 'white',
-                                  '&:hover': { backgroundColor: '#1565c0' },
-                                  width: 24,
-                                  height: 24,
-                                  borderRadius: '3px'
-                                }}
-                              >
-                                <Add fontSize="small" />
-                              </IconButton>
-                            </InputAdornment>
-                          )
+                        placeholder="Referral Name"
+                        value={formData.referralName}
+                        onChange={(e) => handleInputChange('referralName', e.target.value)}
+                        disabled={loading || readOnly || selectedDoctor !== null}
+                        sx={{
+                          '& .MuiInputBase-input': {
+                            backgroundColor: selectedDoctor !== null ? '#f5f5f5' : 'white',
+                            cursor: selectedDoctor !== null ? 'not-allowed' : 'text'
+                          }
                         }}
                       />
-                      
-                      {/* Search Results Dropdown */}
-                      {referralNameOptions.length > 0 && (
-                        <Box sx={{
-                          position: 'absolute',
-                          top: '100%',
-                          left: 0,
-                          right: 0,
-                          backgroundColor: 'white',
-                          border: '1px solid #B7B7B7',
-                          borderRadius: '6px',
-                          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                          zIndex: 11001,
-                          maxHeight: '200px',
-                          overflowY: 'auto'
-                        }}>
-                          {referralNameOptions.map((option) => (
-                            <Box
-                              key={option.id}
-                              onClick={() => {
-                                // Store the selected doctor data
-                                setSelectedDoctor((option as any).fullData)
-                                
-                                // Update form data with doctor information
-                                setFormData(prev => ({ 
-                                  ...prev, 
-                                  referralName: option.name,
-                                  referralContact: (option as any).fullData?.doctorMob || '',
-                                  referralEmail: (option as any).fullData?.doctorMail || '',
-                                  referralAddress: (option as any).fullData?.doctorAddress || ''
-                                }))
-                                
-                                setReferralNameSearch(option.name)
-                                setReferralNameOptions([])
-                                
-                                console.log('=== DOCTOR SELECTED ===')
-                                console.log('Selected doctor data:', (option as any).fullData)
-                                console.log('Updated form data:', {
-                                  referralName: option.name,
-                                  referralContact: (option as any).fullData?.doctorMob || '',
-                                  referralEmail: (option as any).fullData?.doctorMail || '',
-                                  referralAddress: (option as any).fullData?.doctorAddress || ''
-                                })
-                                console.log('=== END DOCTOR SELECTED ===')
-                              }}
-                              sx={{
-                                padding: '8px 12px',
-                                cursor: 'pointer',
-                                fontSize: '0.9rem',
-                                borderBottom: '1px solid #f0f0f0',
-                                transition: 'background-color 0.2s',
-                                '&:hover': { backgroundColor: '#f5f5f5' }
-                              }}
-                            >
-                              {option.name}
-                            </Box>
-                          ))}
-                        </Box>
-                      )}
-                    </Box>
+                    ) : (
+                      <Box sx={{ position: 'relative' }}>
+                        <TextField
+                          fullWidth
+                          placeholder="Search Doctor Name"
+                          value={referralNameSearch}
+                          onChange={(e) => handleReferralNameSearch(e.target.value)}
+                          disabled={loading || readOnly}
+                          InputProps={{
+                            endAdornment: (
+                              <InputAdornment position="end">
+                                <IconButton
+                                  size="small"
+                                  onClick={() => setShowReferralPopup(true)}
+                                  sx={{
+                                    backgroundColor: '#1976d2',
+                                    color: 'white',
+                                    '&:hover': { backgroundColor: '#1565c0' },
+                                    width: 24,
+                                    height: 24,
+                                    borderRadius: '3px'
+                                  }}
+                                >
+                                  <Add fontSize="small" />
+                                </IconButton>
+                              </InputAdornment>
+                            )
+                          }}
+                        />
+                        
+                        {/* Search Results Dropdown */}
+                        {referralNameOptions.length > 0 && (
+                          <Box sx={{
+                            position: 'absolute',
+                            top: '100%',
+                            left: 0,
+                            right: 0,
+                            backgroundColor: 'white',
+                            border: '1px solid #B7B7B7',
+                            borderRadius: '6px',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                            zIndex: 11001,
+                            maxHeight: '200px',
+                            overflowY: 'auto'
+                          }}>
+                            {referralNameOptions.map((option) => (
+                              <Box
+                                key={option.id}
+                                onClick={() => {
+                                  // Store the selected doctor data
+                                  setSelectedDoctor((option as any).fullData)
+                                  
+                                  // Update form data with doctor information
+                                  setFormData(prev => ({ 
+                                    ...prev, 
+                                    referralName: option.name,
+                                    referralContact: (option as any).fullData?.doctorMob || '',
+                                    referralEmail: (option as any).fullData?.doctorMail || '',
+                                    referralAddress: (option as any).fullData?.doctorAddress || ''
+                                  }))
+                                  
+                                  setReferralNameSearch(option.name)
+                                  setReferralNameOptions([])
+                                  
+                                  console.log('=== DOCTOR SELECTED ===')
+                                  console.log('Selected doctor data:', (option as any).fullData)
+                                  console.log('Updated form data:', {
+                                    referralName: option.name,
+                                    referralContact: (option as any).fullData?.doctorMob || '',
+                                    referralEmail: (option as any).fullData?.doctorMail || '',
+                                    referralAddress: (option as any).fullData?.doctorAddress || ''
+                                  })
+                                  console.log('=== END DOCTOR SELECTED ===')
+                                }}
+                                sx={{
+                                  padding: '8px 12px',
+                                  cursor: 'pointer',
+                                  fontSize: '0.9rem',
+                                  borderBottom: '1px solid #f0f0f0',
+                                  transition: 'background-color 0.2s',
+                                  '&:hover': { backgroundColor: '#f5f5f5' }
+                                }}
+                              >
+                                {option.name}
+                              </Box>
+                            ))}
+                          </Box>
+                        )}
+                      </Box>
+                    )
                   ) : (
                     <TextField
                       fullWidth
@@ -1740,8 +2122,8 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                 field1: '',
                 field2: '',
                 gender: '',
-                area: 'pune',
-                city: 'Pune',
+                area: '',
+                city: '',
                 patientId: '',
                 maritalStatus: '',
                 occupation: '',
@@ -1757,6 +2139,13 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                 addToTodaysAppointment: true
               })
               setErrors({})
+              // Clear area and city related states
+              setAreaInput('')
+              setCityInput('')
+              setSelectedAreaCityId(null)
+              setAreaOptions([])
+              setCityOptions([])
+              setAreaOpen(false)
               // Clear doctor referral states
               setReferralNameSearch('')
               setReferralNameOptions([])
@@ -1811,9 +2200,12 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
       onSave={(referralData: ReferralData) => {
         // Handle save new referral logic here
         console.log('New referral data:', referralData)
-        // You can add API call to save the new referral
-        // Example: await referralService.createReferral(referralData);
+        // Refresh referral name options after saving
+        if (isDoctorReferral()) {
+          handleReferralNameSearch(referralData.doctorName || '')
+        }
       }}
+      clinicId={currentClinicId}
     />
   </>)
 }

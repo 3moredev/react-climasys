@@ -54,6 +54,7 @@ export async function getMaritalStatuses(): Promise<OptionItem[]> {
 export interface AreaItem {
   id: string
   name: string
+  cityId?: string
 }
 
 function mapAreaItem(item: any): AreaItem {
@@ -76,7 +77,8 @@ export async function searchAreas(query?: string): Promise<AreaItem[]> {
   return basicAreaSearch.map((item: any) => {
     const id = item?.areaId ?? item?.id ?? ''
     const name = item?.areaName ?? item?.name ?? String(id)
-    return { id: String(id), name: String(name) }
+    const cityId = item?.cityId
+    return { id: String(id), name: String(name), cityId: cityId ? String(cityId) : undefined }
   })
 }
 

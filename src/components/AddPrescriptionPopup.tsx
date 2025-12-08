@@ -80,7 +80,15 @@ const AddPrescriptionPopup: React.FC<AddPrescriptionPopupProps> = ({
 
     useEffect(() => {
         if (open) {
-            setPrescriptionData(initialData ? initialData : createDefaultPrescription());
+            if (initialData) {
+                // Ensure addToActiveList is properly set (default to true if undefined)
+                setPrescriptionData({
+                    ...initialData,
+                    addToActiveList: initialData.addToActiveList ?? true
+                });
+            } else {
+                setPrescriptionData(createDefaultPrescription());
+            }
         }
     }, [open, initialData]);
 
@@ -539,7 +547,7 @@ const AddPrescriptionPopup: React.FC<AddPrescriptionPopupProps> = ({
                                     style={{
                                         width: '100%',
                                         padding: '8px 12px',
-                                        border: '1px solid #ccc',
+                                        border: '1px solid #ccc', 
                                         borderRadius: '4px',
                                         fontSize: '13px',
                                         backgroundColor: 'white',
@@ -590,7 +598,7 @@ const AddPrescriptionPopup: React.FC<AddPrescriptionPopupProps> = ({
                                 }}>
                                     <input
                                         type="checkbox"
-                                        checked={prescriptionData.addToActiveList ?? true}
+                                        checked={prescriptionData.addToActiveList !== undefined ? prescriptionData.addToActiveList : true}
                                         onChange={(e) => handleInputChange('addToActiveList', e.target.checked)}
                                         style={{
                                             marginRight: '8px',

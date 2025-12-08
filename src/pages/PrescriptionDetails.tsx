@@ -22,6 +22,7 @@ type PrescriptionRow = {
   days: number
   instruction: string
   providerId: string
+  addToActiveList?: boolean
 }
 
 const INITIAL_PRESCRIPTIONS: PrescriptionRow[] = [
@@ -99,6 +100,7 @@ export default function PrescriptionDetails() {
     days: apiModel.noOfDays ?? 0,
     instruction: apiModel.instruction || '',
     providerId: apiModel.doctorId,
+    addToActiveList: apiModel.active ?? true, // Map 'active' field from API to 'addToActiveList'
   })
 
   const loadPrescriptions = useCallback(
@@ -209,6 +211,7 @@ export default function PrescriptionDetails() {
         noOfDays: data.days ? parseInt(data.days, 10) || 0 : 0,
         instruction: newInstruction,
         doctorId: selectedDoctorId,
+        active: data.addToActiveList ?? true, // Include active field from addToActiveList
       }
 
       if (editingRow) {
@@ -309,6 +312,7 @@ export default function PrescriptionDetails() {
       dinner: editingRow.dinner.toString(),
       days: editingRow.days.toString(),
       priority: editingRow.priority.toString(),
+      addToActiveList: editingRow.addToActiveList ?? true, // Include addToActiveList from row data
     }
     : null
 
