@@ -533,7 +533,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
               </Typography>
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', minWidth: '120px', justifyContent: 'flex-end' }}>
-              <Tooltip title={sessionLoading ? 'Loading...' : `${displayUsername} (${displayDoctorName})`}>
+              <Tooltip title={sessionLoading ? 'Loading...' : `${displayUsername} (${displayClinicName})`}>
                 <IconButton
                   size="medium"
                   aria-label="account of current user"
