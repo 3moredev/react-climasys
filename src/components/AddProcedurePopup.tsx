@@ -579,7 +579,7 @@ const AddProcedurePopup: React.FC<AddProcedurePopupProps> = ({ open, onClose, on
                     </div>
                 </div>
 
-                {/* Popup Footer */}
+                {/* Popup Footer - Submit / Cancel / Back (match other popups) */}
                 <div style={{
                     background: 'transparent',
                     padding: '0 20px 20px',
@@ -594,7 +594,7 @@ const AddProcedurePopup: React.FC<AddProcedurePopupProps> = ({ open, onClose, on
                         disabled={loading}
                         style={{
                             padding: '8px 16px',
-                            backgroundColor: loading ? '#ccc' : '#1976d2',
+                            backgroundColor: '#1976d2',
                             color: 'white',
                             border: 'none',
                             borderRadius: '4px',
@@ -618,6 +618,54 @@ const AddProcedurePopup: React.FC<AddProcedurePopupProps> = ({ open, onClose, on
                         }}
                     >
                         {loading ? 'Saving...' : 'Submit'}
+                    </button>
+                    <button
+                        onClick={handleCancel}
+                        style={{
+                            padding: '8px 16px',
+                            backgroundColor: '#1976d2',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            fontFamily: "'Roboto', sans-serif",
+                            fontWeight: '500',
+                            transition: 'background-color 0.2s',
+                            whiteSpace: 'nowrap'
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = '#1565c0';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = '#1976d2';
+                        }}
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={handleBack}
+                        style={{
+                            padding: '8px 16px',
+                            backgroundColor: '#1976d2',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            fontFamily: "'Roboto', sans-serif",
+                            fontWeight: '500',
+                            transition: 'background-color 0.2s',
+                            whiteSpace: 'nowrap'
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = '#1565c0';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = '#1976d2';
+                        }}
+                    >
+                        Back
                     </button>
                 </div>
             </div>

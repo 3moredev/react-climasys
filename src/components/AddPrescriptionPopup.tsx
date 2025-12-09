@@ -150,6 +150,12 @@ const AddPrescriptionPopup: React.FC<AddPrescriptionPopupProps> = ({
         }));
     };
 
+    // Restrict certain fields to numeric input only
+    const handleNumericChange = (field: keyof PrescriptionData, rawValue: string) => {
+        const cleaned = rawValue.replace(/\D/g, '');
+        handleInputChange(field, cleaned);
+    };
+
     const handleSave = () => {
         // Validate required fields
         if (!prescriptionData.categoryName.trim()) {
@@ -474,7 +480,7 @@ const AddPrescriptionPopup: React.FC<AddPrescriptionPopupProps> = ({
                                     type="text"
                                     placeholder="Breakfast"
                                     value={prescriptionData.breakfast}
-                                    onChange={(e) => handleInputChange('breakfast', e.target.value)}
+                                    onChange={(e) => handleNumericChange('breakfast', e.target.value)}
                                     style={{
                                         width: '100%',
                                         padding: '8px 12px',
@@ -497,7 +503,7 @@ const AddPrescriptionPopup: React.FC<AddPrescriptionPopupProps> = ({
                                     type="text"
                                     placeholder="Lunch"
                                     value={prescriptionData.lunch}
-                                    onChange={(e) => handleInputChange('lunch', e.target.value)}
+                                    onChange={(e) => handleNumericChange('lunch', e.target.value)}
                                     style={{
                                         width: '100%',
                                         padding: '8px 12px',
@@ -520,7 +526,7 @@ const AddPrescriptionPopup: React.FC<AddPrescriptionPopupProps> = ({
                                     type="text"
                                     placeholder="Dinner"
                                     value={prescriptionData.dinner}
-                                    onChange={(e) => handleInputChange('dinner', e.target.value)}
+                                    onChange={(e) => handleNumericChange('dinner', e.target.value)}
                                     style={{
                                         width: '100%',
                                         padding: '8px 12px',
@@ -543,7 +549,7 @@ const AddPrescriptionPopup: React.FC<AddPrescriptionPopupProps> = ({
                                     type="text"
                                     placeholder="Days"
                                     value={prescriptionData.days}
-                                    onChange={(e) => handleInputChange('days', e.target.value)}
+                                    onChange={(e) => handleNumericChange('days', e.target.value)}
                                     style={{
                                         width: '100%',
                                         padding: '8px 12px',
@@ -566,7 +572,7 @@ const AddPrescriptionPopup: React.FC<AddPrescriptionPopupProps> = ({
                                     type="text"
                                     placeholder="Priority"
                                     value={prescriptionData.priority}
-                                    onChange={(e) => handleInputChange('priority', e.target.value)}
+                                    onChange={(e) => handleNumericChange('priority', e.target.value)}
                                     style={{
                                         width: '100%',
                                         padding: '8px 12px',
@@ -614,7 +620,7 @@ const AddPrescriptionPopup: React.FC<AddPrescriptionPopupProps> = ({
                     </div>
                 </div>
 
-                {/* Popup Footer - single Submit button aligned to bottom right */}
+                {/* Popup Footer - Submit / Cancel / Back (same styling as complaints) */}
                 <div
                     style={{
                         background: 'transparent',
@@ -623,12 +629,13 @@ const AddPrescriptionPopup: React.FC<AddPrescriptionPopupProps> = ({
                         borderBottomRightRadius: '8px',
                         display: 'flex',
                         justifyContent: 'flex-end',
+                        gap: '8px'
                     }}
                 >
                     <button
                         onClick={handleSave}
                         style={{
-                            padding: '8px 24px',
+                            padding: '8px 16px',
                             backgroundColor: '#1976d2',
                             color: 'white',
                             border: 'none',
@@ -647,6 +654,52 @@ const AddPrescriptionPopup: React.FC<AddPrescriptionPopupProps> = ({
                         }}
                     >
                         Submit
+                    </button>
+                    <button
+                        onClick={handleClose}
+                        style={{
+                            padding: '8px 16px',
+                            backgroundColor: '#1976d2',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '14px',
+                            fontWeight: '500',
+                            transition: 'background-color 0.2s',
+                            fontFamily: "'Roboto', sans-serif",
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = '#1565c0';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = '#1976d2';
+                        }}
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={handleClose}
+                        style={{
+                            padding: '8px 16px',
+                            backgroundColor: '#1976d2',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '14px',
+                            fontWeight: '500',
+                            transition: 'background-color 0.2s',
+                            fontFamily: "'Roboto', sans-serif",
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = '#1565c0';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = '#1976d2';
+                        }}
+                    >
+                        Back
                     </button>
                 </div>
             </div>
