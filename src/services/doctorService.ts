@@ -70,7 +70,7 @@ export const doctorService = {
   async getAllDoctors(): Promise<Doctor[]> {
     try {
       console.log('Fetching all doctors...');
-      const response = await api.get('/doctors/all');
+      const response = await api.get('/doctors/all-doctors');
       console.log('Get all doctors response:', response.data);
 
       const data = Array.isArray(response.data) ? response.data : [];
