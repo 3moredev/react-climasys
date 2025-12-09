@@ -251,8 +251,18 @@ export default function PrescriptionDetails() {
       setSnackbarOpen(true)
     } catch (err: any) {
       console.error('Error saving prescription:', err)
-      setError(err.message || 'Failed to save prescription')
-      setSnackbarMessage(err.message || (editingRow ? 'Failed to update prescription' : 'Failed to create prescription'))
+      const rawMessage = err?.message || ''
+      const isDuplicate =
+        typeof rawMessage === 'string' &&
+        rawMessage.toLowerCase().includes('prescription medicine with medicine name')
+
+      if (isDuplicate) {
+        setError('Record already exists')
+        setSnackbarMessage('Record already exists')
+      } else {
+        setError(rawMessage || 'Failed to save prescription')
+        setSnackbarMessage(rawMessage || (editingRow ? 'Failed to update prescription' : 'Failed to create prescription'))
+      }
       setSnackbarOpen(true)
     } finally {
       setLoadingPrescriptions(false)

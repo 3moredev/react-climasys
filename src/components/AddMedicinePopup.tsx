@@ -7,7 +7,7 @@ import { sessionService } from '../services/sessionService';
 export interface MedicineData {
     shortDescription: string;
     medicineName: string;
-    priority: string;
+    priority: string;    
     breakfast: string;
     lunch: string;
     dinner: string;
@@ -210,6 +210,12 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
         handleClose();
     };
 
+    // Numeric-only helper for dose/priority inputs
+    const handleNumericChange = (setter: (v: string) => void, rawValue: string) => {
+        const cleaned = rawValue.replace(/\D/g, '');
+        setter(cleaned);
+    };
+
     if (!open) return null;
 
     return (
@@ -347,7 +353,7 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                                     type="text"
                                     placeholder="Priority"
                                     value={priority}
-                                    onChange={(e) => setPriority(e.target.value)}
+                                    onChange={(e) => handleNumericChange(setPriority, e.target.value)}
                                     style={{
                                         width: '100%',
                                         padding: '8px 12px',
@@ -370,7 +376,7 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                                     type="text"
                                     placeholder="Breakfast"
                                     value={breakfast}
-                                    onChange={(e) => setBreakfast(e.target.value)}
+                                    onChange={(e) => handleNumericChange(setBreakfast, e.target.value)}
                                     style={{
                                         width: '100%',
                                         padding: '8px 12px',
@@ -414,7 +420,7 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                                     type="text"
                                     placeholder="Lunch"
                                     value={lunch}
-                                    onChange={(e) => setLunch(e.target.value)}
+                                    onChange={(e) => handleNumericChange(setLunch, e.target.value)}
                                     style={{
                                         width: '100%',
                                         padding: '8px 12px',
@@ -437,7 +443,7 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                                     type="text"
                                     placeholder="Dinner"
                                     value={dinner}
-                                    onChange={(e) => setDinner(e.target.value)}
+                                    onChange={(e) => handleNumericChange(setDinner, e.target.value)}
                                     style={{
                                         width: '100%',
                                         padding: '8px 12px',
@@ -460,7 +466,7 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                                     type="text"
                                     placeholder="Days"
                                     value={days}
-                                    onChange={(e) => setDays(e.target.value)}
+                                    onChange={(e) => handleNumericChange(setDays, e.target.value)}
                                     style={{
                                         width: '100%',
                                         padding: '8px 12px',
@@ -507,7 +513,7 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                     </div>
                 </div>
 
-                {/* Popup Footer */}
+                {/* Popup Footer - Submit / Cancel / Back */}
                 <div style={{
                     background: 'transparent',
                     padding: '0 20px 20px',
@@ -546,6 +552,54 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                         }}
                     >
                         {loading ? 'Saving...' : 'Submit'}
+                    </button>
+                    <button
+                        onClick={handleCancel}
+                        style={{
+                            padding: '8px 16px',
+                            backgroundColor: '#1976d2',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            fontFamily: "'Roboto', sans-serif",
+                            fontWeight: '500',
+                            transition: 'background-color 0.2s',
+                            whiteSpace: 'nowrap'
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = '#1565c0';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = '#1976d2';
+                        }}
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={handleBack}
+                        style={{
+                            padding: '8px 16px',
+                            backgroundColor: '#1976d2',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            fontFamily: "'Roboto', sans-serif",
+                            fontWeight: '500',
+                            transition: 'background-color 0.2s',
+                            whiteSpace: 'nowrap'
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = '#1565c0';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = '#1976d2';
+                        }}
+                    >
+                        Back
                     </button>
                 </div>
             </div>
