@@ -54,8 +54,8 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
     field1: '',
     field2: 'Years',
     gender: '',
-    area: 'pune',
-    city: 'Pune',
+    area: '',
+    city: '',
     patientId: '',
     maritalStatus: '',
     occupation: '',
@@ -319,6 +319,12 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
     const selectedMaritalStatus = maritalStatusOptions.find(opt => opt.id === formData.maritalStatus)
     const selectedOccupation = occupationOptions.find(opt => opt.id === formData.occupation)
     const selectedReferBy = referByOptions.find(opt => opt.id === formData.referredBy)
+    // referId is char(1) in DB; guard against longer values (e.g., "Self")
+    const normalizedReferId = (() => {
+      const raw = selectedReferBy ? selectedReferBy.id : (formData.referredBy || '')
+      if (!raw) return ''
+      return String(raw).trim().charAt(0) // ensure max length 1
+    })()
 
     console.log('=== MAPPING FORM DATA TO API REQUEST ===')
     console.log('Selected Area:', selectedArea)
@@ -344,7 +350,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
       regYear: '5', // Match Swagger format
       registrationStatus: 'P', // Default to 'P' for Pending
       userId: 'Recep2', // You might want to get this from session
-      referBy: selectedReferBy ? selectedReferBy.id : (formData.referredBy || ''),
+      referBy: normalizedReferId,
       referDoctorDetails: formData.referralName || '',
       maritalStatus: selectedMaritalStatus ? selectedMaritalStatus.id : '',
       occupation: selectedOccupation ? parseInt(selectedOccupation.id) : undefined,
@@ -472,10 +478,13 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
   }, [open, formData.referralName, formData.referredBy, formData.referralContact, formData.referralEmail, formData.referralAddress])
 
   // Sync areaInput with formData.area when dialog opens or formData.area is set externally
+  // Only sync when data is being patched (not when user is actively editing)
   useEffect(() => {
     if (open && formData.area && formData.area.trim() !== '' && formData.area !== 'pune') {
       // Only sync if areaInput is empty or doesn't match formData.area
-      if (!areaInput || areaInput !== formData.area) {
+      // But don't sync if user is actively editing (input exists and doesn't match)
+      const isUserEditing = areaInput && areaInput.trim() !== '' && areaInput !== formData.area
+      if (!isUserEditing && (!areaInput || areaInput !== formData.area)) {
         setAreaInput(formData.area)
         setAreaOpen(false) // Close dropdown when syncing patched data
         // Also ensure the area is in options if it's not already there
@@ -523,17 +532,12 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
             cityId: item.cityId || undefined
           }))
           setAreaOptions(mappedResults)
-          // Only open dropdown if we have results AND input doesn't match selected value
-          // (Prevent opening when data is patched and input matches selected area)
-          if (mappedResults.length > 0) {
-            const selectedAreaName = formData.area?.trim() || ''
-            const currentInput = areaInput?.trim() || ''
-            // Only open if user is actively searching (input doesn't match selected value)
-            if (selectedAreaName === '' || currentInput !== selectedAreaName) {
-              setAreaOpen(true)
-            } else {
-              setAreaOpen(false)
-            }
+          // Open dropdown if we have results and user is actively searching
+          // Allow opening even if input matches selected value (user might want to change it)
+          if (mappedResults.length > 0 && areaInput && areaInput.trim().length > 0) {
+            // Only prevent opening if this is initial data patching (no user interaction)
+            // We'll let onOpen handler control this instead
+            // Don't auto-open here - let user interaction control it
           }
         }
       } catch (e) {
@@ -1507,21 +1511,33 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                       if (typeof opt === 'string') return opt
                       return opt.name || ''
                     }}
-                    value={formData.area ? (areaOptions.find(o => o.name === formData.area) || null) : null}
+                    value={formData.area && areaInput === formData.area ? (areaOptions.find(o => o.name === formData.area) || null) : null}
                     inputValue={areaInput || ''}
                     onInputChange={(event, newInput, reason) => {
                       console.log('📝 Area input changed:', { newInput, reason, event: event?.type })
                       setAreaInput(newInput || '')
-                      // Clear formData.area when user clears the input
+                      // Clear formData.area when user clears the input or when input doesn't match selected area
                       if (reason === 'clear' || !newInput) {
                         handleInputChange('area', '')
                         setAreaOpen(false)
+                        setSelectedAreaCityId(null)
+                        // Clear city when area is cleared
+                        handleInputChange('city', '')
+                        setCityInput('')
+                        setCityOptions([])
                       } else if (newInput && newInput.trim().length > 0) {
-                        // If input matches selected value, don't open dropdown (patching scenario)
-                        if (formData.area && newInput.trim() === formData.area.trim()) {
-                          setAreaOpen(false)
+                        // If user is editing and input doesn't match the selected area, clear the selected area
+                        // This prevents re-selection when backspacing
+                        if (formData.area && newInput.trim() !== formData.area.trim()) {
+                          handleInputChange('area', '')
+                          setSelectedAreaCityId(null)
+                          // Clear city when area is being edited
+                          handleInputChange('city', '')
+                          setCityInput('')
+                          setCityOptions([])
                         }
-                        // Otherwise, let the useEffect handle opening when results arrive
+                        // Allow dropdown to open when user is typing
+                        // The useEffect will handle opening when results arrive
                       }
                     }}
                     onChange={(event, newValue, reason) => {
@@ -1603,15 +1619,12 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                       }
                     }}
                     filterOptions={(options) => options}
-                    open={areaOpen && areaOptions.length > 0 && !areaLoading && 
-                      // Don't open if input matches the selected value (patching scenario)
-                      !(formData.area && areaInput && areaInput.trim() === formData.area.trim())}
+                    open={areaOpen && areaOptions.length > 0 && !areaLoading}
                     onOpen={() => {
-                      // Only open if user is actively searching (input doesn't match selected value)
-                      if (!formData.area || !areaInput || areaInput.trim() !== formData.area.trim()) {
-                        console.log('🔓 Area autocomplete opened, options:', areaOptions.length)
-                        setAreaOpen(true)
-                      }
+                      // Always allow opening when user clicks/focuses on the field
+                      // This allows users to change the selected area
+                      console.log('🔓 Area autocomplete opened, options:', areaOptions.length)
+                      setAreaOpen(true)
                     }}
                     onClose={(event, reason) => {
                       console.log('🔒 Area autocomplete closed:', reason)
@@ -1674,10 +1687,10 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                       fullWidth
                       placeholder="City"
                       value={formData.city}
-                      disabled={loading || readOnly}
+                      disabled={true}
                       sx={{
                         '& .MuiInputBase-input': {
-                          backgroundColor: readOnly ? '#f5f5f5' : 'white'
+                          backgroundColor: '#f5f5f5'
                         }
                       }}
                     />
@@ -1686,7 +1699,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     <Autocomplete
                       options={cityOptions}
                       loading={cityLoading}
-                      disabled={loading || readOnly}
+                      disabled={true}
                       getOptionLabel={(opt) => opt.name || ''}
                       value={cityOptions.find(o => o.name === formData.city) || null}
                       inputValue={cityInput}
@@ -1717,14 +1730,14 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                           {...params}
                           fullWidth
                           placeholder="Search City"
-                          disabled={loading || readOnly}
+                          disabled={true}
+                          sx={{
+                            '& .MuiInputBase-input': {
+                              backgroundColor: '#f5f5f5'
+                            }
+                          }}
                           InputProps={{
-                            ...params.InputProps,
-                            endAdornment: (
-                          <InputAdornment position="end" sx={{ pr: 1 }}>
-                                <Search sx={{ color: '#666' }} />
-                              </InputAdornment>
-                            )
+                            ...params.InputProps
                           }}
                         />
                       )}

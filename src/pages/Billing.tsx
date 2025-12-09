@@ -4190,7 +4190,7 @@ export default function Treatment() {
                                     <div style={{ position: 'relative', width: '100%' }}>
                                         <input
                                             type="text"
-                                            value={billingData.acBalance}
+                                            value={Math.abs(parseFloat(billingData.acBalance) || 0).toFixed(2)}
                                             disabled
                                             placeholder="0.00"
                                             style={{
@@ -4204,7 +4204,12 @@ export default function Treatment() {
                                                 borderRadius: '4px',
                                                 fontSize: '13px',
                                                 backgroundColor: '#f5f5f5',
-                                                color: '#666',
+                                                color: folderAmountData?.totalAcBalance !== undefined && 
+                                                       folderAmountData?.totalAcBalance !== null && 
+                                                       folderAmountData?.rows && 
+                                                       folderAmountData.rows.length > 0
+                                                       ? (folderAmountData.totalAcBalance < 0 ? '#d32f2f' : '#2e7d32')
+                                                       : '#666',
                                                 cursor: 'not-allowed'
                                             }}
                                         />
@@ -4219,11 +4224,11 @@ export default function Treatment() {
                                                 transform: 'translateY(-50%)',
                                                 fontSize: '11px',
                                                 fontWeight: 'bold',
-                                                color: folderAmountData.totalAcBalance < 0 ? '#d32f2f' : '#2e7d32',
+                                                color: '#333', // Always black for status text
                                                 whiteSpace: 'nowrap',
                                                 pointerEvents: 'none'
                                             }}>
-                                                {folderAmountData.totalAcBalance < 0 ? 'Amount Pending' : 'Outstanding'}
+                                                {folderAmountData.totalAcBalance < 0 ? 'Outstanding' : 'Excess'}
                                             </span>
                                         )}
                                     </div>

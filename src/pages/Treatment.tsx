@@ -6987,11 +6987,11 @@ export default function Treatment() {
                                                 transform: 'translateY(-50%)',
                                                 fontSize: '11px',
                                                 fontWeight: 'bold',
-                                                color: folderAmountData.totalAcBalance < 0 ? '#d32f2f' : '#2e7d32',
+                                                color: '#333', // Always black for status text
                                                 whiteSpace: 'nowrap',
                                                 pointerEvents: 'none'
                                             }}>
-                                                {folderAmountData.totalAcBalance < 0 ? 'Amount Pending' : 'Outstanding'}
+                                                {folderAmountData.totalAcBalance < 0 ? 'Outstanding' : 'Excess'}
                                             </span>
                                         )}
                                     </div>

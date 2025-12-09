@@ -396,6 +396,7 @@ const AccountsPopup: React.FC<AccountsPopupProps> = ({ open, onClose, patientId,
                                                 <>
                                                     {visitWiseData.map((row, index) => {
                                                         const balanceNum = parseFloat(row.balance) || 0;
+                                                        // Only show negative balances in red, positive/zero balances in black
                                                         const isNegativeBalance = balanceNum < 0;
                                                         return (
                                                             <tr
@@ -422,10 +423,11 @@ const AccountsPopup: React.FC<AccountsPopupProps> = ({ open, onClose, patientId,
                                                                         padding: '6px',
                                                                         textAlign: 'right',
                                                                         fontSize: '12px',
-                                                                        color: isNegativeBalance ? '#d32f2f' : '#333'
+                                                                        // Only negative balances are red, positive/zero are black
+                                                                        color: balanceNum < 0 ? '#d32f2f' : '#333'
                                                                     }}
                                                                 >
-                                                                    {Math.abs(parseFloat(row.balance) || 0).toFixed(2)}
+                                                                    {Math.abs(balanceNum).toFixed(2)}
                                                                 </td>
                                                             </tr>
                                                         );
@@ -454,6 +456,7 @@ const AccountsPopup: React.FC<AccountsPopupProps> = ({ open, onClose, patientId,
                                                                 padding: '6px',
                                                                 textAlign: 'right',
                                                                 fontSize: '12px',
+                                                                // Only negative balances are red, positive/zero are black
                                                                 color: totals.balance < 0 ? '#d32f2f' : '#333'
                                                             }}
                                                         >
@@ -500,7 +503,7 @@ const AccountsPopup: React.FC<AccountsPopupProps> = ({ open, onClose, patientId,
                                             ) : (
                                                 fyWiseData.map((row, index) => {
                                                     const balanceNum = parseFloat(row.balance) || 0;
-                                                    const isNegativeBalance = balanceNum < 0;
+                                                    // Only show negative balances in red, positive/zero balances in black
                                                     return (
                                                         <tr
                                                             key={index}
@@ -521,10 +524,11 @@ const AccountsPopup: React.FC<AccountsPopupProps> = ({ open, onClose, patientId,
                                                                     padding: '6px',
                                                                     textAlign: 'right',
                                                                     fontSize: '12px',
-                                                                    color: isNegativeBalance ? '#d32f2f' : '#333'
+                                                                    // Only negative balances are red, positive/zero are black
+                                                                    color: balanceNum < 0 ? '#d32f2f' : '#333'
                                                                 }}
                                                             >
-                                                                {Math.abs(parseFloat(row.balance) || 0).toFixed(2)}
+                                                                {Math.abs(balanceNum).toFixed(2)}
                                                             </td>
                                                         </tr>
                                                     );
