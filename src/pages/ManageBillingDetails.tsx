@@ -6,6 +6,7 @@ import { billingService, BillingDetail } from "../services/billingService";
 import { doctorService, Doctor } from "../services/doctorService";
 import { useSession } from "../store/hooks/useSession";
 import AddBillingDetailsPopup, { BillingDetailData } from "../components/AddBillingDetailsPopup";
+import GlobalSnackbar from "../components/GlobalSnackbar";
 
 type BillingDetailRow = BillingDetail & {
   sr: number;
@@ -27,6 +28,10 @@ export default function ManageBillingDetails() {
   const [loadingDoctors, setLoadingDoctors] = useState<boolean>(false);
   const [showAddPopup, setShowAddPopup] = useState<boolean>(false);
   const [editData, setEditData] = useState<BillingDetailRow | null>(null);
+  
+  // Snackbar state
+  const [showSnackbar, setShowSnackbar] = useState<boolean>(false);
+  const [snackbarMessage, setSnackbarMessage] = useState<string>('');
 
   // Filter billing details based on search term
   const filteredBillingDetails = billingDetails.filter(billing => {
@@ -74,12 +79,14 @@ export default function ManageBillingDetails() {
     // Use selectedDoctorId if available, otherwise fall back to doctorId from session
     const doctorIdToUse = selectedDoctorId || doctorId;
     if (!doctorIdToUse) {
-      setError('Doctor ID is required');
+      setSnackbarMessage('Doctor ID is required');
+      setShowSnackbar(true);
       return;
     }
 
     if (!userId) {
-      setError('User ID is required');
+      setSnackbarMessage('User ID is required');
+      setShowSnackbar(true);
       return;
     }
 
@@ -119,11 +126,15 @@ export default function ManageBillingDetails() {
       setShowAddPopup(false);
       setEditData(null);
       
+      setSnackbarMessage(editData ? 'Billing detail updated successfully' : 'Billing detail created successfully');
+      setShowSnackbar(true);
+      
       // Refresh billing details list
       await fetchBillingDetails(doctorIdToUse);
     } catch (err: any) {
       console.error('Error saving billing detail:', err);
-      setError(err.message || (editData ? 'Failed to update billing detail' : 'Failed to create billing detail'));
+      setSnackbarMessage(err.message || (editData ? 'Failed to update billing detail' : 'Failed to create billing detail'));
+      setShowSnackbar(true);
       // Keep popup open on error so user can retry
     } finally {
       setLoading(false);
@@ -142,19 +153,22 @@ export default function ManageBillingDetails() {
     }
 
     if (!clinicId) {
-      setError('Clinic ID is required to delete billing detail');
+      setSnackbarMessage('Clinic ID is required to delete billing detail');
+      setShowSnackbar(true);
       return;
     }
 
     // Use selectedDoctorId if available, otherwise fall back to doctorId from session
     const doctorIdToUse = selectedDoctorId || doctorId;
     if (!doctorIdToUse) {
-      setError('Doctor ID is required to delete billing detail');
+      setSnackbarMessage('Doctor ID is required to delete billing detail');
+      setShowSnackbar(true);
       return;
     }
 
     if (!billing.id) {
-      setError('Billing detail ID is missing');
+      setSnackbarMessage('Billing detail ID is missing');
+      setShowSnackbar(true);
       return;
     }
 
@@ -164,11 +178,15 @@ export default function ManageBillingDetails() {
       
       await billingService.deleteBillingDetail(billing.id, doctorIdToUse, clinicId);
       
+      setSnackbarMessage('Billing detail deleted successfully');
+      setShowSnackbar(true);
+      
       // Refresh the billing details list after successful deletion
       await fetchBillingDetails(doctorIdToUse);
     } catch (err: any) {
       console.error('Error deleting billing detail:', err);
-      setError(err.message || 'Failed to delete billing detail');
+      setSnackbarMessage(err.message || 'Failed to delete billing detail');
+      setShowSnackbar(true);
     } finally {
       setLoading(false);
     }
@@ -726,6 +744,14 @@ export default function ManageBillingDetails() {
           lunch: editData.lunch || ''
         } : null}
         doctorId={selectedDoctorId || doctorId}
+      />
+      
+      {/* Global Snackbar */}
+      <GlobalSnackbar
+        show={showSnackbar}
+        message={snackbarMessage}
+        onClose={() => setShowSnackbar(false)}
+        autoHideDuration={5000}
       />
     </div>
   );

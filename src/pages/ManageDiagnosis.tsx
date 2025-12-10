@@ -6,6 +6,7 @@ import { diagnosisService, DiagnosisApiResponse } from "../services/diagnosisSer
 import { doctorService, Doctor } from "../services/doctorService";
 import { useSession } from "../store/hooks/useSession";
 import AddDiagnosisPopup from "../components/AddDiagnosisPopup";
+import GlobalSnackbar from "../components/GlobalSnackbar";
 
 // Diagnosis type definition
 type Diagnosis = {
@@ -31,6 +32,10 @@ export default function ManageDiagnosis() {
   const [loadingDoctors, setLoadingDoctors] = useState<boolean>(false);
   const [showAddPopup, setShowAddPopup] = useState<boolean>(false);
   const [editData, setEditData] = useState<Diagnosis | null>(null);
+  
+  // Snackbar state
+  const [showSnackbar, setShowSnackbar] = useState<boolean>(false);
+  const [snackbarMessage, setSnackbarMessage] = useState<string>('');
 
   // Filter diagnoses based on search term
   const filteredDiagnoses = diagnoses.filter(diagnosis => {
@@ -78,14 +83,16 @@ export default function ManageDiagnosis() {
     priority: string;
   }) => {
     if (!clinicId) {
-      setError('Clinic ID is required');
+      setSnackbarMessage('Clinic ID is required');
+      setShowSnackbar(true);
       return;
     }
 
     // Use selectedDoctorId if available, otherwise fall back to doctorId from session
     const doctorIdToUse = selectedDoctorId || doctorId;
     if (!doctorIdToUse) {
-      setError('Doctor ID is required');
+      setSnackbarMessage('Doctor ID is required');
+      setShowSnackbar(true);
       return;
     }
 
@@ -114,11 +121,15 @@ export default function ManageDiagnosis() {
         console.log('Updating diagnosis:', diagnosisData);
         await diagnosisService.updateDiagnosis(diagnosisData);
         console.log('Diagnosis updated successfully');
+        setSnackbarMessage('Diagnosis updated successfully');
+        setShowSnackbar(true);
       } else {
         // Create new diagnosis
         console.log('Creating diagnosis:', diagnosisData);
         await diagnosisService.createDiagnosis(diagnosisData);
         console.log('Diagnosis created successfully');
+        setSnackbarMessage('Diagnosis created successfully');
+        setShowSnackbar(true);
       }
       
       // Close popup and clear edit data
@@ -129,7 +140,8 @@ export default function ManageDiagnosis() {
       await fetchDiagnoses(doctorIdToUse);
     } catch (err: any) {
       console.error('Error saving diagnosis:', err);
-      setError(err.message || (editData ? 'Failed to update diagnosis' : 'Failed to create diagnosis'));
+      setSnackbarMessage(err.message || (editData ? 'Failed to update diagnosis' : 'Failed to create diagnosis'));
+      setShowSnackbar(true);
       // Keep popup open on error so user can retry
     } finally {
       setLoading(false);
@@ -148,14 +160,16 @@ export default function ManageDiagnosis() {
     }
 
     if (!clinicId) {
-      setError('Clinic ID is required to delete diagnosis');
+      setSnackbarMessage('Clinic ID is required to delete diagnosis');
+      setShowSnackbar(true);
       return;
     }
 
     // Use selectedDoctorId if available, otherwise fall back to doctorId from session
     const doctorIdToUse = selectedDoctorId || doctorId;
     if (!doctorIdToUse) {
-      setError('Doctor ID is required to delete diagnosis');
+      setSnackbarMessage('Doctor ID is required to delete diagnosis');
+      setShowSnackbar(true);
       return;
     }
 
@@ -166,6 +180,9 @@ export default function ManageDiagnosis() {
       console.log('Deleting diagnosis:', diagnosis.shortDescription, 'for doctor:', doctorIdToUse, 'and clinic:', clinicId);
       await diagnosisService.deleteDiagnosis(doctorIdToUse, clinicId, diagnosis.shortDescription);
       
+      setSnackbarMessage('Diagnosis deleted successfully');
+      setShowSnackbar(true);
+      
       // Refresh the diagnoses list after successful deletion
       await fetchDiagnoses(doctorIdToUse);
       
@@ -173,7 +190,8 @@ export default function ManageDiagnosis() {
       console.log('Diagnosis deleted successfully');
     } catch (err: any) {
       console.error('Error deleting diagnosis:', err);
-      setError(err.message || 'Failed to delete diagnosis');
+      setSnackbarMessage(err.message || 'Failed to delete diagnosis');
+      setShowSnackbar(true);
     } finally {
       setLoading(false);
     }
@@ -684,6 +702,14 @@ export default function ManageDiagnosis() {
           diagnosisDescription: editData.diagnosisDescription,
           priority: editData.priority
         } : null}
+      />
+      
+      {/* Global Snackbar */}
+      <GlobalSnackbar
+        show={showSnackbar}
+        message={snackbarMessage}
+        onClose={() => setShowSnackbar(false)}
+        autoHideDuration={5000}
       />
     </div>
   );

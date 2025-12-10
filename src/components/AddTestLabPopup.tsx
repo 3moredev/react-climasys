@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Close, Delete } from '@mui/icons-material';
-import { Snackbar } from '@mui/material';
 import { labService } from '../services/labService';
 import { labParameterService, LabTestAndParameterRequest } from '../services/labParameterService';
 import { useSession } from '../store/hooks/useSession';
+import GlobalSnackbar from './GlobalSnackbar';
 
 interface AddTestLabPopupProps {
     open: boolean;
@@ -587,22 +587,11 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
         </div>
         
         {/* Success/Error Snackbar */}
-        <Snackbar
-            open={snackbarOpen}
-            autoHideDuration={2000}
-            onClose={() => {
-                setSnackbarOpen(false);
-            }}
+        <GlobalSnackbar
+            show={snackbarOpen}
             message={snackbarMessage}
-            anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-            sx={{
-                zIndex: 99999, // Ensure snackbar appears above everything
-                '& .MuiSnackbarContent-root': {
-                    backgroundColor: snackbarMessage.includes('successfully') ? '#4caf50' : '#f44336',
-                    color: 'white',
-                    fontWeight: 'bold'
-                }
-            }}
+            onClose={() => setSnackbarOpen(false)}
+            autoHideDuration={5000}
         />
         </>
     );

@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { List, CreditCard, MoreVert, Add as AddIcon, Save, Delete, Info, FastForward, Close, ChatBubbleOutline, Phone, SwapHoriz, ShoppingCart } from "@mui/icons-material";
-import { Snackbar } from '@mui/material';
 import { appointmentService, Appointment, AppointmentRequest, TodayAppointmentsResponse, getDoctorStatusReference, getStatusOptionsByClinic } from "../services/appointmentService";
 import { doctorService, DoctorDetail, Doctor } from "../services/doctorService";
 import { patientService, Patient, formatVisitDateTime, getVisitStatusText } from "../services/patientService";
@@ -13,6 +12,7 @@ import { sessionService, SessionInfo } from "../services/sessionService";
 import { sessionPersistence } from "../utils/sessionPersistence";
 import PatientFormTest from "../components/Test/PatientFormTest";
 import LabTestEntry from "../components/LabTestEntry";
+import GlobalSnackbar from "../components/GlobalSnackbar";
 
 export type AppointmentRow = {
     reports_received: any;
@@ -4604,7 +4604,7 @@ export default function AppointmentTable() {
                                                                     if (!pid || !vdatetime || !did) {
                                                                         setSnackbarMessage('Missing identifiers to delete appointment');
                                                                         setShowSnackbar(true);
-                                                                        setTimeout(() => setShowSnackbar(false), 3000);
+                                                                        // setTimeout(() => setShowSnackbar(false), 3000);
                                                                         return;
                                                                     }
                                                                     const confirmDelete = window.confirm('Delete this appointment?');
@@ -4617,12 +4617,15 @@ export default function AppointmentTable() {
                                                                         clinicId: sessionData?.clinicId || '',
                                                                         userId: String(sessionData?.userId || 'system') 
                                                                     });
+                                                                    setSnackbarMessage('Appointment deleted');
+                                                                    setShowSnackbar(true);
+                                                                    setTimeout(() => setShowSnackbar(false), 3000);
                                                                     setAppointments(prev => prev.filter((_, i) => i !== originalIndex));
                                                                 } catch (err) {
                                                                     console.error('Delete appointment failed:', err);
                                                                     setSnackbarMessage('Failed to delete appointment');
                                                                     setShowSnackbar(true);
-                                                                    setTimeout(() => setShowSnackbar(false), 3000);
+                                                                    // setTimeout(() => setShowSnackbar(false), 3000);
                                                                 }
                                                             }}
                                                             style={{
@@ -5410,6 +5413,9 @@ export default function AppointmentTable() {
                                                                     userId: String(sessionData?.userId || 'system') 
                                                                 });
                                                                 // Remove from UI
+                                                                setSnackbarMessage('Appointment deleted successfully.');
+                                                                setShowSnackbar(true);
+                                                                setTimeout(() => setShowSnackbar(false), 3000);
                                                                 setAppointments(prev => prev.filter((_, i) => i !== originalIndex));
                                                             } catch (err) {
                                                                 console.error('Delete appointment failed:', err);
@@ -5899,12 +5905,19 @@ export default function AppointmentTable() {
                 />
             )}
 
-            <Snackbar
-                open={showBookedSnackbar}
-                autoHideDuration={3000}
-                onClose={() => setShowBookedSnackbar(false)}
+            {/* Global snackbar (reception / non-doctor view) */}
+            <GlobalSnackbar
+                show={showSnackbar}
+                message={snackbarMessage}
+                onClose={() => setShowSnackbar(false)}
+                autoHideDuration={5000}
+            />
+
+            <GlobalSnackbar
+                show={showBookedSnackbar}
                 message={bookedSnackbarMessage || 'Appointment booked successfully'}
-                anchorOrigin={{ vertical: 'bottom', horizontal: 'center',}}
+                onClose={() => setShowBookedSnackbar(false)}
+                autoHideDuration={5000}
             />
         </div>
     );
