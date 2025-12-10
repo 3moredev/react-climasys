@@ -7219,6 +7219,8 @@ export default function Treatment() {
                 open={showMedicinePopup}
                 onClose={() => setShowMedicinePopup(false)}
                 onSave={handleSaveMedicine}
+                doctorId={treatmentData?.doctorId || sessionData?.doctorId}
+                clinicId={treatmentData?.clinicId || sessionData?.clinicId}
             />
 
             {/* Add Prescription Popup */}
