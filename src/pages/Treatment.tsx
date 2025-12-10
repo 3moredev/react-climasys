@@ -5268,6 +5268,7 @@ export default function Treatment() {
                                                 clinicId: treatmentData?.clinicId || '',
                                                 visitNumber: Number(treatmentData?.visitNumber || 0),
                                                 provider: getDoctorLabelById(treatmentData?.doctorId),
+                                                shiftId: 1,
                                                 visitDate: new Date().toISOString().slice(0, 10)
                                             };
                                             setSelectedPatientForLab(appointmentRow);

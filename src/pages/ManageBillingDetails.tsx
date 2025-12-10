@@ -88,7 +88,7 @@ export default function ManageBillingDetails() {
       setError(null);
       
       // Prepare billing master data request
-      const billingMasterDataRequest = {
+      const billingMasterDataRequest: any = {
         groupName: data.group,
         subgroupName: data.subGroup || '',
         userId: userId.toString(),
@@ -99,6 +99,13 @@ export default function ManageBillingDetails() {
         isDefault: data.isDefault,
         visitType: data.visitType
       };
+      
+      // Include clinicId if provided from popup
+      if (data.clinicId) {
+        billingMasterDataRequest.clinicId = data.clinicId;
+        billingMasterDataRequest.clinic_id = data.clinicId;
+        billingMasterDataRequest.Clinic_ID = data.clinicId;
+      }
       
       if (editData && editData.id) {
         // Update existing billing master data
@@ -508,11 +515,6 @@ export default function ManageBillingDetails() {
           />
           <Search className="search-icon" style={{ fontSize: '20px' }} />
         </div>
-
-        <button className="btn-primary-custom" onClick={handleSearch}>
-          <Search style={{ fontSize: '18px' }} />
-          <label>Search</label>
-        </button>
 
         <button className="btn-primary-custom" onClick={handleAddNew}>
           <Add style={{ fontSize: '18px' }} />

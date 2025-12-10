@@ -542,7 +542,7 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
                         onClick={handleClose}
                         style={{
                             padding: '8px 16px',
-                            backgroundColor: 'white',
+                            backgroundColor: 'rgb(0, 100, 200)',
                             color: '#1976d2',
                             border: '1px solid #1976d2',
                             borderRadius: '4px',
@@ -552,10 +552,10 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
                             transition: 'all 0.2s'
                         }}
                         onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = '#f5f5f5';
+                            e.currentTarget.style.backgroundColor = 'rgb(0, 100, 200)';
                         }}
                         onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = 'white';
+                            e.currentTarget.style.backgroundColor = 'rgb(0, 123, 255)';
                         }}
                     >
                         Cancel
@@ -564,7 +564,7 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
                         onClick={handleClose}
                         style={{
                             padding: '8px 16px',
-                            backgroundColor: 'white',
+                            backgroundColor: 'rgb(0, 100, 200)',
                             color: '#1976d2',
                             border: '1px solid #1976d2',
                             borderRadius: '4px',
@@ -574,10 +574,10 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
                             transition: 'all 0.2s'
                         }}
                         onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = '#f5f5f5';
+                            e.currentTarget.style.backgroundColor = 'rgb(0, 100, 200)';
                         }}
                         onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = 'white';
+                            e.currentTarget.style.backgroundColor = 'rgb(0, 123, 255)';
                         }}
                     >
                         Back
