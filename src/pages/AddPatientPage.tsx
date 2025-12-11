@@ -18,8 +18,7 @@ import {
   InputAdornment,
   Checkbox,
   FormControlLabel,
-  Switch,
-  Snackbar
+  Switch
 } from '@mui/material'
 import Autocomplete from '@mui/material/Autocomplete'
 import { DateField } from '@mui/x-date-pickers/DateField'
@@ -30,6 +29,7 @@ import { Close, Save, Person, Search, CalendarToday, Add } from '@mui/icons-mate
 import { patientService, QuickRegistrationRequest } from '../services/patientService'
 import { appointmentService, AppointmentRequest } from '../services/appointmentService'
 import AddReferralPopup, { ReferralData } from '../components/AddReferralPopup'
+import GlobalSnackbar from '../components/GlobalSnackbar'
 
 interface AddPatientPageProps {
   open: boolean
@@ -743,7 +743,13 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => {
-      const next = { ...prev, [field]: value }
+      // Convert firstName, middleName, and lastName to uppercase
+      let processedValue = value
+      if (field === 'firstName' || field === 'middleName' || field === 'lastName') {
+        processedValue = value.toUpperCase()
+      }
+      
+      const next = { ...prev, [field]: processedValue }
       // Reverse sync: when Age (field1) changes, compute DoB using today's month/day
       if (field === 'field1') {
         const trimmed = String(value || '').trim()
@@ -1024,59 +1030,64 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
         const successMessage = formData.addToTodaysAppointment 
           ? 'Patient added and appointment booked successfully!' 
           : 'Patient added successfully!'
-        setSnackbarMessage(successMessage)
-        setSnackbarOpen(true)
+          setSnackbarMessage("Saved Successfully!");
+          setSnackbarOpen(true);
         
-        // Wait for 2 seconds to show snackbar, then close form
+        console.log('=== SNACKBAR SET ===')
+        console.log('Snackbar message:', successMessage)
+        console.log('Snackbar open:', true)
+        
+        // Reset form immediately but keep dialog open briefly to show snackbar
+        console.log('=== RESETTING FORM ===')
+        // Reset form
+        setFormData({
+          lastName: '',
+          firstName: '',
+          middleName: '',
+          age: '',
+          dateOfBirth: '',
+          dobDate: null,
+          field1: '',
+          field2: '',
+          gender: '',
+          area: '',
+          city: '',
+          patientId: '',
+          maritalStatus: '',
+          occupation: '',
+          address: '',
+          mobileNumber: '',
+          email: '',
+          state: 'Maharashtra',
+          referredBy: 'Self',
+          referralName: '',
+          referralContact: '',
+          referralEmail: '',
+          referralAddress: '',
+          addToTodaysAppointment: true
+        })
+        // Clear area and city related states
+        setAreaInput('')
+        setCityInput('')
+        setSelectedAreaCityId(null)
+        setAreaOptions([])
+        setCityOptions([])
+        setAreaOpen(false)
+        // Clear doctor referral states
+        setReferralNameSearch('')
+        setReferralNameOptions([])
+        setSelectedDoctor(null)
+        setShowReferralPopup(false)
+        console.log('Form reset completed')
+        
+        // Close dialog after a short delay to allow snackbar to be visible
         setTimeout(() => {
-          console.log('=== RESETTING FORM ===')
-          // Reset form
-          setFormData({
-            lastName: '',
-            firstName: '',
-            middleName: '',
-            age: '',
-            dateOfBirth: '',
-            dobDate: null,
-            field1: '',
-            field2: '',
-            gender: '',
-            area: '',
-            city: '',
-            patientId: '',
-            maritalStatus: '',
-            occupation: '',
-            address: '',
-            mobileNumber: '',
-            email: '',
-            state: 'Maharashtra',
-            referredBy: 'Self',
-            referralName: '',
-            referralContact: '',
-            referralEmail: '',
-            referralAddress: '',
-            addToTodaysAppointment: true
-          })
-          // Clear area and city related states
-          setAreaInput('')
-          setCityInput('')
-          setSelectedAreaCityId(null)
-          setAreaOptions([])
-          setCityOptions([])
-          setAreaOpen(false)
-          // Clear doctor referral states
-          setReferralNameSearch('')
-          setReferralNameOptions([])
-          setSelectedDoctor(null)
-          setShowReferralPopup(false)
-          console.log('Form reset completed')
-          
           console.log('=== CLOSING DIALOG ===')
           onClose()
           console.log('Dialog closed')
           
           console.log('=== FORM SUBMISSION COMPLETED SUCCESSFULLY ===')
-        }, 2000) // 2 second delay
+        }, 1000) // 1 second delay to ensure snackbar is visible
       } else {
         console.error('=== PATIENT REGISTRATION FAILED ===')
         console.error('Save Status:', response.SAVE_STATUS)
@@ -1090,8 +1101,10 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
       console.error('Error message:', error instanceof Error ? error.message : 'Unknown error')
       console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace')
       
-      // Show error message to user (you might want to add a state for this)
-      alert(`Patient registration failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      // Show error snackbar
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      setSnackbarMessage(`Patient registration failed: ${errorMessage}`)
+      setSnackbarOpen(true)
     } finally {
       console.log('=== FINALLY BLOCK ===')
       console.log('Setting loading to false')
@@ -1107,8 +1120,20 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
   }
 
   console.log('AddPatientPage render - Dialog should be:', open ? 'OPEN' : 'CLOSED');
+  console.log('Snackbar state - open:', snackbarOpen, 'message:', snackbarMessage);
   
   return (<> 
+    {/* Success Snackbar (outside Dialog so it persists after close) */}
+    <GlobalSnackbar
+      show={snackbarOpen}
+      message={snackbarMessage}
+      onClose={() => {
+        console.log('Snackbar onClose called');
+        setSnackbarOpen(false);
+      }}
+      autoHideDuration={5000}
+    />
+    
     <Dialog
       open={open}
       onClose={handleClose}
@@ -2188,23 +2213,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
         </Box>
       </DialogActions>
     </Dialog>
-
-    {/* Success Snackbar (outside Dialog so it persists after close) */}
-    <Snackbar
-      open={snackbarOpen}
-      autoHideDuration={2000}
-      onClose={() => setSnackbarOpen(false)}
-      message={snackbarMessage}
-      anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      sx={{
-        zIndex: 11001,
-        '& .MuiSnackbarContent-root': {
-          backgroundColor: '#4caf50',
-          color: 'white',
-          fontWeight: 'bold'
-        }
-      }}
-    />
 
     {/* Add New Referral Popup */}
     <AddReferralPopup
