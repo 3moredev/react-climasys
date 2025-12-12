@@ -266,7 +266,19 @@ const AccountsPopup: React.FC<AccountsPopupProps> = ({ open, onClose, patientId,
         }, { billed: 0, discount: 0, dues: 0, collected: 0, balance: 0 });
     };
 
+    const calculateFyTotals = (data: FYWiseData[]) => {
+        return data.reduce((acc, row) => {
+            acc.billed += parseFloat(row.billed) || 0;
+            acc.discount += parseFloat(row.discount) || 0;
+            acc.dues += parseFloat(row.dues) || 0;
+            acc.collected += parseFloat(row.collected) || 0;
+            acc.balance += parseFloat(row.balance) || 0;
+            return acc;
+        }, { billed: 0, discount: 0, dues: 0, collected: 0, balance: 0 });
+    };
+
     const totals = calculateTotals(visitWiseData);
+    const fyTotals = calculateFyTotals(fyWiseData);
 
     if (!open) return null;
 
@@ -501,38 +513,71 @@ const AccountsPopup: React.FC<AccountsPopupProps> = ({ open, onClose, patientId,
                                                     </td>
                                                 </tr>
                                             ) : (
-                                                fyWiseData.map((row, index) => {
-                                                    const balanceNum = parseFloat(row.balance) || 0;
-                                                    // Only show negative balances in red, positive/zero balances in black
-                                                    return (
-                                                        <tr
-                                                            key={index}
-                                                            style={{
-                                                                borderBottom: '1px solid #e0e0e0',
-                                                                backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white'
-                                                            }}
-                                                            onMouseEnter={(e) => { (e.currentTarget as HTMLTableRowElement).style.backgroundColor = '#f5f5f5'; }}
-                                                            onMouseLeave={(e) => { (e.currentTarget as HTMLTableRowElement).style.backgroundColor = index % 2 === 0 ? '#f8f9fa' : 'white'; }}
-                                                        >
-                                                            <td style={{ padding: '6px', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>{row.financialYear}</td>
-                                                            <td style={{ padding: '6px', textAlign: 'right', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>{row.billed}</td>
-                                                            <td style={{ padding: '6px', textAlign: 'right', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>{row.discount}</td>
-                                                            <td style={{ padding: '6px', textAlign: 'right', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>{row.dues}</td>
-                                                            <td style={{ padding: '6px', textAlign: 'right', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>{row.collected}</td>
-                                                            <td
+                                                <>
+                                                    {fyWiseData.map((row, index) => {
+                                                        const balanceNum = parseFloat(row.balance) || 0;
+                                                        // Only show negative balances in red, positive/zero balances in black
+                                                        return (
+                                                            <tr
+                                                                key={index}
                                                                 style={{
-                                                                    padding: '6px',
-                                                                    textAlign: 'right',
-                                                                    fontSize: '12px',
-                                                                    // Only negative balances are red, positive/zero are black
-                                                                    color: balanceNum < 0 ? '#d32f2f' : '#333'
+                                                                    borderBottom: '1px solid #e0e0e0',
+                                                                    backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white'
                                                                 }}
+                                                                onMouseEnter={(e) => { (e.currentTarget as HTMLTableRowElement).style.backgroundColor = '#f5f5f5'; }}
+                                                                onMouseLeave={(e) => { (e.currentTarget as HTMLTableRowElement).style.backgroundColor = index % 2 === 0 ? '#f8f9fa' : 'white'; }}
                                                             >
-                                                                {Math.abs(balanceNum).toFixed(2)}
-                                                            </td>
-                                                        </tr>
-                                                    );
-                                                })
+                                                                <td style={{ padding: '6px', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>{row.financialYear}</td>
+                                                                <td style={{ padding: '6px', textAlign: 'right', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>{row.billed}</td>
+                                                                <td style={{ padding: '6px', textAlign: 'right', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>{row.discount}</td>
+                                                                <td style={{ padding: '6px', textAlign: 'right', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>{row.dues}</td>
+                                                                <td style={{ padding: '6px', textAlign: 'right', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>{row.collected}</td>
+                                                                <td
+                                                                    style={{
+                                                                        padding: '6px',
+                                                                        textAlign: 'right',
+                                                                        fontSize: '12px',
+                                                                        // Only negative balances are red, positive/zero are black
+                                                                        color: balanceNum < 0 ? '#d32f2f' : '#333'
+                                                                    }}
+                                                                >
+                                                                    {Math.abs(balanceNum).toFixed(2)}
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                    {/* Total Row */}
+                                                    <tr style={{
+                                                        backgroundColor: '#e8e8e8',
+                                                        fontWeight: 'bold',
+                                                        borderTop: '2px solid #ccc'
+                                                    }}>
+                                                        <td style={{ padding: '6px', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>Total</td>
+                                                        <td style={{ padding: '6px', textAlign: 'right', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>
+                                                            {fyTotals.billed.toFixed(2)}
+                                                        </td>
+                                                        <td style={{ padding: '6px', textAlign: 'right', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>
+                                                            {fyTotals.discount.toFixed(2)}
+                                                        </td>
+                                                        <td style={{ padding: '6px', textAlign: 'right', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>
+                                                            {fyTotals.dues.toFixed(2)}
+                                                        </td>
+                                                        <td style={{ padding: '6px', textAlign: 'right', color: '#333', fontSize: '12px', borderRight: '1px solid #e0e0e0' }}>
+                                                            {fyTotals.collected.toFixed(2)}
+                                                        </td>
+                                                        <td
+                                                            style={{
+                                                                padding: '6px',
+                                                                textAlign: 'right',
+                                                                fontSize: '12px',
+                                                                // Only negative balances are red, positive/zero are black
+                                                                color: fyTotals.balance < 0 ? '#d32f2f' : '#333'
+                                                            }}
+                                                        >
+                                                            {Math.abs(fyTotals.balance).toFixed(2)}
+                                                        </td>
+                                                    </tr>
+                                                </>
                                             )}
                                         </tbody>
                                     </table>
