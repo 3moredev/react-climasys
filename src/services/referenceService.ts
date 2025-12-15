@@ -201,9 +201,9 @@ export async function getStates(countryId?: string, languageId: number = 1): Pro
     const data = Array.isArray(response.data) ? response.data : []
     return data.map((item: any) => {
       // State entity has embedded id with stateId
-      const id = item?.id?.id ?? item?.id ?? item?.stateId ?? ''
+      const id = item?.id?.stateId ?? ''
       // Priority: stateName from state_translations.state_name (from database), then name, then id
-      const name = item?.stateName ?? item?.name ?? String(id)
+      const name = item?.stateName ?? ''
       return { id: String(id), name: String(name) }
     })
   } catch (error) {
