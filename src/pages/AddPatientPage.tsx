@@ -18,8 +18,7 @@ import {
   InputAdornment,
   Checkbox,
   FormControlLabel,
-  Switch,
-  Snackbar
+  Switch
 } from '@mui/material'
 import Autocomplete from '@mui/material/Autocomplete'
 import { DateField } from '@mui/x-date-pickers/DateField'
@@ -30,6 +29,7 @@ import { Close, Save, Person, Search, CalendarToday, Add } from '@mui/icons-mate
 import { patientService, QuickRegistrationRequest } from '../services/patientService'
 import { appointmentService, AppointmentRequest } from '../services/appointmentService'
 import AddReferralPopup, { ReferralData } from '../components/AddReferralPopup'
+import GlobalSnackbar from '../components/GlobalSnackbar'
 
 interface AddPatientPageProps {
   open: boolean
@@ -54,8 +54,8 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
     field1: '',
     field2: 'Years',
     gender: '',
-    area: 'pune',
-    city: 'Pune',
+    area: '',
+    city: '',
     patientId: '',
     maritalStatus: '',
     occupation: '',
@@ -63,7 +63,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
     mobileNumber: '',
     email: '',
     state: 'Maharashtra',
-    referredBy: 'Self',
+    referredBy: '',
     referralName: '',
     referralContact: '',
     referralEmail: '',
@@ -75,12 +75,12 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
   const [genderOptions, setGenderOptions] = useState<{ id: string; name: string }[]>([])
   const [occupationOptions, setOccupationOptions] = useState<{ id: string; name: string }[]>([])
   const [maritalStatusOptions, setMaritalStatusOptions] = useState<{ id: string; name: string }[]>([])
-  const [areaOptions, setAreaOptions] = useState<{ id: string; name: string; cityId?: string }[]>([])
+  const [areaOptions, setAreaOptions] = useState<{ id: string; name: string; cityId?: string; stateId?: string }[]>([])
   const [areaInput, setAreaInput] = useState('')
   const [areaLoading, setAreaLoading] = useState(false)
   const [areaOpen, setAreaOpen] = useState(false)
   const [selectedAreaCityId, setSelectedAreaCityId] = useState<string | null>(null)
-  const [cityOptions, setCityOptions] = useState<{ id: string; name: string }[]>([])
+  const [cityOptions, setCityOptions] = useState<{ id: string; name: string; stateId?: string }[]>([])
   const [cityInput, setCityInput] = useState('')
   const [cityLoading, setCityLoading] = useState(false)
   const [referByOptions, setReferByOptions] = useState<{ id: string; name: string }[]>([])
@@ -174,10 +174,11 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
               
               if (matchingArea) {
                 areaName = matchingArea.name
-                // Preserve cityId if available from API response
+                // Preserve cityId and stateId if available from API response
                 const areaWithCityId = {
                   ...matchingArea,
-                  cityId: (matchingArea as any).cityId || undefined
+                  cityId: (matchingArea as any).cityId || undefined,
+                  stateId: (matchingArea as any).stateId || undefined
                 }
                 // Add area to options first, then set input
                 setAreaOptions(prev => {
@@ -186,6 +187,126 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                   }
                   return prev
                 })
+                
+                // Fetch City and State based on area's cityId and stateId from database (must match exactly)
+                const fetchCityAndStateForLoadedArea = async () => {
+                  try {
+                    const { searchCities, getStates, getAreaDetails } = await import('../services/referenceService')
+                    const areaCityId = areaWithCityId.cityId
+                    const areaStateId = areaWithCityId.stateId
+                    let matchingCity: { id: string; name: string; stateId?: string } | null = null
+                    
+                    // First, try to get stateName directly from area details (this includes stateName from state_translations.state_name)
+                    let stateNameFromArea: string | null = null
+                    if (areaStateId) {
+                      try {
+                        const areaDetails = await getAreaDetails(areaName, 1)
+                        if (areaDetails?.stateName) {
+                          stateNameFromArea = areaDetails.stateName
+                          console.log(`✅ Got stateName from area details for loaded patient:`, stateNameFromArea)
+                        }
+                      } catch (e) {
+                        console.warn('Could not get area details for stateName:', e)
+                      }
+                    }
+                    
+                    // Step 1: Fetch city using area's cityId (must match exactly)
+                    if (areaCityId) {
+                      const searchTerms = ['a', 'e', 'i', 'o', 'u', 'p', 'm', 'd']
+                      
+                      for (const term of searchTerms) {
+                        try {
+                          const results = await searchCities(term)
+                          matchingCity = results.find(city => {
+                            const matches = city.id === areaCityId || 
+                                           city.id?.toUpperCase() === areaCityId.toUpperCase() ||
+                                           String(city.id) === String(areaCityId)
+                            return matches
+                          }) || null
+                          if (matchingCity) {
+                            console.log(`✅ Found city for loaded area (cityId: ${areaCityId}):`, matchingCity.name)
+                            break
+                          }
+                        } catch (e) {
+                          console.warn(`Search failed for term "${term}":`, e)
+                        }
+                      }
+                      
+                      if (matchingCity) {
+                        // Update city in form data
+                        setFormData(prev => ({ ...prev, city: matchingCity!.name }))
+                        setCityInput(matchingCity.name)
+                      } else {
+                        console.warn('⚠️ Could not find city for area cityId:', areaCityId)
+                      }
+                    }
+                    
+                    // Step 2: Fetch state using area's stateId (must match exactly from database)
+                    // Priority: 1) stateName from area details (state_translations.state_name), 2) from getStates, 3) fallback to city
+                    if (areaStateId) {
+                      try {
+                        // First, use stateName from area details if available (this comes from state_translations.state_name)
+                        if (stateNameFromArea) {
+                          setFormData(prev => ({ ...prev, state: stateNameFromArea }))
+                          console.log(`✅ Using stateName from area details for loaded patient (stateId: ${areaStateId}):`, stateNameFromArea)
+                        } else {
+                          // Fallback: try to get from getStates
+                          const allStates = await getStates()
+                          const matchingState = allStates.find(state => {
+                            const matches = state.id === areaStateId || 
+                                           state.id?.toUpperCase() === areaStateId.toUpperCase() ||
+                                           String(state.id) === String(areaStateId)
+                            return matches
+                          })
+                          if (matchingState && matchingState.name && matchingState.name !== matchingState.id) {
+                            setFormData(prev => ({ ...prev, state: matchingState.name }))
+                            console.log(`✅ Found state from getStates for loaded patient (stateId: ${areaStateId}):`, matchingState.name)
+                          } else {
+                            console.warn('⚠️ Could not find state name for area stateId:', areaStateId)
+                            // Fallback: try to get state from city if available
+                            if (matchingCity?.stateId) {
+                              const cityStateId = matchingCity.stateId
+                              const cityStateMatch = allStates.find(state => {
+                                const matches = state.id === cityStateId || 
+                                               state.id?.toUpperCase() === cityStateId.toUpperCase() ||
+                                               String(state.id) === String(cityStateId)
+                                return matches
+                              })
+                              if (cityStateMatch && cityStateMatch.name && cityStateMatch.name !== cityStateMatch.id) {
+                                setFormData(prev => ({ ...prev, state: cityStateMatch.name }))
+                                console.log(`✅ Found state from city fallback (stateId: ${cityStateId}):`, cityStateMatch.name)
+                              }
+                            }
+                          }
+                        }
+                      } catch (e) {
+                        console.error('Error fetching state for loaded area:', e)
+                      }
+                    } else if (matchingCity?.stateId) {
+                      // Fallback: use city's stateId if area doesn't have stateId
+                      try {
+                        const allStates = await getStates()
+                        const cityStateId = matchingCity.stateId
+                        const matchingState = allStates.find(state => {
+                          const matches = state.id === cityStateId || 
+                                         state.id?.toUpperCase() === cityStateId.toUpperCase() ||
+                                         String(state.id) === String(cityStateId)
+                          return matches
+                        })
+                        if (matchingState && matchingState.name && matchingState.name !== matchingState.id) {
+                          setFormData(prev => ({ ...prev, state: matchingState.name }))
+                          console.log(`✅ Found state from city for loaded patient (stateId: ${cityStateId}):`, matchingState.name)
+                        }
+                      } catch (e) {
+                        console.error('Error fetching state from city:', e)
+                      }
+                    }
+                  } catch (e) {
+                    console.error('Error fetching city and state for loaded area:', e)
+                  }
+                }
+                fetchCityAndStateForLoadedArea()
+                
                 // Set areaInput after a small delay to ensure options are updated
                 // Close dropdown when patching data
                 setTimeout(() => {
@@ -280,7 +401,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
               occupation: patient.occupation_id ? String(patient.occupation_id) : '',
               maritalStatus: patient.marital_status_id ? String(patient.marital_status_id) : '',
               // Referral fields from patient_master table
-              referredBy: patient.refer_id || prev.referredBy || 'Self',
+              referredBy: patient.refer_id || prev.referredBy || '',
               referralName: patient.refer_doctor_details || prev.referralName || '',
               referralContact: patient.doctor_mobile || prev.referralContact || '',
               referralEmail: patient.doctor_email || prev.referralEmail || '',
@@ -319,6 +440,12 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
     const selectedMaritalStatus = maritalStatusOptions.find(opt => opt.id === formData.maritalStatus)
     const selectedOccupation = occupationOptions.find(opt => opt.id === formData.occupation)
     const selectedReferBy = referByOptions.find(opt => opt.id === formData.referredBy)
+    // referId is char(1) in DB; guard against longer values (e.g., "Self")
+    const normalizedReferId = (() => {
+      const raw = selectedReferBy ? selectedReferBy.id : (formData.referredBy || '')
+      if (!raw) return ''
+      return String(raw).trim().charAt(0) // ensure max length 1
+    })()
 
     console.log('=== MAPPING FORM DATA TO API REQUEST ===')
     console.log('Selected Area:', selectedArea)
@@ -328,6 +455,17 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
     console.log('Selected Occupation:', selectedOccupation)
     console.log('Selected Refer By:', selectedReferBy)
 
+    // Derive cityId/stateId from selected area/city to match DB values
+    const derivedCityId =
+      selectedArea?.cityId ||
+      selectedCity?.id ||
+      ''
+
+    const derivedStateId =
+      selectedArea?.stateId ||
+      selectedCity?.stateId ||
+      ''
+
     const apiRequest: QuickRegistrationRequest = {
       doctorId: currentDoctorId,
       lastName: formData.lastName,
@@ -335,8 +473,8 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
       firstName: formData.firstName,
       mobile: formData.mobileNumber,
       areaId: selectedArea ? parseInt(selectedArea.id) : undefined,
-      cityId: selectedCity ? selectedCity.id : 'PU', // Default to 'PU' for Pune
-      stateId: 'MAH', // Default to Maharashtra
+      cityId: derivedCityId || 'PU', // Fallback to 'PU' if nothing derived
+      stateId: derivedStateId || 'MAH', // Fallback to 'MAH' if nothing derived
       countryId: 'IND', // Default to India
       dob: formData.dateOfBirth || undefined,
       age: formData.age || undefined,
@@ -344,7 +482,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
       regYear: '5', // Match Swagger format
       registrationStatus: 'P', // Default to 'P' for Pending
       userId: 'Recep2', // You might want to get this from session
-      referBy: selectedReferBy ? selectedReferBy.id : (formData.referredBy || ''),
+      referBy: normalizedReferId,
       referDoctorDetails: formData.referralName || '',
       maritalStatus: selectedMaritalStatus ? selectedMaritalStatus.id : '',
       occupation: selectedOccupation ? parseInt(selectedOccupation.id) : undefined,
@@ -472,10 +610,13 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
   }, [open, formData.referralName, formData.referredBy, formData.referralContact, formData.referralEmail, formData.referralAddress])
 
   // Sync areaInput with formData.area when dialog opens or formData.area is set externally
+  // Only sync when data is being patched (not when user is actively editing)
   useEffect(() => {
     if (open && formData.area && formData.area.trim() !== '' && formData.area !== 'pune') {
       // Only sync if areaInput is empty or doesn't match formData.area
-      if (!areaInput || areaInput !== formData.area) {
+      // But don't sync if user is actively editing (input exists and doesn't match)
+      const isUserEditing = areaInput && areaInput.trim() !== '' && areaInput !== formData.area
+      if (!isUserEditing && (!areaInput || areaInput !== formData.area)) {
         setAreaInput(formData.area)
         setAreaOpen(false) // Close dropdown when syncing patched data
         // Also ensure the area is in options if it's not already there
@@ -516,24 +657,20 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
         const results = await searchAreas(areaInput)
         console.log('✅ Area search results:', results)
         if (active) {
-          // Map results to include cityId from API response
+          // Map results to include cityId and stateId from API response (matching database structure)
           const mappedResults = results.map((item: any) => ({
             id: item.id || item.areaId || '',
             name: item.name || item.areaName || '',
-            cityId: item.cityId || undefined
+            cityId: item.cityId || undefined,
+            stateId: item.stateId || undefined
           }))
           setAreaOptions(mappedResults)
-          // Only open dropdown if we have results AND input doesn't match selected value
-          // (Prevent opening when data is patched and input matches selected area)
-          if (mappedResults.length > 0) {
-            const selectedAreaName = formData.area?.trim() || ''
-            const currentInput = areaInput?.trim() || ''
-            // Only open if user is actively searching (input doesn't match selected value)
-            if (selectedAreaName === '' || currentInput !== selectedAreaName) {
-              setAreaOpen(true)
-            } else {
-              setAreaOpen(false)
-            }
+          // Open dropdown if we have results and user is actively searching
+          // Allow opening even if input matches selected value (user might want to change it)
+          if (mappedResults.length > 0 && areaInput && areaInput.trim().length > 0) {
+            // Only prevent opening if this is initial data patching (no user interaction)
+            // We'll let onOpen handler control this instead
+            // Don't auto-open here - let user interaction control it
           }
         }
       } catch (e) {
@@ -657,7 +794,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
             // Try multiple common search terms to get more cities
             const searchTerms = ['a', 'e', 'i', 'o', 'u', 'p', 'm', 'd']
             const allResultsSet = new Set<string>()
-            const allResults: { id: string; name: string }[] = []
+            const allResults: Array<{ id: string; name: string; stateId?: string }> = []
             
             // Search with multiple terms and combine results
             for (const term of searchTerms) {
@@ -739,7 +876,13 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => {
-      const next = { ...prev, [field]: value }
+      // Convert firstName, middleName, and lastName to uppercase
+      let processedValue = value
+      if (field === 'firstName' || field === 'middleName' || field === 'lastName') {
+        processedValue = value.toUpperCase()
+      }
+      
+      const next = { ...prev, [field]: processedValue }
       // Reverse sync: when Age (field1) changes, compute DoB using today's month/day
       if (field === 'field1') {
         const trimmed = String(value || '').trim()
@@ -1020,59 +1163,64 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
         const successMessage = formData.addToTodaysAppointment 
           ? 'Patient added and appointment booked successfully!' 
           : 'Patient added successfully!'
-        setSnackbarMessage(successMessage)
-        setSnackbarOpen(true)
+          setSnackbarMessage("Saved Successfully!");
+          setSnackbarOpen(true);
         
-        // Wait for 2 seconds to show snackbar, then close form
+        console.log('=== SNACKBAR SET ===')
+        console.log('Snackbar message:', successMessage)
+        console.log('Snackbar open:', true)
+        
+        // Reset form immediately but keep dialog open briefly to show snackbar
+        console.log('=== RESETTING FORM ===')
+        // Reset form
+        setFormData({
+          lastName: '',
+          firstName: '',
+          middleName: '',
+          age: '',
+          dateOfBirth: '',
+          dobDate: null,
+          field1: '',
+          field2: '',
+          gender: '',
+          area: '',
+          city: '',
+          patientId: '',
+          maritalStatus: '',
+          occupation: '',
+          address: '',
+          mobileNumber: '',
+          email: '',
+          state: 'Maharashtra',
+          referredBy: '',
+          referralName: '',
+          referralContact: '',
+          referralEmail: '',
+          referralAddress: '',
+          addToTodaysAppointment: true
+        })
+        // Clear area and city related states
+        setAreaInput('')
+        setCityInput('')
+        setSelectedAreaCityId(null)
+        setAreaOptions([])
+        setCityOptions([])
+        setAreaOpen(false)
+        // Clear doctor referral states
+        setReferralNameSearch('')
+        setReferralNameOptions([])
+        setSelectedDoctor(null)
+        setShowReferralPopup(false)
+        console.log('Form reset completed')
+        
+        // Close dialog after a short delay to allow snackbar to be visible
         setTimeout(() => {
-          console.log('=== RESETTING FORM ===')
-          // Reset form
-          setFormData({
-            lastName: '',
-            firstName: '',
-            middleName: '',
-            age: '',
-            dateOfBirth: '',
-            dobDate: null,
-            field1: '',
-            field2: '',
-            gender: '',
-            area: '',
-            city: '',
-            patientId: '',
-            maritalStatus: '',
-            occupation: '',
-            address: '',
-            mobileNumber: '',
-            email: '',
-            state: 'Maharashtra',
-            referredBy: 'Self',
-            referralName: '',
-            referralContact: '',
-            referralEmail: '',
-            referralAddress: '',
-            addToTodaysAppointment: true
-          })
-          // Clear area and city related states
-          setAreaInput('')
-          setCityInput('')
-          setSelectedAreaCityId(null)
-          setAreaOptions([])
-          setCityOptions([])
-          setAreaOpen(false)
-          // Clear doctor referral states
-          setReferralNameSearch('')
-          setReferralNameOptions([])
-          setSelectedDoctor(null)
-          setShowReferralPopup(false)
-          console.log('Form reset completed')
-          
           console.log('=== CLOSING DIALOG ===')
           onClose()
           console.log('Dialog closed')
           
           console.log('=== FORM SUBMISSION COMPLETED SUCCESSFULLY ===')
-        }, 2000) // 2 second delay
+        }, 1000) // 1 second delay to ensure snackbar is visible
       } else {
         console.error('=== PATIENT REGISTRATION FAILED ===')
         console.error('Save Status:', response.SAVE_STATUS)
@@ -1086,8 +1234,10 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
       console.error('Error message:', error instanceof Error ? error.message : 'Unknown error')
       console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace')
       
-      // Show error message to user (you might want to add a state for this)
-      alert(`Patient registration failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      // Show error snackbar
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      setSnackbarMessage(`Patient registration failed: ${errorMessage}`)
+      setSnackbarOpen(true)
     } finally {
       console.log('=== FINALLY BLOCK ===')
       console.log('Setting loading to false')
@@ -1103,8 +1253,20 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
   }
 
   console.log('AddPatientPage render - Dialog should be:', open ? 'OPEN' : 'CLOSED');
+  console.log('Snackbar state - open:', snackbarOpen, 'message:', snackbarMessage);
   
   return (<> 
+    {/* Success Snackbar (outside Dialog so it persists after close) */}
+    <GlobalSnackbar
+      show={snackbarOpen}
+      message={snackbarMessage}
+      onClose={() => {
+        console.log('Snackbar onClose called');
+        setSnackbarOpen(false);
+      }}
+      autoHideDuration={5000}
+    />
+    
     <Dialog
       open={open}
       onClose={handleClose}
@@ -1503,25 +1665,43 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     options={areaOptions}
                     loading={areaLoading}
                     disabled={loading || readOnly}
+                    getOptionKey={(opt) => {
+                      if (typeof opt === 'string') return opt
+                      return `${opt.id}-${opt.name}` // Use ID and name to ensure uniqueness
+                    }}
                     getOptionLabel={(opt) => {
                       if (typeof opt === 'string') return opt
                       return opt.name || ''
                     }}
-                    value={formData.area ? (areaOptions.find(o => o.name === formData.area) || null) : null}
+                    value={formData.area && areaInput === formData.area ? (areaOptions.find(o => o.name === formData.area) || null) : null}
                     inputValue={areaInput || ''}
                     onInputChange={(event, newInput, reason) => {
                       console.log('📝 Area input changed:', { newInput, reason, event: event?.type })
                       setAreaInput(newInput || '')
-                      // Clear formData.area when user clears the input
+                      // Clear formData.area when user clears the input or when input doesn't match selected area
                       if (reason === 'clear' || !newInput) {
                         handleInputChange('area', '')
                         setAreaOpen(false)
+                        setSelectedAreaCityId(null)
+                        // Clear city and reset state when area is cleared
+                        handleInputChange('city', '')
+                        setCityInput('')
+                        setCityOptions([])
+                        handleInputChange('state', 'Maharashtra')
                       } else if (newInput && newInput.trim().length > 0) {
-                        // If input matches selected value, don't open dropdown (patching scenario)
-                        if (formData.area && newInput.trim() === formData.area.trim()) {
-                          setAreaOpen(false)
+                        // If user is editing and input doesn't match the selected area, clear the selected area
+                        // This prevents re-selection when backspacing
+                        if (formData.area && newInput.trim() !== formData.area.trim()) {
+                          handleInputChange('area', '')
+                          setSelectedAreaCityId(null)
+                          // Clear city and reset state when area is being edited
+                          handleInputChange('city', '')
+                          setCityInput('')
+                          setCityOptions([])
+                          handleInputChange('state', 'Maharashtra')
                         }
-                        // Otherwise, let the useEffect handle opening when results arrive
+                        // Allow dropdown to open when user is typing
+                        // The useEffect will handle opening when results arrive
                       }
                     }}
                     onChange={(event, newValue, reason) => {
@@ -1531,87 +1711,199 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         setAreaInput(newValue)
                         setAreaOpen(false) // Close dropdown when value is selected
                         setSelectedAreaCityId(null) // Clear cityId for string input
-                        // Clear city when area changes
+                        // Clear city and reset state when area changes to string value
                         handleInputChange('city', '')
                         setCityInput('')
                         setCityOptions([])
+                        handleInputChange('state', 'Maharashtra')
                       } else if (newValue) {
                         handleInputChange('area', newValue.name)
                         setAreaInput(newValue.name)
                         setAreaOpen(false) // Close dropdown when value is selected
-                        // Store the area's cityId for filtering cities
-                        const areaCityId = newValue.cityId || null
+                        // Get cityId and stateId directly from area (matching database structure)
+                        const areaCityId = (newValue as any).cityId || null
+                        const areaStateId = (newValue as any).stateId || null
                         setSelectedAreaCityId(areaCityId)
-                        // Automatically fetch and set city when area is selected
-                        if (areaCityId) {
-                          // Fetch city name based on cityId
-                          const fetchCityForArea = async () => {
-                            try {
-                              const { searchCities } = await import('../services/referenceService')
-                              // Try multiple search terms to find the city
-                              const searchTerms = ['a', 'e', 'i', 'o', 'u', 'p', 'm', 'd']
-                              let matchingCity = null
+                        
+                        // Fetch and populate City and State based on area's cityId and stateId from database (must match exactly)
+                        const fetchCityAndStateForArea = async () => {
+                          try {
+                            const { searchCities, getStates, getAreaDetails } = await import('../services/referenceService')
+                            let matchingCity: { id: string; name: string; stateId?: string } | null = null
+                            
+                            // First, try to get stateName directly from area details (this includes stateName from state_translations)
+                            let stateNameFromArea: string | null = null
+                            if (areaStateId) {
+                              try {
+                                const areaDetails = await getAreaDetails(newValue.name, 1)
+                                if (areaDetails?.stateName) {
+                                  stateNameFromArea = areaDetails.stateName
+                                  console.log(`✅ Got stateName from area details:`, stateNameFromArea)
+                                }
+                              } catch (e) {
+                                console.warn('Could not get area details for stateName:', e)
+                              }
+                            }
+                            
+                            // Step 1: Fetch City using area's cityId (must match exactly)
+                            if (areaCityId) {
                               
-                              for (const term of searchTerms) {
-                                try {
-                                  const results = await searchCities(term)
-                                  matchingCity = results.find(city => {
-                                    const matches = city.id === areaCityId || 
-                                                   city.id?.toUpperCase() === areaCityId.toUpperCase() ||
-                                                   String(city.id) === String(areaCityId)
-                                    return matches
-                                  })
-                                  if (matchingCity) {
-                                    console.log(`✅ Found city for area (cityId: ${areaCityId}):`, matchingCity.name)
-                                    break
+                              // Try searching with the cityId directly first
+                              try {
+                                const directResults = await searchCities(areaCityId)
+                                matchingCity = directResults.find(city => {
+                                  const matches = city.id === areaCityId || 
+                                                 city.id?.toUpperCase() === areaCityId.toUpperCase() ||
+                                                 String(city.id) === String(areaCityId)
+                                  return matches
+                                }) || null
+                                if (matchingCity) {
+                                  console.log(`✅ Found city by direct cityId search (${areaCityId}):`, matchingCity.name)
+                                }
+                              } catch (e) {
+                                console.warn(`Direct cityId search failed:`, e)
+                              }
+                              
+                              // If not found, try comprehensive search
+                              if (!matchingCity) {
+                                const searchTerms = ['a', 'e', 'i', 'o', 'u', 'p', 'm', 'd', 'pu', 'mu', 'de']
+                                const allCitiesSet = new Set<string>()
+                                const allCities: Array<{ id: string; name: string; stateId?: string }> = []
+                                
+                                for (const term of searchTerms) {
+                                  try {
+                                    const results = await searchCities(term)
+                                    results.forEach(city => {
+                                      const key = `${city.id}-${city.name}`
+                                      if (!allCitiesSet.has(key)) {
+                                        allCitiesSet.add(key)
+                                        allCities.push(city)
+                                      }
+                                    })
+                                  } catch (e) {
+                                    console.warn(`Search failed for term "${term}":`, e)
                                   }
-                                } catch (e) {
-                                  console.warn(`Search failed for term "${term}":`, e)
+                                }
+                                
+                                matchingCity = allCities.find(city => {
+                                  const matches = city.id === areaCityId || 
+                                                 city.id?.toUpperCase() === areaCityId.toUpperCase() ||
+                                                 String(city.id) === String(areaCityId)
+                                  return matches
+                                }) || null
+                                
+                                if (matchingCity) {
+                                  console.log(`✅ Found city from comprehensive search (cityId: ${areaCityId}):`, matchingCity.name)
                                 }
                               }
                               
                               if (matchingCity) {
+                                // Populate city
                                 handleInputChange('city', matchingCity.name)
                                 setCityInput(matchingCity.name)
                               } else {
-                                // Clear city if not found
+                                console.warn('⚠️ Could not find city for area cityId:', areaCityId)
                                 handleInputChange('city', '')
                                 setCityInput('')
                               }
-                            } catch (e) {
-                              console.error('Error fetching city for area:', e)
+                            } else {
                               handleInputChange('city', '')
                               setCityInput('')
                             }
+                            
+                            // Step 2: Fetch State using area's stateId (must match exactly from database)
+                            // Priority: 1) stateName from area details (state_translations.state_name), 2) from getStates, 3) fallback to city
+                            if (areaStateId) {
+                              try {
+                                // First, use stateName from area details if available (this comes from state_translations.state_name)
+                                if (stateNameFromArea) {
+                                  handleInputChange('state', stateNameFromArea)
+                                  console.log(`✅ Using stateName from area details (stateId: ${areaStateId}):`, stateNameFromArea)
+                                } else {
+                                  // Fallback: try to get from getStates
+                                  const allStates = await getStates()
+                                  const matchingState = allStates.find(state => {
+                                    const matches = state.id === areaStateId || 
+                                                   state.id?.toUpperCase() === areaStateId.toUpperCase() ||
+                                                   String(state.id) === String(areaStateId)
+                                    return matches
+                                  })
+                                  if (matchingState && matchingState.name && matchingState.name !== matchingState.id) {
+                                    handleInputChange('state', matchingState.name)
+                                    console.log(`✅ Found state from getStates (stateId: ${areaStateId}):`, matchingState.name)
+                                  } else {
+                                    console.warn('⚠️ Could not find state name for area stateId:', areaStateId)
+                                    // Fallback: try to get state from city if available
+                                    if (matchingCity?.stateId) {
+                                      const cityStateId = matchingCity.stateId
+                                      const cityStateMatch = allStates.find(state => {
+                                        const matches = state.id === cityStateId || 
+                                                       state.id?.toUpperCase() === cityStateId.toUpperCase() ||
+                                                       String(state.id) === String(cityStateId)
+                                        return matches
+                                      })
+                                      if (cityStateMatch && cityStateMatch.name && cityStateMatch.name !== cityStateMatch.id) {
+                                        handleInputChange('state', cityStateMatch.name)
+                                        console.log(`✅ Found state from city fallback (stateId: ${cityStateId}):`, cityStateMatch.name)
+                                      }
+                                    }
+                                  }
+                                }
+                              } catch (e) {
+                                console.error('Error fetching state for area:', e)
+                              }
+                            } else {
+                              // Fallback: try to get state from city if area doesn't have stateId
+                              if (matchingCity?.stateId) {
+                                try {
+                                  const allStates = await getStates()
+                                  const cityStateId = matchingCity.stateId
+                                  const matchingState = allStates.find(state => {
+                                    const matches = state.id === cityStateId || 
+                                                   state.id?.toUpperCase() === cityStateId.toUpperCase() ||
+                                                   String(state.id) === String(cityStateId)
+                                    return matches
+                                  })
+                                  if (matchingState && matchingState.name && matchingState.name !== matchingState.id) {
+                                    handleInputChange('state', matchingState.name)
+                                    console.log(`✅ Found state from city (stateId: ${cityStateId}):`, matchingState.name)
+                                  }
+                                } catch (e) {
+                                  console.error('Error fetching state from city:', e)
+                                }
+                              } else {
+                                handleInputChange('state', 'Maharashtra')
+                              }
+                            }
+                          } catch (e) {
+                            console.error('Error fetching city and state for area:', e)
+                            handleInputChange('city', '')
+                            setCityInput('')
+                            handleInputChange('state', 'Maharashtra')
                           }
-                          fetchCityForArea()
-                        } else {
-                          // Clear city when area changes if no cityId
-                          handleInputChange('city', '')
-                          setCityInput('')
                         }
-                        console.log('🔍 Area selected with cityId:', areaCityId)
+                        fetchCityAndStateForArea()
+                        console.log('🔍 Area selected with cityId:', areaCityId, 'stateId:', areaStateId)
                       } else if (reason === 'clear') {
                         handleInputChange('area', '')
                         setAreaInput('')
                         setAreaOpen(false)
                         setSelectedAreaCityId(null) // Clear selected area cityId
-                        // Clear city when area is cleared
+                        // Clear city and state when area is cleared
                         handleInputChange('city', '')
                         setCityInput('')
                         setCityOptions([])
+                        // Reset state to default when area is cleared
+                        handleInputChange('state', 'Maharashtra')
                       }
                     }}
                     filterOptions={(options) => options}
-                    open={areaOpen && areaOptions.length > 0 && !areaLoading && 
-                      // Don't open if input matches the selected value (patching scenario)
-                      !(formData.area && areaInput && areaInput.trim() === formData.area.trim())}
+                    open={areaOpen && areaOptions.length > 0 && !areaLoading}
                     onOpen={() => {
-                      // Only open if user is actively searching (input doesn't match selected value)
-                      if (!formData.area || !areaInput || areaInput.trim() !== formData.area.trim()) {
-                        console.log('🔓 Area autocomplete opened, options:', areaOptions.length)
-                        setAreaOpen(true)
-                      }
+                      // Always allow opening when user clicks/focuses on the field
+                      // This allows users to change the selected area
+                      console.log('🔓 Area autocomplete opened, options:', areaOptions.length)
+                      setAreaOpen(true)
                     }}
                     onClose={(event, reason) => {
                       console.log('🔒 Area autocomplete closed:', reason)
@@ -1674,12 +1966,8 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                       fullWidth
                       placeholder="City"
                       value={formData.city}
+                      onChange={(e) => handleInputChange('city', e.target.value)}
                       disabled={loading || readOnly}
-                      sx={{
-                        '& .MuiInputBase-input': {
-                          backgroundColor: readOnly ? '#f5f5f5' : 'white'
-                        }
-                      }}
                     />
                   ) : (
                     // If no area is selected, show Autocomplete for searching
@@ -1702,6 +1990,37 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         // Update input to show selected value
                         if (newValue) {
                           setCityInput(newValue.name)
+                          
+                          // Populate state based on city's stateId
+                          const cityStateId = (newValue as any).stateId
+                          if (cityStateId) {
+                            const fetchStateForCity = async () => {
+                              try {
+                                const { getStates } = await import('../services/referenceService')
+                                const allStates = await getStates()
+                                const matchingState = allStates.find(state => {
+                                  const matches = state.id === cityStateId || 
+                                                 state.id?.toUpperCase() === cityStateId.toUpperCase() ||
+                                                 String(state.id) === String(cityStateId)
+                                  return matches
+                                })
+                                if (matchingState) {
+                                  handleInputChange('state', matchingState.name)
+                                  console.log(`✅ Found state from manually selected city (stateId: ${cityStateId}):`, matchingState.name)
+                                } else {
+                                  console.warn('⚠️ Could not find state for city stateId:', cityStateId)
+                                }
+                              } catch (e) {
+                                console.error('Error fetching state for manually selected city:', e)
+                              }
+                            }
+                            fetchStateForCity()
+                          } else {
+                            console.warn('⚠️ Selected city does not have stateId')
+                          }
+                        } else {
+                          // Clear state when city is cleared
+                          handleInputChange('state', 'Maharashtra')
                         }
                       }}
                       filterOptions={(options) => options}
@@ -1719,12 +2038,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                           placeholder="Search City"
                           disabled={loading || readOnly}
                           InputProps={{
-                            ...params.InputProps,
-                            endAdornment: (
-                          <InputAdornment position="end" sx={{ pr: 1 }}>
-                                <Search sx={{ color: '#666' }} />
-                              </InputAdornment>
-                            )
+                            ...params.InputProps
                           }}
                         />
                       )}
@@ -1740,12 +2054,8 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                   <TextField
                     fullWidth
                     value={formData.state}
-                    disabled={true || readOnly}
-                    sx={{ 
-                      '& .MuiInputBase-input': { 
-                        backgroundColor: '#f5f5f5' 
-                      } 
-                    }}
+                    onChange={(e) => handleInputChange('state', e.target.value)}
+                    disabled={loading || readOnly}
                   />
                 </Box>
               </Grid>
@@ -2131,7 +2441,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                 mobileNumber: '',
                 email: '',
                 state: 'Maharashtra',
-                referredBy: 'Self',
+                referredBy: '',
                 referralName: '',
                 referralContact: '',
                 referralEmail: '',
@@ -2175,23 +2485,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
         </Box>
       </DialogActions>
     </Dialog>
-
-    {/* Success Snackbar (outside Dialog so it persists after close) */}
-    <Snackbar
-      open={snackbarOpen}
-      autoHideDuration={2000}
-      onClose={() => setSnackbarOpen(false)}
-      message={snackbarMessage}
-      anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      sx={{
-        zIndex: 11001,
-        '& .MuiSnackbarContent-root': {
-          backgroundColor: '#4caf50',
-          color: 'white',
-          fontWeight: 'bold'
-        }
-      }}
-    />
 
     {/* Add New Referral Popup */}
     <AddReferralPopup

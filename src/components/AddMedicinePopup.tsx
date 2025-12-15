@@ -21,9 +21,11 @@ interface AddMedicinePopupProps {
     onClose: () => void;
     onSave: (data: MedicineData) => void;
     editData?: MedicineData;
+    doctorId?: string;
+    clinicId?: string;
 }
 
-const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSave, editData }) => {
+const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSave, editData, doctorId, clinicId }) => {
     const [shortDescription, setShortDescription] = useState('');
     const [medicineName, setMedicineName] = useState('');
     const [priority, setPriority] = useState('');
@@ -81,19 +83,33 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
         try {
             setLoading(true);
             
-            // Hardcoded values as requested
-            const doctorId = "DR-00010";
-            const clinicId = "CL-00001";
-            
-            // Get user name from session for createdByName/modifiedByName
+            // Get doctorId and clinicId from props or session
+            let finalDoctorId = doctorId;
+            let finalClinicId = clinicId;
             let userName = "System";
+            
             try {
                 const sessionResult = await sessionService.getSessionInfo();
                 if (sessionResult.success && sessionResult.data) {
+                    // Use session data if props are not provided
+                    if (!finalDoctorId) {
+                        finalDoctorId = sessionResult.data.doctorId;
+                    }
+                    if (!finalClinicId) {
+                        finalClinicId = sessionResult.data.clinicId;
+                    }
                     userName = sessionResult.data.firstName || sessionResult.data.loginId || "System";
                 }
             } catch (err) {
-                console.warn('Could not get session info for user name:', err);
+                console.warn('Could not get session info:', err);
+            }
+            
+            // Validate that we have required IDs
+            if (!finalDoctorId || !finalClinicId) {
+                setSnackbarMessage('Doctor ID and Clinic ID are required. Please ensure you are logged in.');
+                setSnackbarOpen(true);
+                setLoading(false);
+                return;
             }
 
             const isEditMode = !!editData;
@@ -110,8 +126,8 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
             const medicineData: MedicineMaster = {
                 shortDescription: newShortDescription,
                 medicineDescription: newMedicineName,
-                doctorId: doctorId,
-                clinicId: clinicId,
+                doctorId: finalDoctorId,
+                clinicId: finalClinicId,
                 priorityValue: parseInt(priorityValue),
                 morning: breakfast.trim() ? parseFloat(breakfast.trim()) : null,
                 afternoon: lunch.trim() ? parseFloat(lunch.trim()) : null,
@@ -130,7 +146,7 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                     // because short description is part of the composite key
                     try {
                         // Delete old medicine
-                        await medicineService.deleteMedicine(doctorId, clinicId, originalShortDescription);
+                        await medicineService.deleteMedicine(finalDoctorId, finalClinicId, originalShortDescription);
                     } catch (err) {
                         console.warn('Error deleting old medicine (may not exist):', err);
                     }

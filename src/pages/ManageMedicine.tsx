@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { Edit, Delete, Search, Refresh } from "@mui/icons-material";
-import { Snackbar } from "@mui/material";
 import AddMedicinePopup from "../components/AddMedicinePopup";
 import medicineService from "../services/medicineService";
 import { doctorService, Doctor } from "../services/doctorService";
 import { useSession } from "../store/hooks/useSession";
+import GlobalSnackbar from "../components/GlobalSnackbar";
 
 // Medicine type definition
 type Medicine = {
@@ -706,22 +706,11 @@ export default function ManageMedicine() {
       />
 
       {/* Success/Error Snackbar */}
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={2000}
-        onClose={() => {
-          setSnackbarOpen(false);
-        }}
+      <GlobalSnackbar
+        show={snackbarOpen}
         message={snackbarMessage}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-        sx={{
-          zIndex: 99999, // Ensure snackbar appears above everything
-          '& .MuiSnackbarContent-root': {
-            backgroundColor: snackbarMessage.includes('successfully') ? '#4caf50' : '#f44336',
-            color: 'white',
-            fontWeight: 'bold'
-          }
-        }}
+        onClose={() => setSnackbarOpen(false)}
+        autoHideDuration={5000}
       />
     </div>
   );

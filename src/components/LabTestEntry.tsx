@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Close, Add, Delete } from '@mui/icons-material';
-import { Snackbar } from '@mui/material';
 import { Calendar } from 'lucide-react';
 import { patientService } from '../services/patientService';
 import { SessionInfo } from '../services/sessionService';
 import { doctorService, Doctor } from '../services/doctorService';
 import AddPatientPage from '../pages/AddPatientPage';
+import GlobalSnackbar from './GlobalSnackbar';
 
 interface AppointmentRow {
     reports_received: any;
@@ -1513,12 +1513,11 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
             )}
 
             {/* Snackbar for notifications */}
-            <Snackbar
-                open={snackbarOpen}
-                autoHideDuration={4000}
-                onClose={() => setSnackbarOpen(false)}
+            <GlobalSnackbar
+                show={snackbarOpen}
                 message={snackbarMessage}
-                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+                onClose={() => setSnackbarOpen(false)}
+                autoHideDuration={5000}
             />
 
             {/* Quick Registration Modal - appears on top of Lab Test Entry window */}

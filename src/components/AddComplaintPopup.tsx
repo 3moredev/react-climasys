@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Close } from '@mui/icons-material';
 import { Snackbar } from '@mui/material';
+import { useSession } from '../store/hooks/useSession';
 
 interface AddComplaintPopupProps {
     open: boolean;
@@ -10,6 +11,7 @@ interface AddComplaintPopupProps {
         complaintDescription: string;
         priority: string;
         displayToOperator: boolean;
+        clinicId?: string;
     }) => void;
     editData?: {
         shortDescription: string;
@@ -20,6 +22,7 @@ interface AddComplaintPopupProps {
 }
 
 const AddComplaintPopup: React.FC<AddComplaintPopupProps> = ({ open, onClose, onSave, editData }) => {
+    const session = useSession();
     const [shortDescription, setShortDescription] = useState('');
     const [complaintDescription, setComplaintDescription] = useState('');
     const [priority, setPriority] = useState('');
@@ -58,6 +61,13 @@ const AddComplaintPopup: React.FC<AddComplaintPopupProps> = ({ open, onClose, on
             return;
         }
 
+        // Validate clinicId from session
+        if (!session.clinicId) {
+            setSnackbarMessage('Clinic ID is required. Please ensure you are logged in.');
+            setSnackbarOpen(true);
+            return;
+        }
+
         // Normalize text fields to uppercase before saving
         const shortDescUpper = shortDescription.trim().toUpperCase();
         const complaintDescUpper = complaintDescription.trim().toUpperCase();
@@ -70,7 +80,8 @@ const AddComplaintPopup: React.FC<AddComplaintPopupProps> = ({ open, onClose, on
             shortDescription: shortDescUpper,
             complaintDescription: complaintDescUpper,
             priority: priorityValue,
-            displayToOperator
+            displayToOperator,
+            clinicId: session.clinicId
         });
         
         // Show success snackbar

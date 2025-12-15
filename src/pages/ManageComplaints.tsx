@@ -7,6 +7,7 @@ import { doctorService, Doctor } from "../services/doctorService";
 import { useSession } from "../store/hooks/useSession";
 import { useAppSelector } from "../store/hooks";
 import AddComplaintPopup from "../components/AddComplaintPopup";
+import GlobalSnackbar from "../components/GlobalSnackbar";
 
 // Complaint type definition
 type Complaint = {
@@ -36,6 +37,10 @@ export default function ManageComplaints() {
   const [loadingDoctors, setLoadingDoctors] = useState<boolean>(false);
   const [showAddPopup, setShowAddPopup] = useState<boolean>(false);
   const [editData, setEditData] = useState<Complaint | null>(null);
+  
+  // Snackbar state
+  const [showSnackbar, setShowSnackbar] = useState<boolean>(false);
+  const [snackbarMessage, setSnackbarMessage] = useState<string>('');
 
   // Filter complaints based on search term
   const filteredComplaints = complaints.filter(complaint => {
@@ -84,14 +89,16 @@ export default function ManageComplaints() {
     displayToOperator: boolean;
   }) => {
     if (!clinicId) {
-      setError('Clinic ID is required');
+      setSnackbarMessage('Clinic ID is required');
+      setShowSnackbar(true);
       return;
     }
 
     // Use selectedDoctorId if available, otherwise fall back to doctorId from session
     const doctorIdToUse = selectedDoctorId || doctorId;
     if (!doctorIdToUse) {
-      setError('Doctor ID is required');
+      setSnackbarMessage('Doctor ID is required');
+      setShowSnackbar(true);
       return;
     }
 
@@ -121,11 +128,15 @@ export default function ManageComplaints() {
         console.log('Updating complaint:', complaintData);
         await patientService.updateComplaint(complaintData);
         console.log('Complaint updated successfully');
+        setSnackbarMessage('Complaint updated successfully');
+        setShowSnackbar(true);
       } else {
         // Create new complaint
         console.log('Creating complaint:', complaintData);
         await patientService.createComplaint(complaintData);
         console.log('Complaint created successfully');
+        setSnackbarMessage('Complaint created successfully');
+        setShowSnackbar(true);
       }
       
       // Close popup and clear edit data
@@ -136,7 +147,8 @@ export default function ManageComplaints() {
       await fetchComplaints(doctorIdToUse);
     } catch (err: any) {
       console.error('Error saving complaint:', err);
-      setError(err.message || (editData ? 'Failed to update complaint' : 'Failed to create complaint'));
+      setSnackbarMessage(err.message || (editData ? 'Failed to update complaint' : 'Failed to create complaint'));
+      setShowSnackbar(true);
       // Keep popup open on error so user can retry
     } finally {
       setLoading(false);
@@ -155,14 +167,16 @@ export default function ManageComplaints() {
     }
 
     if (!clinicId) {
-      setError('Clinic ID is required to delete complaint');
+      setSnackbarMessage('Clinic ID is required to delete complaint');
+      setShowSnackbar(true);
       return;
     }
 
     // Use selectedDoctorId if available, otherwise fall back to doctorId from session
     const doctorIdToUse = selectedDoctorId || doctorId;
     if (!doctorIdToUse) {
-      setError('Doctor ID is required to delete complaint');
+      setSnackbarMessage('Doctor ID is required to delete complaint');
+      setShowSnackbar(true);
       return;
     }
 
@@ -173,6 +187,9 @@ export default function ManageComplaints() {
       console.log('Deleting complaint:', complaint.shortDescription, 'for doctor:', doctorIdToUse, 'and clinic:', clinicId);
       await patientService.deleteComplaint(doctorIdToUse, clinicId, complaint.shortDescription);
       
+      setSnackbarMessage('Complaint deleted successfully');
+      setShowSnackbar(true);
+      
       // Refresh the complaints list after successful deletion
       await fetchComplaints(doctorIdToUse);
       
@@ -180,7 +197,8 @@ export default function ManageComplaints() {
       console.log('Complaint deleted successfully');
     } catch (err: any) {
       console.error('Error deleting complaint:', err);
-      setError(err.message || 'Failed to delete complaint');
+      setSnackbarMessage(err.message || 'Failed to delete complaint');
+      setShowSnackbar(true);
     } finally {
       setLoading(false);
     }
@@ -722,6 +740,14 @@ export default function ManageComplaints() {
           priority: editData.priority,
           displayToOperator: editData.displayToOperator
         } : null}
+      />
+      
+      {/* Global Snackbar */}
+      <GlobalSnackbar
+        show={showSnackbar}
+        message={snackbarMessage}
+        onClose={() => setShowSnackbar(false)}
+        autoHideDuration={5000}
       />
     </div>
   );
