@@ -449,20 +449,24 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                 
                 // Examination Comments/Detailed History: patch from detailedHistory field value (not from Additional_Comments directly)
                 // Always patch detailedHistory into examinationComments if detailedHistory exists
-                if (patched.detailedHistory && patched.detailedHistory.trim() !== '') {
-                    patched.examinationComments = patched.detailedHistory;
+                if (patched.rawVisit.Detailed_History && patched.rawVisit.Detailed_History.trim() !== '') {
+                    patched.detailedHistory = patched.rawVisit.Detailed_History;
                     console.log('PatientFormTest: Patched examinationComments from detailedHistory:', patched.examinationComments);
                 }
-                
+                if(patched.rawVisit.Additional_Comments && patched.rawVisit.Additional_Comments.trim() !== '') {
+                    patched.examinationComments = patched.rawVisit.Additional_Comments;
+                    console.log('PatientFormTest: Patched examinationComments from additionalComments:', patched.examinationComments);
+                }
                 // Patch medicines field: combine existing + visit_medicine (short_description) + medicine_names (from prescriptions)
                 if (patched.rawVisit) {
-                    const existingMedicines = patched.medicines || '';
+                    // const existingMedicines = patched.medicines || '';
                     
                     // Get medicines from visit_medicine table (short_description) - comma-separated string from backend
                     const visitMedicinesStr = patched.rawVisit?.visit_medicines_short_description 
                         || patched.rawVisit?.visitMedicinesShortDescription 
                         || patched.rawVisit?.Visit_Medicines_Short_Description 
                         || '';
+                        patched.medicines = visitMedicinesStr;
                     
                     // Get medicine_names from visit_prescription_overwrite table (medicine_name) - comma-separated string from backend
                     const medicineNamesStr = patched.rawVisit?.medicine_names 
@@ -472,9 +476,9 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                         || '';
                     
                     // Parse comma-separated strings into arrays
-                    const existingList = existingMedicines 
-                        ? existingMedicines.split(',').map((m: string) => m.trim()).filter((m: string) => m !== '')
-                        : [];
+                    // const existingList = existingMedicines 
+                    //     ? existingMedicines.split(',').map((m: string) => m.trim()).filter((m: string) => m !== '')
+                    //     : [];
                     
                     const visitMedicinesList = visitMedicinesStr 
                         ? String(visitMedicinesStr).split(',').map((m: string) => m.trim()).filter((m: string) => m !== '')
@@ -499,7 +503,8 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                     }
                     
                     // Combine all medicine sources: existing + visit_medicine (short_description) + medicine_names (prescriptions) + fallback
-                    const allMedicines = [...existingList, ...visitMedicinesList, ...medicineNamesList, ...fallbackMedicinesList];
+                    // const allMedicines = [...existingList, ...visitMedicinesList, ...medicineNamesList, ...fallbackMedicinesList];
+                    const allMedicines = [...visitMedicinesList, ...medicineNamesList, ...fallbackMedicinesList];
                     
                     // Remove duplicates and empty values
                     const uniqueMedicines = Array.from(new Set(allMedicines.filter((m: string) => m !== '')));
@@ -1264,7 +1269,7 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                             { key: 'surgicalHistory', label: 'Surgical History' },
                             { key: 'visitComments', label: 'Visit Comments' },
                             { key: 'currentMedicines', label: 'Exisiting Medicines' },
-                            { key: 'detailedHistory', label: 'Detailed History/Additional Comments' },
+                            { key: 'examinationComments', label: 'Detailed History/Additional Comments' },
                             { key: 'examinationFindings', label: 'Important/Examination Findings' },
                             { key: 'complaints', label: 'Complaints' },
                             { key: 'provisionalDiagnosis', label: 'Provisional Diagnosis' },
@@ -1348,7 +1353,7 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                             // { key: 'examinationFindings', label: 'Important/Examination Findings:' },
                             // { key: 'complaints', label: 'Complaints:' },
                             // { key: 'provisionalDiagnosis', label: 'Provisional Diagnosis:' },
-                            { key: 'examinationComments', label: 'Examination Comments/Detailed History:' },
+                            { key: 'detailedHistory', label: 'Examination Comments/Detailed History:' },
                             { key: 'procedurePerformed', label: 'Procedure Performed/Notes:' },
                             { key: 'labSuggested', label: 'Lab Suggested:' }
                         ].map(({ key, label }) => (
@@ -1610,20 +1615,21 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                                 {prescription.instructions || '-'}
                                             </td>
                                         </tr>
-                                    ))
-                                ) : (
-                                    <tr>
-                                        <td colSpan={3} style={{ 
-                                            padding: '20px', 
-                                            textAlign: 'center', 
-                                            color: '#666', 
-                                            fontStyle: 'italic',
-                                            borderBottom: '1px solid #eaeaea'
-                                        }}>
-                                            No prescriptions found for this visit
-                                        </td>
-                                    </tr>
-                                )}
+                                        ))
+                                    ) : (
+                                        // If no prescriptions are available, show a single row with '-' in each column
+                                        <tr>
+                                            <td style={{ height: '40px', padding: '10px', lineHeight: '20px', borderBottom: '1px solid #eaeaea', borderRight: '1px solid #e0e0e0', verticalAlign: 'middle', whiteSpace: 'normal', wordBreak: 'break-word', overflow: 'hidden' }}>
+                                                -
+                                            </td>
+                                            <td style={{ height: '40px', padding: '10px', lineHeight: '20px', borderBottom: '1px solid #eaeaea', borderRight: '1px solid #e0e0e0', verticalAlign: 'middle', whiteSpace: 'normal', wordBreak: 'break-word', overflow: 'hidden' }}>
+                                                -
+                                            </td>
+                                            <td style={{ height: '40px', padding: '10px', lineHeight: '20px', borderBottom: '1px solid #eaeaea', verticalAlign: 'middle', whiteSpace: 'normal', wordBreak: 'break-word', overflow: 'hidden' }}>
+                                                -
+                                            </td>
+                                        </tr>
+                                    )}
                             </tbody>
                         </table>
                     </div>
