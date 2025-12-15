@@ -646,7 +646,7 @@ export default function Treatment() {
         const sugar = escapeHtml(formData.sugar || '-');
 
         // Get advice
-        const advice = escapeHtml(formData.visitComments || formData.additionalComments || '');
+        const advice = escapeHtml(formData.additionalComments || '');
 
         // Build instructions HTML from mlInstructionsTable
         let instructionsHTML = '';
@@ -1165,12 +1165,25 @@ export default function Treatment() {
                             pulse: vitals.pulse !== undefined ? String(vitals.pulse) : prev.pulse,
                             bp: vitals.blood_pressure !== undefined ? String(vitals.blood_pressure) : prev.bp,
                             sugar: vitals.sugar !== undefined ? String(vitals.sugar) : prev.sugar,
-                            tft: vitals.tft !== undefined ? String(vitals.tft) : prev.tft,
+                            tft: vitals.thtext !== undefined ? String(vitals.thtext) : prev.tft,
                             pallorHb: vitals.pallor !== undefined ? String(vitals.pallor) : prev.pallorHb,
                             allergy: vitals.allergy_dtls !== undefined ? String(vitals.allergy_dtls) : prev.allergy,
                             medicalHistoryText: vitals.habits_comments !== undefined ? String(vitals.habits_comments) : prev.medicalHistoryText,
-                            visitComments: vitals.instructions !== undefined ? String(vitals.instructions) : prev.visitComments,
-                            medicines: medicinesJoined || prev.medicines,
+                            // Map vitals.ui-style narrative fields into Billing form fields
+                            // Instructions → Plan / Advice (visitComments)
+                            visitComments: vitals.visit_comments !== undefined ? String(vitals.visit_comments) : prev.visitComments,
+                            // symptom_comment → Detailed History
+                            detailedHistory: vitals.symptom_comment !== undefined ? String(vitals.symptom_comment) : prev.detailedHistory,
+                            // surgical_history_past_history → Surgical History
+                            surgicalHistory: vitals.surgical_history_past_history !== undefined ? String(vitals.surgical_history_past_history) : prev.surgicalHistory,
+                            // observation → Procedure Performed
+                            procedurePerformed: vitals.observation !== undefined ? String(vitals.observation) : prev.procedurePerformed,
+                            // important_findings → Examination Findings
+                            examinationFindings: vitals.important_findings !== undefined ? String(vitals.important_findings) : prev.examinationFindings,
+                            // impression → Additional Comments
+                            additionalComments: vitals.impression !== undefined ? String(vitals.impression) : prev.additionalComments,
+                            // medicines: medicinesJoined || prev.medicines,
+                            medicines: vitals.current_medicines !== undefined ? String(vitals.current_medicines) : prev.medicines,
                             dressingBodyParts: dressingCombined || prev.dressingBodyParts,
                             visitType: {
                                 ...prev.visitType,
@@ -1219,8 +1232,9 @@ export default function Treatment() {
                             setFollowUpData(prev => ({
                                 ...prev,
                                 followUpType: fuTypeId ? String(fuTypeId) : prev.followUpType,
-                                followUp: fu ? String(fu) : prev.followUp,
-                                followUpDate: fuDate ? String(fuDate) : prev.followUpDate
+                                followUp: vitals.follow_up_comment !== undefined ? String(vitals.follow_up_comment) : prev.followUp,
+                                followUpDate: fuDate ? String(fuDate) : prev.followUpDate, 
+                                planAdv: vitals.instructions !== undefined ? String(vitals.instructions) : prev.planAdv
                             }));
 
                             // Patch billing fields from master lists (uiFields and vitals)
@@ -1267,9 +1281,16 @@ export default function Treatment() {
                                     ? (uiFields.paymentRemark !== null ? String(uiFields.paymentRemark) : '')
                                     : prev.paymentRemark;
                                 
-                                // Handle reason - check multiple possible field names
-                                const reasonValue = uiFields?.reason ?? uiFields?.Reason ?? dataRoot?.reason ?? dataRoot?.Reason ?? prev.reason;
+                                // Handle reason - prefer vitals[0].comment, fall back to uiFields/dataRoot, then keep previous
+                                const reasonValue =
+                                    vitals?.comment ??
+                                    uiFields?.reason ??
+                                    uiFields?.Reason ??
+                                    dataRoot?.reason ??
+                                    dataRoot?.Reason ??
+                                    prev.reason;
                                 const reasonStr = reasonValue !== undefined && reasonValue !== null ? String(reasonValue) : prev.reason;
+                                console.log('reasonValue', reasonValue);
                                 
                                 return {
                                     ...prev,
