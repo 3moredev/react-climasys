@@ -214,6 +214,7 @@ export const doctorService = {
   async updateDoctor(id: string, doctorData: Partial<Doctor>): Promise<Doctor> {
     try {
       const payload = {
+        doctorId: id,
         firstName: doctorData.firstName,
         middleName: doctorData.middleName,
         lastName: doctorData.lastName,

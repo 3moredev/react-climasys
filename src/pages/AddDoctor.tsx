@@ -207,6 +207,11 @@ export default function AddDoctor() {
         }
     };
 
+    const handleClinicChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const clinicId = e.target.value;
+        setFormData(prev => ({ ...prev, clinicId }));
+    };
+
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
@@ -364,6 +369,22 @@ export default function AddDoctor() {
                                 {error}
                             </div>
                         )}
+                        <div className="form-row">
+                            <div className="form-group">
+                                <label className="form-label">Clinic</label>
+                                <select
+                                    className="form-control"
+                                    name="clinicId"
+                                    value={formData.clinicId}
+                                    onChange={handleClinicChange}
+                                >
+                                    <option value="">--Select Clinic--</option>
+                                    {clinics.map(c => (
+                                        <option key={c.id} value={c.id}>{c.name}</option>
+                                    ))}
+                                </select>
+                            </div>                           
+                        </div>
 
                         <div className="form-row">
                             <div className="form-group">

@@ -12,7 +12,6 @@ import {
     AreaItem
 } from "../services/referenceService";
 import { clinicService, Clinic } from "../services/clinicService";
-import { doctorService, Doctor } from "../services/doctorService";
 import { CircularProgress } from "@mui/material";
 
 export default function AddClinic() {
@@ -21,7 +20,6 @@ export default function AddClinic() {
     const editingClinic = location.state as Clinic | null;
 
     const [formData, setFormData] = useState({
-        doctorId: "",
         name: "",
         address: "",
         countryId: "",
@@ -38,8 +36,7 @@ export default function AddClinic() {
     const [countries, setCountries] = useState<CountryItem[]>([]);
     const [states, setStates] = useState<StateItem[]>([]);
     const [cities, setCities] = useState<CityItem[]>([]);
-    const [areas, setAreas] = useState<AreaItem[]>([]);
-    const [doctors, setDoctors] = useState<Doctor[]>([]);
+    const [areas, setAreas] = useState<AreaItem[]>([]);    
 
     const [loading, setLoading] = useState(false);
     const [submitting, setSubmitting] = useState(false);
@@ -52,16 +49,12 @@ export default function AddClinic() {
                 const countriesData = await getCountries();
                 setCountries(countriesData);
 
-                const doctorsData = await doctorService.getAllDoctors();
-                setDoctors(doctorsData);
-
                 if (editingClinic) {
                     try {
                         // Fetch fresh details
                         const clinicDetails = await clinicService.getClinicById(editingClinic.id);
 
                         setFormData({
-                            doctorId: clinicDetails.doctorId || "",
                             name: clinicDetails.name || "",
                             address: clinicDetails.address || "",
                             countryId: clinicDetails.countryId || "",
@@ -92,7 +85,6 @@ export default function AddClinic() {
                         console.error("Error fetching clinic details:", err);
                         // Fallback to passed state if fetch fails
                         setFormData({
-                            doctorId: editingClinic.doctorId || "",
                             name: editingClinic.name || "",
                             address: editingClinic.address || "",
                             countryId: editingClinic.countryId || "",
@@ -199,8 +191,7 @@ export default function AddClinic() {
     };
 
     const handleClear = () => {
-        setFormData({
-            doctorId: "",
+        setFormData({            
             name: "",
             address: "",
             countryId: "",
@@ -318,21 +309,7 @@ export default function AddClinic() {
                             </div>
                         </div>
 
-                        <div className="form-row">
-                            <div className="form-group">
-                                <label className="form-label">Doctor</label>
-                                <select
-                                    className="form-control"
-                                    name="doctorId"
-                                    value={formData.doctorId}
-                                    onChange={handleInputChange}
-                                >
-                                    <option value="">--Select Doctor--</option>
-                                    {doctors.map(d => (
-                                        <option key={d.id} value={d.id}>{d.name}</option>
-                                    ))}
-                                </select>
-                            </div>
+                        <div className="form-row">                            
                             <div className="form-group">
                                 <label className="form-label">Country</label>
                                 <select
@@ -347,9 +324,6 @@ export default function AddClinic() {
                                     ))}
                                 </select>
                             </div>
-                        </div>
-
-                        <div className="form-row">
                             <div className="form-group">
                                 <label className="form-label">State</label>
                                 <select
@@ -365,6 +339,9 @@ export default function AddClinic() {
                                     ))}
                                 </select>
                             </div>
+                        </div>
+
+                        <div className="form-row">
                             <div className="form-group">
                                 <label className="form-label">City</label>
                                 <select
@@ -380,9 +357,6 @@ export default function AddClinic() {
                                     ))}
                                 </select>
                             </div>
-                        </div>
-
-                        <div className="form-row">
                             <div className="form-group">
                                 <label className="form-label">Area</label>
                                 <select
@@ -399,6 +373,9 @@ export default function AddClinic() {
                                     ))}
                                 </select>
                             </div>
+                        </div>
+
+                        <div className="form-row">
                             <div className="form-group">
                                 <label className="form-label">Pincode</label>
                                 <input
@@ -410,9 +387,6 @@ export default function AddClinic() {
                                     placeholder="Enter Your Pincode"
                                 />
                             </div>
-                        </div>
-
-                        <div className="form-row">
                             <div className="form-group">
                                 <label className="form-label">Tips</label>
                                 <input
@@ -423,6 +397,9 @@ export default function AddClinic() {
                                     onChange={handleInputChange}
                                 />
                             </div>
+                        </div>
+
+                        <div className="form-row">
                             <div className="form-group">
                                 <label className="form-label">News</label>
                                 <input
@@ -433,9 +410,6 @@ export default function AddClinic() {
                                     onChange={handleInputChange}
                                 />
                             </div>
-                        </div>
-
-                        <div className="form-row">
                             <div className="form-group">
                                 <label className="form-label">Phone No</label>
                                 <input
@@ -447,6 +421,9 @@ export default function AddClinic() {
                                     placeholder="Enter Your Phone No"
                                 />
                             </div>
+                        </div>
+
+                        <div className="form-row">
                             <div className="form-group" style={{ maxWidth: 'calc(50% - 20px)' }}>
                                 <label className="form-label">Fax No</label>
                                 <input

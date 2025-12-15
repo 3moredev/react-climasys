@@ -134,8 +134,8 @@ export interface ClinicItem {
 }
 
 function mapClinicItem(item: any): ClinicItem {
-  const id = item?.id ?? item?.clinicId ?? item?.code ?? ''
-  const name = item?.name ?? item?.clinicName ?? String(id)
+  const id = item?.clinicId ?? ''
+  const name = item?.clinicName ?? ''
   return { id: String(id), name: String(name) }
 }
 

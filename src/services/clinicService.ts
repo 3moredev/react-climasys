@@ -16,8 +16,7 @@ export interface Clinic {
     pincode?: string;
     tips?: string;
     news?: string;
-    faxNo?: string;
-    doctorId?: string;
+    faxNo?: string;    
 }
 
 export const clinicService = {
@@ -80,8 +79,7 @@ export const clinicService = {
                 pincode: item.pincode || '',
                 tips: item.tips || '',
                 news: item.news || '',
-                faxNo: item.faxNo || '',
-                doctorId: item.doctorId || ''
+                faxNo: item.faxNo || ''                
             };
         } catch (error: any) {
             console.error('Error fetching clinic details:', error);
@@ -95,8 +93,7 @@ export const clinicService = {
     async createClinic(clinicData: Partial<Clinic>): Promise<Clinic> {
         try {
             const payload = {
-                clinicId: '',
-                doctorId: clinicData.doctorId,
+                clinicId: '',                
                 clinicName: clinicData.name,
                 clinicAddress: clinicData.address,
                 countryId: clinicData.countryId,
@@ -122,8 +119,7 @@ export const clinicService = {
      */
     async updateClinic(id: string, clinicData: Partial<Clinic>): Promise<Clinic> {
         try {
-            const payload = {
-                doctorId: clinicData.doctorId,
+            const payload = {                
                 clinicId: id,
                 clinicName: clinicData.name,
                 clinicAddress: clinicData.address,
