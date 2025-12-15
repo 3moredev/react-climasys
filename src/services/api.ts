@@ -2,7 +2,7 @@ import axios from 'axios'
 
 // Create axios instance with base configuration
 const api = axios.create({
-  baseURL: 'http://localhost:8080/api',
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -12,7 +12,7 @@ const api = axios.create({
 
 // Session timeout handling
 let sessionTimeoutWarningShown = false
-let sessionTimeoutTimer: NodeJS.Timeout | null = null
+let sessionTimeoutTimer: ReturnType<typeof setTimeout> | null = null
 
 // Function to handle session timeout
 const handleSessionTimeout = (message: string = 'Your session has expired. Please log in again.') => {
