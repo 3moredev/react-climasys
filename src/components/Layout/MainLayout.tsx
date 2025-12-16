@@ -42,6 +42,7 @@ import { authService } from '../../services/authService'
 import SessionTimeoutHandler from '../Session/SessionTimeoutHandler'
 import { getSessionConfig } from '../../config/sessionConfig'
 import { useActivityTracker } from '../../hooks/useActivityTracker'
+import { LockReset } from '@mui/icons-material'
 
 interface MainLayoutProps {
   children: React.ReactNode
@@ -293,12 +294,12 @@ export default function MainLayout({ children }: MainLayoutProps) {
 
     // OPD Master (index 3)
     // Check for manage-complaints, manage-billing-details and settings path with OPD master query params (but not IPD master params)
-    if (currentPath.startsWith('/manage-complaints') || 
-        currentPath.startsWith('/manage-billing-details') ||
-        currentPath.startsWith('/manage-diagnosis') ||
-        currentPath.startsWith('/manage-procedure') ||
-        currentPath.startsWith('/manage-labs') ||
-        currentPath.startsWith('/manage-medicines')) return 3
+    if (currentPath.startsWith('/manage-complaints') ||
+      currentPath.startsWith('/manage-billing-details') ||
+      currentPath.startsWith('/manage-diagnosis') ||
+      currentPath.startsWith('/manage-procedure') ||
+      currentPath.startsWith('/manage-labs') ||
+      currentPath.startsWith('/manage-medicines')) return 3
     // Check for manage-complaints and settings path with OPD master query params (but not IPD master params)
     // if (currentPath.startsWith('/manage-complaints')) return 3
     if (
@@ -575,6 +576,12 @@ export default function MainLayout({ children }: MainLayoutProps) {
                   </ListItemIcon>
                   {sessionLoading ? 'Loading...' : `${displayUsername} (${displayClinicName})`}
                 </MenuItem>
+                <MenuItem onClick={() => { handleMenuClose(); navigate('/change-password'); }}>
+                  <ListItemIcon>
+                    <LockReset fontSize="small" />
+                  </ListItemIcon>
+                  Change Password
+                </MenuItem>
                 <MenuItem onClick={handleLogout} disabled={isLoggingOut}>
                   <ListItemIcon>
                     <Logout fontSize="small" />
@@ -585,6 +592,8 @@ export default function MainLayout({ children }: MainLayoutProps) {
             </Box>
           </Toolbar>
         </AppBar>
+
+
 
         {/* Main Content */}
         <Box

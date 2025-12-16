@@ -2,7 +2,7 @@ import axios from 'axios'
 
 // Create axios instance with base configuration
 const api = axios.create({
-  baseURL: 'http://localhost:8080/api',
+  baseURL: 'http://localhost:8081/api',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -24,16 +24,16 @@ const handleSessionTimeout = (message: string = 'Your session has expired. Pleas
   // Clear local storage
   localStorage.removeItem('token')
   localStorage.removeItem('user')
-  
+
   // Dispatch custom event for components to listen to
-  window.dispatchEvent(new CustomEvent('sessionTimeout', { 
-    detail: { message } 
+  window.dispatchEvent(new CustomEvent('sessionTimeout', {
+    detail: { message }
   }))
-  
+
   // Show session timeout message
   if (!sessionTimeoutWarningShown) {
     sessionTimeoutWarningShown = true
-    
+
     // Create a modal or alert for session timeout
     const timeoutModal = document.createElement('div')
     timeoutModal.style.cssText = `
@@ -49,7 +49,7 @@ const handleSessionTimeout = (message: string = 'Your session has expired. Pleas
       z-index: 10000;
       font-family: Arial, sans-serif;
     `
-    
+
     timeoutModal.innerHTML = `
       <div style="
         background: white;
@@ -72,9 +72,9 @@ const handleSessionTimeout = (message: string = 'Your session has expired. Pleas
         ">Go to Login</button>
       </div>
     `
-    
+
     document.body.appendChild(timeoutModal)
-    
+
     // Auto redirect after 5 seconds
     sessionTimeoutTimer = setTimeout(() => {
       window.location.href = '/login'
@@ -87,10 +87,10 @@ api.interceptors.request.use(
   (config) => {
     // Reset session timeout warning flag on successful requests
     sessionTimeoutWarningShown = false
-    
+
     // Add session cookie support
     config.withCredentials = true
-    
+
     return config
   },
   (error) => {
@@ -107,7 +107,7 @@ api.interceptors.response.use(
   },
   (error) => {
     const { response } = error
-    
+
     if (response?.status === 401) {
       // Session expired or unauthorized
       const errorMessage = response.data?.message || response.data?.error || 'Your session has expired. Please log in again.'
@@ -120,7 +120,7 @@ api.interceptors.response.use(
       // Request timeout - might indicate server issues
       console.warn('Request timeout - this might indicate server connectivity issues')
     }
-    
+
     return Promise.reject(error)
   }
 )
