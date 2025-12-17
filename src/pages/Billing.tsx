@@ -1757,55 +1757,85 @@ export default function Treatment() {
 
     const receiptDetailsText = React.useMemo(() => {
         const billingArray = masterListsBillingRef.current || [];
-        
-        // If we have billing items from master-lists API, use those directly to ensure all items are included
+
+        // Preferred: build Details text directly from master-lists billing array
+        // using billing_group_name, billing_subgroup_name, and collected_fees
         if (billingArray.length > 0) {
-            const parts = billingArray.map((item: any) => {
-                const billingDetails = item.billing_details || item.billingDetails || '';
-                const collectedFees = item.collected_fees ?? item.collectedFees ?? item.default_fees ?? item.defaultFees;
-                const amount = typeof collectedFees === 'number' && !isNaN(collectedFees) && collectedFees > 0
-                    ? ` Rs.${collectedFees.toFixed(2)}`
-                    : '';
-                
-                return billingDetails ? `${billingDetails}${amount}` : '';
-            }).filter(Boolean);
-            
+            const parts = billingArray
+                .map((item: any) => {
+                    const group = (item.billing_group_name || '').toString().trim();
+                    const subgroup = (item.billing_subgroup_name || '').toString().trim();
+                    const rawAmount =
+                        item.collected_fees ??
+                        item.collectedFees ??
+                        item.default_fees ??
+                        item.defaultFees;
+
+                    const hasAmount =
+                        typeof rawAmount === 'number' && !isNaN(rawAmount) && rawAmount > 0;
+                    const amountText = hasAmount ? `Rs.${rawAmount.toFixed(2)}` : '';
+
+                    if (!group && !subgroup && !amountText) return '';
+
+                    // Build "Group - SubGroup - Rs.xxx.xx" (skip empty parts cleanly)
+                    const labelParts: string[] = [];
+                    if (group) labelParts.push(group);
+                    if (subgroup) labelParts.push(subgroup);
+                    if (amountText) labelParts.push(amountText);
+
+                    return labelParts.join(' - ');
+                })
+                .filter(Boolean);
+
             if (parts.length > 0) {
                 return parts.join(', ');
             }
         }
-        
-        // Fallback: Use selected billing detail IDs if no billing array available
+
+        // Fallback: derive from currently selected billing options
         if (selectedBillingDetailIds.length === 0) return '';
-        
+
         const parts = selectedBillingDetailIds
             .map(id => {
-                // Find the billing option
-                const opt = billingDetailsOptions.find(opt => opt.id === id);
+                const opt = billingDetailsOptions.find(o => o.id === id);
                 if (!opt) return '';
-                
-                // Try to find matching billing item from master-lists API to get collected_fees
+
                 const billingItem = billingArray.find((item: any) => {
                     const optGroup = (opt.billing_group_name || '').trim().toLowerCase();
                     const optSubgroup = (opt.billing_subgroup_name || '').trim().toLowerCase();
                     const optDetails = (opt.billing_details || '').trim().toLowerCase();
-                    
+
                     const itemGroup = (item.billing_group_name || '').trim().toLowerCase();
                     const itemSubgroup = (item.billing_subgroup_name || '').trim().toLowerCase();
                     const itemDetails = (item.billing_details || '').trim().toLowerCase();
-                    
-                    return optGroup === itemGroup && optSubgroup === itemSubgroup && optDetails === itemDetails;
+
+                    return (
+                        optGroup === itemGroup &&
+                        optSubgroup === itemSubgroup &&
+                        optDetails === itemDetails
+                    );
                 });
-                
-                // Use collected_fees from billing item if available, otherwise use default_fees from option
-                const fees = billingItem?.collected_fees ?? billingItem?.collectedFees ?? opt.default_fees;
-                const amount = typeof fees === 'number' && !isNaN(fees) && fees > 0
-                    ? ` Rs.${fees.toFixed(2)}`
-                    : '';
-                
-                return `${opt.billing_details}${amount}`;
+
+                const rawAmount =
+                    billingItem?.collected_fees ??
+                    billingItem?.collectedFees ??
+                    opt.default_fees;
+                const hasAmount =
+                    typeof rawAmount === 'number' && !isNaN(rawAmount) && rawAmount > 0;
+                const amountText = hasAmount ? `Rs.${rawAmount.toFixed(2)}` : '';
+
+                const group = (opt.billing_group_name || '').toString().trim();
+                const subgroup = (opt.billing_subgroup_name || '').toString().trim();
+
+                const labelParts: string[] = [];
+                if (group) labelParts.push(group);
+                if (subgroup) labelParts.push(subgroup);
+                if (amountText) labelParts.push(amountText);
+
+                return labelParts.join(' - ');
             })
             .filter(Boolean);
+
         return parts.join(', ');
     }, [selectedBillingDetailIds, billingDetailsOptions]);
 
@@ -2893,7 +2923,7 @@ export default function Treatment() {
                 alchohol: formData.medicalHistory.alcohol,
                 
                 // Additional fields
-                habitDetails: '',
+                habitDetails: formData.medicalHistoryText || '',
                 allergyDetails: formData.allergy,
                 observation: formData.examinationFindings,
                 inPerson: formData.visitType.inPerson,

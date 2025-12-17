@@ -2921,25 +2921,33 @@ export default function AppointmentTable() {
 
                                                     </td>
                                                     <td className="last-col">
-                                                        <a
-                                                            href="#"
-                                                            title={`View visit history`}
-                                                            style={{ textDecoration: "underline", color: "#1E88E5", cursor: "pointer" }}
-                                                            onClick={(e) => {
-                                                                e.preventDefault();
-                                                                handleLastVisitClick(a.patientId, a.patient, a);
-                                                            }}
-                                                        >
-
-                                                            {loadingVisits[a.patientId] ? (
+                                                    {(() => {
+                                                        if (loadingVisits[a.patientId]) {
+                                                            return (
                                                                 <span className="text-muted">
                                                                     <i className="fas fa-spinner fa-spin me-1"></i>
                                                                     Loading...
                                                                 </span>
-                                                            ) : (
-                                                                formatLastVisitDisplay(a.patientId, a.reports_received, a.visitNumber === 1)
-                                                            )}
-                                                        </a>
+                                                            );
+                                                        }
+                                                        const lastVisitText = formatLastVisitDisplay(a.patientId, a.reports_received, a.visitNumber === 1);
+                                                        if (lastVisitText === "-") {
+                                                            return <span>{lastVisitText}</span>;
+                                                        }
+                                                        return (
+                                                            <a
+                                                                href="#"
+                                                                title={`View visit history`}
+                                                                style={{ textDecoration: "underline", color: "#1E88E5", cursor: "pointer" }}
+                                                                onClick={(e) => {
+                                                                    e.preventDefault();
+                                                                    handleLastVisitClick(a.patientId, a.patient, a);
+                                                                }}
+                                                            >
+                                                                {lastVisitText}
+                                                            </a>
+                                                        );
+                                                    })()}
                                                     </td>
                                                     <td className="action-col" style={{ whiteSpace: "nowrap" }}>
                                                         <div style={{
@@ -3207,24 +3215,37 @@ export default function AppointmentTable() {
                                                     <div className="kv">
                                                         <span className="k">Last Visit:</span>
                                                         <span className="v">
-                                                            <a
-                                                                href="#"
-                                                                title={`View visit history`}
-                                                                style={{ textDecoration: 'underline', color: '#1E88E5', cursor: 'pointer' }}
-                                                                onClick={(e) => {
-                                                                    e.preventDefault();
-                                                                    handleLastVisitClick(appointment.patientId, appointment.patient, appointment);
-                                                                }}
-                                                            >
-                                                                {loadingVisits[appointment.patientId] ? (
-                                                                    <span className="text-muted">
-                                                                        <i className="fas fa-spinner fa-spin me-1"></i>
-                                                                        Loading...
-                                                                    </span>
-                                                                ) : (
-                                                                    formatLastVisitDisplay(appointment.patientId, appointment.reports_received, appointment.visitNumber === 1)
-                                                                )}
-                                                            </a>
+                                                            {(() => {
+                                                                if (loadingVisits[appointment.patientId]) {
+                                                                    return (
+                                                                        <span className="text-muted">
+                                                                            <i className="fas fa-spinner fa-spin me-1"></i>
+                                                                            Loading...
+                                                                        </span>
+                                                                    );
+                                                                }
+                                                                const lastVisitText = formatLastVisitDisplay(
+                                                                    appointment.patientId,
+                                                                    appointment.reports_received,
+                                                                    appointment.visitNumber === 1
+                                                                );
+                                                                if (lastVisitText === "-") {
+                                                                    return <span>{lastVisitText}</span>;
+                                                                }
+                                                                return (
+                                                                    <a
+                                                                        href="#"
+                                                                        title={`View visit history`}
+                                                                        style={{ textDecoration: 'underline', color: '#1E88E5', cursor: 'pointer' }}
+                                                                        onClick={(e) => {
+                                                                            e.preventDefault();
+                                                                            handleLastVisitClick(appointment.patientId, appointment.patient, appointment);
+                                                                        }}
+                                                                    >
+                                                                        {lastVisitText}
+                                                                    </a>
+                                                                );
+                                                            })()}
                                                         </span>
                                                     </div>
                                                     <div className="kv"><span className="k">Gender:</span><span className="v">{appointment.gender}</span></div>
@@ -4365,24 +4386,33 @@ export default function AppointmentTable() {
                                                 </td>
                                                 {/* <td><a href={`/patients/${a.patientId}/visits`} style={{ textDecoration: "underline", color: "#1E88E5" }}>{a.lastOpd}</a></td> */}
                                                 <td className="last-col">
-                                                    <a
-                                                        href="#"
-                                                        title={`View visit history`}
-                                                        style={{ textDecoration: "underline", color: "#1E88E5", cursor: "pointer" }}
-                                                        onClick={(e) => {
-                                                            e.preventDefault();
-                                                            handleLastVisitClick(a.patientId, a.patient, a);
-                                                        }}
-                                                    >
-                                                        {loadingVisits[a.patientId] ? (
-                                                            <span className="text-muted">
-                                                                <i className="fas fa-spinner fa-spin me-1"></i>
-                                                                Loading...
-                                                            </span>
-                                                        ) : (
-                                                            formatLastVisitDisplay(a.patientId, a.reports_received, a.visitNumber === 1)
-                                                        )}
-                                                    </a>
+                                                    {(() => {
+                                                        if (loadingVisits[a.patientId]) {
+                                                            return (
+                                                                <span className="text-muted">
+                                                                    <i className="fas fa-spinner fa-spin me-1"></i>
+                                                                    Loading...
+                                                                </span>
+                                                            );
+                                                        }
+                                                        const lastVisitText = formatLastVisitDisplay(a.patientId, a.reports_received, a.visitNumber === 1);
+                                                        if (lastVisitText === "-") {
+                                                            return <span>{lastVisitText}</span>;
+                                                        }
+                                                        return (
+                                                            <a
+                                                                href="#"
+                                                                title={`View visit history`}
+                                                                style={{ textDecoration: "underline", color: "#1E88E5", cursor: "pointer" }}
+                                                                onClick={(e) => {
+                                                                    e.preventDefault();
+                                                                    handleLastVisitClick(a.patientId, a.patient, a);
+                                                                }}
+                                                            >
+                                                                {lastVisitText}
+                                                            </a>
+                                                        );
+                                                    })()}
                                                 </td>
                                                 <td className="action-col" style={{ whiteSpace: "nowrap" }}>
                                                     <div style={{
@@ -5197,26 +5227,39 @@ export default function AppointmentTable() {
                                                 <div className="kv"><span className="k">Age:</span><span className="v">{appointment.age}</span></div>
                                                 <div className="kv">
                                                     <span className="k">Last Visit:</span>
-                                                    <span className="v">
-                                                        <a
-                                                            href="#"
-                                                            title={`View visit history`}
-                                                            style={{ textDecoration: 'underline', color: '#1E88E5', cursor: 'pointer' }}
-                                                            onClick={(e) => {
-                                                                e.preventDefault();
-                                                                handleLastVisitClick(appointment.patientId, appointment.patient, appointment);
-                                                            }}
-                                                        >
-                                                            {loadingVisits[appointment.patientId] ? (
-                                                                <span className="text-muted">
-                                                                    <i className="fas fa-spinner fa-spin me-1"></i>
-                                                                    Loading...
-                                                                </span>
-                                                            ) : (
-                                                                formatLastVisitDisplay(appointment.patientId, appointment.reports_received, appointment.visitNumber === 1)
-                                                            )}
-                                                        </a>
-                                                    </span>
+                                                        <span className="v">
+                                                            {(() => {
+                                                                if (loadingVisits[appointment.patientId]) {
+                                                                    return (
+                                                                        <span className="text-muted">
+                                                                            <i className="fas fa-spinner fa-spin me-1"></i>
+                                                                            Loading...
+                                                                        </span>
+                                                                    );
+                                                                }
+                                                                const lastVisitText = formatLastVisitDisplay(
+                                                                    appointment.patientId,
+                                                                    appointment.reports_received,
+                                                                    appointment.visitNumber === 1
+                                                                );
+                                                                if (lastVisitText === "-") {
+                                                                    return <span>{lastVisitText}</span>;
+                                                                }
+                                                                return (
+                                                                    <a
+                                                                        href="#"
+                                                                        title={`View visit history`}
+                                                                        style={{ textDecoration: 'underline', color: '#1E88E5', cursor: 'pointer' }}
+                                                                        onClick={(e) => {
+                                                                            e.preventDefault();
+                                                                            handleLastVisitClick(appointment.patientId, appointment.patient, appointment);
+                                                                        }}
+                                                                    >
+                                                                        {lastVisitText}
+                                                                    </a>
+                                                                );
+                                                            })()}
+                                                        </span>
                                                 </div>
                                                 <div className="kv"><span className="k">Gender:</span><span className="v">{appointment.gender}</span></div>
                                                 <div className="kv"><span className="k">Provider:</span><span className="v">
