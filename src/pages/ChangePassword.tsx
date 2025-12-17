@@ -103,7 +103,7 @@ const ChangePasswordPage = () => {
     }
 
     return (
-        <Box sx={{ width: '100%', height: '100%', bgcolor: 'white', display: 'flex', flexDirection: 'column' }}>
+        <Box sx={{ width: '100%', height: '100%', bgcolor: 'white', display: 'flex', flexDirection: 'column', fontFamily: "'Roboto', sans-serif" }}>
             {/* Header Strip */}
             <Box sx={{
                 width: '100%',
@@ -127,7 +127,7 @@ const ChangePasswordPage = () => {
                         {/* Current Password */}
                         <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
                             <Box sx={{ width: '35%', textAlign: 'right', pr: 3 }}>
-                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold', fontSize: '13px' }}>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
                                     Current Password:<span style={{ color: 'red', marginLeft: '4px' }}>*</span>
                                 </Typography>
                             </Box>
@@ -146,12 +146,11 @@ const ChangePasswordPage = () => {
                                         sx: {
                                             borderRadius: '4px',
                                             height: '35px',
-                                            fontSize: '13px',
                                             backgroundColor: 'white',
                                             '& fieldset': { borderColor: '#b2dfdb' },
                                             '&:hover fieldset': { borderColor: '#80cbc4' },
                                             '&.Mui-focused fieldset': { borderColor: '#4db6ac' },
-                                            '& input::placeholder': { fontSize: '12px', opacity: 0.6 },
+                                            '& input::placeholder': { opacity: 0.6 },
                                             '& input::-ms-reveal': { display: 'none', width: 0, height: 0 },
                                             '& input::-ms-clear': { display: 'none', width: 0, height: 0 }
                                         },
@@ -207,7 +206,7 @@ const ChangePasswordPage = () => {
                         {/* New Password */}
                         <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
                             <Box sx={{ width: '35%', textAlign: 'right', pr: 3 }}>
-                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold', fontSize: '13px' }}>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
                                     New Password:<span style={{ color: 'red', marginLeft: '4px' }}>*</span>
                                 </Typography>
                             </Box>
@@ -226,12 +225,11 @@ const ChangePasswordPage = () => {
                                         sx: {
                                             borderRadius: '4px',
                                             height: '35px',
-                                            fontSize: '13px',
                                             backgroundColor: 'white',
                                             '& fieldset': { borderColor: '#b2dfdb' },
                                             '&:hover fieldset': { borderColor: '#80cbc4' },
                                             '&.Mui-focused fieldset': { borderColor: '#4db6ac' },
-                                            '& input::placeholder': { fontSize: '12px', opacity: 0.6 },
+                                            '& input::placeholder': { opacity: 0.6 },
                                         },
                                     }}
                                 />
@@ -286,7 +284,7 @@ const ChangePasswordPage = () => {
                         {/* Confirm Password */}
                         <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
                             <Box sx={{ width: '35%', textAlign: 'right', pr: 3 }}>
-                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold', fontSize: '13px' }}>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
                                     Confirm Password:<span style={{ color: 'red', marginLeft: '4px' }}>*</span>
                                 </Typography>
                             </Box>
@@ -305,12 +303,11 @@ const ChangePasswordPage = () => {
                                         sx: {
                                             borderRadius: '4px',
                                             height: '35px',
-                                            fontSize: '13px',
                                             backgroundColor: 'white',
                                             '& fieldset': { borderColor: '#b2dfdb' },
                                             '&:hover fieldset': { borderColor: '#80cbc4' },
                                             '&.Mui-focused fieldset': { borderColor: '#4db6ac' },
-                                            '& input::placeholder': { fontSize: '12px', opacity: 0.6 },
+                                            '& input::placeholder': { opacity: 0.6 },
                                         },
                                     }}
                                 />
@@ -367,8 +364,7 @@ const ChangePasswordPage = () => {
                                     minWidth: '80px',
                                     borderRadius: '4px',
                                     boxShadow: 'none',
-                                    height: '34px',
-                                    fontSize: '13px'
+                                    height: '34px'
                                 }}
                             >
                                 {loading ? 'Submitting...' : 'Submit'}
@@ -384,8 +380,7 @@ const ChangePasswordPage = () => {
                                     minWidth: '80px',
                                     borderRadius: '4px',
                                     boxShadow: 'none',
-                                    height: '34px',
-                                    fontSize: '13px'
+                                    height: '34px'
                                 }}
                             >
                                 Cancel
