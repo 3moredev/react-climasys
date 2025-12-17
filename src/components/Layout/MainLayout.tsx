@@ -78,7 +78,7 @@ const subMenus: Record<string, Array<SubMenuItem>> = {
         { label: 'OPD-IIIC Register(Service-wise collection)', path: '/settings?t=sub-category' },
       ],
     },
-    { label: 'OPD - Daily Collection', path: '/reports?type=receipts' },
+    { label: 'OPD - Daily Collection', path: '/opd-daily-collection' },
     { label: 'OPD - Defaulters', path: '/reports?type=dashboard' },
     {
       label: 'Dashboard & Reports', children: [
@@ -293,12 +293,12 @@ export default function MainLayout({ children }: MainLayoutProps) {
 
     // OPD Master (index 3)
     // Check for manage-complaints, manage-billing-details and settings path with OPD master query params (but not IPD master params)
-    if (currentPath.startsWith('/manage-complaints') || 
-        currentPath.startsWith('/manage-billing-details') ||
-        currentPath.startsWith('/manage-diagnosis') ||
-        currentPath.startsWith('/manage-procedure') ||
-        currentPath.startsWith('/manage-labs') ||
-        currentPath.startsWith('/manage-medicines')) return 3
+    if (currentPath.startsWith('/manage-complaints') ||
+      currentPath.startsWith('/manage-billing-details') ||
+      currentPath.startsWith('/manage-diagnosis') ||
+      currentPath.startsWith('/manage-procedure') ||
+      currentPath.startsWith('/manage-labs') ||
+      currentPath.startsWith('/manage-medicines')) return 3
     // Check for manage-complaints and settings path with OPD master query params (but not IPD master params)
     // if (currentPath.startsWith('/manage-complaints')) return 3
     if (

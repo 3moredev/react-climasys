@@ -44,6 +44,7 @@ import ManageBillingDetails from './pages/ManageBillingDetails'
 import PrescriptionCategory from './pages/PrescriptionCategory'
 import PrescriptionSubCategory from './pages/PrescriptionSubCategory'
 import PrescriptionDetails from './pages/PrescriptionDetails'
+import OPDDailyCollection from './pages/OPDDailyCollection'
 // Import dev helpers for console access
 import './utils/devHelpers'
 const theme = createTheme({
@@ -234,7 +235,7 @@ function App() {
               <AuthGuard>
                 <MainLayout>
                   <ManageBillingDetails />
-                    </MainLayout>
+                </MainLayout>
               </AuthGuard>
             } />
             <Route path="/prescription-category" element={
@@ -255,6 +256,13 @@ function App() {
               <AuthGuard>
                 <MainLayout>
                   <PrescriptionDetails />
+                </MainLayout>
+              </AuthGuard>
+            } />
+            <Route path="/opd-daily-collection" element={
+              <AuthGuard>
+                <MainLayout>
+                  <OPDDailyCollection />
                 </MainLayout>
               </AuthGuard>
             } />
