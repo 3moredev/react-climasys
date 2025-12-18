@@ -47,6 +47,15 @@ export const login = createAsyncThunk(
       const response = await authService.login(credentials)
       return response
     } catch (error: any) {
+      // Handle connection refused errors specifically
+      if (error.code === 'ERR_NETWORK' || error.message?.includes('ERR_CONNECTION_REFUSED') || error.message?.includes('Network Error')) {
+        return rejectWithValue('Cannot connect to server. Please ensure the backend server is running on port 8080.')
+      }
+      // Handle timeout errors
+      if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+        return rejectWithValue('Request timed out. The server may be slow or unavailable.')
+      }
+      // Handle other errors
       return rejectWithValue(error.response?.data?.errorMessage || error.message || 'Login failed')
     }
   }

@@ -93,18 +93,22 @@ if (process.env.NODE_ENV === 'development') {
   try {
     // Check if we're in a browser environment
     if (typeof window !== 'undefined' && window !== null) {
-      (window as any).enableDevAuthBypass = enableDevAuthBypass
-      (window as any).disableDevAuthBypass = disableDevAuthBypass
-      (window as any).clearAuthData = clearAuthData
-      (window as any).getAuthStatus = getAuthStatus
-      (window as any).simulateLogin = simulateLogin
-      
-      console.log('Development helpers available:')
-      console.log('- enableDevAuthBypass() - Enable auth bypass')
-      console.log('- disableDevAuthBypass() - Disable auth bypass')
-      console.log('- clearAuthData() - Clear all auth data')
-      console.log('- getAuthStatus() - Get current auth status')
-      console.log('- simulateLogin() - Simulate successful login')
+      // Safely assign functions to window object
+      const win = window as any
+      if (win) {
+        win.enableDevAuthBypass = enableDevAuthBypass
+        win.disableDevAuthBypass = disableDevAuthBypass
+        win.clearAuthData = clearAuthData
+        win.getAuthStatus = getAuthStatus
+        win.simulateLogin = simulateLogin
+        
+        console.log('Development helpers available:')
+        console.log('- enableDevAuthBypass() - Enable auth bypass')
+        console.log('- disableDevAuthBypass() - Disable auth bypass')
+        console.log('- clearAuthData() - Clear all auth data')
+        console.log('- getAuthStatus() - Get current auth status')
+        console.log('- simulateLogin() - Simulate successful login')
+      }
     } else {
       console.log('Development helpers not available (not in browser environment)')
     }

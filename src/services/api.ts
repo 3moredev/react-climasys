@@ -108,6 +108,13 @@ api.interceptors.response.use(
   (error) => {
     const { response } = error
 
+    // Handle connection refused errors
+    if (error.code === 'ERR_NETWORK' || error.message?.includes('ERR_CONNECTION_REFUSED') || error.message?.includes('Network Error')) {
+      console.error('Network error: Cannot connect to backend server. Please ensure the server is running on port 8080.')
+      // Don't handle session timeout for connection errors - these are server availability issues
+      return Promise.reject(error)
+    }
+
     if (response?.status === 401) {
       // Session expired or unauthorized
       const errorMessage = response.data?.message || response.data?.error || 'Your session has expired. Please log in again.'
