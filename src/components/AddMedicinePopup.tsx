@@ -7,7 +7,7 @@ import { sessionService } from '../services/sessionService';
 export interface MedicineData {
     shortDescription: string;
     medicineName: string;
-    priority: string;
+    priority: string;    
     breakfast: string;
     lunch: string;
     dinner: string;
@@ -21,9 +21,11 @@ interface AddMedicinePopupProps {
     onClose: () => void;
     onSave: (data: MedicineData) => void;
     editData?: MedicineData;
+    doctorId?: string;
+    clinicId?: string;
 }
 
-const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSave, editData }) => {
+const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSave, editData, doctorId, clinicId }) => {
     const [shortDescription, setShortDescription] = useState('');
     const [medicineName, setMedicineName] = useState('');
     const [priority, setPriority] = useState('');
@@ -81,19 +83,33 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
         try {
             setLoading(true);
             
-            // Hardcoded values as requested
-            const doctorId = "DR-00010";
-            const clinicId = "CL-00001";
-            
-            // Get user name from session for createdByName/modifiedByName
+            // Get doctorId and clinicId from props or session
+            let finalDoctorId = doctorId;
+            let finalClinicId = clinicId;
             let userName = "System";
+            
             try {
                 const sessionResult = await sessionService.getSessionInfo();
                 if (sessionResult.success && sessionResult.data) {
+                    // Use session data if props are not provided
+                    if (!finalDoctorId) {
+                        finalDoctorId = sessionResult.data.doctorId;
+                    }
+                    if (!finalClinicId) {
+                        finalClinicId = sessionResult.data.clinicId;
+                    }
                     userName = sessionResult.data.firstName || sessionResult.data.loginId || "System";
                 }
             } catch (err) {
-                console.warn('Could not get session info for user name:', err);
+                console.warn('Could not get session info:', err);
+            }
+            
+            // Validate that we have required IDs
+            if (!finalDoctorId || !finalClinicId) {
+                setSnackbarMessage('Doctor ID and Clinic ID are required. Please ensure you are logged in.');
+                setSnackbarOpen(true);
+                setLoading(false);
+                return;
             }
 
             const isEditMode = !!editData;
@@ -110,8 +126,8 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
             const medicineData: MedicineMaster = {
                 shortDescription: newShortDescription,
                 medicineDescription: newMedicineName,
-                doctorId: doctorId,
-                clinicId: clinicId,
+                doctorId: finalDoctorId,
+                clinicId: finalClinicId,
                 priorityValue: parseInt(priorityValue),
                 morning: breakfast.trim() ? parseFloat(breakfast.trim()) : null,
                 afternoon: lunch.trim() ? parseFloat(lunch.trim()) : null,
@@ -130,7 +146,7 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                     // because short description is part of the composite key
                     try {
                         // Delete old medicine
-                        await medicineService.deleteMedicine(doctorId, clinicId, originalShortDescription);
+                        await medicineService.deleteMedicine(finalDoctorId, finalClinicId, originalShortDescription);
                     } catch (err) {
                         console.warn('Error deleting old medicine (may not exist):', err);
                     }
@@ -208,6 +224,12 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
 
     const handleBack = () => {
         handleClose();
+    };
+
+    // Numeric-only helper for dose/priority inputs
+    const handleNumericChange = (setter: (v: string) => void, rawValue: string) => {
+        const cleaned = rawValue.replace(/\D/g, '');
+        setter(cleaned);
     };
 
     if (!open) return null;
@@ -347,7 +369,7 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                                     type="text"
                                     placeholder="Priority"
                                     value={priority}
-                                    onChange={(e) => setPriority(e.target.value)}
+                                    onChange={(e) => handleNumericChange(setPriority, e.target.value)}
                                     style={{
                                         width: '100%',
                                         padding: '8px 12px',
@@ -370,7 +392,7 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                                     type="text"
                                     placeholder="Breakfast"
                                     value={breakfast}
-                                    onChange={(e) => setBreakfast(e.target.value)}
+                                    onChange={(e) => handleNumericChange(setBreakfast, e.target.value)}
                                     style={{
                                         width: '100%',
                                         padding: '8px 12px',
@@ -414,7 +436,7 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                                     type="text"
                                     placeholder="Lunch"
                                     value={lunch}
-                                    onChange={(e) => setLunch(e.target.value)}
+                                    onChange={(e) => handleNumericChange(setLunch, e.target.value)}
                                     style={{
                                         width: '100%',
                                         padding: '8px 12px',
@@ -437,7 +459,7 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                                     type="text"
                                     placeholder="Dinner"
                                     value={dinner}
-                                    onChange={(e) => setDinner(e.target.value)}
+                                    onChange={(e) => handleNumericChange(setDinner, e.target.value)}
                                     style={{
                                         width: '100%',
                                         padding: '8px 12px',
@@ -460,7 +482,7 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                                     type="text"
                                     placeholder="Days"
                                     value={days}
-                                    onChange={(e) => setDays(e.target.value)}
+                                    onChange={(e) => handleNumericChange(setDays, e.target.value)}
                                     style={{
                                         width: '100%',
                                         padding: '8px 12px',
@@ -507,7 +529,7 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                     </div>
                 </div>
 
-                {/* Popup Footer */}
+                {/* Popup Footer - Submit / Cancel / Back */}
                 <div style={{
                     background: 'transparent',
                     padding: '0 20px 20px',
@@ -546,6 +568,54 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                         }}
                     >
                         {loading ? 'Saving...' : 'Submit'}
+                    </button>
+                    <button
+                        onClick={handleCancel}
+                        style={{
+                            padding: '8px 16px',
+                            backgroundColor: '#1976d2',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            fontFamily: "'Roboto', sans-serif",
+                            fontWeight: '500',
+                            transition: 'background-color 0.2s',
+                            whiteSpace: 'nowrap'
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = '#1565c0';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = '#1976d2';
+                        }}
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={handleBack}
+                        style={{
+                            padding: '8px 16px',
+                            backgroundColor: '#1976d2',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            fontFamily: "'Roboto', sans-serif",
+                            fontWeight: '500',
+                            transition: 'background-color 0.2s',
+                            whiteSpace: 'nowrap'
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = '#1565c0';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = '#1976d2';
+                        }}
+                    >
+                        Back
                     </button>
                 </div>
             </div>

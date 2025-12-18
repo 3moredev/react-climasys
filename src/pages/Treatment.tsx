@@ -2680,6 +2680,8 @@ export default function Treatment() {
         const optionValue = trimmedShortDescription || id;
         const optionLabel = trimmedMedicineName || optionValue;
 
+        const isActive = !!medicineData.addToActiveList;
+
         const newMedicine: MedicineRow = {
             id,
             medicine: `${trimmedMedicineName}${trimmedShortDescription ? ` (${trimmedShortDescription})` : ''}`,
@@ -2699,26 +2701,29 @@ export default function Treatment() {
             // Sort by priority (lower priority number = higher priority)
             return next.sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999));
         });
-        setMedicinesOptions(prev => {
-            const exists = prev.some(opt => opt.value === optionValue);
-            if (exists) return prev;
-            return [
-                ...prev,
-                {
-                    value: optionValue,
-                    label: optionLabel,
-                    short_description: optionValue,
-                    medicine_description: optionLabel,
-                    morning: normalizedBreakfast,
-                    afternoon: normalizedLunch,
-                    priority_value: normalizedPriority,
-                    active: true,
-                    clinic_id: clinicId,
-                    created_on: new Date().toISOString(),
-                    modified_on: null
-                }
-            ];
-        });
+        // Only add to search dropdown if user marked it as active
+        if (isActive) {
+            setMedicinesOptions(prev => {
+                const exists = prev.some(opt => opt.value === optionValue);
+                if (exists) return prev;
+                return [
+                    ...prev,
+                    {
+                        value: optionValue,
+                        label: optionLabel,
+                        short_description: optionValue,
+                        medicine_description: optionLabel,
+                        morning: normalizedBreakfast,
+                        afternoon: normalizedLunch,
+                        priority_value: normalizedPriority,
+                        active: true,
+                        clinic_id: clinicId,
+                        created_on: new Date().toISOString(),
+                        modified_on: null
+                    }
+                ];
+            });
+        }
         setShowMedicinePopup(false);
     };
 
@@ -5268,6 +5273,7 @@ export default function Treatment() {
                                                 clinicId: treatmentData?.clinicId || '',
                                                 visitNumber: Number(treatmentData?.visitNumber || 0),
                                                 provider: getDoctorLabelById(treatmentData?.doctorId),
+                                                shiftId: 1,
                                                 visitDate: new Date().toISOString().slice(0, 10)
                                             };
                                             setSelectedPatientForLab(appointmentRow);
@@ -6987,11 +6993,11 @@ export default function Treatment() {
                                                 transform: 'translateY(-50%)',
                                                 fontSize: '11px',
                                                 fontWeight: 'bold',
-                                                color: folderAmountData.totalAcBalance < 0 ? '#d32f2f' : '#2e7d32',
+                                                color: '#333', // Always black for status text
                                                 whiteSpace: 'nowrap',
                                                 pointerEvents: 'none'
                                             }}>
-                                                {folderAmountData.totalAcBalance < 0 ? 'Amount Pending' : 'Outstanding'}
+                                                {folderAmountData.totalAcBalance < 0 ? 'Outstanding' : 'Excess'}
                                             </span>
                                         )}
                                     </div>
@@ -7218,6 +7224,8 @@ export default function Treatment() {
                 open={showMedicinePopup}
                 onClose={() => setShowMedicinePopup(false)}
                 onSave={handleSaveMedicine}
+                doctorId={treatmentData?.doctorId || sessionData?.doctorId}
+                clinicId={treatmentData?.clinicId || sessionData?.clinicId}
             />
 
             {/* Add Prescription Popup */}

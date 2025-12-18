@@ -502,6 +502,17 @@ form {
   }
 }
 
+@keyframes slideInUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
 /* ===== GLOBAL UTILITY CLASSES ===== */
 .text-center { text-align: center !important; }
 .text-left { text-align: left !important; }

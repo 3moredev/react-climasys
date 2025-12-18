@@ -55,6 +55,7 @@ export interface AreaItem {
   id: string
   name: string
   cityId?: string
+  stateId?: string
 }
 
 function mapAreaItem(item: any): AreaItem {
@@ -78,7 +79,8 @@ export async function searchAreas(query?: string): Promise<AreaItem[]> {
     const id = item?.areaId ?? item?.id ?? ''
     const name = item?.areaName ?? item?.name ?? String(id)
     const cityId = item?.cityId
-    return { id: String(id), name: String(name), cityId: cityId ? String(cityId) : undefined }
+    const stateId = item?.stateId
+    return { id: String(id), name: String(name), cityId: cityId ? String(cityId) : undefined, stateId: stateId ? String(stateId) : undefined }
   })
 }
 
@@ -140,5 +142,79 @@ export async function getFollowUpTypes(): Promise<FollowUpTypeItem[]> {
   const response = await api.get('/reference/follow-up-types')
   const data = Array.isArray(response?.data) ? response.data : []
   return data.map(mapFollowUpTypeItem)
+}
+
+export interface StateItem {
+  id: string
+  name: string
+}
+
+export async function getStates(countryId?: string, languageId: number = 1): Promise<StateItem[]> {
+  try {
+    const params: any = { languageId }
+    if (countryId) {
+      params.countryId = countryId
+    }
+    const response = await api.get('/reference/states', { params })
+    const data = Array.isArray(response.data) ? response.data : []
+    return data.map((item: any) => {
+      // State entity has embedded id with stateId
+      const id = item?.id?.id ?? item?.id ?? item?.stateId ?? ''
+      // Priority: stateName from state_translations.state_name (from database), then name, then id
+      const name = item?.stateName ?? item?.name ?? String(id)
+      return { id: String(id), name: String(name) }
+    })
+  } catch (error) {
+    console.error('Error fetching states:', error)
+    return []
+  }
+}
+
+// Helper function to get state name by stateId (fetches translation)
+export async function getStateNameByStateId(stateId: string, languageId: number = 1): Promise<string | null> {
+  try {
+    // First try to get from all states
+    const allStates = await getStates()
+    const state = allStates.find(s => {
+      const matches = s.id === stateId || 
+                     s.id?.toUpperCase() === stateId.toUpperCase() ||
+                     String(s.id) === String(stateId)
+      return matches
+    })
+    if (state && state.name && state.name !== state.id) {
+      return state.name
+    }
+    
+    // If not found or name is just the ID, try using getAreaDetails with a dummy area
+    // Actually, we can't do that without an area name
+    
+    // Return null if we can't find a proper name
+    return null
+  } catch (error) {
+    console.error('Error fetching state name by stateId:', error)
+    return null
+  }
+}
+
+export async function getAreaDetails(areaName: string, languageId: number = 1): Promise<{ stateName?: string; stateId?: string; cityName?: string; cityId?: string } | null> {
+  try {
+    const response = await api.get('/reference/areas/details', {
+      params: { areaName, languageId }
+    })
+    const data = response?.data ?? {}
+    if (data.error) {
+      console.error('Error getting area details:', data.error)
+      return null
+    }
+    return {
+      stateName: data.stateName,
+      stateId: data.stateId,
+      cityName: data.cityName,
+      cityId: data.cityId
+    }
+  } catch (error) {
+    console.error('Error fetching area details:', error)
+    return null
+  }
 }
 

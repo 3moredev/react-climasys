@@ -7,6 +7,7 @@ import { labParameterService, LabTestAndParameterRequest } from "../services/lab
 import { doctorService, Doctor } from "../services/doctorService";
 import { useSession } from "../store/hooks/useSession";
 import AddTestLabPopup, { TestLabData } from "../components/AddTestLabPopup";
+import GlobalSnackbar from "../components/GlobalSnackbar";
 
 // Lab Test type definition
 type LabTest = {
@@ -38,6 +39,10 @@ export default function ManageLabs() {
   const [loadingDoctors, setLoadingDoctors] = useState<boolean>(false);
   const [showAddPopup, setShowAddPopup] = useState<boolean>(false);
   const [editData, setEditData] = useState<LabTest | null>(null);
+  
+  // Snackbar state
+  const [showSnackbar, setShowSnackbar] = useState<boolean>(false);
+  const [snackbarMessage, setSnackbarMessage] = useState<string>('');
 
   // Filter lab tests based on search term
   const filteredLabTests = labTests.filter(labTest => {
@@ -80,14 +85,16 @@ export default function ManageLabs() {
 
   const handleSaveLabTest = async (data: TestLabData) => {
     if (!clinicId) {
-      setError('Clinic ID is required');
+      setSnackbarMessage('Clinic ID is required');
+      setShowSnackbar(true);
       return;
     }
 
     // Use selectedDoctorId if available, otherwise fall back to doctorId from session
     const doctorIdToUse = selectedDoctorId || doctorId;
     if (!doctorIdToUse) {
-      setError('Doctor ID is required');
+      setSnackbarMessage('Doctor ID is required');
+      setShowSnackbar(true);
       return;
     }
 
@@ -163,6 +170,8 @@ export default function ManageLabs() {
         }
         
         console.log('Lab test and parameters updated successfully');
+        setSnackbarMessage('Lab test updated successfully');
+        setShowSnackbar(true);
       } else {
         // Create new lab test
         console.log('Creating lab test:', labTestData);
@@ -205,7 +214,8 @@ export default function ManageLabs() {
               } catch (paramError: any) {
                 console.error('Error creating parameters:', paramError);
                 // Don't fail the entire operation if parameter creation fails
-                setError('Lab test created but failed to create some parameters: ' + paramError.message);
+                setSnackbarMessage('Lab test created but failed to create some parameters: ' + paramError.message);
+                setShowSnackbar(true);
               }
             } else {
               console.warn('Could not find created lab test to create parameters. Lab test ID not available.');
@@ -213,8 +223,12 @@ export default function ManageLabs() {
           } catch (paramError: any) {
             console.error('Error fetching lab test for parameter creation:', paramError);
             // Don't fail the entire operation if parameter creation fails
-            setError('Lab test created but failed to create parameters: ' + paramError.message);
+            setSnackbarMessage('Lab test created but failed to create parameters: ' + paramError.message);
+            setShowSnackbar(true);
           }
+        } else {
+          setSnackbarMessage('Lab test created successfully');
+          setShowSnackbar(true);
         }
       }
       
@@ -226,7 +240,8 @@ export default function ManageLabs() {
       await fetchLabTests(doctorIdToUse);
     } catch (err: any) {
       console.error('Error saving lab test:', err);
-      setError(err.message || (editData ? 'Failed to update lab test' : 'Failed to create lab test'));
+      setSnackbarMessage(err.message || (editData ? 'Failed to update lab test' : 'Failed to create lab test'));
+      setShowSnackbar(true);
       // Keep popup open on error so user can retry
     } finally {
       setLoading(false);
@@ -235,14 +250,16 @@ export default function ManageLabs() {
 
   const handleEdit = async (labTest: LabTest) => {
     if (!clinicId) {
-      setError('Clinic ID is required to edit lab test');
+      setSnackbarMessage('Clinic ID is required to edit lab test');
+      setShowSnackbar(true);
       return;
     }
 
     // Use selectedDoctorId if available, otherwise fall back to doctorId from session
     const doctorIdToUse = selectedDoctorId || doctorId;
     if (!doctorIdToUse) {
-      setError('Doctor ID is required to edit lab test');
+      setSnackbarMessage('Doctor ID is required to edit lab test');
+      setShowSnackbar(true);
       return;
     }
 
@@ -296,7 +313,8 @@ export default function ManageLabs() {
       setShowAddPopup(true);
     } catch (err: any) {
       console.error('Error preparing edit data:', err);
-      setError(err.message || 'Failed to load lab test data for editing');
+      setSnackbarMessage(err.message || 'Failed to load lab test data for editing');
+      setShowSnackbar(true);
     } finally {
       setLoading(false);
     }
@@ -309,14 +327,16 @@ export default function ManageLabs() {
     }
 
     if (!clinicId) {
-      setError('Clinic ID is required to delete lab test');
+      setSnackbarMessage('Clinic ID is required to delete lab test');
+      setShowSnackbar(true);
       return;
     }
 
     // Use selectedDoctorId if available, otherwise fall back to doctorId from session
     const doctorIdToUse = selectedDoctorId || doctorId;
     if (!doctorIdToUse) {
-      setError('Doctor ID is required to delete lab test');
+      setSnackbarMessage('Doctor ID is required to delete lab test');
+      setShowSnackbar(true);
       return;
     }
 
@@ -429,11 +449,15 @@ export default function ManageLabs() {
       await labService.deleteLabTest(doctorIdToUse, Number(labTestId), clinicId);
       console.log('Lab test deleted successfully');
       
+      setSnackbarMessage('Lab test deleted successfully');
+      setShowSnackbar(true);
+      
       // Refresh the lab tests list after successful deletion
       await fetchLabTests(doctorIdToUse);
     } catch (err: any) {
       console.error('Error deleting lab test:', err);
-      setError(err.message || 'Failed to delete lab test');
+      setSnackbarMessage(err.message || 'Failed to delete lab test');
+      setShowSnackbar(true);
     } finally {
       setLoading(false);
     }
@@ -953,6 +977,14 @@ export default function ManageLabs() {
         } : null}
         clinicId={clinicId}
         doctorId={selectedDoctorId || doctorId}
+      />
+      
+      {/* Global Snackbar */}
+      <GlobalSnackbar
+        show={showSnackbar}
+        message={snackbarMessage}
+        onClose={() => setShowSnackbar(false)}
+        autoHideDuration={5000}
       />
     </div>
   );

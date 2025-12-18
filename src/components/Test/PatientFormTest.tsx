@@ -53,6 +53,7 @@ type PatientFormData = {
     surgicalHistory: string;
     visitComments: string;
     medicines: string;
+    currentMedicines: string;
     detailedHistory: string;
     examinationFindings: string;
     examinationComments: string;
@@ -128,6 +129,7 @@ const defaultFormData: PatientFormData = {
     surgicalHistory: '',
     visitComments: '',
     medicines: '',
+    currentMedicines: '',
     detailedHistory: '',
     examinationFindings: '',
     examinationComments: '',
@@ -238,27 +240,383 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
     }, [initialData, formData, visitDates, currentVisitIndex]);
 
     // Sync form data when a new visit (initialData) is provided by parent
+    // This matches the behavior in Treatment.tsx and Billing.tsx
     useEffect(() => {
         if (initialData) {
-            setFormData({
-                ...defaultFormData,
-                ...initialData
+            setFormData(prev => {
+                // Start with defaults, then always overwrite with values from initialData
+                const patched: any = { ...defaultFormData };
+                
+                // Helper function to always set value if it's present in initialData (including empty strings)
+                const alwaysSet = (key: keyof PatientFormData, value: any) => {
+                    // Only skip if value is explicitly undefined or null (empty strings should overwrite)
+                    if (value === undefined || value === null) return;
+                    
+                    // Preserve type: convert to string for string fields, boolean for boolean fields, etc.
+                    const defaultValue = defaultFormData[key];
+                    if (typeof defaultValue === 'boolean') {
+                        patched[key] = Boolean(value);
+                    } else if (typeof defaultValue === 'string') {
+                        // Always set string values, even if empty (to clear previous visit data)
+                        patched[key] = String(value);
+                    } else if (Array.isArray(defaultValue)) {
+                        // For arrays (like prescriptions), always set the array value, even if empty
+                        patched[key] = Array.isArray(value) ? value : [];
+                    } else if (typeof defaultValue === 'object' && defaultValue !== null) {
+                        // For objects (like rawVisit), use the value directly
+                        patched[key] = value;
+                    } else {
+                        patched[key] = value;
+                    }
+                };
+                
+                // Always overwrite with values from initialData when they are present
+                // This ensures that when navigating between visits, all fields update correctly
+                (Object.keys(initialData) as Array<keyof PatientFormData>).forEach((key) => {
+                    const value = (initialData as any)[key];
+                    alwaysSet(key, value);
+                });
+                
+                // Ensure rawVisit is set first so we can use it for prescription mapping
+                if ('rawVisit' in initialData && initialData.rawVisit !== undefined) {
+                    patched.rawVisit = initialData.rawVisit;
+                }
+                
+                // Map prescriptions from API format to component format
+                // Handle prescriptions from initialData or rawVisit.Prescriptions
+                // Priority: Use visit_prescription_overwrite table fields (brand_name, morning-afternoon-night, no_of_days, instruction)
+                const mapPrescriptionFromApi = (p: any, index?: number): Prescription => {
+                    // Helper to get value with fallbacks
+                    const get = (obj: any, ...keys: string[]) => {
+                        for (const k of keys) {
+                            if (obj && obj[k] !== undefined && obj[k] !== null && obj[k] !== '') return obj[k];
+                        }
+                        return '';
+                    };
+                    const toStr = (v: any) => (v === undefined || v === null ? '' : String(v));
+                    
+                    // Medicine column: Use brand_name from visit_prescription_overwrite (vp.brand_name)
+                    // Priority: brand_name > brandName > medicineName > other fallbacks
+                    let med = '';
+                    if (p.brand_name !== undefined && p.brand_name !== null && String(p.brand_name).trim() !== '') {
+                        med = String(p.brand_name).trim();
+                        console.log(`Prescription[${index ?? '?'}]: Using brand_name (visit_prescription): "${med}"`);
+                    } else if (p.brandName !== undefined && p.brandName !== null && String(p.brandName).trim() !== '') {
+                        med = String(p.brandName).trim();
+                        console.log(`Prescription[${index ?? '?'}]: Using brandName: "${med}"`);
+                    } else {
+                        med = toStr(get(p, 'medicineName', 'Medicine_Name', 'medicine', 'drug_name', 'item', 'Medicine', 'Drug', 'med_name', 'medication', 'MedName'));
+                        if (med) {
+                            console.log(`Prescription[${index ?? '?'}]: Using fallback medicine name: "${med}"`);
+                        }
+                    }
+                    
+                    // Dosage column: Format as morning-afternoon-night (no_of_days) from visit_prescription_overwrite
+                    // Priority: Use morning, afternoon, night, no_of_days from visit_prescription table
+                    const m = toStr(get(p, 'morning', 'Morning', 'morningDose', 'M', 'morn', 'AM')) || '0';
+                    const a = toStr(get(p, 'afternoon', 'Afternoon', 'afternoonDose', 'A', 'aft', 'PM')) || '0';
+                    const n = toStr(get(p, 'night', 'Night', 'nightDose', 'N', 'eve', 'Evening')) || '0';
+                    const noOfdays = toStr(get(p, 'no_of_days', 'noOfDays', 'NoOfDays', 'noOfdays'));
+                    
+                    // Format dosage as: morning-afternoon-night (no_of_days)
+                    let doseCombined = '';
+                    if (m !== '0' || a !== '0' || n !== '0') {
+                        doseCombined = `${m}-${a}-${n}`;
+                        // Add number of days if available
+                        if (noOfdays && noOfdays !== '0' && noOfdays !== '') {
+                            doseCombined += ` (${noOfdays})`;
+                        }
+                    } else {
+                        // Fallback: Try to get pre-formatted dosage
+                        doseCombined = toStr(get(p, 'doseSummary', 'Dosage', 'dosage', 'dose', 'Dose', 'dosage_formatted', 'frequency', 'Frequency'));
+                        // Add number of days if available and not already included
+                        if (noOfdays && noOfdays !== '0' && noOfdays !== '' && !doseCombined.toLowerCase().includes('day') && !doseCombined.includes('(')) {
+                            doseCombined += ` (${noOfdays})`;
+                        }
+                    }
+                    
+                    // Instructions column: Use instruction from visit_prescription_overwrite (vp.instruction)
+                    // Priority: instruction > Instruction > Instructions > other fallbacks
+                    let instr = toStr(get(p, 'instruction', 'Instruction', 'Instructions', 'instructions', 'Instruction_Text', 'directions', 'how_to_take', 'Directions'));
+                    // Skip if instruction is just "0" (which is a placeholder)
+                    if (instr === '0' || instr === '') {
+                        instr = ''; // Clear placeholder values
+                    }
+                    
+                    const mapped = {
+                        medicine: med,
+                        dosage: doseCombined,
+                        instructions: instr
+                    };
+                    
+                    console.log(`Prescription[${index ?? '?'}]: Mapped from visit_prescription_overwrite:`, mapped);
+                    return mapped;
+                };
+                
+                // Explicitly handle prescriptions if present in initialData (even if empty array)
+                // This ensures prescriptions are always updated when initialData changes
+                // This is critical for visit navigation to show correct prescriptions for each visit
+                if ('prescriptions' in initialData) {
+                    const prescriptionsValue = (initialData as any).prescriptions;
+                    if (Array.isArray(prescriptionsValue)) {
+                        // Check if prescriptions are in API format (have brandName, morningDose, etc.) or already mapped
+                        // Always prefer brandName if available, even if medicine field exists
+                        const isApiFormat = prescriptionsValue.length > 0 && prescriptionsValue[0] && 
+                            ('brandName' in prescriptionsValue[0] || 'morningDose' in prescriptionsValue[0] || 'afternoonDose' in prescriptionsValue[0]);
+                        
+                        if (!isApiFormat && prescriptionsValue.length > 0 && prescriptionsValue[0] && 'medicine' in prescriptionsValue[0]) {
+                            // Already in correct format, but check if medicine is empty and brandName exists in rawVisit
+                            patched.prescriptions = prescriptionsValue
+                                .filter((p: any, idx: number) => {
+                                    const hasMedicine = p.medicine && String(p.medicine).trim() !== '';
+                                    // Also check rawVisit for brandName if medicine is empty
+                                    let hasBrandName = false;
+                                    if (!hasMedicine && patched.rawVisit?.Prescriptions?.[idx]) {
+                                        const rawPrescription = patched.rawVisit.Prescriptions[idx];
+                                        hasBrandName = rawPrescription?.brandName && String(rawPrescription.brandName).trim() !== '';
+                                    }
+                                    const hasDosage = p.dosage && String(p.dosage).trim() !== '';
+                                    return hasMedicine || hasBrandName || hasDosage;
+                                })
+                                .map((p: any, idx: number) => {
+                                    // If medicine is empty but brandName exists in rawVisit, use brandName
+                                    let medicineValue = String(p.medicine || '').trim();
+                                    if (!medicineValue && patched.rawVisit?.Prescriptions?.[idx]) {
+                                        const rawPrescription = patched.rawVisit.Prescriptions[idx];
+                                        if (rawPrescription?.brandName) {
+                                            medicineValue = String(rawPrescription.brandName).trim();
+                                            console.log(`PatientFormTest: Using brandName from rawVisit for prescription[${idx}]:`, medicineValue);
+                                        }
+                                    }
+                                    return {
+                                        medicine: medicineValue,
+                                        dosage: String(p.dosage || '').trim(),
+                                        instructions: (p.instructions === '0' || p.instructions === '' ? '' : String(p.instructions || '').trim())
+                                    };
+                                });
+                        } else {
+                            // Need to map from API format - ensure brandName is used
+                            console.log('PatientFormTest: Mapping prescriptions from API format, raw data:', prescriptionsValue);
+                            patched.prescriptions = prescriptionsValue
+                                .map((p: any, idx: number) => {
+                                    console.log(`PatientFormTest: Mapping prescription[${idx}]:`, p);
+                                    return mapPrescriptionFromApi(p, idx);
+                                })
+                                .filter((p: Prescription, idx: number) => {
+                                    // Filter out empty prescriptions
+                                    const hasMedicine = p.medicine && p.medicine.trim() !== '';
+                                    const hasDosage = p.dosage && p.dosage.trim() !== '';
+                                    const isValid = hasMedicine || hasDosage;
+                                    if (!isValid) {
+                                        console.log(`PatientFormTest: Filtering out empty prescription[${idx}]:`, p);
+                                    }
+                                    return isValid;
+                                });
+                        }
+                        console.log('PatientFormTest: Patched prescriptions from initialData:', patched.prescriptions.length, 'items', patched.prescriptions);
+                    } else if (prescriptionsValue === undefined || prescriptionsValue === null) {
+                        // If explicitly set to null/undefined, reset to empty array
+                        patched.prescriptions = [];
+                        console.log('PatientFormTest: Reset prescriptions to empty array (null/undefined)');
+                    }
+                } else if (patched.rawVisit && patched.rawVisit.Prescriptions && Array.isArray(patched.rawVisit.Prescriptions)) {
+                    // If prescriptions are not in initialData but are in rawVisit, map them
+                    console.log('PatientFormTest: Mapping prescriptions from rawVisit.Prescriptions, raw data:', patched.rawVisit.Prescriptions);
+                    patched.prescriptions = patched.rawVisit.Prescriptions
+                        .map((p: any, idx: number) => {
+                            console.log(`PatientFormTest: Mapping rawVisit prescription[${idx}]:`, p);
+                            return mapPrescriptionFromApi(p, idx);
+                        })
+                        .filter((p: Prescription, idx: number) => {
+                            // Filter out empty prescriptions
+                            const hasMedicine = p.medicine && p.medicine.trim() !== '';
+                            const hasDosage = p.dosage && p.dosage.trim() !== '';
+                            const isValid = hasMedicine || hasDosage;
+                            if (!isValid) {
+                                console.log(`PatientFormTest: Filtering out empty rawVisit prescription[${idx}]:`, p);
+                            }
+                            return isValid;
+                        });
+                    console.log('PatientFormTest: Mapped prescriptions from rawVisit:', patched.prescriptions.length, 'items', patched.prescriptions);
+                }
+                // Note: If prescriptions is not in initialData or rawVisit, it will remain as defaultFormData.prescriptions (empty array)
+                
+                // Patch Allergy from rawVisit if not already set
+                if ((!patched.allergy || patched.allergy === '') && patched.rawVisit && patched.rawVisit.Allergy !== undefined && patched.rawVisit.Allergy !== null) {
+                    patched.allergy = String(patched.rawVisit.Allergy);
+                    console.log('PatientFormTest: Patched allergy from rawVisit.Allergy:', patched.allergy);
+                }
+                
+                // Examination Comments/Detailed History: patch from detailedHistory field value (not from Additional_Comments directly)
+                // Always patch detailedHistory into examinationComments if detailedHistory exists
+                if (patched.rawVisit.Detailed_History && patched.rawVisit.Detailed_History.trim() !== '') {
+                    patched.detailedHistory = patched.rawVisit.Detailed_History;
+                    console.log('PatientFormTest: Patched examinationComments from detailedHistory:', patched.examinationComments);
+                }
+                if(patched.rawVisit.Additional_Comments && patched.rawVisit.Additional_Comments.trim() !== '') {
+                    patched.examinationComments = patched.rawVisit.Additional_Comments;
+                    console.log('PatientFormTest: Patched examinationComments from additionalComments:', patched.examinationComments);
+                }
+                // Patch medicines field: combine existing + visit_medicine (short_description) + medicine_names (from prescriptions)
+                if (patched.rawVisit) {
+                    // const existingMedicines = patched.medicines || '';
+                    
+                    // Get medicines from visit_medicine table (short_description) - comma-separated string from backend
+                    const visitMedicinesStr = patched.rawVisit?.visit_medicines_short_description 
+                        || patched.rawVisit?.visitMedicinesShortDescription 
+                        || patched.rawVisit?.Visit_Medicines_Short_Description 
+                        || '';
+                        patched.medicines = visitMedicinesStr;
+                    
+                    // Get medicine_names from visit_prescription_overwrite table (medicine_name) - comma-separated string from backend
+                    const medicineNamesStr = patched.rawVisit?.medicine_names 
+                        || patched.rawVisit?.medicineNames 
+                        || patched.rawVisit?.Medicine_Names 
+                        || patched.rawVisit?.Medicine_Name 
+                        || '';
+                    
+                    // Parse comma-separated strings into arrays
+                    // const existingList = existingMedicines 
+                    //     ? existingMedicines.split(',').map((m: string) => m.trim()).filter((m: string) => m !== '')
+                    //     : [];
+                    
+                    const visitMedicinesList = visitMedicinesStr 
+                        ? String(visitMedicinesStr).split(',').map((m: string) => m.trim()).filter((m: string) => m !== '')
+                        : [];
+                    
+                    const medicineNamesList = medicineNamesStr 
+                        ? String(medicineNamesStr).split(',').map((m: string) => m.trim()).filter((m: string) => m !== '')
+                        : [];
+                    
+                    // Fallback: If backend strings not available, try array format
+                    let fallbackMedicinesList: string[] = [];
+                    if (visitMedicinesList.length === 0 && medicineNamesList.length === 0) {
+                        const visitMedicines = patched.rawVisit?.medicines || patched.rawVisit?.Medicines || patched.rawVisit?.associatedData?.medicines || [];
+                        if (Array.isArray(visitMedicines) && visitMedicines.length > 0) {
+                            fallbackMedicinesList = visitMedicines
+                                .map((m: any) => {
+                                    const shortDesc = m?.short_description || m?.shortDescription || m?.Short_Description || '';
+                                    return shortDesc;
+                                })
+                                .filter((desc: string) => desc && desc.trim() !== '');
+                        }
+                    }
+                    
+                    // Combine all medicine sources: existing + visit_medicine (short_description) + medicine_names (prescriptions) + fallback
+                    // const allMedicines = [...existingList, ...visitMedicinesList, ...medicineNamesList, ...fallbackMedicinesList];
+                    const allMedicines = [...visitMedicinesList, ...medicineNamesList, ...fallbackMedicinesList];
+                    
+                    // Remove duplicates and empty values
+                    const uniqueMedicines = Array.from(new Set(allMedicines.filter((m: string) => m !== '')));
+                    
+                    if (uniqueMedicines.length > 0) {
+                        patched.medicines = uniqueMedicines.join(', ');
+                        console.log('PatientFormTest: Patched medicines field with visit_medicine (short_description) + medicine_names:', patched.medicines);
+                    }
+                    
+                    // Patch patient_visit.follow_up into followUp field
+                    const followUpFromVisit = patched.rawVisit?.follow_up || patched.rawVisit?.followUp || patched.rawVisit?.Follow_Up || '';
+                    if (followUpFromVisit && String(followUpFromVisit).trim() !== '') {
+                        patched.followUp = String(followUpFromVisit).trim();
+                        console.log('PatientFormTest: Patched followUp from patient_visit.follow_up:', patched.followUp);
+                    }
+                    
+                    // Patch rawVisit.Current_Medicines into currentMedicines field
+                    const currentMedicinesFromVisit = patched.rawVisit?.Current_Medicines 
+                        || patched.rawVisit?.current_medicines 
+                        || patched.rawVisit?.currentMedicines 
+                        || '';
+                    if (currentMedicinesFromVisit && String(currentMedicinesFromVisit).trim() !== '') {
+                        patched.currentMedicines = String(currentMedicinesFromVisit).trim();
+                        console.log('PatientFormTest: Patched currentMedicines from rawVisit.Current_Medicines:', patched.currentMedicines);
+                    }
+                }
+
+                // Procedure Performed/Notes: patch from raw visit Observation if present
+                if ((!patched.procedurePerformed || patched.procedurePerformed === '') && patched.rawVisit && patched.rawVisit.Observation) {
+                    patched.procedurePerformed = String(patched.rawVisit.Observation);
+                    console.log('PatientFormTest: Patched procedurePerformed from Observation:', patched.procedurePerformed);
+                }
+                
+                // Dressing: patch from raw visit Dressing if present
+                if ((!patched.dressing || patched.dressing === '') && patched.rawVisit && patched.rawVisit.Dressing !== undefined && patched.rawVisit.Dressing !== null) {
+                    patched.dressing = String(patched.rawVisit.Dressing);
+                    console.log('PatientFormTest: Patched dressing from rawVisit.Dressing:', patched.dressing);
+                }
+
+                // Receipt fields: Receipt No / Receipt Date / Remark
+                if ((!patched.receiptNo || patched.receiptNo === '') && patched.rawVisit && patched.rawVisit.Receipt_No) {
+                    patched.receiptNo = String(patched.rawVisit.Receipt_No);
+                }
+                if ((!patched.receiptDate || patched.receiptDate === '') && patched.rawVisit && patched.rawVisit.Receipt_Date) {
+                    patched.receiptDate = String(patched.rawVisit.Receipt_Date);
+                }
+                // Remark: patch from patient_visit.additional_instructions first, then fallback to comment field
+                // Priority: additional_instructions > Remark/comment (excluding Instructions and Plan)
+                // Backend field: patient_visit.additional_instructions (database column name in snake_case)
+                if (patched.rawVisit) {
+                    // First check for additional_instructions (highest priority) - matches backend field name exactly
+                    // Check snake_case first (as returned from native SQL query), then camelCase (if JPA entity serialized)
+                    const additionalInstructions = patched.rawVisit?.additional_instructions 
+                        || patched.rawVisit?.additionalInstructions 
+                        || patched.rawVisit?.Additional_Instructions 
+                        || '';
+                    if (additionalInstructions && String(additionalInstructions).trim() !== '') {
+                        patched.remark = String(additionalInstructions).trim();
+                        console.log('PatientFormTest: Patched remark from patient_visit.additional_instructions:', patched.remark);
+                        console.log('PatientFormTest: additional_instructions value found in rawVisit:', {
+                            'additional_instructions': patched.rawVisit?.additional_instructions,
+                            'additionalInstructions': patched.rawVisit?.additionalInstructions,
+                            'Additional_Instructions': patched.rawVisit?.Additional_Instructions
+                        });
+                    } else if ((!patched.remark || patched.remark === '') && patched.rawVisit) {
+                        // Fallback to existing logic: Only use Remark or comment field, explicitly exclude Instructions and Plan
+                        const instructionsValue = patched.rawVisit.Instructions;
+                        const planValue = patched.rawVisit.Plan;
+                        const remarkValue = patched.rawVisit.Remark ?? patched.rawVisit.remarks ?? patched.rawVisit.Remarks;
+                        const commentValue = patched.rawVisit.comment ?? patched.rawVisit.Comment;
+                        const isPlanAdv = (val: any) => {
+                            if (val === undefined || val === null) return false;
+                            const s = String(val).trim().toLowerCase();
+                            return s === 'plan / adv' || s === 'plan/adv';
+                        };
+                        
+                        // Check if Remark or comment exists and is not the same as Instructions or Plan
+                        if (remarkValue !== undefined && remarkValue !== null && String(remarkValue).trim() !== '') {
+                            const remarkStr = String(remarkValue).trim();
+                            // Only set if it's not the same as Instructions or Plan
+                            if (!isPlanAdv(remarkStr) && remarkStr !== String(instructionsValue || '').trim() && remarkStr !== String(planValue || '').trim()) {
+                                patched.remark = remarkStr;
+                                console.log('PatientFormTest: Patched remark from rawVisit.Remark:', patched.remark);
+                            }
+                        } else if (commentValue !== undefined && commentValue !== null && String(commentValue).trim() !== '') {
+                            const commentStr = String(commentValue).trim();
+                            // Only set if it's not the same as Instructions or Plan
+                            if (!isPlanAdv(commentStr) && commentStr !== String(instructionsValue || '').trim() && commentStr !== String(planValue || '').trim()) {
+                                patched.remark = commentStr;
+                                console.log('PatientFormTest: Patched remark from rawVisit.comment:', patched.remark);
+                            }
+                        }
+
+                        // If remark still matches Instructions/Plan, clear it
+                        if (patched.remark && (
+                            isPlanAdv(patched.remark) ||
+                            patched.remark === String(instructionsValue || '').trim() ||
+                            patched.remark === String(planValue || '').trim()
+                        )) {
+                            patched.remark = '';
+                        }
+                    }
+                }
+                
+                console.log('PatientFormTest: Final patched prescriptions:', patched.prescriptions.length, 'items');
+                console.log('PatientFormTest: Final patched prescriptions details:', patched.prescriptions);
+                return patched as PatientFormData;
             });
         }
     }, [initialData]);
 
     const isReadOnly = true;
-
-    // Prescriptions: only use real data from rawVisit.Prescriptions
-
-    // Ensure prescriptions update with visit navigation - only use real data
-    useEffect(() => {
-        const incoming = (initialData && Array.isArray(initialData.prescriptions)) ? (initialData.prescriptions as any[]) : [];
-        setFormData(prev => ({
-            ...prev,
-            prescriptions: incoming
-        }));
-    }, [initialData?.prescriptions, currentVisitIndex]);
 
     const formatDate = (d: Date): string => {
         const dd = String(d.getDate()).padStart(2, '0');
@@ -910,8 +1268,8 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                             // { key: 'medicalHistory', label: 'Medical History:' },
                             { key: 'surgicalHistory', label: 'Surgical History' },
                             { key: 'visitComments', label: 'Visit Comments' },
-                            { key: 'medicines', label: 'Exisiting Medicines' },
-                            { key: 'detailedHistory', label: 'Detailed History/Additional Comments' },
+                            { key: 'currentMedicines', label: 'Exisiting Medicines' },
+                            { key: 'examinationComments', label: 'Detailed History/Additional Comments' },
                             { key: 'examinationFindings', label: 'Important/Examination Findings' },
                             { key: 'complaints', label: 'Complaints' },
                             { key: 'provisionalDiagnosis', label: 'Provisional Diagnosis' },
@@ -995,7 +1353,7 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                             // { key: 'examinationFindings', label: 'Important/Examination Findings:' },
                             // { key: 'complaints', label: 'Complaints:' },
                             // { key: 'provisionalDiagnosis', label: 'Provisional Diagnosis:' },
-                            { key: 'examinationComments', label: 'Examination Comments/Detailed History:' },
+                            { key: 'detailedHistory', label: 'Examination Comments/Detailed History:' },
                             { key: 'procedurePerformed', label: 'Procedure Performed/Notes:' },
                             { key: 'labSuggested', label: 'Lab Suggested:' }
                         ].map(({ key, label }) => (
@@ -1068,19 +1426,62 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                 </thead>
                                 <tbody>
                                     {formData.prescriptions.length > 0 ? (
-                                        formData.prescriptions.map((prescription, index) => (
+                                        formData.prescriptions.map((prescription, index) => {
+                                            // Medicine: Use brand_name from visit_prescription_overwrite (vp.brand_name)
+                                            // Fallback: if medicine is empty, try to get brand_name from rawVisit
+                                            let medicineDisplay = prescription.medicine || '';
+                                            if (!medicineDisplay && formData.rawVisit?.Prescriptions?.[index]) {
+                                                const rawPrescription = formData.rawVisit.Prescriptions[index];
+                                                medicineDisplay = rawPrescription?.brand_name 
+                                                    || rawPrescription?.brandName 
+                                                    || rawPrescription?.medicineName 
+                                                    || rawPrescription?.Medicine_Name 
+                                                    || '';
+                                            }
+                                            
+                                            // Dosage: Format as morning-afternoon-night (no_of_days) from visit_prescription_overwrite
+                                            // If dosage is empty, try to construct from rawVisit prescription data
+                                            let dosageDisplay = prescription.dosage || '';
+                                            if (!dosageDisplay && formData.rawVisit?.Prescriptions?.[index]) {
+                                                const rawPrescription = formData.rawVisit.Prescriptions[index];
+                                                const m = rawPrescription?.morning || rawPrescription?.Morning || '0';
+                                                const a = rawPrescription?.afternoon || rawPrescription?.Afternoon || '0';
+                                                const n = rawPrescription?.night || rawPrescription?.Night || '0';
+                                                const noOfdays = rawPrescription?.no_of_days || rawPrescription?.noOfDays || '';
+                                                
+                                                if (m !== '0' || a !== '0' || n !== '0') {
+                                                    dosageDisplay = `${m}-${a}-${n}`;
+                                                    if (noOfdays && noOfdays !== '0' && noOfdays !== '') {
+                                                        dosageDisplay += ` (${noOfdays})`;
+                                                    }
+                                                }
+                                            }
+                                            
+                                            // Instructions: Use instruction from visit_prescription_overwrite (vp.instruction)
+                                            // Fallback: if instructions is empty, try to get instruction from rawVisit
+                                            let instructionsDisplay = prescription.instructions || '';
+                                            if (!instructionsDisplay && formData.rawVisit?.Prescriptions?.[index]) {
+                                                const rawPrescription = formData.rawVisit.Prescriptions[index];
+                                                instructionsDisplay = rawPrescription?.instruction 
+                                                    || rawPrescription?.Instruction 
+                                                    || rawPrescription?.Instructions 
+                                                    || '';
+                                            }
+                                            
+                                            return (
                                             <tr key={index}>
                                                 <td style={{ height: '40px', padding: '10px', lineHeight: '20px', borderBottom: '1px solid #eaeaea', borderRight: '1px solid #e0e0e0', verticalAlign: 'middle', whiteSpace: 'normal', wordBreak: 'break-word', overflow: 'hidden' }}>
-                                                    {prescription.medicine || '-'}
+                                                        {medicineDisplay || '-'}
                                                 </td>
                                                 <td style={{ height: '40px', padding: '10px', lineHeight: '20px', borderBottom: '1px solid #eaeaea', borderRight: '1px solid #e0e0e0', verticalAlign: 'middle', whiteSpace: 'normal', wordBreak: 'break-word', overflow: 'hidden' }}>
-                                                    {prescription.dosage || '-'}
+                                                    {dosageDisplay || '-'}
                                                 </td>
                                                 <td style={{ height: '40px', padding: '10px', lineHeight: '20px', borderBottom: '1px solid #eaeaea', verticalAlign: 'middle', whiteSpace: 'normal', wordBreak: 'break-word', overflow: 'hidden' }}>
-                                                    {prescription.instructions || '-'}
+                                                    {instructionsDisplay || '-'}
                                                 </td>
                                             </tr>
-                                        ))
+                                            );
+                                        })
                                     ) : (
                                         <tr>
                                             <td colSpan={3} style={{ 
@@ -1214,20 +1615,21 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                                 {prescription.instructions || '-'}
                                             </td>
                                         </tr>
-                                    ))
-                                ) : (
-                                    <tr>
-                                        <td colSpan={3} style={{ 
-                                            padding: '20px', 
-                                            textAlign: 'center', 
-                                            color: '#666', 
-                                            fontStyle: 'italic',
-                                            borderBottom: '1px solid #eaeaea'
-                                        }}>
-                                            No prescriptions found for this visit
-                                        </td>
-                                    </tr>
-                                )}
+                                        ))
+                                    ) : (
+                                        // If no prescriptions are available, show a single row with '-' in each column
+                                        <tr>
+                                            <td style={{ height: '40px', padding: '10px', lineHeight: '20px', borderBottom: '1px solid #eaeaea', borderRight: '1px solid #e0e0e0', verticalAlign: 'middle', whiteSpace: 'normal', wordBreak: 'break-word', overflow: 'hidden' }}>
+                                                -
+                                            </td>
+                                            <td style={{ height: '40px', padding: '10px', lineHeight: '20px', borderBottom: '1px solid #eaeaea', borderRight: '1px solid #e0e0e0', verticalAlign: 'middle', whiteSpace: 'normal', wordBreak: 'break-word', overflow: 'hidden' }}>
+                                                -
+                                            </td>
+                                            <td style={{ height: '40px', padding: '10px', lineHeight: '20px', borderBottom: '1px solid #eaeaea', verticalAlign: 'middle', whiteSpace: 'normal', wordBreak: 'break-word', overflow: 'hidden' }}>
+                                                -
+                                            </td>
+                                        </tr>
+                                    )}
                             </tbody>
                         </table>
                     </div>
@@ -1273,37 +1675,55 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                     }}>
                                         Breakup
                                     </span>
-                                    {showBillingTooltip && (
-                                        <div style={{
-                                            position: 'absolute',
-                                            bottom: '100%',
-                                            left: '50%',
-                                            transform: 'translateX(-50%)',
-                                            backgroundColor: '#333',
-                                            color: 'white',
-                                            padding: '8px 12px',
-                                            borderRadius: '4px',
-                                            fontSize: '0.8rem',
-                                            whiteSpace: 'nowrap',
-                                            zIndex: 1000,
-                                            boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-                                            marginBottom: '5px'
-                                        }}>
-                                            <div>Follow-up: ₹300</div>
-                                            <div>CBC: ₹300</div>
+                                    {showBillingTooltip && (() => {
+                                        const billingData = formData.rawVisit?.Billing || [];
+                                        const hasBillingData = Array.isArray(billingData) && billingData.length > 0;
+                                        
+                                        return (
                                             <div style={{
                                                 position: 'absolute',
-                                                top: '100%',
+                                                bottom: '100%',
                                                 left: '50%',
                                                 transform: 'translateX(-50%)',
-                                                width: 0,
-                                                height: 0,
-                                                borderLeft: '5px solid transparent',
-                                                borderRight: '5px solid transparent',
-                                                borderTop: '5px solid #333'
-                                            }}></div>
-                                        </div>
-                                    )}
+                                                backgroundColor: '#333',
+                                                color: 'white',
+                                                padding: '8px 12px',
+                                                borderRadius: '4px',
+                                                fontSize: '0.8rem',
+                                                whiteSpace: 'nowrap',
+                                                zIndex: 1000,
+                                                boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                                                marginBottom: '5px',
+                                                minWidth: '150px'
+                                            }}>
+                                                {hasBillingData ? (
+                                                    billingData.map((item: any, index: number) => {
+                                                        const billingDetails = item.billing_details || item.billingDetails || '';
+                                                        const fees = item.collected_fees || item.collectedFees || item.default_fees || item.defaultFees || 0;
+                                                        const displayName = billingDetails || `${item.billing_group_name || ''} - ${item.billing_subgroup_name || ''}`.replace(/^ - | - $/g, '');
+                                                        return (
+                                                            <div key={index}>
+                                                                {displayName}: ₹{typeof fees === 'number' ? fees.toFixed(2) : fees}
+                                                            </div>
+                                                        );
+                                                    })
+                                                ) : (
+                                                    <div>No billing details available</div>
+                                                )}
+                                                <div style={{
+                                                    position: 'absolute',
+                                                    top: '100%',
+                                                    left: '50%',
+                                                    transform: 'translateX(-50%)',
+                                                    width: 0,
+                                                    height: 0,
+                                                    borderLeft: '5px solid transparent',
+                                                    borderRight: '5px solid transparent',
+                                                    borderTop: '5px solid #333'
+                                                }}></div>
+                                            </div>
+                                        );
+                                    })()}
                                 </div>
                             </label>
                             <input

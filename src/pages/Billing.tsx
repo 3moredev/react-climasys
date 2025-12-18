@@ -646,7 +646,7 @@ export default function Treatment() {
         const sugar = escapeHtml(formData.sugar || '-');
 
         // Get advice
-        const advice = escapeHtml(formData.visitComments || formData.additionalComments || '');
+        const advice = escapeHtml(formData.additionalComments || '');
 
         // Build instructions HTML from mlInstructionsTable
         let instructionsHTML = '';
@@ -1165,12 +1165,25 @@ export default function Treatment() {
                             pulse: vitals.pulse !== undefined ? String(vitals.pulse) : prev.pulse,
                             bp: vitals.blood_pressure !== undefined ? String(vitals.blood_pressure) : prev.bp,
                             sugar: vitals.sugar !== undefined ? String(vitals.sugar) : prev.sugar,
-                            tft: vitals.tft !== undefined ? String(vitals.tft) : prev.tft,
+                            tft: vitals.thtext !== undefined ? String(vitals.thtext) : prev.tft,
                             pallorHb: vitals.pallor !== undefined ? String(vitals.pallor) : prev.pallorHb,
                             allergy: vitals.allergy_dtls !== undefined ? String(vitals.allergy_dtls) : prev.allergy,
                             medicalHistoryText: vitals.habits_comments !== undefined ? String(vitals.habits_comments) : prev.medicalHistoryText,
-                            visitComments: vitals.instructions !== undefined ? String(vitals.instructions) : prev.visitComments,
-                            medicines: medicinesJoined || prev.medicines,
+                            // Map vitals.ui-style narrative fields into Billing form fields
+                            // Instructions → Plan / Advice (visitComments)
+                            visitComments: vitals.visit_comments !== undefined ? String(vitals.visit_comments) : prev.visitComments,
+                            // symptom_comment → Detailed History
+                            detailedHistory: vitals.symptom_comment !== undefined ? String(vitals.symptom_comment) : prev.detailedHistory,
+                            // surgical_history_past_history → Surgical History
+                            surgicalHistory: vitals.surgical_history_past_history !== undefined ? String(vitals.surgical_history_past_history) : prev.surgicalHistory,
+                            // observation → Procedure Performed
+                            procedurePerformed: vitals.observation !== undefined ? String(vitals.observation) : prev.procedurePerformed,
+                            // important_findings → Examination Findings
+                            examinationFindings: vitals.important_findings !== undefined ? String(vitals.important_findings) : prev.examinationFindings,
+                            // impression → Additional Comments
+                            additionalComments: vitals.impression !== undefined ? String(vitals.impression) : prev.additionalComments,
+                            // medicines: medicinesJoined || prev.medicines,
+                            medicines: vitals.current_medicines !== undefined ? String(vitals.current_medicines) : prev.medicines,
                             dressingBodyParts: dressingCombined || prev.dressingBodyParts,
                             visitType: {
                                 ...prev.visitType,
@@ -1219,8 +1232,9 @@ export default function Treatment() {
                             setFollowUpData(prev => ({
                                 ...prev,
                                 followUpType: fuTypeId ? String(fuTypeId) : prev.followUpType,
-                                followUp: fu ? String(fu) : prev.followUp,
-                                followUpDate: fuDate ? String(fuDate) : prev.followUpDate
+                                followUp: vitals.follow_up_comment !== undefined ? String(vitals.follow_up_comment) : prev.followUp,
+                                followUpDate: fuDate ? String(fuDate) : prev.followUpDate, 
+                                planAdv: vitals.instructions !== undefined ? String(vitals.instructions) : prev.planAdv
                             }));
 
                             // Patch billing fields from master lists (uiFields and vitals)
@@ -1267,9 +1281,16 @@ export default function Treatment() {
                                     ? (uiFields.paymentRemark !== null ? String(uiFields.paymentRemark) : '')
                                     : prev.paymentRemark;
                                 
-                                // Handle reason - check multiple possible field names
-                                const reasonValue = uiFields?.reason ?? uiFields?.Reason ?? dataRoot?.reason ?? dataRoot?.Reason ?? prev.reason;
+                                // Handle reason - prefer vitals[0].comment, fall back to uiFields/dataRoot, then keep previous
+                                const reasonValue =
+                                    vitals?.comment ??
+                                    uiFields?.reason ??
+                                    uiFields?.Reason ??
+                                    dataRoot?.reason ??
+                                    dataRoot?.Reason ??
+                                    prev.reason;
                                 const reasonStr = reasonValue !== undefined && reasonValue !== null ? String(reasonValue) : prev.reason;
+                                console.log('reasonValue', reasonValue);
                                 
                                 return {
                                     ...prev,
@@ -1736,55 +1757,85 @@ export default function Treatment() {
 
     const receiptDetailsText = React.useMemo(() => {
         const billingArray = masterListsBillingRef.current || [];
-        
-        // If we have billing items from master-lists API, use those directly to ensure all items are included
+
+        // Preferred: build Details text directly from master-lists billing array
+        // using billing_group_name, billing_subgroup_name, and collected_fees
         if (billingArray.length > 0) {
-            const parts = billingArray.map((item: any) => {
-                const billingDetails = item.billing_details || item.billingDetails || '';
-                const collectedFees = item.collected_fees ?? item.collectedFees ?? item.default_fees ?? item.defaultFees;
-                const amount = typeof collectedFees === 'number' && !isNaN(collectedFees) && collectedFees > 0
-                    ? ` Rs.${collectedFees.toFixed(2)}`
-                    : '';
-                
-                return billingDetails ? `${billingDetails}${amount}` : '';
-            }).filter(Boolean);
-            
+            const parts = billingArray
+                .map((item: any) => {
+                    const group = (item.billing_group_name || '').toString().trim();
+                    const subgroup = (item.billing_subgroup_name || '').toString().trim();
+                    const rawAmount =
+                        item.collected_fees ??
+                        item.collectedFees ??
+                        item.default_fees ??
+                        item.defaultFees;
+
+                    const hasAmount =
+                        typeof rawAmount === 'number' && !isNaN(rawAmount) && rawAmount > 0;
+                    const amountText = hasAmount ? `Rs.${rawAmount.toFixed(2)}` : '';
+
+                    if (!group && !subgroup && !amountText) return '';
+
+                    // Build "Group - SubGroup - Rs.xxx.xx" (skip empty parts cleanly)
+                    const labelParts: string[] = [];
+                    if (group) labelParts.push(group);
+                    if (subgroup) labelParts.push(subgroup);
+                    if (amountText) labelParts.push(amountText);
+
+                    return labelParts.join(' - ');
+                })
+                .filter(Boolean);
+
             if (parts.length > 0) {
                 return parts.join(', ');
             }
         }
-        
-        // Fallback: Use selected billing detail IDs if no billing array available
+
+        // Fallback: derive from currently selected billing options
         if (selectedBillingDetailIds.length === 0) return '';
-        
+
         const parts = selectedBillingDetailIds
             .map(id => {
-                // Find the billing option
-                const opt = billingDetailsOptions.find(opt => opt.id === id);
+                const opt = billingDetailsOptions.find(o => o.id === id);
                 if (!opt) return '';
-                
-                // Try to find matching billing item from master-lists API to get collected_fees
+
                 const billingItem = billingArray.find((item: any) => {
                     const optGroup = (opt.billing_group_name || '').trim().toLowerCase();
                     const optSubgroup = (opt.billing_subgroup_name || '').trim().toLowerCase();
                     const optDetails = (opt.billing_details || '').trim().toLowerCase();
-                    
+
                     const itemGroup = (item.billing_group_name || '').trim().toLowerCase();
                     const itemSubgroup = (item.billing_subgroup_name || '').trim().toLowerCase();
                     const itemDetails = (item.billing_details || '').trim().toLowerCase();
-                    
-                    return optGroup === itemGroup && optSubgroup === itemSubgroup && optDetails === itemDetails;
+
+                    return (
+                        optGroup === itemGroup &&
+                        optSubgroup === itemSubgroup &&
+                        optDetails === itemDetails
+                    );
                 });
-                
-                // Use collected_fees from billing item if available, otherwise use default_fees from option
-                const fees = billingItem?.collected_fees ?? billingItem?.collectedFees ?? opt.default_fees;
-                const amount = typeof fees === 'number' && !isNaN(fees) && fees > 0
-                    ? ` Rs.${fees.toFixed(2)}`
-                    : '';
-                
-                return `${opt.billing_details}${amount}`;
+
+                const rawAmount =
+                    billingItem?.collected_fees ??
+                    billingItem?.collectedFees ??
+                    opt.default_fees;
+                const hasAmount =
+                    typeof rawAmount === 'number' && !isNaN(rawAmount) && rawAmount > 0;
+                const amountText = hasAmount ? `Rs.${rawAmount.toFixed(2)}` : '';
+
+                const group = (opt.billing_group_name || '').toString().trim();
+                const subgroup = (opt.billing_subgroup_name || '').toString().trim();
+
+                const labelParts: string[] = [];
+                if (group) labelParts.push(group);
+                if (subgroup) labelParts.push(subgroup);
+                if (amountText) labelParts.push(amountText);
+
+                return labelParts.join(' - ');
             })
             .filter(Boolean);
+
         return parts.join(', ');
     }, [selectedBillingDetailIds, billingDetailsOptions]);
 
@@ -2406,10 +2457,61 @@ export default function Treatment() {
             medicalHistory: toStr(get(visit, 'medical_history', 'Medical_History', 'medicalHistory', 'past_history', 'Past_History')),
             surgicalHistory: toStr(get(visit, 'surgical_history', 'Surgical_History', 'surgicalHistory', 'surgery_history', 'Surgery_History')),
             visitComments: toStr(get(visit, 'visit_comments', 'Visit_Comments', 'visitComments', 'comments', 'Comments')),
-            medicines: toStr(get(visit, 'medicines', 'Current_Medicines', 'current_medicines', 'currentMedicines', 'medications')),
+            // Patch medicines field: combine existing + visit_medicine (short_description) + medicine_names (from prescriptions)
+            medicines: (() => {
+                const existingMedicines = toStr(get(visit, 'medicines', 'Current_Medicines', 'current_medicines', 'currentMedicines', 'medications'));
+                
+                // Get medicines from visit_medicine table (short_description) - comma-separated string from backend
+                const visitMedicinesStr = toStr(get(visit, 'visit_medicines_short_description', 'visitMedicinesShortDescription', 'Visit_Medicines_Short_Description'));
+                
+                // Get medicine_names from visit_prescription_overwrite table (medicine_name) - comma-separated string from backend
+                const medicineNamesStr = toStr(get(visit, 'medicine_names', 'medicineNames', 'Medicine_Names', 'Medicine_Name'));
+                
+                // Parse comma-separated strings into arrays
+                const existingList = existingMedicines 
+                    ? existingMedicines.split(',').map((m: string) => m.trim()).filter((m: string) => m !== '')
+                    : [];
+                
+                const visitMedicinesList = visitMedicinesStr 
+                    ? visitMedicinesStr.split(',').map((m: string) => m.trim()).filter((m: string) => m !== '')
+                    : [];
+                
+                const medicineNamesList = medicineNamesStr 
+                    ? medicineNamesStr.split(',').map((m: string) => m.trim()).filter((m: string) => m !== '')
+                    : [];
+                
+                // Fallback: If backend strings not available, try array format
+                let fallbackMedicinesList: string[] = [];
+                if (visitMedicinesList.length === 0 && medicineNamesList.length === 0) {
+                    const visitMedicines = visit?.medicines || visit?.Medicines || visit?.associatedData?.medicines || [];
+                    if (Array.isArray(visitMedicines) && visitMedicines.length > 0) {
+                        fallbackMedicinesList = visitMedicines
+                            .map((m: any) => {
+                                const shortDesc = m?.short_description || m?.shortDescription || m?.Short_Description || '';
+                                return shortDesc;
+                            })
+                            .filter((desc: string) => desc && desc.trim() !== '');
+                    }
+                }
+                
+                // Combine all medicine sources: existing + visit_medicine (short_description) + medicine_names (prescriptions) + fallback
+                const allMedicines = [...existingList, ...visitMedicinesList, ...medicineNamesList, ...fallbackMedicinesList];
+                
+                // Remove duplicates and empty values
+                const uniqueMedicines = Array.from(new Set(allMedicines.filter((m: string) => m !== '')));
+                
+                return uniqueMedicines.length > 0 ? uniqueMedicines.join(', ') : existingMedicines;
+            })(),
             detailedHistory: toStr(get(visit, 'detailed_history', 'Detailed_History', 'Additional_Comments', 'detailedHistory', 'additional_comments', 'history')),
             examinationFindings: toStr(get(visit, 'examination_findings', 'Important_Findings', 'examinationFindings', 'findings', 'Findings', 'clinical_findings')),
-            examinationComments: toStr(get(visit, 'examination_comments', 'Examination_Comments', 'examinationComments', 'exam_comments', 'Exam_Comments')),
+            // Patch detailedHistory value into examinationComments field
+            examinationComments: (() => {
+                const detailedHist = toStr(get(visit, 'detailed_history', 'Detailed_History', 'Additional_Comments', 'detailedHistory', 'additional_comments', 'history'));
+                if (detailedHist) {
+                    return detailedHist;
+                }
+                return toStr(get(visit, 'examination_comments', 'Examination_Comments', 'examinationComments', 'exam_comments', 'Exam_Comments'));
+            })(),
             procedurePerformed: toStr(get(visit, 'procedure_performed', 'Procedure_Performed', 'procedurePerformed', 'procedures', 'Procedures')),
 
             // Current visit text
@@ -2435,9 +2537,23 @@ export default function Treatment() {
             receiptNo: toStr(get(visit, 'receipt_no', 'Receipt_No', 'receiptNo', 'receipt_number', 'Receipt_Number')),
             receiptDate: toStr(get(visit, 'receipt_date', 'Receipt_Date', 'receiptDate', 'receipt_issue_date', 'Receipt_Issue_Date')),
             followUpType: toStr(get(visit, 'followup_type', 'Follow_Up_Type', 'followUpType', 'follow_up_type', 'Follow_Up_Type')),
-            followUp: toStr(get(visit, 'followup_label', 'Follow_Up', 'followUp', 'follow_up', 'Follow_Up', 'next_visit')),
+            // Patch patient_visit.follow_up into followUp field
+            followUp: (() => {
+                const followUpFromVisit = toStr(get(visit, 'follow_up', 'followUp', 'Follow_Up', 'followup'));
+                if (followUpFromVisit) {
+                    return followUpFromVisit;
+                }
+                return toStr(get(visit, 'followup_label', 'Follow_Up', 'followUp', 'next_visit'));
+            })(),
             followUpDate: toStr(get(visit, 'followup_date', 'Follow_Up_Date', 'followUpDate', 'follow_up_date', 'Follow_Up_Date', 'next_visit_date')),
-            remark: toStr(get(visit, 'remark', 'Remark', 'remarks', 'Remarks', 'notes', 'Notes', 'comments', 'Comments')),
+            // Patch patient_visit.additional_instructions into remark field
+            remark: (() => {
+                const additionalInstructions = toStr(get(visit, 'additional_instructions', 'additionalInstructions', 'Additional_Instructions', 'Additional_Instructions'));
+                if (additionalInstructions) {
+                    return additionalInstructions;
+                }
+                return toStr(get(visit, 'remark', 'Remark', 'remarks', 'Remarks', 'notes', 'Notes', 'comments', 'Comments'));
+            })(),
             // Include the full raw visit payload for access to all fields
             rawVisit: visit
         };
@@ -2807,7 +2923,7 @@ export default function Treatment() {
                 alchohol: formData.medicalHistory.alcohol,
                 
                 // Additional fields
-                habitDetails: '',
+                habitDetails: formData.medicalHistoryText || '',
                 allergyDetails: formData.allergy,
                 observation: formData.examinationFindings,
                 inPerson: formData.visitType.inPerson,
@@ -2908,7 +3024,8 @@ export default function Treatment() {
                     comment: visitData.visitComments,
                     paymentById: parseInt(billingData.paymentBy) || undefined,
                     paymentRemark: billingData.paymentRemark || undefined,
-                    discount: visitData.discount
+                    discount: visitData.discount,
+                    reason: billingData.reason || undefined
                 };
                 result = await patientService.saveMedicineOverwrite(overwriteRequest);
             } else {
@@ -4190,7 +4307,7 @@ export default function Treatment() {
                                     <div style={{ position: 'relative', width: '100%' }}>
                                         <input
                                             type="text"
-                                            value={billingData.acBalance}
+                                            value={Math.abs(parseFloat(billingData.acBalance) || 0).toFixed(2)}
                                             disabled
                                             placeholder="0.00"
                                             style={{
@@ -4204,7 +4321,12 @@ export default function Treatment() {
                                                 borderRadius: '4px',
                                                 fontSize: '13px',
                                                 backgroundColor: '#f5f5f5',
-                                                color: '#666',
+                                                color: folderAmountData?.totalAcBalance !== undefined && 
+                                                       folderAmountData?.totalAcBalance !== null && 
+                                                       folderAmountData?.rows && 
+                                                       folderAmountData.rows.length > 0
+                                                       ? (folderAmountData.totalAcBalance < 0 ? '#d32f2f' : '#2e7d32')
+                                                       : '#666',
                                                 cursor: 'not-allowed'
                                             }}
                                         />
@@ -4219,11 +4341,11 @@ export default function Treatment() {
                                                 transform: 'translateY(-50%)',
                                                 fontSize: '11px',
                                                 fontWeight: 'bold',
-                                                color: folderAmountData.totalAcBalance < 0 ? '#d32f2f' : '#2e7d32',
+                                                color: '#333', // Always black for status text
                                                 whiteSpace: 'nowrap',
                                                 pointerEvents: 'none'
                                             }}>
-                                                {folderAmountData.totalAcBalance < 0 ? 'Amount Pending' : 'Outstanding'}
+                                                {folderAmountData.totalAcBalance < 0 ? 'Outstanding' : 'Excess'}
                                             </span>
                                         )}
                                     </div>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Close } from '@mui/icons-material';
 import { Snackbar } from '@mui/material';
+import { useSession } from '../store/hooks/useSession';
 
 interface AddDiagnosisPopupProps {
     open: boolean;
@@ -9,6 +10,7 @@ interface AddDiagnosisPopupProps {
         shortDescription: string;
         diagnosisDescription: string;
         priority: string;
+        clinicId?: string;
     }) => void;
     editData?: {
         shortDescription: string;
@@ -18,6 +20,7 @@ interface AddDiagnosisPopupProps {
 }
 
 const AddDiagnosisPopup: React.FC<AddDiagnosisPopupProps> = ({ open, onClose, onSave, editData }) => {
+    const session = useSession();
     const [shortDescription, setShortDescription] = useState('');
     const [diagnosisDescription, setDiagnosisDescription] = useState('');
     const [priority, setPriority] = useState('');
@@ -53,6 +56,13 @@ const AddDiagnosisPopup: React.FC<AddDiagnosisPopupProps> = ({ open, onClose, on
             return;
         }
 
+        // Validate clinicId from session
+        if (!session.clinicId) {
+            setSnackbarMessage('Clinic ID is required. Please ensure you are logged in.');
+            setSnackbarOpen(true);
+            return;
+        }
+
         // Normalize text fields to uppercase before saving
         const shortDescUpper = shortDescription.trim().toUpperCase();
         const diagnosisDescUpper = diagnosisDescription.trim().toUpperCase();
@@ -65,6 +75,7 @@ const AddDiagnosisPopup: React.FC<AddDiagnosisPopupProps> = ({ open, onClose, on
             shortDescription: shortDescUpper,
             diagnosisDescription: diagnosisDescUpper,
             priority: priorityValue,
+            clinicId: session.clinicId
         });
         
         // Show success snackbar

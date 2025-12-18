@@ -115,6 +115,7 @@ export interface SaveMedicineOverwriteRequest {
   paymentById?: number;
   paymentRemark?: string;
   discount?: number;
+  reason?: string;
 }
 
 export interface SaveMedicineOverwriteResponse {

@@ -13,6 +13,7 @@ export interface BillingDetailData {
   visitType: string;
   isDefault: boolean;
   lunch: string;
+  clinicId?: string;
 }
 
 interface AddBillingDetailsPopupProps {
@@ -51,7 +52,8 @@ const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
     sequenceNo: '',
     visitType: '',
     isDefault: false,
-    lunch: ''
+    lunch: '',
+    clinicId: ''
   });
   
   const [snackbarOpen, setSnackbarOpen] = useState(false);
@@ -211,6 +213,13 @@ const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
     }
     if (isNaN(Number(billingData.sequenceNo)) || Number(billingData.sequenceNo) < 0) {
       setSnackbarMessage('Sequence No must be a valid number');
+      setSnackbarOpen(true);
+      return;
+    }
+
+    // Validate clinicId from session
+    if (!session.clinicId) {
+      setSnackbarMessage('Clinic ID is required. Please ensure you are logged in.');
       setSnackbarOpen(true);
       return;
     }
@@ -565,7 +574,7 @@ const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
               onClick={handleClose}
               style={{
                 padding: '8px 16px',
-                backgroundColor: 'white',
+                backgroundColor: 'rgb(0, 100, 200)',
                 color: '#1976d2',
                 border: '1px solid #1976d2',
                 borderRadius: '4px',
@@ -575,11 +584,11 @@ const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
                 transition: 'all 0.2s'
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#f5f5f5';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'white';
-              }}
+                e.currentTarget.style.backgroundColor = 'rgb(0, 100, 200)';
+            }}
+            onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgb(0, 123, 255)';
+            }}
             >
               Cancel
             </button>
@@ -587,7 +596,7 @@ const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
               onClick={handleClose}
               style={{
                 padding: '8px 16px',
-                backgroundColor: 'white',
+                backgroundColor: 'rgb(0, 100, 200)',
                 color: '#1976d2',
                 border: '1px solid #1976d2',
                 borderRadius: '4px',
@@ -597,11 +606,11 @@ const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
                 transition: 'all 0.2s'
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#f5f5f5';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'white';
-              }}
+                e.currentTarget.style.backgroundColor = 'rgb(0, 100, 200)';
+            }}
+            onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgb(0, 123, 255)';
+            }}
             >
               Back
             </button>

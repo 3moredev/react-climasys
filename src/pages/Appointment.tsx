@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { List, CreditCard, MoreVert, Add as AddIcon, Save, Delete, Info, FastForward, Close, ChatBubbleOutline, Phone, SwapHoriz, ShoppingCart } from "@mui/icons-material";
-import { Snackbar } from '@mui/material';
 import { appointmentService, Appointment, AppointmentRequest, TodayAppointmentsResponse, getDoctorStatusReference, getStatusOptionsByClinic } from "../services/appointmentService";
 import { doctorService, DoctorDetail, Doctor } from "../services/doctorService";
 import { patientService, Patient, formatVisitDateTime, getVisitStatusText } from "../services/patientService";
@@ -13,6 +12,7 @@ import { sessionService, SessionInfo } from "../services/sessionService";
 import { sessionPersistence } from "../utils/sessionPersistence";
 import PatientFormTest from "../components/Test/PatientFormTest";
 import LabTestEntry from "../components/LabTestEntry";
+import GlobalSnackbar from "../components/GlobalSnackbar";
 
 export type AppointmentRow = {
     reports_received: any;
@@ -38,6 +38,7 @@ export type AppointmentRow = {
     actions: boolean;
     gender_description?: string;
     visitDetailsSubmitted?: boolean;
+    created_on?: string;
 };
 
 
@@ -111,6 +112,7 @@ export default function AppointmentTable() {
     const [loadingAppointments, setLoadingAppointments] = useState<boolean>(false);
     const [loadingStatuses, setLoadingStatuses] = useState<boolean>(false);
     const [isInitialLoadComplete, setIsInitialLoadComplete] = useState<boolean>(false);
+    const [isBooking, setIsBooking] = useState<boolean>(false); // Prevent duplicate booking requests
 
     // Fetch session data on component mount
     useEffect(() => {
@@ -362,6 +364,7 @@ export default function AppointmentTable() {
             const clinicIdFromRow = toStringSafe(getField(row, ['clinic_id', 'Clinic_ID', 'clinicId'], ''));
             const genderDescription = toStringSafe(getField(row, ['gender_description', 'genderDescription', 'gender', 'sex'], ''));
             const visitDetailsSubmitted = !!getField(row, ['Is_Submit_Patient_Visit_Details', 'is_submit_patient_visit_details', 'visitDetailsSubmitted'], false);
+            const createdOn = toStringSafe(getField(row, ['created_on', 'createdOn', 'created_at', 'createdAt'], ''));
 
             // Fix time formatting - ensure proper HH:mm format
             let formattedTime = '00:00'; // Default fallback
@@ -462,7 +465,8 @@ export default function AppointmentTable() {
                 clinicId: clinicIdFromRow,
                 actions: true,
                 gender_description: genderDescription,
-                visitDetailsSubmitted: visitDetailsSubmitted
+                visitDetailsSubmitted: visitDetailsSubmitted,
+                created_on: createdOn
             };
         });
     };
@@ -1748,6 +1752,12 @@ export default function AppointmentTable() {
 
     // Book appointment - immediately call API
     const handleBookAppointment = async () => {
+        // Prevent duplicate booking requests
+        if (isBooking) {
+            console.log('Booking already in progress, ignoring duplicate request');
+            return;
+        }
+
         if (selectedPatients.length === 0) {
             setSnackbarMessage("Please select a patient to book an appointment.");
             setShowSnackbar(true);
@@ -1770,6 +1780,9 @@ export default function AppointmentTable() {
         }
 
         const patient = selectedPatients[0];
+
+        // Set booking flag to prevent duplicates
+        setIsBooking(true);
 
         try {
             // Block booking if patient has any non-COMPLETED appointment today
@@ -1827,21 +1840,32 @@ export default function AppointmentTable() {
 
             if (result.success) {
                 // Refresh appointments from server to get the correct status and time
-                // Note: This uses selected doctor ID to refresh the selected doctor's appointment view
+                // Use the doctorId from the booking result to ensure we refresh the correct doctor's appointments
                 try {
                     const today = new Date().toISOString().split('T')[0];
-                    const doctorId = selectedDoctorId; // Use selected doctor for refreshing appointment view
+                    // Use doctorId from booking result, fallback to selectedDoctorId if not available
+                    const doctorId = (result.doctorId || selectedDoctorId) as string;
                     const clinicId = (sessionData?.clinicId ?? '');
 
                     console.log('🔄 Refreshing appointments for selected doctor after booking:', doctorId);
 
+                    // Add a small delay to ensure database transaction is committed
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    
                     const resp: TodayAppointmentsResponse = await appointmentService.getAppointmentsForDateSP({
                         doctorId,
                         clinicId,
                         futureDate: today,
                         languageId: 1
                     });
+                    
+                    console.log('📋 Refresh response:', resp);
+                    console.log('📋 ResultSet1 count:', resp?.resultSet1?.length || 0);
+                    console.log('📋 ResultSet1 data:', resp?.resultSet1);
+                    
                     const rows = convertSPResultToRows(resp?.resultSet1 || []);
+                    console.log('📋 Converted rows count:', rows.length);
+                    console.log('📋 Converted rows:', rows);
                     setAppointments(rows);
                     // Log and fetch previous visits using booked patientId
                     console.log('📌 Booked patientId (from appointmentData):', appointmentData.patientId);
@@ -1893,6 +1917,9 @@ export default function AppointmentTable() {
             setSnackbarMessage("Failed to book appointment. Please try again.");
             setShowSnackbar(true);
             setTimeout(() => setShowSnackbar(false), 4000);
+        } finally {
+            // Always reset booking flag to allow future bookings
+            setIsBooking(false);
         }
     };
 
@@ -1941,8 +1968,8 @@ export default function AppointmentTable() {
         }
     }, [appointments.length, isDoctor]);
     // Sort order depends on role
-    // - Doctor: WITH DOCTOR (top) -> CONSULT ON CALL -> WAITING
-    // - Others: WAITING (top) as before
+    // - Doctor: WITH DOCTOR (top) -> CONSULT ON CALL -> WAITING (sorted by booking time)
+    // - Others: WAITING (top, sorted by booking time) as before
     const sortedAppointments = isDoctor
         ? [...filteredAppointments].sort((a, b) => {
             const priority = (s: string) => {
@@ -1956,13 +1983,35 @@ export default function AppointmentTable() {
             const pa = priority(a.status);
             const pb = priority(b.status);
             if (pa !== pb) return pa - pb;
+            // Within same status, sort by booking time (created_on) - first come first served
+            const aCreatedOn = (a as any).created_on || '';
+            const bCreatedOn = (b as any).created_on || '';
+            if (aCreatedOn && bCreatedOn) {
+                const aTime = new Date(aCreatedOn).getTime();
+                const bTime = new Date(bCreatedOn).getTime();
+                if (!isNaN(aTime) && !isNaN(bTime)) {
+                    return aTime - bTime;
+                }
+            }
             return 0;
         })
         : [...filteredAppointments].sort((a, b) => {
             const aIsWaiting = mapStatusLabelToId(a.status) === 1;
             const bIsWaiting = mapStatusLabelToId(b.status) === 1;
-            if (aIsWaiting === bIsWaiting) return 0;
-            return aIsWaiting ? -1 : 1;
+            if (aIsWaiting !== bIsWaiting) {
+                return aIsWaiting ? -1 : 1;
+            }
+            // Within same status (especially WAITING), sort by booking time (created_on)
+            const aCreatedOn = (a as any).created_on || '';
+            const bCreatedOn = (b as any).created_on || '';
+            if (aCreatedOn && bCreatedOn) {
+                const aTime = new Date(aCreatedOn).getTime();
+                const bTime = new Date(bCreatedOn).getTime();
+                if (!isNaN(aTime) && !isNaN(bTime)) {
+                    return aTime - bTime;
+                }
+            }
+            return 0;
         });
     const totalPages = Math.ceil(filteredAppointments.length / pageSize);
     const startIndex = (currentPage - 1) * pageSize;
@@ -2872,25 +2921,33 @@ export default function AppointmentTable() {
 
                                                     </td>
                                                     <td className="last-col">
-                                                        <a
-                                                            href="#"
-                                                            title={`View visit history`}
-                                                            style={{ textDecoration: "underline", color: "#1E88E5", cursor: "pointer" }}
-                                                            onClick={(e) => {
-                                                                e.preventDefault();
-                                                                handleLastVisitClick(a.patientId, a.patient, a);
-                                                            }}
-                                                        >
-
-                                                            {loadingVisits[a.patientId] ? (
+                                                    {(() => {
+                                                        if (loadingVisits[a.patientId]) {
+                                                            return (
                                                                 <span className="text-muted">
                                                                     <i className="fas fa-spinner fa-spin me-1"></i>
                                                                     Loading...
                                                                 </span>
-                                                            ) : (
-                                                                formatLastVisitDisplay(a.patientId, a.reports_received, a.visitNumber === 1)
-                                                            )}
-                                                        </a>
+                                                            );
+                                                        }
+                                                        const lastVisitText = formatLastVisitDisplay(a.patientId, a.reports_received, a.visitNumber === 1);
+                                                        if (lastVisitText === "-") {
+                                                            return <span>{lastVisitText}</span>;
+                                                        }
+                                                        return (
+                                                            <a
+                                                                href="#"
+                                                                title={`View visit history`}
+                                                                style={{ textDecoration: "underline", color: "#1E88E5", cursor: "pointer" }}
+                                                                onClick={(e) => {
+                                                                    e.preventDefault();
+                                                                    handleLastVisitClick(a.patientId, a.patient, a);
+                                                                }}
+                                                            >
+                                                                {lastVisitText}
+                                                            </a>
+                                                        );
+                                                    })()}
                                                     </td>
                                                     <td className="action-col" style={{ whiteSpace: "nowrap" }}>
                                                         <div style={{
@@ -3158,24 +3215,37 @@ export default function AppointmentTable() {
                                                     <div className="kv">
                                                         <span className="k">Last Visit:</span>
                                                         <span className="v">
-                                                            <a
-                                                                href="#"
-                                                                title={`View visit history`}
-                                                                style={{ textDecoration: 'underline', color: '#1E88E5', cursor: 'pointer' }}
-                                                                onClick={(e) => {
-                                                                    e.preventDefault();
-                                                                    handleLastVisitClick(appointment.patientId, appointment.patient, appointment);
-                                                                }}
-                                                            >
-                                                                {loadingVisits[appointment.patientId] ? (
-                                                                    <span className="text-muted">
-                                                                        <i className="fas fa-spinner fa-spin me-1"></i>
-                                                                        Loading...
-                                                                    </span>
-                                                                ) : (
-                                                                    formatLastVisitDisplay(appointment.patientId, appointment.reports_received, appointment.visitNumber === 1)
-                                                                )}
-                                                            </a>
+                                                            {(() => {
+                                                                if (loadingVisits[appointment.patientId]) {
+                                                                    return (
+                                                                        <span className="text-muted">
+                                                                            <i className="fas fa-spinner fa-spin me-1"></i>
+                                                                            Loading...
+                                                                        </span>
+                                                                    );
+                                                                }
+                                                                const lastVisitText = formatLastVisitDisplay(
+                                                                    appointment.patientId,
+                                                                    appointment.reports_received,
+                                                                    appointment.visitNumber === 1
+                                                                );
+                                                                if (lastVisitText === "-") {
+                                                                    return <span>{lastVisitText}</span>;
+                                                                }
+                                                                return (
+                                                                    <a
+                                                                        href="#"
+                                                                        title={`View visit history`}
+                                                                        style={{ textDecoration: 'underline', color: '#1E88E5', cursor: 'pointer' }}
+                                                                        onClick={(e) => {
+                                                                            e.preventDefault();
+                                                                            handleLastVisitClick(appointment.patientId, appointment.patient, appointment);
+                                                                        }}
+                                                                    >
+                                                                        {lastVisitText}
+                                                                    </a>
+                                                                );
+                                                            })()}
                                                         </span>
                                                     </div>
                                                     <div className="kv"><span className="k">Gender:</span><span className="v">{appointment.gender}</span></div>
@@ -3979,8 +4049,9 @@ export default function AppointmentTable() {
                     className="btn"
                     style={{ ...buttonStyle }}
                     onClick={handleBookAppointment}
+                    disabled={isBooking}
                 >
-                    Book Appointment
+                    {isBooking ? 'Booking...' : 'Book Appointment'}
                 </button>
                 <button
                     className="btn"
@@ -4315,24 +4386,33 @@ export default function AppointmentTable() {
                                                 </td>
                                                 {/* <td><a href={`/patients/${a.patientId}/visits`} style={{ textDecoration: "underline", color: "#1E88E5" }}>{a.lastOpd}</a></td> */}
                                                 <td className="last-col">
-                                                    <a
-                                                        href="#"
-                                                        title={`View visit history`}
-                                                        style={{ textDecoration: "underline", color: "#1E88E5", cursor: "pointer" }}
-                                                        onClick={(e) => {
-                                                            e.preventDefault();
-                                                            handleLastVisitClick(a.patientId, a.patient, a);
-                                                        }}
-                                                    >
-                                                        {loadingVisits[a.patientId] ? (
-                                                            <span className="text-muted">
-                                                                <i className="fas fa-spinner fa-spin me-1"></i>
-                                                                Loading...
-                                                            </span>
-                                                        ) : (
-                                                            formatLastVisitDisplay(a.patientId, a.reports_received, a.visitNumber === 1)
-                                                        )}
-                                                    </a>
+                                                    {(() => {
+                                                        if (loadingVisits[a.patientId]) {
+                                                            return (
+                                                                <span className="text-muted">
+                                                                    <i className="fas fa-spinner fa-spin me-1"></i>
+                                                                    Loading...
+                                                                </span>
+                                                            );
+                                                        }
+                                                        const lastVisitText = formatLastVisitDisplay(a.patientId, a.reports_received, a.visitNumber === 1);
+                                                        if (lastVisitText === "-") {
+                                                            return <span>{lastVisitText}</span>;
+                                                        }
+                                                        return (
+                                                            <a
+                                                                href="#"
+                                                                title={`View visit history`}
+                                                                style={{ textDecoration: "underline", color: "#1E88E5", cursor: "pointer" }}
+                                                                onClick={(e) => {
+                                                                    e.preventDefault();
+                                                                    handleLastVisitClick(a.patientId, a.patient, a);
+                                                                }}
+                                                            >
+                                                                {lastVisitText}
+                                                            </a>
+                                                        );
+                                                    })()}
                                                 </td>
                                                 <td className="action-col" style={{ whiteSpace: "nowrap" }}>
                                                     <div style={{
@@ -4604,7 +4684,7 @@ export default function AppointmentTable() {
                                                                     if (!pid || !vdatetime || !did) {
                                                                         setSnackbarMessage('Missing identifiers to delete appointment');
                                                                         setShowSnackbar(true);
-                                                                        setTimeout(() => setShowSnackbar(false), 3000);
+                                                                        // setTimeout(() => setShowSnackbar(false), 3000);
                                                                         return;
                                                                     }
                                                                     const confirmDelete = window.confirm('Delete this appointment?');
@@ -4617,12 +4697,15 @@ export default function AppointmentTable() {
                                                                         clinicId: sessionData?.clinicId || '',
                                                                         userId: String(sessionData?.userId || 'system') 
                                                                     });
+                                                                    setSnackbarMessage('Appointment deleted');
+                                                                    setShowSnackbar(true);
+                                                                    setTimeout(() => setShowSnackbar(false), 3000);
                                                                     setAppointments(prev => prev.filter((_, i) => i !== originalIndex));
                                                                 } catch (err) {
                                                                     console.error('Delete appointment failed:', err);
                                                                     setSnackbarMessage('Failed to delete appointment');
                                                                     setShowSnackbar(true);
-                                                                    setTimeout(() => setShowSnackbar(false), 3000);
+                                                                    // setTimeout(() => setShowSnackbar(false), 3000);
                                                                 }
                                                             }}
                                                             style={{
@@ -5144,26 +5227,39 @@ export default function AppointmentTable() {
                                                 <div className="kv"><span className="k">Age:</span><span className="v">{appointment.age}</span></div>
                                                 <div className="kv">
                                                     <span className="k">Last Visit:</span>
-                                                    <span className="v">
-                                                        <a
-                                                            href="#"
-                                                            title={`View visit history`}
-                                                            style={{ textDecoration: 'underline', color: '#1E88E5', cursor: 'pointer' }}
-                                                            onClick={(e) => {
-                                                                e.preventDefault();
-                                                                handleLastVisitClick(appointment.patientId, appointment.patient, appointment);
-                                                            }}
-                                                        >
-                                                            {loadingVisits[appointment.patientId] ? (
-                                                                <span className="text-muted">
-                                                                    <i className="fas fa-spinner fa-spin me-1"></i>
-                                                                    Loading...
-                                                                </span>
-                                                            ) : (
-                                                                formatLastVisitDisplay(appointment.patientId, appointment.reports_received, appointment.visitNumber === 1)
-                                                            )}
-                                                        </a>
-                                                    </span>
+                                                        <span className="v">
+                                                            {(() => {
+                                                                if (loadingVisits[appointment.patientId]) {
+                                                                    return (
+                                                                        <span className="text-muted">
+                                                                            <i className="fas fa-spinner fa-spin me-1"></i>
+                                                                            Loading...
+                                                                        </span>
+                                                                    );
+                                                                }
+                                                                const lastVisitText = formatLastVisitDisplay(
+                                                                    appointment.patientId,
+                                                                    appointment.reports_received,
+                                                                    appointment.visitNumber === 1
+                                                                );
+                                                                if (lastVisitText === "-") {
+                                                                    return <span>{lastVisitText}</span>;
+                                                                }
+                                                                return (
+                                                                    <a
+                                                                        href="#"
+                                                                        title={`View visit history`}
+                                                                        style={{ textDecoration: 'underline', color: '#1E88E5', cursor: 'pointer' }}
+                                                                        onClick={(e) => {
+                                                                            e.preventDefault();
+                                                                            handleLastVisitClick(appointment.patientId, appointment.patient, appointment);
+                                                                        }}
+                                                                    >
+                                                                        {lastVisitText}
+                                                                    </a>
+                                                                );
+                                                            })()}
+                                                        </span>
                                                 </div>
                                                 <div className="kv"><span className="k">Gender:</span><span className="v">{appointment.gender}</span></div>
                                                 <div className="kv"><span className="k">Provider:</span><span className="v">
@@ -5410,6 +5506,9 @@ export default function AppointmentTable() {
                                                                     userId: String(sessionData?.userId || 'system') 
                                                                 });
                                                                 // Remove from UI
+                                                                setSnackbarMessage('Appointment deleted successfully.');
+                                                                setShowSnackbar(true);
+                                                                setTimeout(() => setShowSnackbar(false), 3000);
                                                                 setAppointments(prev => prev.filter((_, i) => i !== originalIndex));
                                                             } catch (err) {
                                                                 console.error('Delete appointment failed:', err);
@@ -5899,12 +5998,19 @@ export default function AppointmentTable() {
                 />
             )}
 
-            <Snackbar
-                open={showBookedSnackbar}
-                autoHideDuration={3000}
-                onClose={() => setShowBookedSnackbar(false)}
+            {/* Global snackbar (reception / non-doctor view) */}
+            <GlobalSnackbar
+                show={showSnackbar}
+                message={snackbarMessage}
+                onClose={() => setShowSnackbar(false)}
+                autoHideDuration={5000}
+            />
+
+            <GlobalSnackbar
+                show={showBookedSnackbar}
                 message={bookedSnackbarMessage || 'Appointment booked successfully'}
-                anchorOrigin={{ vertical: 'bottom', horizontal: 'center',}}
+                onClose={() => setShowBookedSnackbar(false)}
+                autoHideDuration={5000}
             />
         </div>
     );
