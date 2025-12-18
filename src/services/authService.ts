@@ -60,6 +60,11 @@ export const authService = {
     return response.data
   },
 
+  async changePassword(data: any): Promise<any> {
+    const response = await api.post('/auth/change-password', data)
+    return response.data
+  },
+
   async testDatabase(): Promise<{ status: string; message: string }> {
     const response = await api.get('/test/database')
     return response.data
