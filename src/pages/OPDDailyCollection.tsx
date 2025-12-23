@@ -1,4 +1,26 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import {
+    Box,
+    Paper,
+    Typography,
+    Button,
+    Grid,
+    CircularProgress,
+    Alert,
+    MenuItem,
+    Select,
+    FormControl,
+    InputLabel,
+    Table,
+    TableBody,
+    TableCell,
+    TableContainer,
+    TableHead,
+    TableRow,
+    IconButton,
+    Popover,
+} from '@mui/material';
+import { CalendarToday } from '@mui/icons-material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { StaticDatePicker } from '@mui/x-date-pickers/StaticDatePicker';
@@ -90,8 +112,8 @@ const OPDDailyCollection: React.FC = () => {
     const [data, setData] = useState<OPDDailyCollectionRecord[]>([]);
     const [currentPage, setCurrentPage] = useState<number>(1);
     const [pageSize, setPageSize] = useState<number>(10);
-    const [fromDate, setFromDate] = useState<Date>(new Date());
-    const [toDate, setToDate] = useState<Date>(new Date());
+    const [fromDate, setFromDate] = useState<Date | null>(new Date());
+    const [toDate, setToDate] = useState<Date | null>(new Date());
 
     const [calendarAnchor, setCalendarAnchor] = useState<HTMLButtonElement | null>(null);
     const [selectionMode, setSelectionMode] = useState<'from' | 'to'>('from');
@@ -115,7 +137,7 @@ const OPDDailyCollection: React.FC = () => {
                     clinicId
                 }
             });
-            
+
             const result = response.data;
             if (Array.isArray(result)) {
                 // Map backend field names to frontend structure
@@ -211,9 +233,13 @@ const OPDDailyCollection: React.FC = () => {
                 doctorIdForApi = 'All';
             }
 
+            // Handle null dates safely
+            const safeFromDate = fromDate || new Date();
+            const safeToDate = toDate || safeFromDate;
+
             // Use date range API when dates are selected, otherwise use today endpoint
-            const isToday = fromDate.toDateString() === new Date().toDateString() &&
-                toDate.toDateString() === new Date().toDateString();
+            const isToday = safeFromDate.toDateString() === new Date().toDateString() &&
+                safeToDate.toDateString() === new Date().toDateString();
 
             let response;
             if (isToday) {
@@ -228,8 +254,8 @@ const OPDDailyCollection: React.FC = () => {
             } else {
                 // Use date range API for selected dates
                 response = await getOPDDailyCollection({
-                    fromDate,
-                    toDate,
+                    fromDate: safeFromDate,
+                    toDate: safeToDate,
                     clinicId,
                     doctorId: doctorIdForApi,
                     roleId,
@@ -501,7 +527,7 @@ const OPDDailyCollection: React.FC = () => {
 
     return (
         <LocalizationProvider dateAdapter={AdapterDateFns}>
-            <div className="container-fluid" style={{ fontFamily: "'Roboto', sans-serif", padding: "20px" }}>
+            <Box sx={{ p: 3, backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
                 <style>{`
                     .table-wrapper {
                         width: 100%;
@@ -907,167 +933,218 @@ const OPDDailyCollection: React.FC = () => {
                     }
                 `}</style>
 
-                {/* Page Title */}
-                <h1 style={{
-                    fontWeight: 'bold',
-                    fontSize: '1.8rem',
-                    color: '#212121',
-                    marginBottom: '24px'
-                }}>
+                {/* Header */}
+                <Typography variant="h5" gutterBottom sx={{ fontWeight: 600, mb: 3 }}>
                     OPD - Daily Collection
-                </h1>
+                </Typography>
 
-                {/* Filter Section */}
-                <div className="filter-section">
-                    <button
-                        className="calendar-button"
-                        onClick={(e) => {
-                            setCalendarAnchor(e.currentTarget);
-                            setSelectionMode('from');
-                        }}
-                    >
-                        📅 Select Date Range
-                    </button>
-                    {calendarAnchor && (
-                        <div
-                            className="calendar-popover"
-                            style={{
-                                position: 'absolute',
-                                left: calendarAnchor.offsetLeft,
-                                top: calendarAnchor.offsetTop + calendarAnchor.offsetHeight + 8,
-                            }}
-                        >
-                            <div className="date-display-box">
-                                <div
-                                    className={`date-box ${selectionMode === 'from' ? 'active' : ''}`}
-                                    onClick={() => setSelectionMode('from')}
-                                >
-                                    <div className="date-box-label">From</div>
-                                    <div className="date-box-value">
-                                        {fromDate ? format(fromDate, 'dd MMM yyyy') : 'Select Date'}
-                                    </div>
-                                </div>
-                                <div
-                                    className={`date-box ${selectionMode === 'to' ? 'active' : ''}`}
-                                    onClick={() => setSelectionMode('to')}
-                                >
-                                    <div className="date-box-label">To</div>
-                                    <div className="date-box-value">
-                                        {toDate ? format(toDate, 'dd MMM yyyy') : 'Select Date'}
-                                    </div>
-                                </div>
-                            </div>
-                            <StaticDatePicker
-                                displayStaticWrapperAs="desktop"
-                                value={selectionMode === 'from' ? fromDate : toDate}
-                                onChange={(newValue) => {
-                                    if (newValue) {
-                                        if (selectionMode === 'from') {
-                                            setFromDate(newValue);
-                                            if (newValue > toDate) {
-                                                setToDate(newValue);
-                                            }
-                                            setSelectionMode('to');
-                                        } else {
-                                            if (newValue < fromDate) {
-                                                setFromDate(newValue);
-                                            }
-                                            setToDate(newValue);
+                <Paper elevation={0} sx={{ p: 2, mb: 2, backgroundColor: 'white' }}>
+                    <Grid container spacing={2} alignItems="flex-end">
+                        {canFilterProviders && (
+                            <Grid item xs={12} sm={2.5}>
+                                <FormControl fullWidth size="small" sx={{ maxWidth: '250px' }}>
+                                    <InputLabel>Provider Name</InputLabel>
+                                    <Select
+                                        value={doctorId}
+                                        onChange={(e) => {
+                                            const newDoctorId = e.target.value;
+                                            setDoctorId(newDoctorId);
+                                            handleSearch(newDoctorId);
+                                        }}
+                                        label="Provider Name"
+                                    >
+                                        <MenuItem value="All">All Providers</MenuItem>
+                                        {doctors.map((doctor) => (
+                                            <MenuItem key={doctor.doctorId} value={doctor.doctorId}>
+                                                {doctor.doctorName}
+                                            </MenuItem>
+                                        ))}
+                                    </Select>
+                                </FormControl>
+                            </Grid>
+                        )}
+                        <Grid item xs={12} sm={canFilterProviders ? 5 : 7}>
+                            <Typography variant="subtitle2" sx={{ mb: 0.5, fontWeight: 'bold' }}>
+                                Collection Date *
+                            </Typography>
+                            <Box sx={{ width: '100%', maxWidth: '500px', display: 'flex', gap: 1 }}>
+                                <Box
+                                    onClick={(e) => {
+                                        setCalendarAnchor(e.currentTarget);
+                                        setSelectionMode('from');
+                                    }}
+                                    sx={{
+                                        flex: 1,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        border: '1px solid rgba(0, 0, 0, 0.23)',
+                                        borderRadius: '4px',
+                                        padding: '8.5px 14px',
+                                        cursor: 'pointer',
+                                        backgroundColor: '#fff',
+                                        height: '40px',
+                                        boxSizing: 'border-box',
+                                        '&:hover': {
+                                            borderColor: 'text.primary'
                                         }
-                                    }
-                                }}
-                                slots={{ day: CustomPickersDay }}
-                                slotProps={{
-                                    day: {
-                                        fromDate,
-                                        toDate,
-                                    } as any,
-                                }}
-                                sx={{
-                                    '.MuiPickersLayout-contentWrapper': {
-                                        minWidth: '280px',
-                                    },
-                                    '.MuiPickersDay-root': {
-                                        color: 'black !important',
-                                    },
-                                    '.MuiPickersDay-root.Mui-selected': {
-                                        color: 'white !important',
-                                    },
-                                    '.MuiPickersCalendarHeader-label': {
-                                        color: 'black !important',
-                                    },
-                                    '.MuiPickersArrowSwitcher-button': {
-                                        color: 'black !important',
-                                    },
-                                    '.MuiPickersCalendarHeader-switchViewButton': {
-                                        color: 'black !important',
-                                    },
-                                    '.MuiDayCalendar-weekDayLabel': {
-                                        color: 'black !important',
-                                    },
-                                    '.MuiTypography-root': {
-                                        color: 'black !important',
-                                    },
-                                    '.MuiSvgIcon-root': {
-                                        color: 'black !important',
-                                    }
-                                }}
-                            />
-                            <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
-                                <button
-                                    className="btn-primary-custom"
-                                    onClick={() => {
-                                        setCalendarAnchor(null);
-                                        handleSearch();
                                     }}
                                 >
-                                    Apply
-                                </button>
-                            </div>
-                        </div>
-                    )}
-                    {canFilterProviders && (
-                        <select
-                            className="provider-dropdown"
-                            value={doctorId}
-                            onChange={(e) => {
-                                const newDoctorId = e.target.value;
-                                setDoctorId(newDoctorId);
-                                // Call search with the new doctor immediately so filter applies correctly
-                                handleSearch(newDoctorId);
-                            }}
-                            disabled={loadingDoctors}
-                        >
-                            <option value="All">All Providers</option>
-                            {doctors.map((doctor) => (
-                                <option key={doctor.doctorId} value={doctor.doctorId}>
-                                    {doctor.doctorName}
-                                </option>
-                            ))}
-                        </select>
-                    )}
+                                    <Typography variant="body2" color="text.primary">
+                                        {fromDate
+                                            ? (toDate
+                                                ? `From: ${format(fromDate, 'dd-MMM-yy')} \u00A0\u00A0 To: ${format(toDate, 'dd-MMM-yy')}`
+                                                : `From: ${format(fromDate, 'dd-MMM-yy')}`)
+                                            : 'Select Date Range'}
+                                    </Typography>
+                                    <CalendarToday sx={{ fontSize: 20, color: 'action.active' }} />
+                                </Box>
+                                <Button
+                                    variant="outlined"
+                                    onClick={() => {
+                                        const today = new Date();
+                                        setFromDate(today);
+                                        setToDate(today);
+                                    }}
+                                    sx={{
+                                        height: '40px',
+                                        minWidth: '80px',
+                                        color: 'black !important',
+                                        borderColor: 'rgba(0, 0, 0, 0.23) !important',
+                                        textTransform: 'none',
+                                        fontWeight: 'bold',
+                                        '&:hover': {
+                                            borderColor: 'black !important',
+                                            backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                                        }
+                                    }}
+                                >
+                                    Reset
+                                </Button>
+                            </Box>
+                            <Popover
+                                open={Boolean(calendarAnchor)}
+                                anchorEl={calendarAnchor}
+                                onClose={() => setCalendarAnchor(null)}
+                                anchorOrigin={{
+                                    vertical: 'bottom',
+                                    horizontal: 'left',
+                                }}
+                            >
+                                <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', width: '320px' }}>
+                                    <StaticDatePicker
+                                        displayStaticWrapperAs="desktop"
+                                        value={selectionMode === 'from' ? fromDate : toDate}
+                                        onChange={(newValue) => {
+                                            if (newValue) {
+                                                if (selectionMode === 'from') {
+                                                    setFromDate(newValue);
+                                                    setToDate(null);
+                                                    setSelectionMode('to');
+                                                } else {
+                                                    if (fromDate && newValue < fromDate) {
+                                                        setFromDate(newValue);
+                                                        setToDate(null);
+                                                    } else {
+                                                        setToDate(newValue);
+                                                        setSelectionMode('from');
+                                                    }
+                                                }
+                                            }
+                                        }}
+                                        slots={{ day: CustomPickersDay }}
+                                        slotProps={{
+                                            day: {
+                                                fromDate,
+                                                toDate,
+                                            } as any,
+                                        }}
+                                        sx={{
+                                            '.MuiPickersLayout-contentWrapper': {
+                                                minWidth: '280px',
+                                            },
+                                            '.MuiPickersDay-root': {
+                                                color: 'black !important',
+                                            },
+                                            '.MuiPickersDay-root.Mui-selected': {
+                                                color: 'white !important',
+                                            },
+                                            '.MuiPickersCalendarHeader-label': {
+                                                color: 'black !important',
+                                            },
+                                            '.MuiPickersArrowSwitcher-button': {
+                                                color: 'black !important',
+                                            },
+                                            '.MuiPickersCalendarHeader-switchViewButton': {
+                                                color: 'black !important',
+                                            },
+                                            '.MuiDayCalendar-weekDayLabel': {
+                                                color: 'black !important',
+                                            },
+                                            '.MuiTypography-root': {
+                                                color: 'black !important',
+                                            },
+                                            '.MuiSvgIcon-root': {
+                                                color: 'black !important',
+                                            }
+                                        }}
+                                    />
+                                    <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
+                                        <Button
+                                            variant="contained"
+                                            onClick={() => {
+                                                setCalendarAnchor(null);
+                                                handleSearch();
+                                            }}
+                                            size="small"
+                                        >
+                                            Apply
+                                        </Button>
+                                    </Box>
+                                </Box>
+                            </Popover>
+                        </Grid>
+                        <Grid item xs={0} sm={canFilterProviders ? 1.5 : 1} />
+                        <Grid item xs={12} sm={3} sx={{ textAlign: 'right' }}>
+                            <Button
+                                variant="contained"
+                                onClick={handleExport}
+                                disabled={loading || data.length === 0}
+                                sx={{
+                                    mr: 1,
+                                    textTransform: 'none',
+                                    backgroundColor: 'rgb(0, 123, 255)',
+                                    '&:hover': {
+                                        backgroundColor: 'rgb(0, 100, 200)'
+                                    }
+                                }}
+                            >
+                                Download Excel
+                            </Button>
+                            <Button
+                                variant="contained"
+                                onClick={handlePrint}
+                                disabled={loading || data.length === 0}
+                                sx={{
+                                    textTransform: 'none',
+                                    backgroundColor: 'rgb(0, 123, 255)',
+                                    '&:hover': {
+                                        backgroundColor: 'rgb(0, 100, 200)'
+                                    }
+                                }}
+                            >
+                                Print
+                            </Button>
+                        </Grid>
+                    </Grid>
                     {isReceptionist && (
-                        <span style={{ fontStyle: 'italic', color: '#999', fontSize: '0.9rem' }}>
-                            Note: Only completed visits are shown on selection of provider
-                        </span>
+                        <Box sx={{ mt: 1 }}>
+                            <Typography variant="caption" sx={{ fontStyle: 'italic', color: '#999' }}>
+                                Note: Only completed visits are shown on selection of provider
+                            </Typography>
+                        </Box>
                     )}
-                    <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
-                        <button
-                            className="btn-primary-custom"
-                            onClick={handleExport}
-                            disabled={loading || data.length === 0}
-                        >
-                            Download Excel
-                        </button>
-                        <button
-                            className="btn-primary-custom"
-                            onClick={handlePrint}
-                            disabled={loading || data.length === 0}
-                        >
-                            Print
-                        </button>
-                    </div>
-                </div>
+                </Paper>
 
                 {/* Error Alert */}
                 {error && (
@@ -1234,9 +1311,9 @@ const OPDDailyCollection: React.FC = () => {
                 {filteredData.length > 0 && (
                     <div className="pagination-container">
                         <div className="pagination-info">
-                                <span>
+                            <span>
                                 Showing {startIndex + 1} to {Math.min(endIndex, filteredData.length)} of {filteredData.length} records
-                                </span>
+                            </span>
                             <div className="page-size-selector">
                                 <span>Show:</span>
                                 <select
@@ -1296,10 +1373,9 @@ const OPDDailyCollection: React.FC = () => {
                         </div>
                     </div>
                 )}
-            </div>
-        </LocalizationProvider>
+            </Box>
+        </LocalizationProvider >
     );
 };
 
 export default OPDDailyCollection;
- 
