@@ -1,26 +1,4 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import {
-    Box,
-    Paper,
-    Typography,
-    Button,
-    Grid,
-    CircularProgress,
-    Alert,
-    MenuItem,
-    Select,
-    FormControl,
-    InputLabel,
-    Table,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TableHead,
-    TableRow,
-    IconButton,
-    Popover,
-} from '@mui/material';
-import { CalendarToday } from '@mui/icons-material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { StaticDatePicker } from '@mui/x-date-pickers/StaticDatePicker';
@@ -32,13 +10,14 @@ import {
     getOPDDailyCollectionToday,
     exportToCSV,
 } from '../services/opdDailyCollectionService';
+import api from '../services/api';
 import {
     OPDDailyCollectionRecord,
     OPDDailyCollectionTotals,
 } from '../types/opdDailyCollection';
 import { useAppSelector } from '../store/hooks';
 import { useSession } from '../store/hooks/useSession';
-import { doctorService } from '../services/doctorService';
+import { getHeaderImageUrl } from '../utils/printTemplates';
 import '../global.css';
 
 function CustomPickersDay(props: PickersDayProps<Date> & { fromDate?: Date; toDate?: Date }) {
@@ -97,8 +76,9 @@ const OPDDailyCollection: React.FC = () => {
     const roleId = authState.user?.roleId || 3;
     const languageId = authState.user?.languageId || 1;
 
-    // Get session data
-    const { clinicId: sessionClinicId } = useSession();
+    // Get session data (doctorId used to control provider filter visibility)
+    const { clinicId: sessionClinicId, doctorId: sessionDoctorId } = useSession();
+    const canFilterProviders = sessionDoctorId === 'DR-00010';
     const clinicId = sessionClinicId || 'CL-00001';
 
     // State management
@@ -116,12 +96,12 @@ const OPDDailyCollection: React.FC = () => {
     const [calendarAnchor, setCalendarAnchor] = useState<HTMLButtonElement | null>(null);
     const [selectionMode, setSelectionMode] = useState<'from' | 'to'>('from');
 
-    // Fetch doctors list on mount (only for receptionist)
+    // Fetch doctors list on mount (only for users allowed to filter providers)
     useEffect(() => {
-        if (isReceptionist) {
+        if (canFilterProviders) {
             fetchDoctors();
         }
-    }, [isReceptionist, clinicId]);
+    }, [clinicId, canFilterProviders]);
 
     // Fetch doctors from API
     const fetchDoctors = async () => {
@@ -129,8 +109,14 @@ const OPDDailyCollection: React.FC = () => {
 
         setLoadingDoctors(true);
         try {
-            const response = await fetch(`http://localhost:8080/api/doctors/all?languageId=${languageId}&clinicId=${clinicId}`);
-            const result = await response.json();
+            const response = await api.get('/doctors/all', {
+                params: {
+                    languageId,
+                    clinicId
+                }
+            });
+            
+            const result = response.data;
             if (Array.isArray(result)) {
                 // Map backend field names to frontend structure
                 const mappedDoctors = result.map((doc: any) => ({
@@ -146,15 +132,21 @@ const OPDDailyCollection: React.FC = () => {
         }
     };
 
-    // Pagination calculations
-    const totalPages = Math.ceil(data.length / pageSize);
+    // No client-side filtering needed - API handles all filtering
+    // When DR-00010 selects "All", API returns all doctors including DR-00010
+    // When DR-00010 selects a specific doctor, API returns only that doctor's records
+    // For other doctors, API always returns only their own records
+    const filteredData = data;
+
+    // Pagination calculations (based on filtered data)
+    const totalPages = Math.ceil(filteredData.length / pageSize);
     const startIndex = (currentPage - 1) * pageSize;
     const endIndex = startIndex + pageSize;
-    const currentData = data.slice(startIndex, endIndex);
+    const currentData = filteredData.slice(startIndex, endIndex);
 
-    // Calculate totals (from all data, not just current page)
+    // Calculate totals (from filtered data, not just current page)
     const totals = useMemo<OPDDailyCollectionTotals>(() => {
-        return data.reduce(
+        return filteredData.reduce(
             (acc, record) => ({
                 totalOriginalBilledAmount: acc.totalOriginalBilledAmount + (record.originalBilledAmount || 0),
                 totalFeesToCollect: acc.totalFeesToCollect + (record.feesToCollect || 0),
@@ -180,7 +172,7 @@ const OPDDailyCollection: React.FC = () => {
                 totalCollection: 0,
             }
         );
-    }, [data]);
+    }, [filteredData]);
 
     // Fetch data on component mount
     useEffect(() => {
@@ -188,7 +180,7 @@ const OPDDailyCollection: React.FC = () => {
     }, []);
 
     // Handle search with API
-    const handleSearch = async () => {
+    const handleSearch = async (overrideDoctorId?: string) => {
         if (!clinicId) {
             setError('Clinic ID is required');
             return;
@@ -199,6 +191,26 @@ const OPDDailyCollection: React.FC = () => {
         setCurrentPage(1); // Reset to first page on search
 
         try {
+            // Use the latest doctorId if override is provided (e.g. from dropdown change)
+            const currentDoctorId = overrideDoctorId ?? doctorId;
+
+            // Decide which doctorId to send to API
+            // - If DR-00010 (canFilterProviders) → use selected doctor from dropdown (All = all doctors)
+            // - Else if logged-in doctor exists       → always that doctor's collection
+            // - Else if receptionist                  → use selected (or All) if we ever enable provider filter
+            // - Else                                  → All providers
+            let doctorIdForApi: string;
+
+            if (canFilterProviders) {
+                doctorIdForApi = currentDoctorId === 'All' ? 'All' : currentDoctorId;
+            } else if (sessionDoctorId) {
+                doctorIdForApi = sessionDoctorId;
+            } else if (isReceptionist) {
+                doctorIdForApi = currentDoctorId === 'All' ? 'All' : currentDoctorId;
+            } else {
+                doctorIdForApi = 'All';
+            }
+
             // Use date range API when dates are selected, otherwise use today endpoint
             const isToday = fromDate.toDateString() === new Date().toDateString() &&
                 toDate.toDateString() === new Date().toDateString();
@@ -208,7 +220,7 @@ const OPDDailyCollection: React.FC = () => {
                 // Use today endpoint for today's date
                 response = await getOPDDailyCollectionToday(
                     clinicId,
-                    isReceptionist ? doctorId : 'All',
+                    doctorIdForApi,
                     roleId,
                     languageId
                 );
@@ -219,18 +231,23 @@ const OPDDailyCollection: React.FC = () => {
                     fromDate,
                     toDate,
                     clinicId,
-                    doctorId: isReceptionist ? doctorId : 'All',
+                    doctorId: doctorIdForApi,
                     roleId,
                     languageId,
                 });
                 console.log('=== OPD Daily Collection Search (API - Date Range) ===');
             }
 
-            console.log('Doctor ID:', doctorId);
+            console.log('=== OPD Daily Collection Search Debug ===');
+            console.log('Selected Doctor ID (dropdown):', currentDoctorId);
+            console.log('Session Doctor ID (logged in):', sessionDoctorId);
+            console.log('Can Filter Providers:', canFilterProviders);
+            console.log('Doctor ID sent to API:', doctorIdForApi);
             console.log('From Date:', fromDate);
             console.log('To Date:', toDate);
             console.log('Clinic ID:', clinicId);
             console.log('API Response:', response);
+            console.log('Records returned:', response.data?.length || 0);
 
             if (response.success) {
                 console.log('Setting data:', response.data);
@@ -260,14 +277,213 @@ const OPDDailyCollection: React.FC = () => {
         setCurrentPage(1); // Reset to first page when page size changes
     };
 
-    // Handle export to Excel/CSV
+    // Handle export to Excel/CSV (export filtered data)
     const handleExport = () => {
-        exportToCSV(data, `opd-daily-collection-${new Date().toISOString().split('T')[0]}.csv`);
+        exportToCSV(filteredData, `opd-daily-collection-${new Date().toISOString().split('T')[0]}.csv`);
     };
 
     // Handle print
     const handlePrint = () => {
-        window.print();
+        if (typeof window === 'undefined' || data.length === 0) return;
+
+        const headerImageUrl = getHeaderImageUrl();
+        const fromLabel = fromDate ? format(fromDate, 'dd MMM yyyy') : '';
+        const toLabel = toDate ? format(toDate, 'dd MMM yyyy') : '';
+
+        // Build table body from filtered data (not just current page)
+        const tableRowsHtml = filteredData
+            .map((row, index) => {
+                const srNo = index + 1;
+                const duesFormatted = formatDues(row.dues);
+                return `
+                    <tr>
+                        <td>${srNo}</td>
+                        <td>${row.visitDate || ''}</td>
+                        <td>${row.name || ''}</td>
+                        <td>${row.isFollowUp || ''}</td>
+                        <td>${row.attendedBy || ''}</td>
+                        <td style="text-align:right;">${formatCurrency(row.originalBilledAmount)}</td>
+                        <td style="text-align:right;">${formatCurrency(row.feesToCollect)}</td>
+                        <td style="text-align:right;">${formatCurrency(row.difference)}</td>
+                        <td style="text-align:right;">${formatCurrency(row.originalDiscount)}</td>
+                        <td style="text-align:right;">${formatCurrency(row.discount)}</td>
+                        <td style="text-align:right;">${formatCurrency(row.net)}</td>
+                        <td style="text-align:right;">${formatCurrency(row.feesCollected)}</td>
+                        <td style="text-align:right;color:${duesFormatted.isNegative ? 'red' : 'black'};">${duesFormatted.value}</td>
+                        <td style="text-align:right;">${formatCurrency(row.adhocFees)}</td>
+                        <td>${row.comment || '–'}</td>
+                        <td>${row.paymentDescription || '–'}</td>
+                    </tr>
+                `;
+            })
+            .join('');
+
+        const totalDuesFormatted = formatDues(totals.totalDues);
+        const totalsRowHtml = `
+            <tr>
+                <td colspan="5" style="font-weight:bold;">Total</td>
+                <td style="text-align:right;font-weight:bold;">${formatCurrency(totals.totalOriginalBilledAmount)}</td>
+                <td style="text-align:right;font-weight:bold;">${formatCurrency(totals.totalFeesToCollect)}</td>
+                <td style="text-align:right;font-weight:bold;">${formatCurrency(totals.totalDifference)}</td>
+                <td style="text-align:right;font-weight:bold;">${formatCurrency(totals.totalOriginalDiscount)}</td>
+                <td style="text-align:right;font-weight:bold;">${formatCurrency(totals.totalDiscount)}</td>
+                <td style="text-align:right;font-weight:bold;">${formatCurrency(totals.totalNet)}</td>
+                <td style="text-align:right;font-weight:bold;">${formatCurrency(totals.totalFeesCollected)}</td>
+                <td style="text-align:right;font-weight:bold;color:${totalDuesFormatted.isNegative ? 'red' : 'black'};">${totalDuesFormatted.value}</td>
+                <td style="text-align:right;font-weight:bold;">${formatCurrency(totals.totalAdhocFees)}</td>
+                <td colspan="2"></td>
+            </tr>
+        `;
+
+        const printHtml = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>OPD - Daily Collection</title>
+                <style>
+                    @page {
+                        size: landscape;
+                        margin: 10mm;
+                    }
+                    body {
+                        font-family: Arial, sans-serif;
+                        padding: 10px;
+                        color: #000;
+                        margin: 0;
+                    }
+                    .header-image {
+                        text-align: center;
+                        margin-bottom: 5px;
+                        width: 100%;
+                    }
+                    .header-image img {
+                        width: 100%;
+                        height: auto;
+                        max-height: 80px;
+                        object-fit: contain;
+                    }
+                    .title {
+                        font-size: 16px;
+                        font-weight: bold;
+                        text-align: center;
+                        margin: 5px 0;
+                    }
+                    .date-range {
+                        text-align: center;
+                        margin-bottom: 5px;
+                        font-size: 12px;
+                    }
+                    table {
+                        width: 100%;
+                        border-collapse: collapse;
+                        font-size: 9px;
+                        table-layout: fixed;
+                    }
+                    th, td {
+                        border: 1px solid #000;
+                        padding: 3px 4px;
+                        word-wrap: break-word;
+                        overflow: hidden;
+                    }
+                    th {
+                        background-color: rgb(0, 123, 255);
+                        color: #ffffff;
+                        font-weight: 600;
+                        font-size: 9px;
+                        white-space: nowrap;
+                    }
+                    td {
+                        font-size: 9px;
+                    }
+                    tbody tr:nth-child(even) {
+                        background-color: #f8f9fa;
+                    }
+                    /* Column width adjustments for print */
+                    table th:nth-child(1), table td:nth-child(1) { width: 2.5%; }
+                    table th:nth-child(2), table td:nth-child(2) { width: 5%; }
+                    table th:nth-child(3), table td:nth-child(3) { width: 8%; }
+                    table th:nth-child(4), table td:nth-child(4) { width: 4%; }
+                    table th:nth-child(5), table td:nth-child(5) { width: 6%; }
+                    table th:nth-child(6), table td:nth-child(6) { width: 5.5%; }
+                    table th:nth-child(7), table td:nth-child(7) { width: 5.5%; }
+                    table th:nth-child(8), table td:nth-child(8) { width: 5.5%; }
+                    table th:nth-child(9), table td:nth-child(9) { width: 5.5%; }
+                    table th:nth-child(10), table td:nth-child(10) { width: 5.5%; }
+                    table th:nth-child(11), table td:nth-child(11) { width: 5.5%; }
+                    table th:nth-child(12), table td:nth-child(12) { width: 5.5%; }
+                    table th:nth-child(13), table td:nth-child(13) { width: 5.5%; }
+                    table th:nth-child(14), table td:nth-child(14) { width: 5.5%; }
+                    table th:nth-child(15), table td:nth-child(15) { width: 7%; }
+                    table th:nth-child(16), table td:nth-child(16) { width: 6.5%; }
+                </style>
+            </head>
+            <body>
+                <div class="header-image">
+                    <img src="${headerImageUrl}" alt="Clinic Header" />
+                </div>
+                <div class="title">OPD - Daily Collection</div>
+                <div class="date-range">
+                    ${fromLabel && toLabel ? `From ${fromLabel} To ${toLabel}` : ''}
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Sr.</th>
+                            <th>Visit Time</th>
+                            <th>Patient Name</th>
+                            <th>New/Follow up</th>
+                            <th>Provider</th>
+                            <th>Original (O)</th>
+                            <th>Billed (B)</th>
+                            <th>Diff (O-B)</th>
+                            <th>Orig Disc (OD)</th>
+                            <th>Discount (D)</th>
+                            <th>Net (B-D)</th>
+                            <th>Collected (C)</th>
+                            <th>Dues (B-D-C)</th>
+                            <th>Adhoc (A)</th>
+                            <th>Reason</th>
+                            <th>Pay Method</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${tableRowsHtml || `
+                            <tr>
+                                <td colspan="16" style="text-align:center;padding:20px;">No collection Available for today</td>
+                            </tr>
+                        `}
+                        ${filteredData.length > 0 ? totalsRowHtml : ''}
+                    </tbody>
+                </table>
+            </body>
+            </html>
+        `;
+
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'fixed';
+        iframe.style.right = '0';
+        iframe.style.bottom = '0';
+        iframe.style.width = '0';
+        iframe.style.height = '0';
+        iframe.style.border = '0';
+        iframe.srcdoc = printHtml;
+        document.body.appendChild(iframe);
+
+        iframe.onload = () => {
+            try {
+                const win = iframe.contentWindow;
+                if (win) {
+                    win.focus();
+                    win.print();
+                }
+            } finally {
+                setTimeout(() => {
+                    if (iframe.parentNode) {
+                        iframe.parentNode.removeChild(iframe);
+                    }
+                }, 1000);
+            }
+        };
     };
 
     // Format currency
@@ -276,309 +492,751 @@ const OPDDailyCollection: React.FC = () => {
         return value.toFixed(2);
     };
 
+    // Format dues - show in red if negative, without minus sign
+    const formatDues = (value: number | null | undefined): { value: string; isNegative: boolean } => {
+        if (value === null || value === undefined) return { value: '0.00', isNegative: false };
+        const isNegative = value < 0;
+        return { value: Math.abs(value).toFixed(2), isNegative };
+    };
+
     return (
         <LocalizationProvider dateAdapter={AdapterDateFns}>
-            <Box sx={{ p: 3, backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
-                {/* Header */}
-                <Typography variant="h5" gutterBottom sx={{ fontWeight: 600, mb: 3 }}>
+            <div className="container-fluid" style={{ fontFamily: "'Roboto', sans-serif", padding: "20px" }}>
+                <style>{`
+                    .table-wrapper {
+                        width: 100%;
+                        overflow-x: hidden;
+                        margin-bottom: 20px;
+                        display: flex;
+                        flex-direction: column;
+                        border: 1px solid #dee2e6;
+                        border-radius: 4px;
+                    }
+                    .table-wrapper > table:first-child {
+                        border-bottom: 1px solid #dee2e6;
+                    }
+                    .table-scroll-container {
+                        height: 480px;
+                        overflow-y: auto;
+                        overflow-x: hidden;
+                        position: relative;
+                        display: block;
+                        box-sizing: border-box;
+                    }
+                    .table-scroll-container::-webkit-scrollbar {
+                        width: 8px;
+                    }
+                    .table-scroll-container::-webkit-scrollbar-track {
+                        background: #f1f1f1;
+                    }
+                    .table-scroll-container::-webkit-scrollbar-thumb {
+                        background: #888;
+                        border-radius: 4px;
+                    }
+                    .table-scroll-container::-webkit-scrollbar-thumb:hover {
+                        background: #555;
+                    }
+                    .table-scroll-container table {
+                        border: none;
+                        margin: 0;
+                        width: 100%;
+                        display: table;
+                        box-sizing: border-box;
+                    }
+                    /* Account for scrollbar in scrollable container */
+                    .table-scroll-container:not(:empty) {
+                        padding-right: 0;
+                    }
+                    .opd-collection-table {
+                        width: 100%;
+                        border-collapse: collapse;
+                        border-spacing: 0;
+                        table-layout: fixed;
+                        margin: 0;
+                        box-sizing: border-box;
+                    }
+                    .opd-collection-table * {
+                        box-sizing: border-box;
+                    }
+                    .opd-collection-table thead {
+                        display: table-header-group;
+                    }
+                    .opd-collection-table thead th {
+                        border-bottom: 1px solid #dee2e6;
+                    }
+                    .opd-collection-table tbody {
+                        display: table-row-group;
+                    }
+                    .opd-collection-table tfoot {
+                        display: table-footer-group;
+                        background-color: #ffffff;
+                    }
+                    .table-wrapper > table:last-child {
+                        border-top: 1px solid #dee2e6;
+                    }
+                    .table-wrapper > table {
+                        width: 100%;
+                    }
+                    .opd-collection-table thead th {
+                        background-color: rgb(0, 123, 255);
+                        color: #ffffff;
+                        padding: 10px 6px;
+                        text-align: left;
+                        font-weight: 600;
+                        font-size: 0.85rem;
+                        border: 1px solid #dee2e6;
+                        white-space: nowrap;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                    }
+                    .opd-collection-table thead th[align="right"] {
+                        text-align: right;
+                    }
+                    .opd-collection-table tbody td {
+                        padding: 10px 6px;
+                        border: 1px solid #dee2e6;
+                        font-size: 0.85rem;
+                        white-space: nowrap;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                    }
+                    .opd-collection-table tbody td[align="right"] {
+                        text-align: right;
+                    }
+                    /* Column width adjustments - using percentages for responsive design */
+                    .opd-collection-table th:nth-child(1),
+                    .opd-collection-table td:nth-child(1) {
+                        width: 3%;
+                    }
+                    .opd-collection-table th:nth-child(2),
+                    .opd-collection-table td:nth-child(2) {
+                        width: 6%;
+                    }
+                    .opd-collection-table th:nth-child(3),
+                    .opd-collection-table td:nth-child(3) {
+                        width: 10%;
+                        white-space: normal;
+                        word-wrap: break-word;
+                    }
+                    .opd-collection-table th:nth-child(4),
+                    .opd-collection-table td:nth-child(4) {
+                        width: 5%;
+                    }
+                    .opd-collection-table th:nth-child(5),
+                    .opd-collection-table td:nth-child(5) {
+                        width: 7%;
+                    }
+                    .opd-collection-table th:nth-child(6),
+                    .opd-collection-table td:nth-child(6),
+                    .opd-collection-table th:nth-child(7),
+                    .opd-collection-table td:nth-child(7),
+                    .opd-collection-table th:nth-child(8),
+                    .opd-collection-table td:nth-child(8),
+                    .opd-collection-table th:nth-child(9),
+                    .opd-collection-table td:nth-child(9),
+                    .opd-collection-table th:nth-child(10),
+                    .opd-collection-table td:nth-child(10),
+                    .opd-collection-table th:nth-child(11),
+                    .opd-collection-table td:nth-child(11),
+                    .opd-collection-table th:nth-child(12),
+                    .opd-collection-table td:nth-child(12),
+                    .opd-collection-table th:nth-child(13),
+                    .opd-collection-table td:nth-child(13),
+                    .opd-collection-table th:nth-child(14),
+                    .opd-collection-table td:nth-child(14) {
+                        width: 6%;
+                    }
+                    .opd-collection-table th:nth-child(15),
+                    .opd-collection-table td:nth-child(15) {
+                        width: 8%;
+                        white-space: normal;
+                        word-wrap: break-word;
+                    }
+                    .opd-collection-table th:nth-child(16),
+                    .opd-collection-table td:nth-child(16) {
+                        width: 7%;
+                    }
+                    .opd-collection-table tbody tr:nth-child(even) {
+                        background-color: #f8f9fa;
+                    }
+                    .opd-collection-table tbody tr:nth-child(odd) {
+                        background-color: #ffffff;
+                    }
+                    .opd-collection-table tbody tr:hover {
+                        background-color: #e9ecef;
+                    }
+                    .opd-collection-table tbody tr.total-row {
+                        background-color: #e8eaf6;
+                        font-weight: bold;
+                    }
+                    .opd-collection-table tfoot tr.total-row {
+                        background-color: #e8eaf6;
+                        font-weight: bold;
+                    }
+                    .opd-collection-table tfoot td {
+                        padding: 10px 6px;
+                        border: 1px solid #dee2e6;
+                        font-size: 0.85rem;
+                        background-color: #e8eaf6;
+                        white-space: nowrap;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                    }
+                    .opd-collection-table tfoot td[align="right"] {
+                        text-align: right;
+                    }
+                    /* Ensure consistent border alignment */
+                    .opd-collection-table thead th:first-child,
+                    .opd-collection-table tbody td:first-child,
+                    .opd-collection-table tfoot td:first-child {
+                        border-left: 1px solid #dee2e6;
+                    }
+                    .opd-collection-table thead th:last-child,
+                    .opd-collection-table tbody td:last-child,
+                    .opd-collection-table tfoot td:last-child {
+                        border-right: 1px solid #dee2e6;
+                    }
+                    .filter-section {
+                        display: flex;
+                        align-items: center;
+                        gap: 12px;
+                        margin-bottom: 20px;
+                        flex-wrap: wrap;
+                    }
+                    .filter-row {
+                        display: flex;
+                        align-items: center;
+                        gap: 12px;
+                        width: 100%;
+                        flex-wrap: wrap;
+                    }
+                    .btn-primary-custom {
+                        background-color: rgb(0, 123, 255);
+                        color: #ffffff;
+                        border: none;
+                        padding: 8px 16px;
+                        border-radius: 4px;
+                        font-size: 0.9rem;
+                        font-weight: 500;
+                        cursor: pointer;
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 6px;
+                        transition: background-color 0.2s;
+                        white-space: nowrap;
+                    }
+                    .btn-primary-custom:hover {
+                        background-color: rgb(0, 100, 200);
+                    }
+                    .btn-primary-custom:disabled {
+                        opacity: 0.5;
+                        cursor: not-allowed;
+                    }
+                    .provider-dropdown {
+                        padding: 8px 12px;
+                        border: 1px solid #ced4da;
+                        border-radius: 4px;
+                        font-size: 0.9rem;
+                        width: 300px;
+                        max-width: 300px;
+                    }
+                    .calendar-button {
+                        background-color: rgb(0, 123, 255);
+                        color: #ffffff;
+                        border: none;
+                        padding: 8px 16px;
+                        border-radius: 4px;
+                        font-size: 0.9rem;
+                        cursor: pointer;
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 6px;
+                        transition: background-color 0.2s;
+                    }
+                    .calendar-button:hover {
+                        background-color: rgb(0, 100, 200);
+                    }
+                    .calendar-popover {
+                        position: absolute;
+                        z-index: 1000;
+                        background: white;
+                        border: 1px solid #dee2e6;
+                        border-radius: 4px;
+                        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+                        padding: 16px;
+                        margin-top: 8px;
+                    }
+                    .date-display-box {
+                        display: flex;
+                        gap: 12px;
+                        margin-bottom: 16px;
+                    }
+                    .date-box {
+                        flex: 1;
+                        padding: 8px;
+                        border: 1px solid #ced4da;
+                        border-radius: 4px;
+                        cursor: pointer;
+                        background-color: #f8f9fa;
+                        transition: all 0.2s;
+                    }
+                    .date-box.active {
+                        border-color: rgb(0, 123, 255);
+                        background-color: #e3f2fd;
+                    }
+                    .date-box-label {
+                        font-size: 0.75rem;
+                        font-weight: bold;
+                        margin-bottom: 4px;
+                        color: #333;
+                    }
+                    .date-box-value {
+                        font-size: 0.9rem;
+                        color: #212121;
+                    }
+                    .error-alert {
+                        background-color: #f8d7da;
+                        color: #721c24;
+                        padding: 12px;
+                        border-radius: 4px;
+                        margin-bottom: 20px;
+                        border: 1px solid #f5c6cb;
+                    }
+                    .error-alert-close {
+                        float: right;
+                        cursor: pointer;
+                        font-weight: bold;
+                        font-size: 1.2rem;
+                        line-height: 1;
+                    }
+                    .loading-container {
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        height: 400px;
+                    }
+                    .loading-spinner {
+                        border: 4px solid #f3f3f3;
+                        border-top: 4px solid rgb(0, 123, 255);
+                        border-radius: 50%;
+                        width: 40px;
+                        height: 40px;
+                        animation: spin 1s linear infinite;
+                    }
+                    @keyframes spin {
+                        0% { transform: rotate(0deg); }
+                        100% { transform: rotate(360deg); }
+                    }
+                    /* Pagination styles */
+                    .pagination-container {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        margin-top: 20px;
+                        padding: 15px 0;
+                        border-top: 1px solid #e0e0e0;
+                    }
+                    .pagination-info {
+                        display: flex;
+                        align-items: center;
+                        gap: 15px;
+                        font-size: 0.9rem;
+                        color: #666;
+                    }
+                    .page-size-selector {
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                        white-space: nowrap;
+                    }
+                    .pagination-controls {
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                    }
+                    .page-btn {
+                        padding: 6px 12px;
+                        border: 1px solid #ddd;
+                        background: rgba(0, 0, 0, 0.35);
+                        color: #333;
+                        cursor: pointer;
+                        border-radius: 4px;
+                        font-size: 0.9rem;
+                        transition: all 0.2s ease;
+                    }
+                    .page-btn:hover:not(:disabled) {
+                        border-color: #999;
+                    }
+                    .page-btn.active {
+                        background: #1E88E5;
+                        color: white;
+                        border-color: #1E88E5;
+                    }
+                    .page-btn:disabled {
+                        opacity: 0.5;
+                        cursor: not-allowed;
+                    }
+                    /* Prev/Next buttons */
+                    .nav-btn {
+                        background: #1E88E5;
+                        color: #fff;
+                        border-color: #000;
+                    }
+                    .nav-btn:hover:not(:disabled) {
+                        color: #fff;
+                        border-color: #000;
+                    }
+                    .nav-btn:disabled {
+                        background: #000;
+                        color: #fff;
+                        opacity: 0.35;
+                    }
+                    .page-size-select {
+                        padding: 4px 8px;
+                        border: 1px solid #ddd;
+                        border-radius: 4px;
+                        font-size: 0.9rem;
+                    }
+                    @media print {
+                        .filter-section,
+                        .pagination-container,
+                        .btn-primary-custom,
+                        .calendar-button {
+                            display: none !important;
+                        }
+                    }
+                `}</style>
+
+                {/* Page Title */}
+                <h1 style={{
+                    fontWeight: 'bold',
+                    fontSize: '1.8rem',
+                    color: '#212121',
+                    marginBottom: '24px'
+                }}>
                     OPD - Daily Collection
-                </Typography>
+                </h1>
 
                 {/* Filter Section */}
-                <Paper elevation={0} sx={{ p: 2, mb: 2, backgroundColor: 'white' }}>
-                    <Grid container spacing={2} alignItems="center">
-                        {isReceptionist && (
-                            <Grid item xs={12} sm={2}>
-                                <FormControl fullWidth size="small">
-                                    <InputLabel>Provider Name</InputLabel>
-                                    <Select
-                                        value={doctorId}
-                                        onChange={(e) => {
-                                            setDoctorId(e.target.value);
-                                            handleSearch();
-                                        }}
-                                        label="Provider Name"
-                                    >
-                                        <MenuItem value="All">All</MenuItem>
-                                        {doctors.map((doctor) => (
-                                            <MenuItem key={doctor.doctorId} value={doctor.doctorId}>
-                                                {doctor.doctorName}
-                                            </MenuItem>
-                                        ))}
-                                    </Select>
-                                </FormControl>
-                            </Grid>
-                        )}
-                        <Grid item xs={12} sm={isReceptionist ? 1 : 2}>
-                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                <IconButton
-                                    onClick={(e) => {
-                                        setCalendarAnchor(e.currentTarget);
-                                        setSelectionMode('from'); // Reset to 'from' when opening
-                                    }}
-                                    size="medium"
-                                    color="primary"
-                                    sx={{
-                                        border: '1px solid #1976d2',
-                                        borderRadius: '4px',
-                                        padding: '8px',
-                                        minWidth: '40px',
-                                        minHeight: '40px',
-                                        backgroundColor: '#ffffff',
-                                        '&:hover': {
-                                            backgroundColor: '#e3f2fd',
-                                            borderColor: '#1565c0',
-                                        },
-                                        '& .MuiSvgIcon-root': {
-                                            color: '#1976d2',
-                                        }
-                                    }}
-                                    title="Select Date Range"
+                <div className="filter-section">
+                    <button
+                        className="calendar-button"
+                        onClick={(e) => {
+                            setCalendarAnchor(e.currentTarget);
+                            setSelectionMode('from');
+                        }}
+                    >
+                        📅 Select Date Range
+                    </button>
+                    {calendarAnchor && (
+                        <div
+                            className="calendar-popover"
+                            style={{
+                                position: 'absolute',
+                                left: calendarAnchor.offsetLeft,
+                                top: calendarAnchor.offsetTop + calendarAnchor.offsetHeight + 8,
+                            }}
+                        >
+                            <div className="date-display-box">
+                                <div
+                                    className={`date-box ${selectionMode === 'from' ? 'active' : ''}`}
+                                    onClick={() => setSelectionMode('from')}
                                 >
-                                    <CalendarToday
-                                        sx={{
-                                            fontSize: '20px',
-                                        }}
-                                    />
-                                </IconButton>
-                            </Box>
-                            <Popover
-                                open={Boolean(calendarAnchor)}
-                                anchorEl={calendarAnchor}
-                                onClose={() => setCalendarAnchor(null)}
-                                anchorOrigin={{
-                                    vertical: 'bottom',
-                                    horizontal: 'left',
+                                    <div className="date-box-label">From</div>
+                                    <div className="date-box-value">
+                                        {fromDate ? format(fromDate, 'dd MMM yyyy') : 'Select Date'}
+                                    </div>
+                                </div>
+                                <div
+                                    className={`date-box ${selectionMode === 'to' ? 'active' : ''}`}
+                                    onClick={() => setSelectionMode('to')}
+                                >
+                                    <div className="date-box-label">To</div>
+                                    <div className="date-box-value">
+                                        {toDate ? format(toDate, 'dd MMM yyyy') : 'Select Date'}
+                                    </div>
+                                </div>
+                            </div>
+                            <StaticDatePicker
+                                displayStaticWrapperAs="desktop"
+                                value={selectionMode === 'from' ? fromDate : toDate}
+                                onChange={(newValue) => {
+                                    if (newValue) {
+                                        if (selectionMode === 'from') {
+                                            setFromDate(newValue);
+                                            if (newValue > toDate) {
+                                                setToDate(newValue);
+                                            }
+                                            setSelectionMode('to');
+                                        } else {
+                                            if (newValue < fromDate) {
+                                                setFromDate(newValue);
+                                            }
+                                            setToDate(newValue);
+                                        }
+                                    }
                                 }}
-                            >
-                                <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', width: '320px' }}>
-                                    <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-                                        <Box sx={{ flex: 1 }}>
-                                            <Typography variant="subtitle2" sx={{ mb: 0.5, fontSize: '0.75rem', fontWeight: 'bold' }}>From</Typography>
-                                            <Box
-                                                sx={{
-                                                    p: 1,
-                                                    border: '1px solid',
-                                                    borderColor: selectionMode === 'from' ? 'primary.main' : 'divider',
-                                                    borderRadius: 1,
-                                                    cursor: 'pointer',
-                                                    backgroundColor: selectionMode === 'from' ? 'primary.light' : 'transparent',
-                                                    color: 'black',
-                                                    opacity: selectionMode === 'from' ? 0.9 : 1
-                                                }}
-                                                onClick={() => setSelectionMode('from')}
-                                            >
-                                                <Typography variant="body2" sx={{ color: 'black' }}>{fromDate ? format(fromDate, 'dd MMM yyyy') : 'Select Date'}</Typography>
-                                            </Box>
-                                        </Box>
-                                        <Box sx={{ flex: 1 }}>
-                                            <Typography variant="subtitle2" sx={{ mb: 0.5, fontSize: '0.75rem', fontWeight: 'bold' }}>To</Typography>
-                                            <Box
-                                                sx={{
-                                                    p: 1,
-                                                    border: '1px solid',
-                                                    borderColor: selectionMode === 'to' ? 'primary.main' : 'divider',
-                                                    borderRadius: 1,
-                                                    cursor: 'pointer',
-                                                    backgroundColor: selectionMode === 'to' ? 'primary.light' : 'transparent',
-                                                    color: 'black',
-                                                    opacity: selectionMode === 'to' ? 0.9 : 1
-                                                }}
-                                                onClick={() => setSelectionMode('to')}
-                                            >
-                                                <Typography variant="body2" sx={{ color: 'black' }}>{toDate ? format(toDate, 'dd MMM yyyy') : 'Select Date'}</Typography>
-                                            </Box>
-                                        </Box>
-                                    </Box>
-                                    <StaticDatePicker
-                                        displayStaticWrapperAs="desktop"
-                                        value={selectionMode === 'from' ? fromDate : toDate}
-                                        onChange={(newValue) => {
-                                            if (newValue) {
-                                                if (selectionMode === 'from') {
-                                                    setFromDate(newValue);
-                                                    if (newValue > toDate) {
-                                                        setToDate(newValue);
-                                                    }
-                                                    setSelectionMode('to');
-                                                } else {
-                                                    if (newValue < fromDate) {
-                                                        setFromDate(newValue);
-                                                    }
-                                                    setToDate(newValue);
-                                                }
-                                            }
-                                        }}
-                                        slots={{ day: CustomPickersDay }}
-                                        slotProps={{
-                                            day: {
-                                                fromDate,
-                                                toDate,
-                                            } as any,
-                                        }}
-                                        sx={{
-                                            '.MuiPickersLayout-contentWrapper': {
-                                                minWidth: '280px',
-                                            },
-                                            '.MuiPickersDay-root': {
-                                                color: 'black !important',
-                                            },
-                                            '.MuiPickersDay-root.Mui-selected': {
-                                                color: 'white !important',
-                                            },
-                                            '.MuiPickersCalendarHeader-label': {
-                                                color: 'black !important',
-                                            },
-                                            '.MuiPickersArrowSwitcher-button': {
-                                                color: 'black !important',
-                                            },
-                                            '.MuiPickersCalendarHeader-switchViewButton': {
-                                                color: 'black !important',
-                                            },
-                                            '.MuiDayCalendar-weekDayLabel': {
-                                                color: 'black !important',
-                                            },
-                                            '.MuiTypography-root': {
-                                                color: 'black !important',
-                                            },
-                                            '.MuiSvgIcon-root': {
-                                                color: 'black !important',
-                                            }
-                                        }}
-                                    />
-                                    <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
-                                        <Button
-                                            variant="contained"
-                                            onClick={() => {
-                                                setCalendarAnchor(null);
-                                                handleSearch();
-                                            }}
-                                            size="small"
-                                        >
-                                            Apply
-                                        </Button>
-                                    </Box>
-                                </Box>
-                            </Popover>
-                        </Grid>
-                        <Grid item xs={12} sm={isReceptionist ? 5 : 6}>
-                            {isReceptionist && (
-                                <Typography variant="caption" sx={{ fontStyle: 'italic', color: '#999' }}>
-                                    Note: Only completed visits are shown on selection of provider
-                                </Typography>
-                            )}
-                        </Grid>
-                        <Grid item xs={12} sm={2} sx={{ textAlign: 'right' }}>
-                            <Button
-                                variant="contained"
-                                onClick={handleExport}
-                                disabled={loading || data.length === 0}
-                                sx={{ mr: 1, textTransform: 'none' }}
-                            >
-                                Download Excel
-                            </Button>
-                            <Button
-                                variant="contained"
-                                onClick={handlePrint}
-                                disabled={loading || data.length === 0}
-                                sx={{ textTransform: 'none' }}
-                            >
-                                Print
-                            </Button>
-                        </Grid>
-                    </Grid>
-                </Paper>
+                                slots={{ day: CustomPickersDay }}
+                                slotProps={{
+                                    day: {
+                                        fromDate,
+                                        toDate,
+                                    } as any,
+                                }}
+                                sx={{
+                                    '.MuiPickersLayout-contentWrapper': {
+                                        minWidth: '280px',
+                                    },
+                                    '.MuiPickersDay-root': {
+                                        color: 'black !important',
+                                    },
+                                    '.MuiPickersDay-root.Mui-selected': {
+                                        color: 'white !important',
+                                    },
+                                    '.MuiPickersCalendarHeader-label': {
+                                        color: 'black !important',
+                                    },
+                                    '.MuiPickersArrowSwitcher-button': {
+                                        color: 'black !important',
+                                    },
+                                    '.MuiPickersCalendarHeader-switchViewButton': {
+                                        color: 'black !important',
+                                    },
+                                    '.MuiDayCalendar-weekDayLabel': {
+                                        color: 'black !important',
+                                    },
+                                    '.MuiTypography-root': {
+                                        color: 'black !important',
+                                    },
+                                    '.MuiSvgIcon-root': {
+                                        color: 'black !important',
+                                    }
+                                }}
+                            />
+                            <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
+                                <button
+                                    className="btn-primary-custom"
+                                    onClick={() => {
+                                        setCalendarAnchor(null);
+                                        handleSearch();
+                                    }}
+                                >
+                                    Apply
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                    {canFilterProviders && (
+                        <select
+                            className="provider-dropdown"
+                            value={doctorId}
+                            onChange={(e) => {
+                                const newDoctorId = e.target.value;
+                                setDoctorId(newDoctorId);
+                                // Call search with the new doctor immediately so filter applies correctly
+                                handleSearch(newDoctorId);
+                            }}
+                            disabled={loadingDoctors}
+                        >
+                            <option value="All">All Providers</option>
+                            {doctors.map((doctor) => (
+                                <option key={doctor.doctorId} value={doctor.doctorId}>
+                                    {doctor.doctorName}
+                                </option>
+                            ))}
+                        </select>
+                    )}
+                    {isReceptionist && (
+                        <span style={{ fontStyle: 'italic', color: '#999', fontSize: '0.9rem' }}>
+                            Note: Only completed visits are shown on selection of provider
+                        </span>
+                    )}
+                    <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
+                        <button
+                            className="btn-primary-custom"
+                            onClick={handleExport}
+                            disabled={loading || data.length === 0}
+                        >
+                            Download Excel
+                        </button>
+                        <button
+                            className="btn-primary-custom"
+                            onClick={handlePrint}
+                            disabled={loading || data.length === 0}
+                        >
+                            Print
+                        </button>
+                    </div>
+                </div>
 
                 {/* Error Alert */}
                 {error && (
-                    <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+                    <div className="error-alert">
                         {error}
-                    </Alert>
+                        <span className="error-alert-close" onClick={() => setError(null)}>×</span>
+                    </div>
                 )}
 
                 {/* Data Table */}
-                <TableContainer component={Paper} elevation={0}>
-                    {loading ? (
-                        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 400 }}>
-                            <CircularProgress />
-                        </Box>
-                    ) : (
-                        <Table size="small" sx={{ minWidth: 650 }}>
-                            <TableHead>
-                                <TableRow sx={{ backgroundColor: '#4472C4' }}>
-                                    <TableCell sx={{ color: 'white', fontWeight: 'bold', fontSize: '11px', padding: '8px' }}>Sr.</TableCell>
-                                    <TableCell sx={{ color: 'white', fontWeight: 'bold', fontSize: '11px', padding: '8px' }}>Visit Time</TableCell>
-                                    <TableCell sx={{ color: 'white', fontWeight: 'bold', fontSize: '11px', padding: '8px' }}>Patient Name</TableCell>
-                                    <TableCell sx={{ color: 'white', fontWeight: 'bold', fontSize: '11px', padding: '8px' }}>New / Follow up</TableCell>
-                                    <TableCell sx={{ color: 'white', fontWeight: 'bold', fontSize: '11px', padding: '8px' }}>Provider</TableCell>
-                                    <TableCell align="right" sx={{ color: 'white', fontWeight: 'bold', fontSize: '11px', padding: '8px' }}>Original (O)</TableCell>
-                                    <TableCell align="right" sx={{ color: 'white', fontWeight: 'bold', fontSize: '11px', padding: '8px' }}>Billed (B)</TableCell>
-                                    <TableCell align="right" sx={{ color: 'white', fontWeight: 'bold', fontSize: '11px', padding: '8px' }}>Difference (O-B)</TableCell>
-                                    <TableCell align="right" sx={{ color: 'white', fontWeight: 'bold', fontSize: '11px', padding: '8px' }}>Original Discount (OD)</TableCell>
-                                    <TableCell align="right" sx={{ color: 'white', fontWeight: 'bold', fontSize: '11px', padding: '8px' }}>Discount (D)</TableCell>
-                                    <TableCell align="right" sx={{ color: 'white', fontWeight: 'bold', fontSize: '11px', padding: '8px' }}>Net (B-D)</TableCell>
-                                    <TableCell align="right" sx={{ color: 'white', fontWeight: 'bold', fontSize: '11px', padding: '8px' }}>Collected (C)</TableCell>
-                                    <TableCell align="right" sx={{ color: 'white', fontWeight: 'bold', fontSize: '11px', padding: '8px' }}>Dues (B-D-C)</TableCell>
-                                    <TableCell align="right" sx={{ color: 'white', fontWeight: 'bold', fontSize: '11px', padding: '8px' }}>Adhoc (A)</TableCell>
-                                    <TableCell sx={{ color: 'white', fontWeight: 'bold', fontSize: '11px', padding: '8px' }}>Reason</TableCell>
-                                    <TableCell sx={{ color: 'white', fontWeight: 'bold', fontSize: '11px', padding: '8px' }}>Pay Method</TableCell>
-                                </TableRow>
-                            </TableHead>
-                            <TableBody>
-                                {currentData.map((row, index) => (
-                                    <TableRow
-                                        key={startIndex + index}
-                                        sx={{
-                                            backgroundColor: index % 2 === 0 ? 'white' : '#f9f9f9',
-                                            '&:hover': { backgroundColor: '#f0f0f0' },
-                                        }}
-                                    >
-                                        <TableCell sx={{ padding: '6px 8px', fontSize: '12px' }}>{startIndex + index + 1}</TableCell>
-                                        <TableCell sx={{ padding: '6px 8px', fontSize: '12px' }}>{row.visitDate}</TableCell>
-                                        <TableCell sx={{ padding: '6px 8px', fontSize: '12px' }}>{row.name}</TableCell>
-                                        <TableCell sx={{ padding: '6px 8px', fontSize: '12px' }}>{row.isFollowUp}</TableCell>
-                                        <TableCell sx={{ padding: '6px 8px', fontSize: '12px' }}>{row.attendedBy}</TableCell>
-                                        <TableCell align="right" sx={{ padding: '6px 8px', fontSize: '12px' }}>{formatCurrency(row.originalBilledAmount)}</TableCell>
-                                        <TableCell align="right" sx={{ padding: '6px 8px', fontSize: '12px' }}>{formatCurrency(row.feesToCollect)}</TableCell>
-                                        <TableCell align="right" sx={{ padding: '6px 8px', fontSize: '12px' }}>{formatCurrency(row.difference)}</TableCell>
-                                        <TableCell align="right" sx={{ padding: '6px 8px', fontSize: '12px' }}>{formatCurrency(row.originalDiscount)}</TableCell>
-                                        <TableCell align="right" sx={{ padding: '6px 8px', fontSize: '12px' }}>{formatCurrency(row.discount)}</TableCell>
-                                        <TableCell align="right" sx={{ padding: '6px 8px', fontSize: '12px' }}>{formatCurrency(row.net)}</TableCell>
-                                        <TableCell align="right" sx={{ padding: '6px 8px', fontSize: '12px' }}>{formatCurrency(row.feesCollected)}</TableCell>
-                                        <TableCell align="right" sx={{ padding: '6px 8px', fontSize: '12px' }}>{formatCurrency(row.dues)}</TableCell>
-                                        <TableCell align="right" sx={{ padding: '6px 8px', fontSize: '12px' }}>{formatCurrency(row.adhocFees)}</TableCell>
-                                        <TableCell sx={{ padding: '6px 8px', fontSize: '12px' }}>{row.comment || '–'}</TableCell>
-                                        <TableCell sx={{ padding: '6px 8px', fontSize: '12px' }}>{row.paymentDescription || '–'}</TableCell>
-                                    </TableRow>
-                                ))}
-                                {/* Total Row */}
-                                {data.length > 0 && (
-                                    <TableRow sx={{ backgroundColor: '#e8eaf6', fontWeight: 'bold' }}>
-                                        <TableCell colSpan={5} sx={{ padding: '8px', fontSize: '13px', fontWeight: 'bold' }}>Total</TableCell>
-                                        <TableCell align="right" sx={{ padding: '8px', fontSize: '13px', fontWeight: 'bold' }}>{formatCurrency(totals.totalOriginalBilledAmount)}</TableCell>
-                                        <TableCell align="right" sx={{ padding: '8px', fontSize: '13px', fontWeight: 'bold' }}>{formatCurrency(totals.totalFeesToCollect)}</TableCell>
-                                        <TableCell align="right" sx={{ padding: '8px', fontSize: '13px', fontWeight: 'bold' }}>{formatCurrency(totals.totalDifference)}</TableCell>
-                                        <TableCell align="right" sx={{ padding: '8px', fontSize: '13px', fontWeight: 'bold' }}>{formatCurrency(totals.totalOriginalDiscount)}</TableCell>
-                                        <TableCell align="right" sx={{ padding: '8px', fontSize: '13px', fontWeight: 'bold' }}>{formatCurrency(totals.totalDiscount)}</TableCell>
-                                        <TableCell align="right" sx={{ padding: '8px', fontSize: '13px', fontWeight: 'bold' }}>{formatCurrency(totals.totalNet)}</TableCell>
-                                        <TableCell align="right" sx={{ padding: '8px', fontSize: '13px', fontWeight: 'bold' }}>{formatCurrency(totals.totalFeesCollected)}</TableCell>
-                                        <TableCell align="right" sx={{ padding: '8px', fontSize: '13px', fontWeight: 'bold' }}>{formatCurrency(totals.totalDues)}</TableCell>
-                                        <TableCell align="right" sx={{ padding: '8px', fontSize: '13px', fontWeight: 'bold' }}>{formatCurrency(totals.totalAdhocFees)}</TableCell>
-                                        <TableCell colSpan={2}></TableCell>
-                                    </TableRow>
-                                )}
-                            </TableBody>
-                        </Table>
-                    )}
-                </TableContainer>
+                {loading ? (
+                    <div className="loading-container">
+                        <div className="loading-spinner"></div>
+                    </div>
+                ) : (
+                    <div className="table-wrapper">
+                        <table className="opd-collection-table">
+                            <colgroup>
+                                <col style={{ width: '3%' }} />
+                                <col style={{ width: '6%' }} />
+                                <col style={{ width: '10%' }} />
+                                <col style={{ width: '5%' }} />
+                                <col style={{ width: '7%' }} />
+                                <col style={{ width: '6%' }} />
+                                <col style={{ width: '6%' }} />
+                                <col style={{ width: '6%' }} />
+                                <col style={{ width: '6%' }} />
+                                <col style={{ width: '6%' }} />
+                                <col style={{ width: '6%' }} />
+                                <col style={{ width: '6%' }} />
+                                <col style={{ width: '6%' }} />
+                                <col style={{ width: '6%' }} />
+                                <col style={{ width: '8%' }} />
+                                <col style={{ width: '7%' }} />
+                            </colgroup>
+                            <thead>
+                                <tr>
+                                    <th>Sr.</th>
+                                    <th>Visit Time</th>
+                                    <th>Patient Name</th>
+                                    <th>New/Follow up</th>
+                                    <th>Provider</th>
+                                    <th align="right">Original (O)</th>
+                                    <th align="right">Billed (B)</th>
+                                    <th align="right">Diff (O-B)</th>
+                                    <th align="right">Orig Disc (OD)</th>
+                                    <th align="right">Discount (D)</th>
+                                    <th align="right">Net (B-D)</th>
+                                    <th align="right">Collected (C)</th>
+                                    <th align="right">Dues (B-D-C)</th>
+                                    <th align="right">Adhoc (A)</th>
+                                    <th>Reason</th>
+                                    <th>Pay Method</th>
+                                </tr>
+                            </thead>
+                        </table>
+                        <div className="table-scroll-container">
+                            <table className="opd-collection-table">
+                                <colgroup>
+                                    <col style={{ width: '3%' }} />
+                                    <col style={{ width: '6%' }} />
+                                    <col style={{ width: '10%' }} />
+                                    <col style={{ width: '5%' }} />
+                                    <col style={{ width: '7%' }} />
+                                    <col style={{ width: '6%' }} />
+                                    <col style={{ width: '6%' }} />
+                                    <col style={{ width: '6%' }} />
+                                    <col style={{ width: '6%' }} />
+                                    <col style={{ width: '6%' }} />
+                                    <col style={{ width: '6%' }} />
+                                    <col style={{ width: '6%' }} />
+                                    <col style={{ width: '6%' }} />
+                                    <col style={{ width: '6%' }} />
+                                    <col style={{ width: '8%' }} />
+                                    <col style={{ width: '7%' }} />
+                                </colgroup>
+                                <tbody>
+                                    {filteredData.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={16} style={{ textAlign: 'center', padding: '40px', color: '#999' }}>
+                                                No collection Available for today
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        filteredData.map((row, index) => {
+                                            const duesFormatted = formatDues(row.dues);
+                                            return (
+                                                <tr key={index}>
+                                                    <td>{index + 1}</td>
+                                                    <td>{row.visitDate}</td>
+                                                    <td>{row.name}</td>
+                                                    <td>{row.isFollowUp}</td>
+                                                    <td>{row.attendedBy}</td>
+                                                    <td align="right">{formatCurrency(row.originalBilledAmount)}</td>
+                                                    <td align="right">{formatCurrency(row.feesToCollect)}</td>
+                                                    <td align="right">{formatCurrency(row.difference)}</td>
+                                                    <td align="right">{formatCurrency(row.originalDiscount)}</td>
+                                                    <td align="right">{formatCurrency(row.discount)}</td>
+                                                    <td align="right">{formatCurrency(row.net)}</td>
+                                                    <td align="right">{formatCurrency(row.feesCollected)}</td>
+                                                    <td align="right" style={{ color: duesFormatted.isNegative ? 'red' : 'inherit' }}>
+                                                        {duesFormatted.value}
+                                                    </td>
+                                                    <td align="right">{formatCurrency(row.adhocFees)}</td>
+                                                    <td>{row.comment || '–'}</td>
+                                                    <td>{row.paymentDescription || '–'}</td>
+                                                </tr>
+                                            );
+                                        })
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                        {filteredData.length > 0 && (
+                            <table className="opd-collection-table">
+                                <colgroup>
+                                    <col style={{ width: '3%' }} />
+                                    <col style={{ width: '6%' }} />
+                                    <col style={{ width: '10%' }} />
+                                    <col style={{ width: '5%' }} />
+                                    <col style={{ width: '7%' }} />
+                                    <col style={{ width: '6%' }} />
+                                    <col style={{ width: '6%' }} />
+                                    <col style={{ width: '6%' }} />
+                                    <col style={{ width: '6%' }} />
+                                    <col style={{ width: '6%' }} />
+                                    <col style={{ width: '6%' }} />
+                                    <col style={{ width: '6%' }} />
+                                    <col style={{ width: '6%' }} />
+                                    <col style={{ width: '6%' }} />
+                                    <col style={{ width: '8%' }} />
+                                    <col style={{ width: '7%' }} />
+                                </colgroup>
+                                <tfoot>
+                                    <tr className="total-row">
+                                        {(() => {
+                                            const totalDuesFormatted = formatDues(totals.totalDues);
+                                            return (
+                                                <>
+                                                    <td colSpan={5}>Total</td>
+                                                    <td align="right">{formatCurrency(totals.totalOriginalBilledAmount)}</td>
+                                                    <td align="right">{formatCurrency(totals.totalFeesToCollect)}</td>
+                                                    <td align="right">{formatCurrency(totals.totalDifference)}</td>
+                                                    <td align="right">{formatCurrency(totals.totalOriginalDiscount)}</td>
+                                                    <td align="right">{formatCurrency(totals.totalDiscount)}</td>
+                                                    <td align="right">{formatCurrency(totals.totalNet)}</td>
+                                                    <td align="right">{formatCurrency(totals.totalFeesCollected)}</td>
+                                                    <td align="right" style={{ color: totalDuesFormatted.isNegative ? 'red' : 'inherit' }}>
+                                                        {totalDuesFormatted.value}
+                                                    </td>
+                                                    <td align="right">{formatCurrency(totals.totalAdhocFees)}</td>
+                                                    <td colSpan={2}></td>
+                                                </>
+                                            );
+                                        })()}
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        )}
+                    </div>
+                )}
 
                 {/* Pagination */}
-                {data.length > 0 && (
-                    <div className="pagination-container" style={{ marginTop: '20px' }}>
+                {filteredData.length > 0 && (
+                    <div className="pagination-container">
                         <div className="pagination-info">
-                            <span>
-                                Showing {startIndex + 1} to {Math.min(endIndex, data.length)} of {data.length} records
-                            </span>
+                                <span>
+                                Showing {startIndex + 1} to {Math.min(endIndex, filteredData.length)} of {filteredData.length} records
+                                </span>
                             <div className="page-size-selector">
                                 <span>Show:</span>
                                 <select
@@ -638,23 +1296,10 @@ const OPDDailyCollection: React.FC = () => {
                         </div>
                     </div>
                 )}
-            </Box>
-
-            {/* Print Styles */}
-            <style>
-                {`
-          @media print {
-            .MuiButton-root {
-              display: none !important;
-            }
-            .pagination-container {
-              display: none !important;
-            }
-          }
-        `}
-            </style>
+            </div>
         </LocalizationProvider>
     );
 };
 
 export default OPDDailyCollection;
+ 
