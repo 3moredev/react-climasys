@@ -7,10 +7,6 @@ import {
     Grid,
     CircularProgress,
     Alert,
-    MenuItem,
-    Select,
-    FormControl,
-    InputLabel,
     Table,
     TableBody,
     TableCell,
@@ -115,7 +111,7 @@ const OPDDailyCollection: React.FC = () => {
     const [fromDate, setFromDate] = useState<Date | null>(new Date());
     const [toDate, setToDate] = useState<Date | null>(new Date());
 
-    const [calendarAnchor, setCalendarAnchor] = useState<HTMLButtonElement | null>(null);
+    const [calendarAnchor, setCalendarAnchor] = useState<HTMLElement | null>(null);
     const [selectionMode, setSelectionMode] = useState<'from' | 'to'>('from');
 
     // Fetch doctors list on mount (only for users allowed to filter providers)
@@ -202,7 +198,7 @@ const OPDDailyCollection: React.FC = () => {
     }, []);
 
     // Handle search with API
-    const handleSearch = async (overrideDoctorId?: string) => {
+    const handleSearch = async (overrideDoctorId?: string, overrideFromDate?: Date | null, overrideToDate?: Date | null) => {
         if (!clinicId) {
             setError('Clinic ID is required');
             return;
@@ -233,9 +229,9 @@ const OPDDailyCollection: React.FC = () => {
                 doctorIdForApi = 'All';
             }
 
-            // Handle null dates safely
-            const safeFromDate = fromDate || new Date();
-            const safeToDate = toDate || safeFromDate;
+            // Handle null dates safely - use override dates if provided, otherwise use state
+            const safeFromDate = overrideFromDate !== undefined ? (overrideFromDate || new Date()) : (fromDate || new Date());
+            const safeToDate = overrideToDate !== undefined ? (overrideToDate || safeFromDate) : (toDate || safeFromDate);
 
             // Use date range API when dates are selected, otherwise use today endpoint
             const isToday = safeFromDate.toDateString() === new Date().toDateString() &&
@@ -478,7 +474,7 @@ const OPDDailyCollection: React.FC = () => {
                                 <td colspan="16" style="text-align:center;padding:20px;">No collection Available for today</td>
                             </tr>
                         `}
-                        ${filteredData.length > 0 ? totalsRowHtml : ''}
+                        ${totalsRowHtml}
                     </tbody>
                 </table>
             </body>
@@ -763,8 +759,20 @@ const OPDDailyCollection: React.FC = () => {
                         border: 1px solid #ced4da;
                         border-radius: 4px;
                         font-size: 0.9rem;
+                        font-family: "'Roboto', sans-serif";
                         width: 300px;
                         max-width: 300px;
+                        background-color: #FFFFFF;
+                        color: #212121;
+                        cursor: pointer;
+                    }
+                    .provider-dropdown:disabled {
+                        background-color: #ECEFF1;
+                        cursor: not-allowed;
+                    }
+                    .provider-dropdown:focus {
+                        outline: none;
+                        border-color: #1976d2;
                     }
                     .calendar-button {
                         background-color: rgb(0, 123, 255);
@@ -942,86 +950,103 @@ const OPDDailyCollection: React.FC = () => {
                     <Grid container spacing={2} alignItems="flex-end">
                         {canFilterProviders && (
                             <Grid item xs={12} sm={2.5}>
-                                <FormControl fullWidth size="small" sx={{ maxWidth: '250px' }}>
-                                    <InputLabel>Provider Name</InputLabel>
-                                    <Select
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <span style={{ fontSize: '0.9rem', color: '#666', whiteSpace: 'nowrap' }}>For Provider</span>
+                                    <select
+                                        className="provider-dropdown"
                                         value={doctorId}
                                         onChange={(e) => {
                                             const newDoctorId = e.target.value;
                                             setDoctorId(newDoctorId);
                                             handleSearch(newDoctorId);
                                         }}
-                                        label="Provider Name"
+                                        disabled={loadingDoctors}
                                     >
-                                        <MenuItem value="All">All Providers</MenuItem>
+                                        <option value="All">All Providers</option>
                                         {doctors.map((doctor) => (
-                                            <MenuItem key={doctor.doctorId} value={doctor.doctorId}>
+                                            <option key={doctor.doctorId} value={doctor.doctorId}>
                                                 {doctor.doctorName}
-                                            </MenuItem>
+                                            </option>
                                         ))}
-                                    </Select>
-                                </FormControl>
+                                    </select>
+                                </div>
                             </Grid>
                         )}
                         <Grid item xs={12} sm={canFilterProviders ? 5 : 7}>
-                            <Typography variant="subtitle2" sx={{ mb: 0.5, fontWeight: 'bold' }}>
-                                Collection Date *
-                            </Typography>
-                            <Box sx={{ width: '100%', maxWidth: '500px', display: 'flex', gap: 1 }}>
-                                <Box
-                                    onClick={(e) => {
-                                        setCalendarAnchor(e.currentTarget);
-                                        setSelectionMode('from');
-                                    }}
-                                    sx={{
-                                        flex: 1,
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'space-between',
-                                        border: '1px solid rgba(0, 0, 0, 0.23)',
-                                        borderRadius: '4px',
-                                        padding: '8.5px 14px',
-                                        cursor: 'pointer',
-                                        backgroundColor: '#fff',
-                                        height: '40px',
-                                        boxSizing: 'border-box',
-                                        '&:hover': {
-                                            borderColor: 'text.primary'
-                                        }
-                                    }}
-                                >
-                                    <Typography variant="body2" color="text.primary">
-                                        {fromDate
-                                            ? (toDate
-                                                ? `From: ${format(fromDate, 'dd-MMM-yy')} \u00A0\u00A0 To: ${format(toDate, 'dd-MMM-yy')}`
-                                                : `From: ${format(fromDate, 'dd-MMM-yy')}`)
-                                            : 'Select Date Range'}
-                                    </Typography>
-                                    <CalendarToday sx={{ fontSize: 20, color: 'action.active' }} />
-                                </Box>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span style={{ fontSize: '0.9rem', color: '#666', whiteSpace: 'nowrap' }}>Collection Date</span>
+                                <Box sx={{ width: '100%', maxWidth: '500px', display: 'flex', gap: 1 }}>
+                                    <Box
+                                        onClick={(e) => {
+                                            setCalendarAnchor(e.currentTarget as HTMLElement);
+                                            setSelectionMode('from');
+                                        }}
+                                        sx={{
+                                            flex: 1,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                            border: '2px solid #e0e0e0',
+                                            borderRadius: '4px',
+                                            padding: '6px 12px',
+                                            cursor: 'pointer',
+                                            backgroundColor: '#fff',
+                                            height: '38px',
+                                            boxSizing: 'border-box',
+                                            fontFamily: "'Roboto', sans-serif",
+                                            fontWeight: 500,
+                                            '&:hover': {
+                                                borderColor: '#3a6f9f'
+                                            },
+                                            '&:focus-within': {
+                                                borderColor: '#3a6f9f',
+                                                boxShadow: '0 0 0 3px rgba(58, 111, 159, 0.1)'
+                                            }
+                                        }}
+                                    >
+                                        <Typography variant="body2" sx={{ fontFamily: "'Roboto', sans-serif", fontSize: '1rem', fontWeight: 500, color: '#212121' }}>
+                                            {fromDate
+                                                ? (toDate
+                                                    ? `From: ${format(fromDate, 'dd-MMM-yy')} \u00A0\u00A0 To: ${format(toDate, 'dd-MMM-yy')}`
+                                                    : `From: ${format(fromDate, 'dd-MMM-yy')}`)
+                                                : 'Select Date Range'}
+                                        </Typography>
+                                        <CalendarToday sx={{ fontSize: 20, color: '#666' }} />
+                                    </Box>
                                 <Button
-                                    variant="outlined"
-                                    onClick={() => {
+                                    variant="contained"
+                                    onClick={async () => {
                                         const today = new Date();
+                                        // Reset dates
                                         setFromDate(today);
                                         setToDate(today);
+                                        // Reset provider filter if applicable
+                                        if (canFilterProviders) {
+                                            setDoctorId('All');
+                                            // Fetch fresh data with reset values (pass dates directly to ensure they're used)
+                                            await handleSearch('All', today, today);
+                                        } else {
+                                            // Fetch fresh data with today's date (pass dates directly to ensure they're used)
+                                            await handleSearch(undefined, today, today);
+                                        }
                                     }}
                                     sx={{
-                                        height: '40px',
+                                        height: '38px',
                                         minWidth: '80px',
-                                        color: 'black !important',
-                                        borderColor: 'rgba(0, 0, 0, 0.23) !important',
+                                        fontFamily: "'Roboto', sans-serif",
+                                        fontSize: '0.9rem',
+                                        fontWeight: 500,
                                         textTransform: 'none',
-                                        fontWeight: 'bold',
+                                        backgroundColor: '#1E88E5',
                                         '&:hover': {
-                                            borderColor: 'black !important',
-                                            backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                                            backgroundColor: '#1565C0'
                                         }
                                     }}
                                 >
                                     Reset
                                 </Button>
                             </Box>
+                            </div>
                             <Popover
                                 open={Boolean(calendarAnchor)}
                                 anchorEl={calendarAnchor}
@@ -1097,6 +1122,17 @@ const OPDDailyCollection: React.FC = () => {
                                                 handleSearch();
                                             }}
                                             size="small"
+                                            sx={{
+                                                height: '38px',
+                                                fontFamily: "'Roboto', sans-serif",
+                                                fontSize: '0.9rem',
+                                                fontWeight: 500,
+                                                textTransform: 'none',
+                                                backgroundColor: '#1E88E5',
+                                                '&:hover': {
+                                                    backgroundColor: '#1565C0'
+                                                }
+                                            }}
                                         >
                                             Apply
                                         </Button>
@@ -1112,10 +1148,18 @@ const OPDDailyCollection: React.FC = () => {
                                 disabled={loading || data.length === 0}
                                 sx={{
                                     mr: 1,
+                                    height: '38px',
+                                    fontFamily: "'Roboto', sans-serif",
+                                    fontSize: '0.9rem',
+                                    fontWeight: 500,
                                     textTransform: 'none',
-                                    backgroundColor: 'rgb(0, 123, 255)',
+                                    backgroundColor: '#1E88E5',
                                     '&:hover': {
-                                        backgroundColor: 'rgb(0, 100, 200)'
+                                        backgroundColor: '#1565C0'
+                                    },
+                                    '&:disabled': {
+                                        backgroundColor: '#ccc',
+                                        color: '#666'
                                     }
                                 }}
                             >
@@ -1126,10 +1170,18 @@ const OPDDailyCollection: React.FC = () => {
                                 onClick={handlePrint}
                                 disabled={loading || data.length === 0}
                                 sx={{
+                                    height: '38px',
+                                    fontFamily: "'Roboto', sans-serif",
+                                    fontSize: '0.9rem',
+                                    fontWeight: 500,
                                     textTransform: 'none',
-                                    backgroundColor: 'rgb(0, 123, 255)',
+                                    backgroundColor: '#1E88E5',
                                     '&:hover': {
-                                        backgroundColor: 'rgb(0, 100, 200)'
+                                        backgroundColor: '#1565C0'
+                                    },
+                                    '&:disabled': {
+                                        backgroundColor: '#ccc',
+                                        color: '#666'
                                     }
                                 }}
                             >
@@ -1258,58 +1310,55 @@ const OPDDailyCollection: React.FC = () => {
                                 </tbody>
                             </table>
                         </div>
-                        {filteredData.length > 0 && (
-                            <table className="opd-collection-table">
-                                <colgroup>
-                                    <col style={{ width: '3%' }} />
-                                    <col style={{ width: '6%' }} />
-                                    <col style={{ width: '10%' }} />
-                                    <col style={{ width: '5%' }} />
-                                    <col style={{ width: '7%' }} />
-                                    <col style={{ width: '6%' }} />
-                                    <col style={{ width: '6%' }} />
-                                    <col style={{ width: '6%' }} />
-                                    <col style={{ width: '6%' }} />
-                                    <col style={{ width: '6%' }} />
-                                    <col style={{ width: '6%' }} />
-                                    <col style={{ width: '6%' }} />
-                                    <col style={{ width: '6%' }} />
-                                    <col style={{ width: '6%' }} />
-                                    <col style={{ width: '8%' }} />
-                                    <col style={{ width: '7%' }} />
-                                </colgroup>
-                                <tfoot>
-                                    <tr className="total-row">
-                                        {(() => {
-                                            const totalDuesFormatted = formatDues(totals.totalDues);
-                                            return (
-                                                <>
-                                                    <td colSpan={5}>Total</td>
-                                                    <td align="right">{formatCurrency(totals.totalOriginalBilledAmount)}</td>
-                                                    <td align="right">{formatCurrency(totals.totalFeesToCollect)}</td>
-                                                    <td align="right">{formatCurrency(totals.totalDifference)}</td>
-                                                    <td align="right">{formatCurrency(totals.totalOriginalDiscount)}</td>
-                                                    <td align="right">{formatCurrency(totals.totalDiscount)}</td>
-                                                    <td align="right">{formatCurrency(totals.totalNet)}</td>
-                                                    <td align="right">{formatCurrency(totals.totalFeesCollected)}</td>
-                                                    <td align="right" style={{ color: totalDuesFormatted.isNegative ? 'red' : 'inherit' }}>
-                                                        {totalDuesFormatted.value}
-                                                    </td>
-                                                    <td align="right">{formatCurrency(totals.totalAdhocFees)}</td>
-                                                    <td colSpan={2}></td>
-                                                </>
-                                            );
-                                        })()}
-                                    </tr>
-                                </tfoot>
-                            </table>
-                        )}
+                        <table className="opd-collection-table">
+                            <colgroup>
+                                <col style={{ width: '3%' }} />
+                                <col style={{ width: '6%' }} />
+                                <col style={{ width: '10%' }} />
+                                <col style={{ width: '5%' }} />
+                                <col style={{ width: '7%' }} />
+                                <col style={{ width: '6%' }} />
+                                <col style={{ width: '6%' }} />
+                                <col style={{ width: '6%' }} />
+                                <col style={{ width: '6%' }} />
+                                <col style={{ width: '6%' }} />
+                                <col style={{ width: '6%' }} />
+                                <col style={{ width: '6%' }} />
+                                <col style={{ width: '6%' }} />
+                                <col style={{ width: '6%' }} />
+                                <col style={{ width: '8%' }} />
+                                <col style={{ width: '7%' }} />
+                            </colgroup>
+                            <tfoot>
+                                <tr className="total-row">
+                                    {(() => {
+                                        const totalDuesFormatted = formatDues(totals.totalDues);
+                                        return (
+                                            <>
+                                                <td colSpan={5}>Total</td>
+                                                <td align="right">{formatCurrency(totals.totalOriginalBilledAmount)}</td>
+                                                <td align="right">{formatCurrency(totals.totalFeesToCollect)}</td>
+                                                <td align="right">{formatCurrency(totals.totalDifference)}</td>
+                                                <td align="right">{formatCurrency(totals.totalOriginalDiscount)}</td>
+                                                <td align="right">{formatCurrency(totals.totalDiscount)}</td>
+                                                <td align="right">{formatCurrency(totals.totalNet)}</td>
+                                                <td align="right">{formatCurrency(totals.totalFeesCollected)}</td>
+                                                <td align="right" style={{ color: totalDuesFormatted.isNegative ? 'red' : 'inherit' }}>
+                                                    {totalDuesFormatted.value}
+                                                </td>
+                                                <td align="right">{formatCurrency(totals.totalAdhocFees)}</td>
+                                                <td colSpan={2}></td>
+                                            </>
+                                        );
+                                    })()}
+                                </tr>
+                            </tfoot>
+                        </table>
                     </div>
                 )}
 
                 {/* Pagination */}
-                {filteredData.length > 0 && (
-                    <div className="pagination-container">
+                <div className="pagination-container">
                         <div className="pagination-info">
                             <span>
                                 Showing {startIndex + 1} to {Math.min(endIndex, filteredData.length)} of {filteredData.length} records
@@ -1372,7 +1421,6 @@ const OPDDailyCollection: React.FC = () => {
                             </button>
                         </div>
                     </div>
-                )}
             </Box>
         </LocalizationProvider >
     );
