@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { useNavigate, useLocation } from "react-router-dom";
 import { visitService, ComprehensiveVisitDataRequest } from '../services/visitService';
@@ -235,7 +235,7 @@ export default function Treatment() {
         referralBy: 'Self',
         visitType: {
             inPerson: true,
-            followUp: true
+            followUp: false,
         },
         medicalHistory: {
             hypertension: false,
@@ -325,6 +325,7 @@ export default function Treatment() {
     // Billing popup state
     const [showBillingPopup, setShowBillingPopup] = useState<boolean>(false);
     const [showPrintReceiptPopup, setShowPrintReceiptPopup] = useState<boolean>(false);
+    const [totalSelectedFees, setTotalSelectedFees] = useState<number>(0);
     
     const filteredComplaints = React.useMemo(() => {
         const term = complaintSearch.trim().toLowerCase();
@@ -449,7 +450,8 @@ export default function Treatment() {
         followUp: '',
         followUpDate: '',
         remarkComments: '',
-        planAdv: ''
+        planAdv: '',
+        fud: '',
     });
     // Store followUpDescription for later matching when options load
     const [storedFollowUpDescription, setStoredFollowUpDescription] = useState<string>('');
@@ -1187,7 +1189,8 @@ export default function Treatment() {
                             dressingBodyParts: dressingCombined || prev.dressingBodyParts,
                             visitType: {
                                 ...prev.visitType,
-                                inPerson: vitals.in_person !== undefined ? Boolean(vitals.in_person) : prev.visitType.inPerson
+                                inPerson: vitals.in_person !== undefined ? Boolean(vitals.in_person) : prev.visitType.inPerson,
+                                followUp: vitals.follow_up_type !== undefined ? Boolean(vitals.follow_up_type) : prev.visitType.followUp
                             },
                             medicalHistory: {
                                 ...prev.medicalHistory,
@@ -1234,7 +1237,8 @@ export default function Treatment() {
                                 followUpType: fuTypeId ? String(fuTypeId) : prev.followUpType,
                                 followUp: vitals.follow_up_comment !== undefined ? String(vitals.follow_up_comment) : prev.followUp,
                                 followUpDate: fuDate ? String(fuDate) : prev.followUpDate, 
-                                planAdv: vitals.instructions !== undefined ? String(vitals.instructions) : prev.planAdv
+                                planAdv: vitals.instructions !== undefined ? String(vitals.instructions) : prev.planAdv,
+                                fud: vitals.follow_up_type !== undefined ? String(vitals.follow_up_type) : prev.fud
                             }));
 
                             // Patch billing fields from master lists (uiFields and vitals)
@@ -1408,6 +1412,9 @@ export default function Treatment() {
         fetchMasterLists();
     }, [treatmentData?.patientId, treatmentData?.visitNumber, sessionData?.clinicId, sessionData?.doctorId, (sessionData as any)?.shiftId, treatmentData?.doctorId]);
 
+    // Update Billed field based on currently selected checkboxes (not from master-lists array)
+    // This will be updated via onTotalFeesChange callback from AddBillingPopup
+
     // Match and pre-select billing items after billing options are loaded
     React.useEffect(() => {
         // Only proceed if we have both billing options and master-lists billing data
@@ -1423,45 +1430,84 @@ export default function Treatment() {
         
         billingArray.forEach((billingItem: any) => {
             // Find matching option by comparing billing fields (case-insensitive, trimmed)
-            const match = billingDetailsOptions.find(opt => {
+            // Try exact match first, then try matching by subgroup and group if details don't match
+            const itemGroup = (billingItem.billing_group_name || '').trim().toLowerCase();
+            const itemSubgroup = (billingItem.billing_subgroup_name || '').trim().toLowerCase();
+            const itemDetails = (billingItem.billing_details || '').trim().toLowerCase();
+            
+            let match = billingDetailsOptions.find(opt => {
                 const optGroup = (opt.billing_group_name || '').trim().toLowerCase();
                 const optSubgroup = (opt.billing_subgroup_name || '').trim().toLowerCase();
                 const optDetails = (opt.billing_details || '').trim().toLowerCase();
                 
-                const itemGroup = (billingItem.billing_group_name || '').trim().toLowerCase();
-                const itemSubgroup = (billingItem.billing_subgroup_name || '').trim().toLowerCase();
-                const itemDetails = (billingItem.billing_details || '').trim().toLowerCase();
-                
+                // Exact match: all three fields match
                 return optGroup === itemGroup && optSubgroup === itemSubgroup && optDetails === itemDetails;
             });
+            
+            // If no exact match, try matching by group and subgroup only (more flexible)
+            if (!match) {
+                match = billingDetailsOptions.find(opt => {
+                    const optGroup = (opt.billing_group_name || '').trim().toLowerCase();
+                    const optSubgroup = (opt.billing_subgroup_name || '').trim().toLowerCase();
+                    
+                    return optGroup === itemGroup && optSubgroup === itemSubgroup;
+                });
+            }
 
             if (match) {
                 matchedIds.push(match.id);
-                console.log('✓ Matched billing item:', billingItem.billing_details, '→ ID:', match.id);
+                console.log('✓ Matched billing item:', {
+                    fromMasterLists: {
+                        group: billingItem.billing_group_name,
+                        subgroup: billingItem.billing_subgroup_name,
+                        details: billingItem.billing_details,
+                        default_fees: billingItem.default_fees
+                    },
+                    matchedTo: {
+                        id: match.id,
+                        group: match.billing_group_name,
+                        subgroup: match.billing_subgroup_name,
+                        details: match.billing_details,
+                        default_fees: match.default_fees
+                    }
+                });
             } else {
-                console.warn('✗ Could not match billing item:', billingItem.billing_details, 
-                    'Group:', billingItem.billing_group_name, 
-                    'Subgroup:', billingItem.billing_subgroup_name);
+                console.warn('✗ Could not match billing item:', {
+                    group: billingItem.billing_group_name,
+                    subgroup: billingItem.billing_subgroup_name,
+                    details: billingItem.billing_details,
+                    default_fees: billingItem.default_fees
+                });
             }
         });
 
-        // Pre-select the matched billing items (only if we have matches and not already selected)
+        // Pre-select the matched billing items - replace existing selections with matched items
         if (matchedIds.length > 0) {
-            setSelectedBillingDetailIds(prev => {
-                // Check if we already have these selected
-                const allAlreadySelected = matchedIds.every(id => prev.includes(id));
-                if (allAlreadySelected) {
-                    console.log('Billing items already selected');
-                    return prev;
+            setSelectedBillingDetailIds(matchedIds);
+            console.log('Pre-selected billing IDs from master-lists:', matchedIds);
+            
+            // Calculate and update Billed field based on selected items
+            const totalDefaultFees = matchedIds.reduce((sum: number, id: string) => {
+                const opt = billingDetailsOptions.find(o => o.id === id);
+                if (opt) {
+                    const defaultFees = typeof opt.default_fees === 'number' ? opt.default_fees : Number(opt.default_fees || 0);
+                    return sum + defaultFees;
                 }
-                
-                // Merge with existing selections, avoiding duplicates
-                const combined = [...new Set([...prev, ...matchedIds])];
-                console.log('Pre-selected billing IDs:', combined);
-                return combined;
-            });
+                return sum;
+            }, 0);
+            
+            console.log('Calculated total default_fees from selected checkboxes:', totalDefaultFees.toFixed(2));
+            setBillingData(prev => ({
+                ...prev,
+                billed: totalDefaultFees > 0 ? totalDefaultFees.toFixed(2) : prev.billed
+            }));
         } else {
             console.warn('No billing items matched for pre-selection');
+            // If no matches, set billed to 0
+            setBillingData(prev => ({
+                ...prev,
+                billed: '0.00'
+            }));
         }
     }, [billingDetailsOptions]);
 
@@ -1919,6 +1965,25 @@ export default function Treatment() {
         setShowPrintReceiptPopup(true);
     };
 
+    // Memoized callback to handle total fees changes from AddBillingPopup
+    const handleTotalFeesChange = useCallback((totalFees: number) => {
+        // Update Billed input based on currently selected checkboxes
+        // This updates dynamically as user checks/unchecks items
+        const totalFeesFixed = totalFees.toFixed(2);
+        console.log('totalSelectedFees from AddBillingPopup (current selection):', totalFeesFixed);
+        setTotalSelectedFees(totalFees);
+        // Update billed field with current selection total (not cumulative)
+        setBillingData(prev => {
+            const discountNum = parseFloat(prev.discount) || 0;
+            const acBal = Math.max(0, totalFees - discountNum);
+            return {
+                ...prev,
+                billed: totalFeesFixed,
+                dues: acBal.toFixed(2)
+            };
+        });
+    }, []);
+
     const handlePrintReceiptSubmit = (values: PrintReceiptFormValues) => {
         setBillingData(prev => ({
             ...prev,
@@ -2266,6 +2331,56 @@ export default function Treatment() {
             const month = monthNames[date.getMonth()];
             const year = String(date.getFullYear()).slice(-2);
             return `${day}-${month}-${year}`;
+        } catch (error) {
+            return dateString;
+        }
+    };
+
+    // Helper function to format date as dd-mmm-yy (generic)
+    const formatDateDdMmmYy = (dateString: string | null | undefined): string => {
+        if (!dateString) return '-';
+        try {
+            // First, try to parse dd/mm/yyyy format (common format from master-lists)
+            const ddMmYyyyMatch = dateString.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+            if (ddMmYyyyMatch) {
+                const day = parseInt(ddMmYyyyMatch[1], 10);
+                const month = parseInt(ddMmYyyyMatch[2], 10) - 1; // month is 0-indexed
+                const year = parseInt(ddMmYyyyMatch[3], 10);
+                if (day >= 1 && day <= 31 && month >= 0 && month <= 11 && year >= 1900 && year <= 2100) {
+                    const dayStr = String(day).padStart(2, '0');
+                    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                    const monthStr = monthNames[month];
+                    const yearStr = String(year).slice(-2);
+                    return `${dayStr}-${monthStr}-${yearStr}`;
+                }
+            }
+            
+            // Try to parse dd-MM-yyyy format
+            const ddMmYyyyDashMatch = dateString.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+            if (ddMmYyyyDashMatch) {
+                const day = parseInt(ddMmYyyyDashMatch[1], 10);
+                const month = parseInt(ddMmYyyyDashMatch[2], 10) - 1;
+                const year = parseInt(ddMmYyyyDashMatch[3], 10);
+                if (day >= 1 && day <= 31 && month >= 0 && month <= 11 && year >= 1900 && year <= 2100) {
+                    const dayStr = String(day).padStart(2, '0');
+                    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                    const monthStr = monthNames[month];
+                    const yearStr = String(year).slice(-2);
+                    return `${dayStr}-${monthStr}-${yearStr}`;
+                }
+            }
+            
+            // Try standard Date parsing for ISO format or other formats
+            const date = new Date(dateString);
+            if (!isNaN(date.getTime())) {
+                const day = String(date.getDate()).padStart(2, '0');
+                const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                const month = monthNames[date.getMonth()];
+                const year = String(date.getFullYear()).slice(-2);
+                return `${day}-${month}-${year}`;
+            }
+            
+            return dateString;
         } catch (error) {
             return dateString;
         }
@@ -3707,7 +3822,7 @@ export default function Treatment() {
                                     <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'not-allowed', fontSize: '12px', whiteSpace: 'nowrap' }}>
                                         <input
                                             type="checkbox"
-                                            checked={formData.visitType.followUp}
+                                            checked={false}
                                             onChange={(e) => handleVisitTypeChange('followUp', e.target.checked)}
                                             disabled
                                             style={{ backgroundColor: '#D5D5D8' }}
@@ -4181,7 +4296,7 @@ export default function Treatment() {
                                     <input
                                         type="text"
                                         disabled
-                                        value={followUpData.followUpDate ? new Date(followUpData.followUpDate).toLocaleDateString('en-GB') : '-'}
+                                        value={formatDateDdMmmYy(followUpData.followUpDate) || '-'}
                                         style={{ border: '1px solid #ddd', padding: '6px 8px', fontSize: 12, background: '#D5D5D8' }}
                                     />
                                 </div>
@@ -4201,7 +4316,7 @@ export default function Treatment() {
                                     <div style={{ position: 'relative' }}>
                                         <input
                                             type="text"
-                                            value={billingData.billed}
+                                            value={totalSelectedFees.toFixed(2)}
                                             onChange={(e) => handleBillingChange('billed', e.target.value)}
                                             disabled
                                             placeholder="Billed Amount"
@@ -4452,7 +4567,7 @@ export default function Treatment() {
                                 <input 
                                     type="text" 
                                     disabled 
-                                    value={billingData.receiptDate || '-'} 
+                                    value={formatDateDdMmmYy(billingData.receiptDate)} 
                                     style={{ width: '100%', border: '1px solid #ddd', padding: '6px 8px', fontSize: 12, background: '#D5D5D8' }} 
                                 />
                             </div>
@@ -4657,10 +4772,8 @@ export default function Treatment() {
                 isFormDisabled={isFormDisabled}
                 onSubmit={(totalAmount) => {
                     setBillingData(prev => {
-                        const existingBilled = parseFloat(prev.billed) || 0;
-                        const newAmount = Number(totalAmount) || 0;
-                        const billedNum = existingBilled + newAmount; // Add to existing billed amount
                         const discountNum = parseFloat(prev.discount) || 0;
+                        const billedNum = Number(totalAmount) || 0;
                         const acBal = Math.max(0, billedNum - discountNum);
                         return {
                             ...prev,
@@ -4669,6 +4782,7 @@ export default function Treatment() {
                         };
                     });
                 }}
+                onTotalFeesChange={handleTotalFeesChange}
                 billingSearch={billingSearch}
                 setBillingSearch={setBillingSearch}
                 filteredBillingDetails={filteredBillingDetails}

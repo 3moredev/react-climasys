@@ -1002,7 +1002,7 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                             <label style={{ color: '#212121', fontSize: '0.9rem', fontWeight: 'bold', fontFamily: "'Roboto', sans-serif" }}>In Person</label>
                             <input
                                 type="checkbox"
-                                checked={true}
+                                checked={formData.inPerson}
                                 onChange={() => handleCheckboxChange('inPerson')}
                                 disabled={isReadOnly}
                                 style={{
@@ -1615,21 +1615,20 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                                 {prescription.instructions || '-'}
                                             </td>
                                         </tr>
-                                        ))
-                                    ) : (
-                                        // If no prescriptions are available, show a single row with '-' in each column
-                                        <tr>
-                                            <td style={{ height: '40px', padding: '10px', lineHeight: '20px', borderBottom: '1px solid #eaeaea', borderRight: '1px solid #e0e0e0', verticalAlign: 'middle', whiteSpace: 'normal', wordBreak: 'break-word', overflow: 'hidden' }}>
-                                                -
-                                            </td>
-                                            <td style={{ height: '40px', padding: '10px', lineHeight: '20px', borderBottom: '1px solid #eaeaea', borderRight: '1px solid #e0e0e0', verticalAlign: 'middle', whiteSpace: 'normal', wordBreak: 'break-word', overflow: 'hidden' }}>
-                                                -
-                                            </td>
-                                            <td style={{ height: '40px', padding: '10px', lineHeight: '20px', borderBottom: '1px solid #eaeaea', verticalAlign: 'middle', whiteSpace: 'normal', wordBreak: 'break-word', overflow: 'hidden' }}>
-                                                -
-                                            </td>
-                                        </tr>
-                                    )}
+                                    ))
+                                ) : (
+                                    <tr>
+                                        <td colSpan={3} style={{ 
+                                            padding: '20px', 
+                                            textAlign: 'center', 
+                                            color: '#666', 
+                                            fontStyle: 'italic',
+                                            borderBottom: '1px solid #eaeaea'
+                                        }}>
+                                            No prescriptions found for this visit
+                                        </td>
+                                    </tr>
+                                )}
                             </tbody>
                         </table>
                     </div>
