@@ -47,6 +47,7 @@ import PrescriptionDetails from './pages/PrescriptionDetails'
 // Import dev helpers for console access
 import ChangePasswordPage from './pages/ChangePassword'
 import './utils/devHelpers'
+import UpdateDischargeCard from './pages/UpdateDischargeCard'
 const theme = createTheme({
   palette: {
     primary: {
@@ -188,6 +189,13 @@ function App() {
                 </MainLayout>
               </AuthGuard>
             } />
+            {/* <Route path="/update-discharge-card" element={
+              <AuthGuard>
+                <MainLayout>
+                  <UpdateDischargeCard />
+                </MainLayout>
+              </AuthGuard>
+            } /> */}
             <Route path="/manage-hospital-bill" element={
               <AuthGuard>
                 <MainLayout>

@@ -142,8 +142,8 @@ html, body, #root {
 }
 
 /* ===== GLOBAL BUTTON STYLES ===== */
-button,
-.MuiButton-root,
+button:not(.MuiTab-root),
+.MuiButton-root:not(.MuiTab-root),
 .form-button,
 .action-button,
 .quick-action-btn {
@@ -159,8 +159,8 @@ button,
   text-transform: none !important;
 }
 
-button:hover,
-.MuiButton-root:hover,
+button:not(.MuiTab-root):hover,
+.MuiButton-root:not(.MuiTab-root):hover,
 .form-button:hover,
 .action-button:hover,
 .quick-action-btn:hover {

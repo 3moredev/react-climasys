@@ -341,8 +341,8 @@ export default function MainLayout({ children }: MainLayoutProps) {
         <AppBar position="static" sx={{ zIndex: theme.zIndex.drawer + 1 }}>
           <Toolbar sx={{ justifyContent: 'space-between', minHeight: '56px !important', py: 0 }}>
             {/* Logo/Brand */}
-            <Box sx={{ display: 'flex', alignItems: 'center', minWidth: '120px' }}>
-              <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 'bold', fontSize: '1.1rem', color: '#ffffff !important' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', minWidth: '120px', justifyContent: 'center'}}>
+              <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 'bold', fontSize: '1.1rem', color: '#ffffff !important', margin: '0px !important', justifyContent: 'center', alignItems: 'center', display: 'flex' }}>
                 MyHealth
               </Typography>
             </Box>
@@ -355,8 +355,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
                   const selectedItem = menuItems[newValue]
                   if (!selectedItem) return
                   openTabMenu(newValue, event as React.MouseEvent<HTMLElement>)
-                }}
-                variant={"scrollable"}
+                }}                
                 scrollButtons={"auto"}
                 allowScrollButtonsMobile
                 sx={{
@@ -373,6 +372,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
                     backgroundColor: 'white',
                     height: '2px',
                   },
+                  gap:'10px'
                 }}
               >
                 {menuItems.map((item, index) => (
@@ -602,7 +602,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
           sx={{
             flexGrow: 1,
             height: 'calc(100vh - 64px)', // Subtract AppBar height
-            overflow: 'hidden',
+            overflow: 'auto',
             display: 'flex',
             flexDirection: 'column',
             background: '#f8f9fa', // Match appointment screen background
