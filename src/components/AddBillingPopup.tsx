@@ -30,6 +30,7 @@ interface AddBillingPopupProps {
     shiftId?: number; // or short
     useOverwrite?: boolean;
     followUp?: boolean; // Follow-up visit type flag
+    onTotalFeesChange?: (totalFees: number) => void; // Callback to expose totalSelectedFees
 }
 
 export default function AddBillingPopup({
@@ -51,6 +52,7 @@ export default function AddBillingPopup({
     shiftId,
     useOverwrite,
     followUp,
+    onTotalFeesChange,
 }: AddBillingPopupProps) {
     // Local state fallbacks when parent does not control
     const [localSearch, setLocalSearch] = React.useState<string>('');
@@ -64,6 +66,10 @@ export default function AddBillingPopup({
     const hasMatchedBillingRef = React.useRef<boolean>(false);
     // Track Professional Fees items that user has explicitly unchecked to prevent re-adding them
     const uncheckedProfessionalFeesRef = React.useRef<Set<string>>(new Set());
+    // Track if we should skip auto-selection (when master-lists data is expected)
+    const shouldSkipAutoSelectionRef = React.useRef<boolean>(false);
+    // Track previous totalSelectedFees to prevent unnecessary callbacks
+    const prevTotalSelectedFeesRef = React.useRef<number>(0);
 
     // Load via API if parent did not provide options
     React.useEffect(() => {
@@ -150,6 +156,8 @@ export default function AddBillingPopup({
                             console.log('Pre-selected billing IDs from load:', combined);
                             return combined;
                         });
+                        // Mark that we should skip auto-selection since master-lists data exists
+                        shouldSkipAutoSelectionRef.current = true;
                     }
                 }
 
@@ -186,8 +194,9 @@ export default function AddBillingPopup({
         async function matchBillingFromMasterLists() {
             // Only run when popup is open
             if (!open) {
-                // Reset the ref when popup closes so it can match again on next open
+                // Reset the refs when popup closes so it can match again on next open
                 hasMatchedBillingRef.current = false;
+                shouldSkipAutoSelectionRef.current = false;
                 return;
             }
             
@@ -231,6 +240,7 @@ export default function AddBillingPopup({
                 if (!Array.isArray(billingArray) || billingArray.length === 0) {
                     console.log('No billing data in master-lists, showing popup as normal');
                     hasMatchedBillingRef.current = true; // Mark as done even if no data
+                    shouldSkipAutoSelectionRef.current = false; // Allow auto-selection if no master-lists data
                     return;
                 }
 
@@ -267,6 +277,8 @@ export default function AddBillingPopup({
                         console.log('Pre-selected billing IDs in popup:', combined);
                         return combined;
                     });
+                    // Mark that we should skip auto-selection since master-lists data exists
+                    shouldSkipAutoSelectionRef.current = true;
                 }
                 
                 // Mark as done so this doesn't run again until popup closes and reopens
@@ -357,10 +369,36 @@ export default function AddBillingPopup({
         return total;
     }, [effectiveOptions, effectiveSelectedIds]);
 
+    // Expose totalSelectedFees to parent component via callback
+    // Only call if value actually changed to prevent infinite loops
+    React.useEffect(() => {
+        if (typeof onTotalFeesChange === 'function') {
+            // Only call callback if the value actually changed
+            if (prevTotalSelectedFeesRef.current !== totalSelectedFees) {
+                prevTotalSelectedFeesRef.current = totalSelectedFees;
+                onTotalFeesChange(totalSelectedFees);
+            }
+        }
+    }, [totalSelectedFees, onTotalFeesChange]);
+
     // Auto-select Professional Fees based on followUp status
+    // Only run if master-lists matching hasn't already selected items
     React.useEffect(() => {
         if (effectiveOptions.length === 0) return;
         if (followUp === undefined) return; // Only act when followUp is explicitly provided
+        
+        // Don't auto-select if master-lists matching has already happened or should be skipped
+        // This prevents auto-selection on page refresh when master-lists data exists
+        if (hasMatchedBillingRef.current || shouldSkipAutoSelectionRef.current) {
+            console.log('Skipping Professional Fees auto-selection - master-lists matching already done or should skip');
+            return;
+        }
+        
+        // Also skip if there are already selected items (from master-lists or user selection)
+        if (effectiveSelectedIds.length > 0) {
+            console.log('Skipping Professional Fees auto-selection - items already selected');
+            return;
+        }
 
         // Find Professional Fees items
         const professionalFeesItems = effectiveOptions.filter(opt => {

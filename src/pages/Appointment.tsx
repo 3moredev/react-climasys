@@ -4058,7 +4058,7 @@ export default function AppointmentTable() {
                     style={buttonStyle}
                     onClick={() => setShowAddPatient(true)}
                 >
-                    Add Patient
+                    New Patient
                 </button>
 
                 {/* 5) Status dropdown */}
@@ -6010,7 +6010,7 @@ export default function AppointmentTable() {
                 show={showBookedSnackbar}
                 message={bookedSnackbarMessage || 'Appointment booked successfully'}
                 onClose={() => setShowBookedSnackbar(false)}
-                autoHideDuration={5000}
+                autoHideDuration={1000}
             />
         </div>
     );

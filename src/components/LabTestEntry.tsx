@@ -246,44 +246,49 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
         const clinicId = String((patientData as any)?.clinicId || (sessionData as any)?.clinicId || '');
         const shiftId = Number((patientData as any)?.shiftId || (sessionData as any)?.shiftId || 1);
         
-        // Get visit date - handle multiple formats
-        const visitDateString = (patientData as any)?.visitDate || (patientData as any)?.visit_date || new Date().toISOString().slice(0, 10);
-        
-        // Convert visit date to ISO 8601 format (YYYY-MM-DDTHH:mm:ss) to avoid URL encoding issues
-        // This format is standard and doesn't require URL encoding, and backend can parse it directly
+
+        const visitDateString =
+            (patientData as any)?.visitDate ||
+            (patientData as any)?.visit_date ||
+            new Date().toISOString().slice(0, 10);
+
+        console.log('=== Visit Date Processing ===');
+        console.log('Original visitDateString:', visitDateString);
+
         let visitDate: string;
+
         try {
-            // Parse the date string
-            const date = new Date(visitDateString);
-            if (!isNaN(date.getTime())) {
-                // Format as ISO 8601: YYYY-MM-DDTHH:mm:ss
-                const year = date.getFullYear();
-                const month = String(date.getMonth() + 1).padStart(2, '0');
-                const day = String(date.getDate()).padStart(2, '0');
+            // Case 1: dd-MM-yyyy (25-12-2025)
+            const ddMMyyyyRegex = /^(\d{2})-(\d{2})-(\d{4})$/;
+            const match = visitDateString.match(ddMMyyyyRegex);
+
+            if (match) {
+                const [, day, month, year] = match;
                 visitDate = `${year}-${month}-${day}T00:00:00`;
-            } else {
-                // If parsing fails, try to extract date part and format
-                if (visitDateString.includes('T')) {
-                    // Already in ISO format, use as-is
-                    visitDate = visitDateString.length >= 19 ? visitDateString.slice(0, 19) : `${visitDateString.slice(0, 10)}T00:00:00`;
+                console.log('Parsed dd-MM-yyyy → ISO:', visitDate);
+            }
+            // Case 2: Already ISO or parsable
+            else {
+                const date = new Date(visitDateString);
+
+                if (!isNaN(date.getTime())) {
+                    visitDate = date.toISOString().slice(0, 19);
+                    console.log('Parsed via Date constructor:', visitDate);
                 } else if (visitDateString.includes(' ')) {
-                    // Convert space to T for ISO format
                     visitDate = visitDateString.replace(' ', 'T');
+                    console.log('Parsed space-separated:', visitDate);
                 } else {
-                    // Date-only format, add time part
                     visitDate = `${visitDateString}T00:00:00`;
+                    console.log('Parsed as date-only:', visitDate);
                 }
             }
-        } catch {
-            // Fallback: try to format as ISO
-            if (visitDateString.includes('T')) {
-                visitDate = visitDateString.length >= 19 ? visitDateString.slice(0, 19) : `${visitDateString.slice(0, 10)}T00:00:00`;
-            } else if (visitDateString.includes(' ')) {
-                visitDate = visitDateString.replace(' ', 'T');
-            } else {
-                visitDate = `${visitDateString}T00:00:00`;
-            }
+        } catch (error) {
+            console.error('Date parsing error:', error);
+            visitDate = new Date().toISOString().slice(0, 19);
         }
+
+        console.log('Final visitDate:', visitDate);
+        console.log('============================');
         
         if (!patientId || !patientVisitNo || !doctorId || !clinicId) {
             console.log('Missing required parameters for fetching lab test results:', { patientId, patientVisitNo, doctorId, clinicId });
@@ -459,22 +464,62 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
     const toYyyyMmDd = (input?: string): string => {
         try {
             if (!input) return new Date().toISOString().slice(0, 10);
-            // Try native parsing first
-            const direct = new Date(input);
-            if (!isNaN(direct.getTime())) return direct.toISOString().slice(0, 10);
-            // Match common patterns: dd-MM-yyyy, dd-MMM-yy, dd-MMM-yyyy
-            const m = input.match(/^(\d{1,2})-(\d{1,2}|[A-Za-z]{3})-(\d{2,4})$/);
+            
+            // Remove time component if present (e.g., "24-12-2025T00:00:00" -> "24-12-2025")
+            const dateOnly = input.split('T')[0].split(' ')[0];
+            
+            // First, try to parse dd-MM-yyyy format explicitly (most common issue)
+            const ddMmYyyyMatch = dateOnly.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+            if (ddMmYyyyMatch) {
+                const day = parseInt(ddMmYyyyMatch[1], 10);
+                const month = parseInt(ddMmYyyyMatch[2], 10) - 1; // month is 0-indexed
+                const year = parseInt(ddMmYyyyMatch[3], 10);
+                if (day >= 1 && day <= 31 && month >= 0 && month <= 11 && year >= 1900 && year <= 2100) {
+                    const dt = new Date(Date.UTC(year, month, day));
+                    const yyyy = String(dt.getUTCFullYear());
+                    const mm = String(dt.getUTCMonth() + 1).padStart(2, '0');
+                    const dd = String(dt.getUTCDate()).padStart(2, '0');
+                    return `${yyyy}-${mm}-${dd}`;
+                }
+            }
+            
+            // Try to parse yyyy-MM-dd format (already correct)
+            const yyyyMmDdMatch = dateOnly.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+            if (yyyyMmDdMatch) {
+                const year = parseInt(yyyyMmDdMatch[1], 10);
+                const month = parseInt(yyyyMmDdMatch[2], 10) - 1;
+                const day = parseInt(yyyyMmDdMatch[3], 10);
+                if (day >= 1 && day <= 31 && month >= 0 && month <= 11 && year >= 1900 && year <= 2100) {
+                    const yyyy = String(year);
+                    const mm = String(month + 1).padStart(2, '0');
+                    const dd = String(day).padStart(2, '0');
+                    return `${yyyy}-${mm}-${dd}`;
+                }
+            }
+            
+            // Try native parsing for ISO format or other standard formats
+            const direct = new Date(dateOnly);
+            if (!isNaN(direct.getTime())) {
+                const year = direct.getFullYear();
+                const month = String(direct.getMonth() + 1).padStart(2, '0');
+                const day = String(direct.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            }
+            
+            // Match common patterns: dd-MMM-yy, dd-MMM-yyyy
+            const m = dateOnly.match(/^(\d{1,2})-([A-Za-z]{3})-(\d{2,4})$/);
             if (m) {
                 const day = parseInt(m[1], 10);
                 const monToken = m[2];
                 let year = parseInt(m[3], 10);
                 if (year < 100) year = 2000 + year; // two-digit year → 20xx
-                const month = /^(\d{1,2})$/.test(monToken)
-                    ? Math.max(0, Math.min(11, parseInt(monToken, 10) - 1))
-                    : ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'].indexOf(monToken.toLowerCase());
+                const month = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'].indexOf(monToken.toLowerCase());
                 if (month >= 0) {
                     const dt = new Date(Date.UTC(year, month, day));
-                    return dt.toISOString().slice(0, 10);
+                    const yyyy = String(dt.getUTCFullYear());
+                    const mm = String(dt.getUTCMonth() + 1).padStart(2, '0');
+                    const dd = String(dt.getUTCDate()).padStart(2, '0');
+                    return `${yyyy}-${mm}-${dd}`;
                 }
             }
         } catch {}
@@ -618,8 +663,16 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
 
         const visitDateString = (patientData as any)?.visitDate || new Date().toISOString().slice(0, 10);
         const visitDateYMD = toYyyyMmDd(String(visitDateString));
-        const visitDateYMDMidnight = `${visitDateYMD} 00:00:00`;
+        // Format as yyyy-MM-ddTHH:mm:ss (ISO format with T separator) for backend
+        const visitDateYMDMidnight = `${visitDateYMD}T00:00:00`;
         const reportDateYMD = toYyyyMmDd(String(formData.reportDate));
+        
+        // Debug: log date transformation
+        console.log('Date transformation:', {
+            original: visitDateString,
+            converted: visitDateYMD,
+            final: visitDateYMDMidnight
+        });
 
         const requestPayload: import('../services/patientService').LabTestResultRequest = {
             patientId,
@@ -822,15 +875,14 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                         style={{
                             backgroundColor: 'white',
                             borderRadius: '8px',
-                            maxWidth: '1400px',
-                            width: '55%',
-                            height: '70vh',
-                            maxHeight: '70vh',
+                            maxWidth: '1000px',
+                            width: '80%',
+                            maxHeight: '95vh',
                             overflow: 'auto',
                             boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
                             display: 'flex',
-                                    flexDirection: 'column',
-                                    fontFamily: 'Roboto, sans-serif',
+                            flexDirection: 'column',
+                            fontFamily: 'Roboto, sans-serif',
                         }}
                         onClick={(e) => e.stopPropagation()}
                     >
@@ -870,6 +922,8 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                     <span>{patientData.gender}</span>
                                     <span>/</span>
                                     <span>{patientData.age} Y</span>
+                                    <span>/</span>
+                                    <span>{patientData.contact}</span>
                                 </div>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
@@ -926,7 +980,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                 <div style={{
                                     display: 'grid',
                                     gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-                                    gap: '20px',
+                                    gap: '10px',
                                     marginBottom: '20px'
                                 }}>
                                     <div>
@@ -945,11 +999,24 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                             placeholder="Lab Name"
                                             style={{
                                                 width: '100%',
-                                                padding: '12px',
-                                                border: '1px solid #ddd',
-                                                borderRadius: '4px',
-                                                fontSize: '14px',
+                                                height: '32px',
+                                                padding: '4px 8px',
+                                                border: '2px solid #B7B7B7',
+                                                borderRadius: '6px',
+                                                fontSize: '0.9rem',
+                                                fontFamily: "'Roboto', sans-serif",
+                                                fontWeight: '500',
+                                                backgroundColor: 'white',
+                                                outline: 'none',
+                                                transition: 'border-color 0.2s',
                                                 boxSizing: 'border-box'
+                                            }}
+                                            onFocus={(e) => {
+                                                e.target.style.borderColor = '#1E88E5';
+                                                e.target.style.boxShadow = 'none';
+                                            }}
+                                            onBlur={(e) => {
+                                                e.target.style.borderColor = '#B7B7B7';
                                             }}
                                         />
                                     </div>
@@ -970,11 +1037,24 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                             placeholder="Doctor Name"
                                             style={{
                                                 width: '100%',
-                                                padding: '12px',
-                                                border: '1px solid #ddd',
-                                                borderRadius: '4px',
-                                                fontSize: '14px',
+                                                height: '32px',
+                                                padding: '4px 8px',
+                                                border: '2px solid #B7B7B7',
+                                                borderRadius: '6px',
+                                                fontSize: '0.9rem',
+                                                fontFamily: "'Roboto', sans-serif",
+                                                fontWeight: '500',
+                                                backgroundColor: 'white',
+                                                outline: 'none',
+                                                transition: 'border-color 0.2s',
                                                 boxSizing: 'border-box'
+                                            }}
+                                            onFocus={(e) => {
+                                                e.target.style.borderColor = '#1E88E5';
+                                                e.target.style.boxShadow = 'none';
+                                            }}
+                                            onBlur={(e) => {
+                                                e.target.style.borderColor = '#B7B7B7';
                                             }}
                                         />
                                     </div>
@@ -995,7 +1075,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                             style={{
                                                 position: 'absolute',
                                                 right: '10px',
-                                                top: '45px',
+                                                top: '38px',
                                                 cursor: 'pointer'
                                             }}
                                             onClick={() => {
@@ -1025,11 +1105,24 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                             placeholder="dd-mmm-yy"
                                             style={{
                                                 width: '100%',
-                                                padding: '12px 40px 12px 12px',
-                                                border: '1px solid #ddd',
-                                                borderRadius: '4px',
-                                                fontSize: '14px',
+                                                height: '32px',
+                                                padding: '4px 40px 4px 8px',
+                                                border: '2px solid #B7B7B7',
+                                                borderRadius: '6px',
+                                                fontSize: '0.9rem',
+                                                fontFamily: "'Roboto', sans-serif",
+                                                fontWeight: '500',
+                                                backgroundColor: 'white',
+                                                outline: 'none',
+                                                transition: 'border-color 0.2s',
                                                 boxSizing: 'border-box'
+                                            }}
+                                            onFocus={(e) => {
+                                                e.target.style.borderColor = '#1E88E5';
+                                                e.target.style.boxShadow = 'none';
+                                            }}
+                                            onBlur={(e) => {
+                                                e.target.style.borderColor = '#B7B7B7';
                                             }}
                                         />                            
                                     </div>
@@ -1051,12 +1144,24 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                         rows={3}
                                         style={{
                                             width: '100%',
-                                            padding: '12px',
-                                            border: '1px solid #ddd',
-                                            borderRadius: '4px',
-                                            fontSize: '14px',
+                                            padding: '4px 8px',
+                                            border: '2px solid #B7B7B7',
+                                            borderRadius: '6px',
+                                            fontSize: '0.9rem',
+                                            fontFamily: "'Roboto', sans-serif",
+                                            fontWeight: '500',
+                                            backgroundColor: 'white',
+                                            outline: 'none',
+                                            transition: 'border-color 0.2s',
                                             boxSizing: 'border-box',
                                             resize: 'vertical'
+                                        }}
+                                        onFocus={(e) => {
+                                            e.target.style.borderColor = '#1E88E5';
+                                            e.target.style.boxShadow = 'none';
+                                        }}
+                                        onBlur={(e) => {
+                                            e.target.style.borderColor = '#B7B7B7';
                                         }}
                                     />
                                 </div>
@@ -1070,22 +1175,26 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                 }}>
                                     Lab Tests
                                 </label>
-                                <div style={{ display: 'flex', gap: '10px', alignItems: 'end' }}>
-                                    <div ref={labTestsRef} style={{ position: 'relative', flex: 1 }}>
+                                <div ref={labTestsRef} style={{ display: 'flex', gap: '10px', alignItems: 'end' }}>
+                                    <div style={{ position: 'relative', flex: 1 }}>
                                         <div
                                             onClick={() => setIsLabTestsOpen(prev => !prev)}
                                             style={{
                                                 display: 'flex',
                                                 alignItems: 'center',
                                                 justifyContent: 'space-between',
-                                                height: '40px',
-                                                padding: '8px 12px',
-                                                border: '1px solid #ddd',
-                                                borderRadius: '4px',
-                                                fontSize: '14px',
+                                                height: '32px',
+                                                padding: '4px 8px',
+                                                border: '2px solid #B7B7B7',
+                                                borderRadius: '6px',
+                                                fontSize: '0.9rem',
+                                                fontFamily: "'Roboto', sans-serif",
+                                                fontWeight: '500',
                                                 backgroundColor: 'white',
                                                 cursor: 'pointer',
-                                                userSelect: 'none'
+                                                userSelect: 'none',
+                                                outline: 'none',
+                                                transition: 'border-color 0.2s'
                                             }}
                                         >
                                             <span style={{ color: selectedLabTests.length ? '#000' : '#9e9e9e' }}>
@@ -1215,11 +1324,14 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                         )}
                                     </div>
                                     <button
-                                        onClick={handleAddResult}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleAddResult();
+                                        }}
                                         style={{
                                             backgroundColor: '#1976d2',
                                             color: 'white',
-        										border: 'none',
+        									border: 'none',
                                             padding: '12px 20px',
                                             borderRadius: '4px',
                                             cursor: 'pointer',
@@ -1405,12 +1517,24 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                                 placeholder="Value / Results"
                                                                 style={{
                                                                     width: '100%',
-                                                                    height: '38px',
+                                                                    height: '32px',
                                                                     padding: '4px 8px',
-                                                                    border: '1px solid #ddd',
-                                                                    borderRadius: '4px',
-                                                                    fontSize: '14px',
+                                                                    border: '2px solid #B7B7B7',
+                                                                    borderRadius: '6px',
+                                                                    fontSize: '0.9rem',
+                                                                    fontFamily: "'Roboto', sans-serif",
+                                                                    fontWeight: '500',
+                                                                    backgroundColor: 'white',
+                                                                    outline: 'none',
+                                                                    transition: 'border-color 0.2s',
                                                                     boxSizing: 'border-box'
+                                                                }}
+                                                                onFocus={(e) => {
+                                                                    e.target.style.borderColor = '#1E88E5';
+                                                                    e.target.style.boxShadow = 'none';
+                                                                }}
+                                                                onBlur={(e) => {
+                                                                    e.target.style.borderColor = '#B7B7B7';
                                                                 }}
                                                             />
                                                         </td>
@@ -1492,7 +1616,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                             >
                                 Reset
                             </button>
-                            <button
+                            {/* <button
                                 onClick={handleClose}
                                 style={{
                                     backgroundColor: 'rgb(25, 118, 210)',
@@ -1506,7 +1630,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                 }}
                             >
                                 Close
-                            </button>
+                            </button> */}
                         </div>
                     </div>
                 </div>

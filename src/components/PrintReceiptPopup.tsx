@@ -112,6 +112,22 @@ const convertAmountToWords = (amount: number): string => {
     return "Zero Rupees Only";
 };
 
+// Helper function to format date as dd-mmm-yy
+const formatDateDdMmmYy = (dateString: string | null | undefined): string => {
+    if (!dateString) return '-';
+    try {
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return dateString;
+        const day = String(date.getDate()).padStart(2, '0');
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const month = monthNames[date.getMonth()];
+        const year = String(date.getFullYear()).slice(-2);
+        return `${day}-${month}-${year}`;
+    } catch (error) {
+        return dateString;
+    }
+};
+
 const PrintReceiptPopup: React.FC<PrintReceiptPopupProps> = ({
     open,
     onClose,
@@ -350,8 +366,8 @@ const PrintReceiptPopup: React.FC<PrintReceiptPopupProps> = ({
                     <div>
                         <label style={fieldLabelStyle}>Receipt Date</label>
                         <input
-                            type="date"
-                            value={formValues.receiptDate}
+                            type="text"
+                            value={formatDateDdMmmYy(formValues.receiptDate)}
                             disabled
                             style={disabledInputStyle}
                         />

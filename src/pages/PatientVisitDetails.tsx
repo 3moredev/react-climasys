@@ -2027,7 +2027,21 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     type="number"
                                     placeholder="Pulse"
                                     value={formData.pulse}
-                                    onChange={(e) => handleInputChange('pulse', e.target.value)}
+                                    onChange={(e) => {
+                                        const value = e.target.value;
+                                        // Allow empty string or non-negative numbers
+                                        if (value === '' || (!isNaN(parseFloat(value)) && parseFloat(value) >= 0)) {
+                                            handleInputChange('pulse', value);
+                                        }
+                                    }}
+                                    onKeyDown={(e) => {
+                                        // Prevent minus key from being entered
+                                        if (e.key === '-' || e.key === 'e' || e.key === 'E' || e.key === '+') {
+                                            e.preventDefault();
+                                        }
+                                    }}
+                                    min="0"
+                                    step="1"
                                     disabled={readOnly}
                                     style={{
                                         width: '100%',
@@ -2052,6 +2066,11 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     onBlur={(e) => {
                                         if (!readOnly) {
                                             e.target.style.borderColor = '#B7B7B7';
+                                        }
+                                        // Ensure value is not negative on blur
+                                        const numValue = parseFloat(e.target.value);
+                                        if (isNaN(numValue) || numValue < 0) {
+                                            handleInputChange('pulse', '');
                                         }
                                     }}
                                 />
@@ -2071,7 +2090,21 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     type="number"
                                     placeholder="Height"
                                     value={formData.height}
-                                    onChange={(e) => handleInputChange('height', e.target.value)}
+                                    onChange={(e) => {
+                                        const value = e.target.value;
+                                        // Allow empty string or non-negative numbers
+                                        if (value === '' || (!isNaN(parseFloat(value)) && parseFloat(value) >= 0)) {
+                                            handleInputChange('height', value);
+                                        }
+                                    }}
+                                    onKeyDown={(e) => {
+                                        // Prevent minus key from being entered
+                                        if (e.key === '-' || e.key === 'e' || e.key === 'E' || e.key === '+') {
+                                            e.preventDefault();
+                                        }
+                                    }}
+                                    min="0"
+                                    step="0.1"
                                     disabled={readOnly}
                                     style={{
                                         width: '100%',
@@ -2096,6 +2129,11 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     onBlur={(e) => {
                                         if (!readOnly) {
                                             e.target.style.borderColor = '#B7B7B7';
+                                        }
+                                        // Ensure value is not negative on blur
+                                        const numValue = parseFloat(e.target.value);
+                                        if (isNaN(numValue) || numValue < 0) {
+                                            handleInputChange('height', '');
                                         }
                                     }}
                                 />
@@ -2108,7 +2146,21 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     type="number"
                                     placeholder="Weight"
                                     value={formData.weight}
-                                    onChange={(e) => handleInputChange('weight', e.target.value)}
+                                    onChange={(e) => {
+                                        const value = e.target.value;
+                                        // Allow empty string or non-negative numbers
+                                        if (value === '' || (!isNaN(parseFloat(value)) && parseFloat(value) >= 0)) {
+                                            handleInputChange('weight', value);
+                                        }
+                                    }}
+                                    onKeyDown={(e) => {
+                                        // Prevent minus key from being entered
+                                        if (e.key === '-' || e.key === 'e' || e.key === 'E' || e.key === '+') {
+                                            e.preventDefault();
+                                        }
+                                    }}
+                                    min="0"
+                                    step="0.1"
                                     disabled={readOnly}
                                     style={{
                                         width: '100%',
@@ -2133,6 +2185,11 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     onBlur={(e) => {
                                         if (!readOnly) {
                                             e.target.style.borderColor = '#B7B7B7';
+                                        }
+                                        // Ensure value is not negative on blur
+                                        const numValue = parseFloat(e.target.value);
+                                        if (isNaN(numValue) || numValue < 0) {
+                                            handleInputChange('weight', '');
                                         }
                                     }}
                                 />
@@ -2169,7 +2226,40 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     type="text"
                                     placeholder="BP"
                                     value={formData.bp}
-                                    onChange={(e) => handleInputChange('bp', e.target.value)}
+                                    onChange={(e) => {
+                                        const value = e.target.value;
+                                        // Allow empty string
+                                        if (value === '') {
+                                            handleInputChange('bp', value);
+                                            return;
+                                        }
+                                        // Check if value starts with minus sign (negative number)
+                                        if (value.trim().startsWith('-')) {
+                                            return; // Reject negative values
+                                        }
+                                        // Check for negative numbers in formats like "120/-80" or "-120/80"
+                                        // Split by common separators and check each part
+                                        const parts = value.split(/[\/\-]/);
+                                        const hasNegative = parts.some(part => {
+                                            const trimmed = part.trim();
+                                            return trimmed.startsWith('-') || (trimmed !== '' && !isNaN(parseFloat(trimmed)) && parseFloat(trimmed) < 0);
+                                        });
+                                        if (!hasNegative) {
+                                            handleInputChange('bp', value);
+                                        }
+                                    }}
+                                    onKeyDown={(e) => {
+                                        // Prevent minus key if it would create a negative number
+                                        if (e.key === '-') {
+                                            const input = e.currentTarget as HTMLInputElement;
+                                            const cursorPos = input.selectionStart || 0;
+                                            // Allow minus only if it's in the middle (like "120-80" format)
+                                            // But prevent if it's at the start or would create a negative number
+                                            if (cursorPos === 0 || (input.value.length === 0)) {
+                                                e.preventDefault();
+                                            }
+                                        }
+                                    }}
                                     disabled={readOnly}
                                     style={{
                                         width: '100%',
@@ -2195,6 +2285,21 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                         if (!readOnly) {
                                             e.target.style.borderColor = '#B7B7B7';
                                         }
+                                        // Clean up any negative values on blur
+                                        const value = e.target.value;
+                                        if (value.trim().startsWith('-')) {
+                                            handleInputChange('bp', '');
+                                        } else {
+                                            // Check for negative numbers in the value
+                                            const parts = value.split(/[\/\-]/);
+                                            const hasNegative = parts.some(part => {
+                                                const trimmed = part.trim();
+                                                return trimmed.startsWith('-') || (trimmed !== '' && !isNaN(parseFloat(trimmed)) && parseFloat(trimmed) < 0);
+                                            });
+                                            if (hasNegative) {
+                                                handleInputChange('bp', '');
+                                            }
+                                        }
                                     }}
                                 />
                             </div>
@@ -2203,7 +2308,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     Sugar
                                 </label>
                                 <input
-                                    type="number"
+                                    type="text"
                                     placeholder="Sugar"
                                     value={formData.sugar}
                                     onChange={(e) => handleInputChange('sugar', e.target.value)}
