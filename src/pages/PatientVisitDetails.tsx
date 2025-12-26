@@ -2908,7 +2908,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                             />
                             <div style={{ marginTop: '5px', fontSize: '12px', color: '#666' }}>
                                 {/* Show loading indicator for existing documents */}
-                                {isLoadingDocuments && (
+                                {/* {isLoadingDocuments && (
                                     <div style={{ 
                                         display: 'flex', 
                                         alignItems: 'center', 
@@ -2926,7 +2926,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                         }}></div>
                                         Loading existing documents...
                                     </div>
-                                )}
+                                )} */}
                                 
                                 {/* Show existing documents */}
                                 {existingDocuments.length > 0 && (
