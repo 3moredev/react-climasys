@@ -43,7 +43,7 @@ interface AddPatientPageProps {
 
 export default function AddPatientPage({ open, onClose, onSave, doctorId, clinicId, patientId, readOnly = false }: AddPatientPageProps) {
   console.log('AddPatientPage rendered with props:', { open, patientId, readOnly, doctorId, clinicId });
-  
+
   const [formData, setFormData] = useState({
     lastName: '',
     firstName: '',
@@ -87,11 +87,11 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
   const [snackbarOpen, setSnackbarOpen] = useState(false)
   const [snackbarMessage, setSnackbarMessage] = useState('')
   const dobInputRef = useRef<HTMLInputElement>(null)
-  
+
   // Store doctorId and clinicId from props
   const [currentDoctorId, setCurrentDoctorId] = useState<string>('')
   const [currentClinicId, setCurrentClinicId] = useState<string>('')
-  
+
   // Doctor referral search states
   const [referralNameSearch, setReferralNameSearch] = useState('')
   const [showReferralPopup, setShowReferralPopup] = useState(false)
@@ -128,7 +128,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
           // The backend accepts both id (number) and folder_no (string) formats
           const patient: any = await patientService.getPatient(patientId)
           console.log('📦 Patient data received:', patient)
-          
+
           // Convert date_of_birth to dayjs object for DateField
           let dobDate = null
           if (patient.date_of_birth) {
@@ -155,7 +155,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
               // Try searching with common terms to find the area
               const searchTerms = ['pune', 'mumbai', 'delhi', 'a']
               let matchingArea = null
-              
+
               for (const term of searchTerms) {
                 try {
                   const searchResults = await searchAreas(term)
@@ -171,7 +171,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                   console.warn(`Search failed for term "${term}":`, e)
                 }
               }
-              
+
               if (matchingArea) {
                 areaName = matchingArea.name
                 // Preserve cityId and stateId if available from API response
@@ -187,7 +187,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                   }
                   return prev
                 })
-                
+
                 // Fetch City and State based on area's cityId and stateId from database (must match exactly)
                 const fetchCityAndStateForLoadedArea = async () => {
                   try {
@@ -195,7 +195,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     const areaCityId = areaWithCityId.cityId
                     const areaStateId = areaWithCityId.stateId
                     let matchingCity: { id: string; name: string; stateId?: string } | null = null
-                    
+
                     // First, try to get stateName directly from area details (this includes stateName from state_translations.state_name)
                     let stateNameFromArea: string | null = null
                     if (areaStateId) {
@@ -209,18 +209,18 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         console.warn('Could not get area details for stateName:', e)
                       }
                     }
-                    
+
                     // Step 1: Fetch city using area's cityId (must match exactly)
                     if (areaCityId) {
                       const searchTerms = ['a', 'e', 'i', 'o', 'u', 'p', 'm', 'd']
-                      
+
                       for (const term of searchTerms) {
                         try {
                           const results = await searchCities(term)
                           matchingCity = results.find(city => {
-                            const matches = city.id === areaCityId || 
-                                           city.id?.toUpperCase() === areaCityId.toUpperCase() ||
-                                           String(city.id) === String(areaCityId)
+                            const matches = city.id === areaCityId ||
+                              city.id?.toUpperCase() === areaCityId.toUpperCase() ||
+                              String(city.id) === String(areaCityId)
                             return matches
                           }) || null
                           if (matchingCity) {
@@ -231,7 +231,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                           console.warn(`Search failed for term "${term}":`, e)
                         }
                       }
-                      
+
                       if (matchingCity) {
                         // Update city in form data
                         setFormData(prev => ({ ...prev, city: matchingCity!.name }))
@@ -240,7 +240,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         console.warn('⚠️ Could not find city for area cityId:', areaCityId)
                       }
                     }
-                    
+
                     // Step 2: Fetch state using area's stateId (must match exactly from database)
                     // Priority: 1) stateName from area details (state_translations.state_name), 2) from getStates, 3) fallback to city
                     if (areaStateId) {
@@ -253,9 +253,9 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                           // Fallback: try to get from getStates
                           const allStates = await getStates()
                           const matchingState = allStates.find(state => {
-                            const matches = state.id === areaStateId || 
-                                           state.id?.toUpperCase() === areaStateId.toUpperCase() ||
-                                           String(state.id) === String(areaStateId)
+                            const matches = state.id === areaStateId ||
+                              state.id?.toUpperCase() === areaStateId.toUpperCase() ||
+                              String(state.id) === String(areaStateId)
                             return matches
                           })
                           if (matchingState && matchingState.name && matchingState.name !== matchingState.id) {
@@ -267,9 +267,9 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                             if (matchingCity?.stateId) {
                               const cityStateId = matchingCity.stateId
                               const cityStateMatch = allStates.find(state => {
-                                const matches = state.id === cityStateId || 
-                                               state.id?.toUpperCase() === cityStateId.toUpperCase() ||
-                                               String(state.id) === String(cityStateId)
+                                const matches = state.id === cityStateId ||
+                                  state.id?.toUpperCase() === cityStateId.toUpperCase() ||
+                                  String(state.id) === String(cityStateId)
                                 return matches
                               })
                               if (cityStateMatch && cityStateMatch.name && cityStateMatch.name !== cityStateMatch.id) {
@@ -288,9 +288,9 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         const allStates = await getStates()
                         const cityStateId = matchingCity.stateId
                         const matchingState = allStates.find(state => {
-                          const matches = state.id === cityStateId || 
-                                         state.id?.toUpperCase() === cityStateId.toUpperCase() ||
-                                         String(state.id) === String(cityStateId)
+                          const matches = state.id === cityStateId ||
+                            state.id?.toUpperCase() === cityStateId.toUpperCase() ||
+                            String(state.id) === String(cityStateId)
                           return matches
                         })
                         if (matchingState && matchingState.name && matchingState.name !== matchingState.id) {
@@ -306,7 +306,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                   }
                 }
                 fetchCityAndStateForLoadedArea()
-                
+
                 // Set areaInput after a small delay to ensure options are updated
                 // Close dropdown when patching data
                 setTimeout(() => {
@@ -335,15 +335,15 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
               // Try multiple search terms - city IDs are usually short codes like "PU", "MU", etc.
               const searchTerms = ['pune', 'mumbai', 'delhi', 'a']
               let matchingCity = null
-              
+
               for (const term of searchTerms) {
                 try {
                   const searchResults = await searchCities(term)
                   matchingCity = searchResults.find(c => {
                     // City ID might be case-sensitive, so check both
-                    return c.id === patient.city_id || 
-                           c.id?.toUpperCase() === String(patient.city_id).toUpperCase() ||
-                           c.id === String(patient.city_id)
+                    return c.id === patient.city_id ||
+                      c.id?.toUpperCase() === String(patient.city_id).toUpperCase() ||
+                      c.id === String(patient.city_id)
                   })
                   if (matchingCity) {
                     console.log(`✅ Found city with term "${term}":`, matchingCity.name)
@@ -353,7 +353,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                   console.warn(`Search failed for term "${term}":`, e)
                 }
               }
-              
+
               if (matchingCity) {
                 cityName = matchingCity.name
                 setCityInput(cityName)
@@ -378,7 +378,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
             if (patient.address_1) addressParts.push(patient.address_1)
             if (patient.address_2) addressParts.push(patient.address_2)
             const fullAddress = addressParts.join(', ') || ''
-            
+
             // Set formData with area and city names (they should be in options by now)
             setFormData(prev => ({
               ...prev,
@@ -407,12 +407,12 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
               referralEmail: patient.doctor_email || prev.referralEmail || '',
               referralAddress: patient.doctor_address || prev.referralAddress || '',
             }))
-            
+
             // Ensure areaInput is synced with the area name
             if (areaName) {
               setAreaInput(areaName)
             }
-            
+
             console.log('✅ Patient data mapped to form successfully')
             console.log('📍 Area name:', areaName, 'Area input:', areaInput)
           } catch (mappingError) {
@@ -566,13 +566,13 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
       // Only auto-match if referralBy is 'D' (Doctor) or if we have referral contact details
       const isDoctorReferral = formData.referredBy === 'D'
       const hasReferralDetails = formData.referralContact || formData.referralEmail || formData.referralAddress
-      
+
       // If it's not a doctor referral and we don't have details, skip
       if (!isDoctorReferral && !hasReferralDetails) return
-      
+
       // If selectedDoctor is already set, don't re-run
       if (selectedDoctor !== null) return
-      
+
       try {
         const { getReferralDoctors } = await import('../services/referralService')
         const doctors = await getReferralDoctors(1)
@@ -707,7 +707,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
 
   useEffect(() => {
     let active = true
-    
+
     // Get the area's cityId - check selectedAreaCityId first, then areaOptions, then formData.area
     const getAreaCityId = (): string | null => {
       if (selectedAreaCityId) {
@@ -723,37 +723,37 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
       }
       return null
     }
-    
+
     const fetchCities = async () => {
       try {
         setCityLoading(true)
         const { searchCities } = await import('../services/referenceService')
-        
+
         // Get area's cityId
         const areaCityId = getAreaCityId()
-        
+
         // If there's input, search with that input
         // If no input but area is selected, use a broad search to get cities
-        const searchTerm = cityInput && cityInput.trim().length > 0 
-          ? cityInput.trim() 
+        const searchTerm = cityInput && cityInput.trim().length > 0
+          ? cityInput.trim()
           : (areaCityId ? 'a' : '') // Use 'a' to get cities if area is selected but no input
-        
+
         if (!searchTerm && !areaCityId) {
           // No search term and no area selected - clear options
           if (active) setCityOptions([])
           return
         }
-        
+
         // Search cities
         const allResults = await searchCities(searchTerm)
-        
+
         // Always filter by area's cityId if an area is selected
         let filteredResults = allResults
         if (areaCityId) {
           filteredResults = allResults.filter(city => {
-            const matches = city.id === areaCityId || 
-                          city.id?.toUpperCase() === areaCityId.toUpperCase() ||
-                          String(city.id) === String(areaCityId)
+            const matches = city.id === areaCityId ||
+              city.id?.toUpperCase() === areaCityId.toUpperCase() ||
+              String(city.id) === String(areaCityId)
             return matches
           })
           console.log('🔍 Filtering cities by area cityId:', areaCityId)
@@ -762,7 +762,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
         } else {
           console.log('⚠️ No area selected, showing all cities')
         }
-        
+
         if (active) setCityOptions(filteredResults)
       } catch (e) {
         console.error('Failed to search cities', e)
@@ -795,7 +795,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
             const searchTerms = ['a', 'e', 'i', 'o', 'u', 'p', 'm', 'd']
             const allResultsSet = new Set<string>()
             const allResults: Array<{ id: string; name: string; stateId?: string }> = []
-            
+
             // Search with multiple terms and combine results
             for (const term of searchTerms) {
               try {
@@ -811,16 +811,16 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                 console.warn(`Failed to search cities with term "${term}":`, e)
               }
             }
-            
+
             console.log('📋 Total cities found:', allResults.length)
-            
+
             // Filter cities based on selected area's cityId
             let filteredResults = allResults
             if (selectedAreaCityId) {
               filteredResults = allResults.filter(city => {
-                const matches = city.id === selectedAreaCityId || 
-                               city.id?.toUpperCase() === selectedAreaCityId.toUpperCase() ||
-                               String(city.id) === String(selectedAreaCityId)
+                const matches = city.id === selectedAreaCityId ||
+                  city.id?.toUpperCase() === selectedAreaCityId.toUpperCase() ||
+                  String(city.id) === String(selectedAreaCityId)
                 return matches
               })
               console.log('🔍 Filtered cities for area (cityId:', selectedAreaCityId, '):', filteredResults)
@@ -837,9 +837,9 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
               if (areaCityId) {
                 setSelectedAreaCityId(areaCityId)
                 filteredResults = allResults.filter(city => {
-                  const matches = city.id === areaCityId || 
-                                 city.id?.toUpperCase() === areaCityId.toUpperCase() ||
-                                 String(city.id) === String(areaCityId)
+                  const matches = city.id === areaCityId ||
+                    city.id?.toUpperCase() === areaCityId.toUpperCase() ||
+                    String(city.id) === String(areaCityId)
                   return matches
                 })
                 console.log('🔍 Loaded cities for area (from options, cityId:', areaCityId, '):', filteredResults)
@@ -849,7 +849,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                 console.log('⚠️ No cityId found for area, showing all cities')
               }
             }
-            
+
             if (active) setCityOptions(filteredResults)
           } catch (e) {
             console.error('Failed to load cities for area', e)
@@ -881,7 +881,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
       if (field === 'firstName' || field === 'middleName' || field === 'lastName') {
         processedValue = value.toUpperCase()
       }
-      
+
       const next = { ...prev, [field]: processedValue }
       // Reverse sync: when Age (field1) changes, compute DoB using today's month/day
       if (field === 'field1') {
@@ -892,14 +892,14 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
         } else {
           const num = parseInt(trimmed, 10)
           if (Number.isFinite(num) && num >= 0) {
-          const unit = next.field2 || 'Years'
-          const base = dayjs()
-          const dob = unit === 'Months' ? base.subtract(num, 'month') : base.subtract(num, 'year')
-          next.dobDate = dob as unknown as Date // keep compatibility with DateField usage
-          next.dateOfBirth = dob.format('YYYY-MM-DD')
-          if (unit === 'Years') {
-            next.age = String(num)
-          }
+            const unit = next.field2 || 'Years'
+            const base = dayjs()
+            const dob = unit === 'Months' ? base.subtract(num, 'month') : base.subtract(num, 'year')
+            next.dobDate = dob as unknown as Date // keep compatibility with DateField usage
+            next.dateOfBirth = dob.format('YYYY-MM-DD')
+            if (unit === 'Years') {
+              next.age = String(num)
+            }
           }
         }
       }
@@ -917,7 +917,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
           }
         }
       }
-      
+
       // Reset referral name search when referral type changes
       if (field === 'referredBy') {
         if (value !== 'D') {
@@ -932,7 +932,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
           }
         }
       }
-      
+
       return next
     })
     // Clear error when user starts typing
@@ -948,31 +948,31 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
       setReferralNameOptions([])
       return
     }
-    
+
     setIsSearchingReferral(true)
     try {
       // Call the actual referral doctors API
       const { getReferralDoctors } = await import('../services/referralService')
       const doctors = await getReferralDoctors(1) // languageId = 1
-      
+
       console.log('=== REFERRAL DOCTORS SEARCH DEBUG ===')
       console.log('Search term:', searchTerm)
       console.log('All doctors from API:', doctors)
-      
+
       // Filter doctors by name containing the search term
-      const filteredDoctors = doctors.filter(doctor => 
+      const filteredDoctors = doctors.filter(doctor =>
         doctor.doctorName.toLowerCase().includes(searchTerm.toLowerCase())
       )
-      
+
       console.log('Filtered doctors:', filteredDoctors)
-      
+
       // Store the full doctor data for later use
       setReferralNameOptions(filteredDoctors.map(doctor => ({
         id: doctor.rdId.toString(),
         name: doctor.doctorName,
         fullData: doctor // Store the complete doctor object
       })))
-      
+
       console.log('Mapped results for dropdown:', filteredDoctors.map(doctor => ({
         id: doctor.rdId.toString(),
         name: doctor.doctorName,
@@ -994,20 +994,20 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
-    
+
     if (!formData.firstName.trim()) newErrors.firstName = 'First name is required'
     if (!formData.lastName.trim()) newErrors.lastName = 'Last name is required'
     if (!formData.gender) newErrors.gender = 'Gender is required'
     if (!formData.area.trim()) newErrors.area = 'Area is required'
-    
+
     // Validate age
     if (!formData.age.trim()) newErrors.age = 'Age is required'
-    
+
     // Validate mobile number format
     if (formData.mobileNumber && !/^\d{10}$/.test(formData.mobileNumber.replace(/\D/g, ''))) {
       newErrors.mobileNumber = 'Please enter a valid 10-digit mobile number'
     }
-    
+
     // Validate email if provided
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = 'Please enter a valid email address'
@@ -1022,7 +1022,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
     console.log('Form validation result:', validateForm())
     console.log('Current Doctor ID:', currentDoctorId)
     console.log('Current Clinic ID:', currentClinicId)
-    
+
     if (!validateForm()) {
       console.log('Form validation failed, stopping submission')
       return
@@ -1032,7 +1032,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
     console.log('Raw form data:', formData)
     console.log('Form data keys:', Object.keys(formData))
     console.log('Form data values:', Object.values(formData))
-    
+
     // Log individual field values
     console.log('=== INDIVIDUAL FIELD VALUES ===')
     // console.log('Family Folder:', formData.familyFolder)
@@ -1061,23 +1061,23 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
     try {
       console.log('=== CALLING PATIENT REGISTRATION API ===')
       console.log('Starting patient registration API call...')
-      
+
       // Map form data to API request format
       const apiRequest = mapFormDataToApiRequest()
-      
+
       // Call the patient registration API
       const response = await patientService.quickRegister(apiRequest)
-      
+
       console.log('=== API RESPONSE ===')
       console.log('API Response:', response)
-      
+
       // Check for successful registration based on backend response format
       if (response.SAVE_STATUS === 1 || response.success) {
         console.log('=== PATIENT REGISTRATION SUCCESSFUL ===')
         console.log('Patient ID:', response.ID)
         console.log('Save Status:', response.SAVE_STATUS)
         console.log('Message:', response.message)
-        
+
         // Create patient data for callback
         const patientData = {
           ...formData,
@@ -1104,7 +1104,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
           console.log('Patient ID for appointment:', response.ID)
           console.log('Doctor ID:', currentDoctorId)
           console.log('Clinic ID:', currentClinicId)
-          
+
           try {
             const now = new Date();
             const hh = String(now.getHours()).padStart(2, '0');
@@ -1121,14 +1121,14 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
               reportsReceived: false, // Default value
               inPerson: true // Default to in-person appointment
             };
-            
+
             console.log('=== APPOINTMENT DATA ===')
             console.log('Appointment data:', appointmentData)
-            
+
             const appointmentResult = await appointmentService.bookAppointment(appointmentData);
             console.log('=== APPOINTMENT BOOKING RESULT ===')
             console.log('Appointment booking result:', appointmentResult)
-            
+
             if (appointmentResult.success) {
               console.log('=== APPOINTMENT BOOKED SUCCESSFULLY ===')
               console.log('Appointment booked for patient:', response.ID)
@@ -1150,7 +1150,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
         console.log('=== CALLING onSave CALLBACK ===')
         console.log('onSave function exists:', !!onSave)
         console.log('onSave function type:', typeof onSave)
-        
+
         if (onSave) {
           console.log('Calling onSave with patient data...')
           onSave(patientData)
@@ -1160,16 +1160,16 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
         }
 
         // Show success snackbar
-        const successMessage = formData.addToTodaysAppointment 
-          ? 'Patient added and appointment booked successfully!' 
+        const successMessage = formData.addToTodaysAppointment
+          ? 'Patient added and appointment booked successfully!'
           : 'Patient added successfully!'
-          setSnackbarMessage("Saved Successfully!");
-          setSnackbarOpen(true);
-        
+        setSnackbarMessage("Saved Successfully!");
+        setSnackbarOpen(true);
+
         console.log('=== SNACKBAR SET ===')
         console.log('Snackbar message:', successMessage)
         console.log('Snackbar open:', true)
-        
+
         // Reset form immediately but keep dialog open briefly to show snackbar
         console.log('=== RESETTING FORM ===')
         // Reset form
@@ -1212,13 +1212,13 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
         setSelectedDoctor(null)
         setShowReferralPopup(false)
         console.log('Form reset completed')
-        
+
         // Close dialog after a short delay to allow snackbar to be visible
         setTimeout(() => {
           console.log('=== CLOSING DIALOG ===')
           onClose()
           console.log('Dialog closed')
-          
+
           console.log('=== FORM SUBMISSION COMPLETED SUCCESSFULLY ===')
         }, 1000) // 1 second delay to ensure snackbar is visible
       } else {
@@ -1233,7 +1233,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
       console.error('Error type:', typeof error)
       console.error('Error message:', error instanceof Error ? error.message : 'Unknown error')
       console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace')
-      
+
       // Show error snackbar
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       setSnackbarMessage(`Patient registration failed: ${errorMessage}`)
@@ -1254,8 +1254,8 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
 
   console.log('AddPatientPage render - Dialog should be:', open ? 'OPEN' : 'CLOSED');
   console.log('Snackbar state - open:', snackbarOpen, 'message:', snackbarMessage);
-  
-  return (<> 
+
+  return (<>
     {/* Success Snackbar (outside Dialog so it persists after close) */}
     <GlobalSnackbar
       show={snackbarOpen}
@@ -1266,7 +1266,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
       }}
       autoHideDuration={5000}
     />
-    
+
     <Dialog
       open={open}
       onClose={handleClose}
@@ -1296,12 +1296,12 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
       disableEnforceFocus={showReferralPopup}
       disableAutoFocus={showReferralPopup}
     >
-      <DialogTitle sx={{ 
-        display: 'flex', 
-        alignItems: 'center', 
+      <DialogTitle sx={{
+        display: 'flex',
+        alignItems: 'center',
         justifyContent: 'space-between',
         backgroundColor: 'transparent',
-        borderBottom: 'none', 
+        borderBottom: 'none',
         padding: '10px 20px 2px 20px'
       }}>
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -1309,11 +1309,11 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
             Patient Details
           </Typography>
         </Box>
-        <IconButton 
-          onClick={handleClose} 
+        <IconButton
+          onClick={handleClose}
           disabled={loading}
           disableRipple
-          sx={{ 
+          sx={{
             color: '#fff',
             backgroundColor: '#1976d2',
             '&:hover': { backgroundColor: '#1565c0' },
@@ -1416,6 +1416,10 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
             outline: 'none !important'
           }
         },
+        // Hide loading indicator (rotating spinner) in Autocomplete
+        '& .MuiAutocomplete-root .MuiCircularProgress-root': {
+          display: 'none !important'
+        },
         // Remove global input borders on this page only
         '& input, & textarea, & select, & .MuiTextField-root input, & .MuiFormControl-root input': {
           border: 'none !important'
@@ -1430,7 +1434,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
         <Grid container spacing={3}>
           {/* Row 1: Patient ID, First Name, Middle Name, Last Name */}
           <Grid item xs={12}>
-            <Grid container spacing={3}>  
+            <Grid container spacing={3}>
               <Grid item xs={12} md={3}>
                 <Box sx={{ mb: 2 }}>
                   <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
@@ -1441,10 +1445,10 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     placeholder="Patient ID"
                     value={formData.patientId}
                     disabled={true || readOnly}
-                    sx={{ 
-                      '& .MuiInputBase-input': { 
-                        backgroundColor: '#f5f5f5' 
-                      } 
+                    sx={{
+                      '& .MuiInputBase-input': {
+                        backgroundColor: '#f5f5f5'
+                      }
                     }}
                   />
                 </Box>
@@ -1540,19 +1544,19 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                                 years--
                               }
                               const calculatedAge = Math.max(0, years)
-                              setFormData(prev => ({ 
-                                ...prev, 
-                                dobDate: newValue, 
-                                dateOfBirth: formattedDate, 
+                              setFormData(prev => ({
+                                ...prev,
+                                dobDate: newValue,
+                                dateOfBirth: formattedDate,
                                 age: String(calculatedAge),
                                 field1: String(calculatedAge) // Update NN field with calculated age
                               }))
                             } else {
                               // When date is cleared, also clear the NN field
-                              setFormData(prev => ({ 
-                                ...prev, 
-                                dobDate: null, 
-                                dateOfBirth: '', 
+                              setFormData(prev => ({
+                                ...prev,
+                                dobDate: null,
+                                dateOfBirth: '',
                                 age: '',
                                 field1: '' // Clear NN field when date is cleared
                               }))
@@ -1724,13 +1728,13 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         const areaCityId = (newValue as any).cityId || null
                         const areaStateId = (newValue as any).stateId || null
                         setSelectedAreaCityId(areaCityId)
-                        
+
                         // Fetch and populate City and State based on area's cityId and stateId from database (must match exactly)
                         const fetchCityAndStateForArea = async () => {
                           try {
                             const { searchCities, getStates, getAreaDetails } = await import('../services/referenceService')
                             let matchingCity: { id: string; name: string; stateId?: string } | null = null
-                            
+
                             // First, try to get stateName directly from area details (this includes stateName from state_translations)
                             let stateNameFromArea: string | null = null
                             if (areaStateId) {
@@ -1744,17 +1748,17 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                                 console.warn('Could not get area details for stateName:', e)
                               }
                             }
-                            
+
                             // Step 1: Fetch City using area's cityId (must match exactly)
                             if (areaCityId) {
-                              
+
                               // Try searching with the cityId directly first
                               try {
                                 const directResults = await searchCities(areaCityId)
                                 matchingCity = directResults.find(city => {
-                                  const matches = city.id === areaCityId || 
-                                                 city.id?.toUpperCase() === areaCityId.toUpperCase() ||
-                                                 String(city.id) === String(areaCityId)
+                                  const matches = city.id === areaCityId ||
+                                    city.id?.toUpperCase() === areaCityId.toUpperCase() ||
+                                    String(city.id) === String(areaCityId)
                                   return matches
                                 }) || null
                                 if (matchingCity) {
@@ -1763,13 +1767,13 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                               } catch (e) {
                                 console.warn(`Direct cityId search failed:`, e)
                               }
-                              
+
                               // If not found, try comprehensive search
                               if (!matchingCity) {
                                 const searchTerms = ['a', 'e', 'i', 'o', 'u', 'p', 'm', 'd', 'pu', 'mu', 'de']
                                 const allCitiesSet = new Set<string>()
                                 const allCities: Array<{ id: string; name: string; stateId?: string }> = []
-                                
+
                                 for (const term of searchTerms) {
                                   try {
                                     const results = await searchCities(term)
@@ -1784,19 +1788,19 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                                     console.warn(`Search failed for term "${term}":`, e)
                                   }
                                 }
-                                
+
                                 matchingCity = allCities.find(city => {
-                                  const matches = city.id === areaCityId || 
-                                                 city.id?.toUpperCase() === areaCityId.toUpperCase() ||
-                                                 String(city.id) === String(areaCityId)
+                                  const matches = city.id === areaCityId ||
+                                    city.id?.toUpperCase() === areaCityId.toUpperCase() ||
+                                    String(city.id) === String(areaCityId)
                                   return matches
                                 }) || null
-                                
+
                                 if (matchingCity) {
                                   console.log(`✅ Found city from comprehensive search (cityId: ${areaCityId}):`, matchingCity.name)
                                 }
                               }
-                              
+
                               if (matchingCity) {
                                 // Populate city
                                 handleInputChange('city', matchingCity.name)
@@ -1810,7 +1814,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                               handleInputChange('city', '')
                               setCityInput('')
                             }
-                            
+
                             // Step 2: Fetch State using area's stateId (must match exactly from database)
                             // Priority: 1) stateName from area details (state_translations.state_name), 2) from getStates, 3) fallback to city
                             if (areaStateId) {
@@ -1823,9 +1827,9 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                                   // Fallback: try to get from getStates
                                   const allStates = await getStates()
                                   const matchingState = allStates.find(state => {
-                                    const matches = state.id === areaStateId || 
-                                                   state.id?.toUpperCase() === areaStateId.toUpperCase() ||
-                                                   String(state.id) === String(areaStateId)
+                                    const matches = state.id === areaStateId ||
+                                      state.id?.toUpperCase() === areaStateId.toUpperCase() ||
+                                      String(state.id) === String(areaStateId)
                                     return matches
                                   })
                                   if (matchingState && matchingState.name && matchingState.name !== matchingState.id) {
@@ -1837,9 +1841,9 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                                     if (matchingCity?.stateId) {
                                       const cityStateId = matchingCity.stateId
                                       const cityStateMatch = allStates.find(state => {
-                                        const matches = state.id === cityStateId || 
-                                                       state.id?.toUpperCase() === cityStateId.toUpperCase() ||
-                                                       String(state.id) === String(cityStateId)
+                                        const matches = state.id === cityStateId ||
+                                          state.id?.toUpperCase() === cityStateId.toUpperCase() ||
+                                          String(state.id) === String(cityStateId)
                                         return matches
                                       })
                                       if (cityStateMatch && cityStateMatch.name && cityStateMatch.name !== cityStateMatch.id) {
@@ -1859,9 +1863,9 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                                   const allStates = await getStates()
                                   const cityStateId = matchingCity.stateId
                                   const matchingState = allStates.find(state => {
-                                    const matches = state.id === cityStateId || 
-                                                   state.id?.toUpperCase() === cityStateId.toUpperCase() ||
-                                                   String(state.id) === String(cityStateId)
+                                    const matches = state.id === cityStateId ||
+                                      state.id?.toUpperCase() === cityStateId.toUpperCase() ||
+                                      String(state.id) === String(cityStateId)
                                     return matches
                                   })
                                   if (matchingState && matchingState.name && matchingState.name !== matchingState.id) {
@@ -1948,7 +1952,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                   />
                 </Box>
               </Grid>
-              
+
             </Grid>
           </Grid>
 
@@ -1973,6 +1977,8 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     // If no area is selected, show Autocomplete for searching
                     <Autocomplete
                       options={cityOptions}
+                      popupIcon={null}
+                      forcePopupIcon={false}
                       loading={cityLoading}
                       disabled={loading || readOnly}
                       getOptionLabel={(opt) => opt.name || ''}
@@ -1990,7 +1996,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         // Update input to show selected value
                         if (newValue) {
                           setCityInput(newValue.name)
-                          
+
                           // Populate state based on city's stateId
                           const cityStateId = (newValue as any).stateId
                           if (cityStateId) {
@@ -1999,9 +2005,9 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                                 const { getStates } = await import('../services/referenceService')
                                 const allStates = await getStates()
                                 const matchingState = allStates.find(state => {
-                                  const matches = state.id === cityStateId || 
-                                                 state.id?.toUpperCase() === cityStateId.toUpperCase() ||
-                                                 String(state.id) === String(cityStateId)
+                                  const matches = state.id === cityStateId ||
+                                    state.id?.toUpperCase() === cityStateId.toUpperCase() ||
+                                    String(state.id) === String(cityStateId)
                                   return matches
                                 })
                                 if (matchingState) {
@@ -2255,7 +2261,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                             )
                           }}
                         />
-                        
+
                         {/* Search Results Dropdown */}
                         {referralNameOptions.length > 0 && (
                           <Box sx={{
@@ -2277,19 +2283,19 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                                 onClick={() => {
                                   // Store the selected doctor data
                                   setSelectedDoctor((option as any).fullData)
-                                  
+
                                   // Update form data with doctor information
-                                  setFormData(prev => ({ 
-                                    ...prev, 
+                                  setFormData(prev => ({
+                                    ...prev,
                                     referralName: option.name,
                                     referralContact: (option as any).fullData?.doctorMob || '',
                                     referralEmail: (option as any).fullData?.doctorMail || '',
                                     referralAddress: (option as any).fullData?.doctorAddress || ''
                                   }))
-                                  
+
                                   setReferralNameSearch(option.name)
                                   setReferralNameOptions([])
-                                  
+
                                   console.log('=== DOCTOR SELECTED ===')
                                   console.log('Selected doctor data:', (option as any).fullData)
                                   console.log('Updated form data:', {
@@ -2397,7 +2403,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                 <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', height: '100%' }}>
                   <Box>
                     <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
-                    Add to Today’s Appointments
+                      Add to Today’s Appointments
                     </Typography>
                     <FormControlLabel
                       control={

@@ -212,7 +212,7 @@ select:focus,
 .MuiFormControl-root input:focus {
   outline: none !important;
   border-color: #3a6f9f !important;
-  box-shadow: 0 0 0 3px rgba(58, 111, 159, 0.1) !important;
+  /* box-shadow: 0 0 0 3px rgba(58, 111, 159, 0.1) !important; */
 }
 
 /* ===== GLOBAL TABLE STYLES ===== */
