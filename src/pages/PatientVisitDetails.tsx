@@ -1581,7 +1581,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                         </div>
                     )}
                     {/* Loading Appointment Details */}
-                    {isLoadingAppointmentDetails && (
+                    {/* {isLoadingAppointmentDetails && (
                         <div style={{
                             backgroundColor: '#e3f2fd',
                             color: '#1976d2',
@@ -1604,7 +1604,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                             }}></div>
                             Loading appointment details...
                         </div>
-                    )}
+                    )} */}
                     
                     {/* Document Upload Loading */}
                     {isUploadingDocuments && (
