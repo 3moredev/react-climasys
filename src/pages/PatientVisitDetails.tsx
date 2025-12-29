@@ -5,6 +5,7 @@ import { visitService, ComprehensiveVisitDataRequest } from '../services/visitSe
 import { complaintService, ComplaintOption } from '../services/complaintService';
 import { DocumentService, DocumentUploadRequest } from '../services/documentService';
 import { sessionService } from '../services/sessionService';
+import { doctorService } from '../services/doctorService';
 import AddReferralPopup, { ReferralData } from '../components/AddReferralPopup';
 import AddPatientPage from './AddPatientPage';
 
@@ -71,8 +72,8 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
 
     const [visitType, setVisitType] = useState({
         inPerson: true,
-        followUp: true,
-        followUpType: 'Follow-up'
+        followUp: false, // Will be set to true only if last visit exists
+        followUpType: 'New' // Will be set to "Follow-up" only if last visit exists
     });
 
     const [referByOptions, setReferByOptions] = useState<{ id: string; name: string }[]>([]);
@@ -104,6 +105,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
     const [showQuickRegistration, setShowQuickRegistration] = useState(false);
     const [sessionDataForQuickReg, setSessionDataForQuickReg] = useState<any>(null);
     const [currentClinicId, setCurrentClinicId] = useState<string>('');
+    const [allDoctors, setAllDoctors] = useState<any[]>([]);
     
     const filteredComplaints = React.useMemo(() => {
         const term = complaintSearch.trim().toLowerCase();
@@ -365,6 +367,74 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
             cancelled = true;
         };
     }, []);
+
+    // Load doctors list for provider name mapping
+    React.useEffect(() => {
+        let cancelled = false;
+        async function loadDoctors() {
+            if (!open) return;
+            try {
+                const doctors = await doctorService.getOpdDoctors();
+                if (!cancelled) {
+                    setAllDoctors(doctors);
+                    console.log('Loaded doctors for provider name mapping:', doctors);
+                }
+            } catch (e) {
+                console.error('Failed to load doctors', e);
+            }
+        }
+        loadDoctors();
+        return () => {
+            cancelled = true;
+        };
+    }, [open]);
+
+    // Format provider label (adds Dr. prefix if not present)
+    const formatProviderLabel = (name?: string): string => {
+        const raw = String(name || '').trim();
+        if (!raw) return '';
+        const cleaned = raw.replace(/\s+/g, ' ').trim();
+        const lower = cleaned.toLowerCase();
+        if (lower.startsWith('dr.') || lower.startsWith('dr ')) return cleaned;
+        return `Dr. ${cleaned}`;
+    };
+
+    // Map doctorId to display label (Dr. Name)
+    const getDoctorLabelById = (id?: string | number): string => {
+        if (!id) return '';
+        const idStr = String(id);
+        const doc = allDoctors.find(d => d.id === idStr);
+        return doc ? formatProviderLabel(doc.name) : '';
+    };
+
+    // Get doctor display name from patientData
+    const doctorDisplayName = React.useMemo(() => {
+        // First try to get doctor name from provider field (which might be ID or name)
+        const providerValue = patientData?.provider;
+        if (providerValue) {
+            // Check if it's already a name (contains letters/spaces) or an ID (like DR-00A10)
+            const isLikelyId = /^DR-/.test(String(providerValue).toUpperCase());
+            
+            if (isLikelyId) {
+                // It's an ID, try to get name from doctors list
+                const doctorName = getDoctorLabelById(providerValue);
+                if (doctorName) return doctorName;
+            } else {
+                // It's already a name, format it
+                return formatProviderLabel(providerValue);
+            }
+        }
+        
+        // Fallback: try doctorId field
+        const doctorId = (patientData as any)?.doctorId;
+        if (doctorId) {
+            const doctorName = getDoctorLabelById(doctorId);
+            if (doctorName) return doctorName;
+        }
+        
+        // Final fallback
+        return providerValue || 'N/A';
+    }, [patientData?.provider, (patientData as any)?.doctorId, allDoctors]);
 
     // Load complaints from API when dialog opens
     React.useEffect(() => {
@@ -628,11 +698,12 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                     return patched;
                 });
 
-                // Patch visit type if provided
+                // Patch visit type if provided (but followUp will be set based on last visit check later)
                 setVisitType(prev => {
                     const next = { ...prev };
-                    if (typeof normalized.inPerson === 'boolean') next.inPerson = normalized.inPerson;
-                    if (typeof normalized.followUpFlag === 'boolean') next.followUp = normalized.followUpFlag;
+                    next.inPerson = true; // Always true, cannot be changed
+                    // Don't set followUp here - it will be set based on last visit existence
+                    // Only set followUpType if it's provided, but it will be overridden by last visit check
                     if (normalized.followUpType && typeof normalized.followUpType === 'string') next.followUpType = normalized.followUpType;
                     console.log('Updated visit type:', next);
                     return next;
@@ -755,11 +826,12 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                             return patched;
                         });
 
-                        // Patch visit type if provided
+                        // Patch visit type if provided (but followUp will be set based on last visit check later)
                         setVisitType(prev => {
                             const next = { ...prev };
-                            if (typeof normalized.inPerson === 'boolean') next.inPerson = normalized.inPerson;
-                            if (typeof normalized.followUpFlag === 'boolean') next.followUp = normalized.followUpFlag;
+                            next.inPerson = true; // Always true, cannot be changed
+                            // Don't set followUp here - it will be set based on last visit existence
+                            // Only set followUpType if it's provided, but it will be overridden by last visit check
                             if (normalized.followUpType && typeof normalized.followUpType === 'string') next.followUpType = normalized.followUpType;
                             return next;
                         });
@@ -775,7 +847,21 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                 if (!cancelled && patientData?.patientId) {
                     console.log('=== LOADING PREVIOUS VISIT DATA FOR PLAN AND COMPLAINT ===');
                     const pid = String(patientData.patientId);
-                    const lastVisitResult: any = await visitService.getLastVisitDetails(pid);
+                    let lastVisitResult: any = null;
+                    try {
+                        lastVisitResult = await visitService.getLastVisitDetails(pid);
+                    } catch (lastVisitError: any) {
+                        // If API returns 404 or "not found" error, there's no last visit
+                        if (lastVisitError?.response?.status === 404 || 
+                            lastVisitError?.message?.includes('not found') ||
+                            lastVisitError?.message?.includes('Last visit details not found')) {
+                            console.log('No last visit found (404 or not found error)');
+                            lastVisitResult = null;
+                        } else {
+                            // Re-throw other errors
+                            throw lastVisitError;
+                        }
+                    }
                     if (cancelled) return;
 
                     if (lastVisitResult) {
@@ -787,7 +873,19 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                             || (lastVisitResult as any).mainData?.[0]  // Check if it's in mainData array
                             || lastVisitResult;
                         
-                        if (lastVisitPayload) {
+                        // Check if lastVisitPayload actually contains valid visit data
+                        // A valid last visit should have at least one of these key fields: patientId, visitDate, patientVisitNo
+                        const hasValidLastVisit = lastVisitPayload && (
+                            lastVisitPayload.patientId || 
+                            lastVisitPayload.visitDate || 
+                            lastVisitPayload.patientVisitNo ||
+                            lastVisitPayload.visit_date ||
+                            lastVisitPayload.patient_visit_no ||
+                            (lastVisitResult as any)?.found === true ||
+                            (lastVisitResult as any)?.success === true
+                        );
+                        
+                        if (hasValidLastVisit) {
                             console.log('=== PREVIOUS VISIT DATA DEBUG ===');
                             console.log('Full lastVisitResult:', JSON.stringify(lastVisitResult, null, 2));
                             console.log('Extracted lastVisitPayload:', lastVisitPayload);
@@ -839,11 +937,33 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                 console.log('Updating form data - chiefComplaint:', complaintValue || '(keeping existing)');
                                 return updated;
                             });
+                            
+                            // If there's a valid last visit, set followUp to true and followUpType to "Follow-up"
+                            setVisitType(prev => ({
+                                ...prev,
+                                followUp: true,
+                                followUpType: 'Follow-up'
+                            }));
+                            console.log('Valid last visit exists - Setting followUp to true and followUpType to "Follow-up"');
                         } else {
-                            console.warn('lastVisitPayload is null or undefined');
+                            console.warn('No valid last visit found - lastVisitPayload is empty or missing key fields');
+                            // No valid last visit - set followUp to false and followUpType to "New"
+                            setVisitType(prev => ({
+                                ...prev,
+                                followUp: false,
+                                followUpType: 'New'
+                            }));
+                            console.log('No valid last visit - Setting followUp to false and followUpType to "New"');
                         }
                     } else {
                         console.warn('lastVisitResult is null or undefined');
+                        // No last visit result - set followUp to false and followUpType to "New"
+                        setVisitType(prev => ({
+                            ...prev,
+                            followUp: false,
+                            followUpType: 'New'
+                        }));
+                        console.log('No last visit result - Setting followUp to false and followUpType to "New"');
                     }
                 }
             } catch (previousVisitError) {
@@ -1170,7 +1290,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                 habitDetails: '',
                 allergyDetails: '',
                 observation: '',
-                inPerson: visitType.inPerson,
+                inPerson: true, // Always true, cannot be changed
                 symptomComment: '',
                 reason: '',
                 impression: '',
@@ -1387,10 +1507,15 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
             selectedComplaint: '',
             attachments: []
         });
+        // Reset inPerson based on current status
+        const status = String(patientData?.status || '').trim().toUpperCase();
+        const normalizedStatus = status === 'ON CALL' ? 'CONSULT ON CALL' : status;
+        const resetInPerson = normalizedStatus === 'CONSULT ON CALL' || (normalizedStatus !== 'WAITING' && normalizedStatus !== 'WITH DOCTOR') ? false : true;
+        
         setVisitType({
-            inPerson: true,
-            followUp: true,
-            followUpType: 'Follow-up'
+            inPerson: resetInPerson,
+            followUp: false, // Will be set based on last visit existence
+            followUpType: 'New' // Will be set based on last visit existence
         });
         setError(null);
         setSuccess(null);
@@ -1435,7 +1560,6 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                 justifyContent: 'center',
                 zIndex: 10000,
             }}
-            onClick={onClose}
         >
             <div
                 style={{
@@ -1518,20 +1642,20 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                             }}
                             title={patientData?.patientId ? 'Click to view patient details' : ''}
                         >
-                            {patientData.patient} / {(patientData as any).gender_description || 'N/A'} / {patientData.age === 0 ? 'Unknown' : patientData.age} Y / {patientData.contact || 'N/A'}
+                            {patientData.patient} / {(patientData as any).gender_description || 'N/A'} / {patientData.age ?? 0} Y / {patientData.contact || 'N/A'}
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
                             <div style={{ color: '#1565c0', fontSize: '14px' }}>
-                                Dr. Tongaonkar - Medicine
+                                {doctorDisplayName}
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                 <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', whiteSpace: 'nowrap' }}>
                                     <span>In-Person:</span>
                                     <input
                                         type="checkbox"
-                                        checked={visitType.inPerson}
-                                        onChange={(e) => setVisitType(prev => ({ ...prev, inPerson: e.target.checked }))}
-                                        disabled={readOnly}
+                                        checked={true}
+                                        disabled={true}
+                                        readOnly
                                     />
                                 </label>
                                 <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', whiteSpace: 'nowrap' }}>
@@ -3174,6 +3298,15 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                     }
                     input[type="checkbox"] {
                         width: auto !important;
+                    }
+                    /* Hide number input spinners */
+                    input[type="number"]::-webkit-inner-spin-button,
+                    input[type="number"]::-webkit-outer-spin-button {
+                        -webkit-appearance: none;
+                        margin: 0;
+                    }
+                    input[type="number"] {
+                        -moz-appearance: textfield;
                     }
                     @keyframes spin {
                         0% { transform: rotate(0deg); }
