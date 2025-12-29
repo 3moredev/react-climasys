@@ -131,7 +131,7 @@ const subMenus: Record<string, Array<SubMenuItem>> = {
     {
       label: 'Manage Master Data',
       children: [
-        { label: 'Manage Keyword (Operation) Master', path: '/settings?t=operation-keyword' },
+        { label: 'Manage Keyword (Operation) Master', path: '/manage-keyword' },
         { label: 'Manage Sub-Category', path: '/settings?t=sub-category' },
         { label: 'Manage Hospital Charges Master', path: '/settings?t=charges' },
         { label: 'Manage Insurance Company', path: '/settings?t=insurance' },
@@ -299,7 +299,8 @@ export default function MainLayout({ children }: MainLayoutProps) {
       currentPath.startsWith('/manage-diagnosis') ||
       currentPath.startsWith('/manage-procedure') ||
       currentPath.startsWith('/manage-labs') ||
-      currentPath.startsWith('/manage-medicines')) return 3
+      currentPath.startsWith('/manage-medicines') ||
+      currentPath.startsWith('/manage-keyword')) return 3
     // Check for manage-complaints and settings path with OPD master query params (but not IPD master params)
     // if (currentPath.startsWith('/manage-complaints')) return 3
     if (

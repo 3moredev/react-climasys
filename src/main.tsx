@@ -46,6 +46,7 @@ import PrescriptionSubCategory from './pages/PrescriptionSubCategory'
 import PrescriptionDetails from './pages/PrescriptionDetails'
 // Import dev helpers for console access
 import ChangePasswordPage from './pages/ChangePassword'
+import ManageKeyword from './pages/ManageKeyword'
 import './utils/devHelpers'
 const theme = createTheme({
   palette: {
@@ -263,6 +264,13 @@ function App() {
               <AuthGuard>
                 <MainLayout>
                   <ChangePasswordPage />
+                </MainLayout>
+              </AuthGuard>
+            } />
+            <Route path="/manage-keyword" element={
+              <AuthGuard>
+                <MainLayout>
+                  <ManageKeyword />
                 </MainLayout>
               </AuthGuard>
             } />
