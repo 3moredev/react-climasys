@@ -78,19 +78,13 @@ const AddDiagnosisPopup: React.FC<AddDiagnosisPopupProps> = ({ open, onClose, on
             clinicId: session.clinicId
         });
         
-        // Show success snackbar
-        setSnackbarMessage(editData ? 'Diagnosis updated successfully!' : 'Diagnosis added successfully!');
-        setSnackbarOpen(true);
-        
         // Reset form
         setShortDescription('');
         setDiagnosisDescription('');
         setPriority('');
         
-        // Close popup after showing success message
-        setTimeout(() => {
-            onClose();
-        }, 1500);
+        // Close popup immediately - success message will be shown in parent component
+        onClose();
     };
 
     const handleClose = () => {
