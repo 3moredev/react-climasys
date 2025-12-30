@@ -159,7 +159,7 @@ export default function AppointmentTable() {
             if (loadingSessionData || !sessionData) {
                 return;
             }
-            
+
             setLoadingDoctors(true);
             try {
                 // Backend will automatically use default_doctor from user_master table based on session
@@ -170,19 +170,22 @@ export default function AppointmentTable() {
                 // Backend sorts doctors with default_doctor from user_master first
                 if (doctors.length > 0) {
                     const currentSelectedId = selectedDoctorId;
-                    
+                    console.log('Current selectedDoctorId:', currentSelectedId);
+                    console.log('Available doctors:', doctors.map(d => ({ id: d.id, name: d.name })));
+                    console.log('First doctor (should be default):', doctors[0]?.id, doctors[0]?.name);
+
                     // Determine which doctor should be selected
                     let doctorToSelect = null;
-                    
+
                     // First priority: use existing selection if it's valid
                     if (currentSelectedId && currentSelectedId !== '' && doctors.find(d => d.id === currentSelectedId)) {
                         doctorToSelect = doctors.find(d => d.id === currentSelectedId);
-                    } 
+                    }
                     // Second priority: use first doctor (should be default doctor sorted by backend from user_master.default_doctor)
                     else {
                         doctorToSelect = doctors[0];
                     }
-                    
+
                     // Set the selected doctor
                     if (doctorToSelect && doctorToSelect.id !== currentSelectedId) {
                         setSelectedDoctorId(doctorToSelect.id)
@@ -204,12 +207,12 @@ export default function AppointmentTable() {
     useEffect(() => {
         if (!loadingSessionData && !loadingDoctors && sessionData && allDoctors.length > 0) {
             const currentSelectedId = selectedDoctorId;
-            
+
             // Only set if no doctor is currently selected
             if (!currentSelectedId || currentSelectedId === '' || !allDoctors.find(d => d.id === currentSelectedId)) {
                 // Use first doctor (should be default doctor sorted by backend from user_master.default_doctor)
                 const defaultDoctor = allDoctors[0];
-                
+
                 if (defaultDoctor) {
                     setSelectedDoctorId(defaultDoctor.id);
                 }
@@ -731,11 +734,11 @@ export default function AppointmentTable() {
 
 
             setSearchResults(sortedResults);
-            setShowDropdown(sortedResults.length > 0);
+            setShowDropdown(true);
         } catch (error: any) {
             console.error("Error searching patients:", error);
             setSearchResults([]);
-            setShowDropdown(false);
+            setShowDropdown(true);
             setSearchError(error.message || "Failed to search patients");
         } finally {
             setLoading(false);
@@ -788,7 +791,7 @@ export default function AppointmentTable() {
     // Load today's appointments for logged-in doctor (when isDoctor is true) or selected doctor (for receptionist)
     useEffect(() => {
         if (!sessionData?.clinicId) return;
-        
+
         // For doctor view: fetch only the logged-in doctor's appointments
         // For receptionist view: fetch selected doctor's appointments
         if (isDoctor && !sessionData?.doctorId) return;
@@ -804,7 +807,7 @@ export default function AppointmentTable() {
                     // Fetch appointments ONLY for the logged-in doctor
                     const doctorId = sessionData?.doctorId || '';
                     console.log('📅 Loading appointments for logged-in doctor:', doctorId, 'clinic:', clinicId);
-                    
+
                     if (!doctorId) {
                         console.warn('Doctor ID not available in session data');
                         setAppointments([]);
@@ -817,7 +820,7 @@ export default function AppointmentTable() {
                         futureDate: today,
                         languageId: 1
                     });
-                    
+
                     const rows = convertSPResultToRows(resp?.resultSet1 || []);
                     // Ensure each row has the correct doctorId and provider name
                     const appointmentsWithProvider = rows.map(row => ({
@@ -825,7 +828,7 @@ export default function AppointmentTable() {
                         doctorId: doctorId,
                         provider: getDoctorLabelById(doctorId) || sessionData?.doctorName || 'Doctor'
                     }));
-                    
+
                     setAppointments(appointmentsWithProvider);
                     console.log('✅ Appointments loaded for logged-in doctor', doctorId, ':', appointmentsWithProvider.length, 'appointments');
                 } else {
@@ -886,12 +889,12 @@ export default function AppointmentTable() {
     // Track when all initial loading is complete
     useEffect(() => {
         const isComplete = Boolean(
-            !loadingSessionData && 
-            !loadingDoctors && 
-            !loadingAppointments && 
-            !loadingStatuses && 
-            sessionData && 
-            allDoctors.length > 0 && 
+            !loadingSessionData &&
+            !loadingDoctors &&
+            !loadingAppointments &&
+            !loadingStatuses &&
+            sessionData &&
+            allDoctors.length > 0 &&
             selectedDoctorId
         );
         setIsInitialLoadComplete(isComplete);
@@ -950,7 +953,7 @@ export default function AppointmentTable() {
 
     const handleSearchChange = (value: string) => {
         setSearchTerm(value);
-    
+
         const search = value.trim().toLowerCase();
         if (!search) {
             setSearchResults([]);
@@ -958,7 +961,7 @@ export default function AppointmentTable() {
             setSearchMenuPosition(null);
             return;
         }
-    
+
         // Recalculate dropdown position whenever user types
         updateSearchMenuPosition();
 
@@ -1502,7 +1505,7 @@ export default function AppointmentTable() {
         try {
             const data: any = await appointmentService.getLastVisitDetails(String(patientId));
             console.log('Last visit details:', data);
-            const plrStr = String(data?.visit?.plr?? '');
+            const plrStr = String(data?.visit?.plr ?? '');
             // const plrStr = typeof plr === 'string' ? plr : plr != null ? String(plr) : '';
             const shouldAppend = plrStr == 'PLR' || plrStr.includes('L');
             setLastVisitSuffix(prev => ({ ...prev, [key]: shouldAppend }));
@@ -1623,13 +1626,13 @@ export default function AppointmentTable() {
         if (!providerName || !allDoctors.length) {
             return '';
         }
-        
+
         // Find doctor by matching the formatted label
         const doctor = allDoctors.find(d => {
             const formattedName = formatProviderLabel(d.name);
             return formattedName === providerName;
         });
-        
+
         console.log(`getDoctorIdFromProviderName: Provider="${providerName}", Found doctor:`, doctor);
         return doctor ? doctor.id : '';
     };
@@ -1647,7 +1650,7 @@ export default function AppointmentTable() {
     // Refresh appointments for the logged-in doctor (when isDoctor is true) or selected doctor (for receptionist)
     const refreshAppointmentsForSelectedDoctor = async () => {
         if (!sessionData?.clinicId) return;
-        
+
         // For doctor view: refresh only the logged-in doctor's appointments
         // For receptionist view: refresh selected doctor's appointments
         if (isDoctor && !sessionData?.doctorId) return;
@@ -1683,7 +1686,7 @@ export default function AppointmentTable() {
                     doctorId: doctorId,
                     provider: getDoctorLabelById(doctorId) || sessionData?.doctorName || 'Doctor'
                 }));
-                
+
                 setAppointments(appointmentsWithProvider);
                 console.log('✅ Appointments refreshed for logged-in doctor', doctorId, ':', appointmentsWithProvider.length, 'appointments');
             } else {
@@ -1809,18 +1812,18 @@ export default function AppointmentTable() {
 
                     // Add a small delay to ensure database transaction is committed
                     await new Promise(resolve => setTimeout(resolve, 100));
-                    
+
                     const resp: TodayAppointmentsResponse = await appointmentService.getAppointmentsForDateSP({
                         doctorId,
                         clinicId,
                         futureDate: today,
                         languageId: 1
                     });
-                    
+
                     console.log('📋 Refresh response:', resp);
                     console.log('📋 ResultSet1 count:', resp?.resultSet1?.length || 0);
                     console.log('📋 ResultSet1 data:', resp?.resultSet1);
-                    
+
                     const rows = convertSPResultToRows(resp?.resultSet1 || []);
                     console.log('📋 Converted rows count:', rows.length);
                     console.log('📋 Converted rows:', rows);
@@ -1840,6 +1843,9 @@ export default function AppointmentTable() {
                         console.warn('⚠️ fetchPreviousVisits failed for string pid:', appointmentData.patientId, e);
                     }
                     setSelectedPatients([]);
+                    setSearchTerm("");
+                    setSearchResults([]);
+                    setShowDropdown(false);
                     setBookedSnackbarMessage(`Appointment booked for ${patient.first_name} ${patient.last_name}`);
                     setShowBookedSnackbar(true);
                 } catch (refreshError) {
@@ -1862,6 +1868,9 @@ export default function AppointmentTable() {
                         console.warn('⚠️ fetchPreviousVisits failed for string pid:', appointmentData.patientId, e);
                     }
                     setSelectedPatients([]);
+                    setSearchTerm("");
+                    setSearchResults([]);
+                    setShowDropdown(false);
                     setBookedSnackbarMessage(`Appointment booked for ${patient.first_name} ${patient.last_name}`);
                     setShowBookedSnackbar(true);
                 }
@@ -1913,7 +1922,7 @@ export default function AppointmentTable() {
 
         return nameOk && contactOk && statusOk;
     });
-    
+
     // Debug logging for filtered results
     useEffect(() => {
         if (appointments.length > 0) {
@@ -1987,9 +1996,10 @@ export default function AppointmentTable() {
     };
 
     // Reset pagination when appointments change
+    // Reset pagination when appointments or filters change
     useEffect(() => {
         setCurrentPage(1);
-    }, [appointments.length]);
+    }, [appointments.length, filterStatus, filterName, filterContact, selectedDoctorId]);
 
     // Handle click outside to close dropdowns and menus
     useEffect(() => {
@@ -2079,10 +2089,10 @@ export default function AppointmentTable() {
             // Add the patient ID to the submitted set to change icon color
             setSubmittedVisitDetails(prev => new Set([...prev, selectedPatientForVisit.patientId.toString()]));
             console.log('Patient visit details submitted for patient ID:', selectedPatientForVisit.patientId);
-            
+
             // Update the appointment in the local state to reflect the change immediately
-            setAppointments(prev => prev.map(appointment => 
-                appointment.patientId === selectedPatientForVisit.patientId 
+            setAppointments(prev => prev.map(appointment =>
+                appointment.patientId === selectedPatientForVisit.patientId
                     ? { ...appointment, visitDetailsSubmitted: true }
                     : appointment
             ));
@@ -2152,14 +2162,14 @@ export default function AppointmentTable() {
             ? appointments.filter(appt => {
                 const normalizedStatus = normalizeStatusLabel(appt.status);
                 // Include all statuses visible to doctors
-                return normalizedStatus === 'WAITING' || 
-                       normalizedStatus === 'WITH DOCTOR' || 
-                       normalizedStatus === 'CONSULT ON CALL' || 
-                       normalizedStatus === 'WAITING FOR MEDICINE' ||
-                       normalizedStatus === 'SAVE' || 
-                       normalizedStatus === 'SUBMITTED' || 
-                       normalizedStatus === 'COLLECTION' ||
-                       normalizedStatus === 'COMPLETE';
+                return normalizedStatus === 'WAITING' ||
+                    normalizedStatus === 'WITH DOCTOR' ||
+                    normalizedStatus === 'CONSULT ON CALL' ||
+                    normalizedStatus === 'WAITING FOR MEDICINE' ||
+                    normalizedStatus === 'SAVE' ||
+                    normalizedStatus === 'SUBMITTED' ||
+                    normalizedStatus === 'COLLECTION' ||
+                    normalizedStatus === 'COMPLETE';
             })
             : appointments;
 
@@ -2600,8 +2610,22 @@ export default function AppointmentTable() {
                                     setTimeout(() => searchInputRef.current?.focus(), 0);
                                 }
                             }}
-                            style={{ borderWidth: "2px", height: "38px", fontFamily: "'Roboto', sans-serif", fontWeight: 500, minWidth: "300px", width: "400px" }}
+                            style={{ borderWidth: "2px", height: "38px", fontFamily: "'Roboto', sans-serif", fontWeight: 500, minWidth: "300px", width: "400px", paddingRight: "30px" }}
                         />
+                        {searchTerm && (
+                            <button
+                                className="btn btn-link position-absolute top-50 translate-middle-y text-decoration-none text-muted"
+                                style={{ right: '10px', zIndex: 10, padding: 0, width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                onClick={() => {
+                                    setSearchTerm('');
+                                    setSearchResults([]);
+                                    setShowDropdown(false);
+                                    searchInputRef.current?.focus();
+                                }}
+                            >
+                                <i className="fas fa-times"></i>
+                            </button>
+                        )}
 
                         {/* Search Dropdown for Doctor Screen */}
                         {showDropdown && searchMenuPosition && (
@@ -2790,12 +2814,12 @@ export default function AppointmentTable() {
                             <div className="table-responsive position-relative">
                                 {/* Loading overlay for appointments refresh (Doctor screen) */}
                                 {isDoctorLoading && (
-                                    <div className="position-absolute top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center" 
-                                         style={{ 
-                                             backgroundColor: 'rgba(255, 255, 255, 0.8)', 
-                                             zIndex: 10,
-                                             minHeight: '200px'
-                                         }}>
+                                    <div className="position-absolute top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
+                                        style={{
+                                            backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                                            zIndex: 10,
+                                            minHeight: '200px'
+                                        }}>
                                         <div className="spinner-border text-primary" role="status">
                                             <span className="visually-hidden">Refreshing...</span>
                                         </div>
@@ -2824,13 +2848,13 @@ export default function AppointmentTable() {
                                                 <tr key={i} style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 500 }}>
                                                     <td className="sr-col">{a.sr}</td>
                                                     <td className="name-col">
-                                                        <a 
-                                                            href="#" 
-                                                            onClick={(e) => { 
-                                                                e.preventDefault(); 
+                                                        <a
+                                                            href="#"
+                                                            onClick={(e) => {
+                                                                e.preventDefault();
                                                                 setSelectedPatientForQuickReg(a);
                                                                 setShowQuickRegistration(true);
-                                                            }} 
+                                                            }}
                                                             style={{ textDecoration: "underline", color: "#1E88E5", cursor: "pointer" }}
                                                         >
                                                             {a.patient}
@@ -2879,33 +2903,33 @@ export default function AppointmentTable() {
 
                                                     </td>
                                                     <td className="last-col">
-                                                    {(() => {
-                                                        if (loadingVisits[a.patientId]) {
+                                                        {(() => {
+                                                            if (loadingVisits[a.patientId]) {
+                                                                return (
+                                                                    <span className="text-muted">
+                                                                        <i className="fas fa-spinner fa-spin me-1"></i>
+                                                                        Loading...
+                                                                    </span>
+                                                                );
+                                                            }
+                                                            const lastVisitText = formatLastVisitDisplay(a.patientId, a.reports_received, a.visitNumber === 1);
+                                                            if (lastVisitText === "-") {
+                                                                return <span>{lastVisitText}</span>;
+                                                            }
                                                             return (
-                                                                <span className="text-muted">
-                                                                    <i className="fas fa-spinner fa-spin me-1"></i>
-                                                                    Loading...
-                                                                </span>
+                                                                <a
+                                                                    href="#"
+                                                                    title={`View visit history`}
+                                                                    style={{ textDecoration: "underline", color: "#1E88E5", cursor: "pointer" }}
+                                                                    onClick={(e) => {
+                                                                        e.preventDefault();
+                                                                        handleLastVisitClick(a.patientId, a.patient, a);
+                                                                    }}
+                                                                >
+                                                                    {lastVisitText}
+                                                                </a>
                                                             );
-                                                        }
-                                                        const lastVisitText = formatLastVisitDisplay(a.patientId, a.reports_received, a.visitNumber === 1);
-                                                        if (lastVisitText === "-") {
-                                                            return <span>{lastVisitText}</span>;
-                                                        }
-                                                        return (
-                                                            <a
-                                                                href="#"
-                                                                title={`View visit history`}
-                                                                style={{ textDecoration: "underline", color: "#1E88E5", cursor: "pointer" }}
-                                                                onClick={(e) => {
-                                                                    e.preventDefault();
-                                                                    handleLastVisitClick(a.patientId, a.patient, a);
-                                                                }}
-                                                            >
-                                                                {lastVisitText}
-                                                            </a>
-                                                        );
-                                                    })()}
+                                                        })()}
                                                     </td>
                                                     <td className="action-col" style={{ whiteSpace: "nowrap" }}>
                                                         <div style={{
@@ -3010,23 +3034,23 @@ export default function AppointmentTable() {
                                                                         // Navigate to treatment or open modal
                                                                         console.log('Treatment clicked for patient:', a.patientId);
                                                                         console.log('Treatment clicked for patient:', a.patientId);
-                                                                    navigate('/treatment', {
-                                                                        state: {
-                                                                            patientId: a.patientId,
-                                                                            patientName: a.patient,
-                                                                            visitNumber: a.visitNumber,
-                                                                            doctorId: a.doctorId,
-                                                                            clinicId: clinicId,
-                                                                            shiftId: Number(a.shiftId || 1),
-                                                                            visitDate: String(a.visitDate || ''),
-                                                                            appointmentId: a.appointmentId,
-                                                                            age: a.age,
-                                                                            gender: a.gender,
-                                                                            contact: a.contact,
-                                                                            status: a.status,
-                                                                            statusId: mapStatusLabelToId(a.status)
-                                                                        }
-                                                                    });
+                                                                        navigate('/treatment', {
+                                                                            state: {
+                                                                                patientId: a.patientId,
+                                                                                patientName: a.patient,
+                                                                                visitNumber: a.visitNumber,
+                                                                                doctorId: a.doctorId,
+                                                                                clinicId: clinicId,
+                                                                                shiftId: Number(a.shiftId || 1),
+                                                                                visitDate: String(a.visitDate || ''),
+                                                                                appointmentId: a.appointmentId,
+                                                                                age: a.age,
+                                                                                gender: a.gender,
+                                                                                contact: a.contact,
+                                                                                status: a.status,
+                                                                                statusId: mapStatusLabelToId(a.status)
+                                                                            }
+                                                                        });
                                                                     }
                                                                 }}
                                                                 style={{
@@ -3081,11 +3105,11 @@ export default function AppointmentTable() {
                                                                     }
                                                                 }}
                                                             >
-                                                                <img 
-                                                                    src="/images/avatar/Treatment.svg" 
-                                                                    alt="Treatment" 
-                                                                    style={{ 
-                                                                        width: 16, 
+                                                                <img
+                                                                    src="/images/avatar/Treatment.svg"
+                                                                    alt="Treatment"
+                                                                    style={{
+                                                                        width: 16,
                                                                         height: 16,
                                                                         filter: (() => {
                                                                             const statusId = mapStatusLabelToId(a.status);
@@ -3093,7 +3117,7 @@ export default function AppointmentTable() {
                                                                             const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'WAITING FOR MEDICINE' || statusId === 5;
                                                                             return isEnabled ? 'none' : 'grayscale(100%)';
                                                                         })()
-                                                                    }} 
+                                                                    }}
                                                                 />
                                                             </div>
                                                         </div>
@@ -3111,12 +3135,12 @@ export default function AppointmentTable() {
                             <div className="card-grid position-relative">
                                 {/* Loading overlay for appointments refresh (Doctor screen) */}
                                 {isDoctorLoading && (
-                                    <div className="position-absolute top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center" 
-                                         style={{ 
-                                             backgroundColor: 'rgba(255, 255, 255, 0.8)', 
-                                             zIndex: 10,
-                                             minHeight: '200px'
-                                         }}>
+                                    <div className="position-absolute top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
+                                        style={{
+                                            backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                                            zIndex: 10,
+                                            minHeight: '200px'
+                                        }}>
                                         <div className="spinner-border text-primary" role="status">
                                             <span className="visually-hidden">Refreshing...</span>
                                         </div>
@@ -3130,14 +3154,14 @@ export default function AppointmentTable() {
                                                 <div className="card-header">
                                                     <div className="d-flex align-items-center" style={{ gap: '8px' }}>
                                                         <span className={`d-inline-block rounded-circle ${((appointment as any).statusColorPending || appointment.statusColor) === 'bg-orange-custom' ? '' : ((appointment as any).statusColorPending || appointment.statusColor)}`} style={{ width: '10px', height: '10px', backgroundColor: ((appointment as any).statusColorPending || appointment.statusColor) === 'bg-orange-custom' ? '#FF9800' : undefined }}></span>
-                                                        <a 
-                                                            href="#" 
-                                                            onClick={(e) => { 
-                                                                e.preventDefault(); 
+                                                        <a
+                                                            href="#"
+                                                            onClick={(e) => {
+                                                                e.preventDefault();
                                                                 setSelectedPatientForQuickReg(appointment);
                                                                 setShowQuickRegistration(true);
-                                                            }} 
-                                                            className="patient-name" 
+                                                            }}
+                                                            className="patient-name"
                                                             style={{ textDecoration: 'underline', color: '#1E88E5', cursor: 'pointer' }}
                                                         >
                                                             {appointment.patient}
@@ -3343,19 +3367,19 @@ export default function AppointmentTable() {
                                                             })()
                                                         }}
                                                     >
-                                                        <img 
-                                                            src="/images/avatar/Treatment.svg" 
-                                                            alt="Treatment" 
-                                                            style={{ 
-                                                                width: 16, 
-                                                                height: 16, 
+                                                        <img
+                                                            src="/images/avatar/Treatment.svg"
+                                                            alt="Treatment"
+                                                            style={{
+                                                                width: 16,
+                                                                height: 16,
                                                                 filter: (() => {
                                                                     const statusId = mapStatusLabelToId(appointment.status);
                                                                     const normalizedStatus = normalizeStatusLabel(appointment.status);
                                                                     const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'WAITING FOR MEDICINE' || statusId === 5;
                                                                     return isEnabled ? 'brightness(0)' : 'grayscale(100%) brightness(0.5)';
                                                                 })()
-                                                            }} 
+                                                            }}
                                                         />
                                                     </div>
                                                 </div>
@@ -3892,8 +3916,22 @@ export default function AppointmentTable() {
                         value={searchTerm}
                         onChange={(e) => handleSearchChange(e.target.value)}
                         ref={searchInputRef}
-                        style={{ borderWidth: "2px", height: "38px", fontFamily: "'Roboto', sans-serif", fontWeight: 500, minWidth: "300px", width: "400px" }}
+                        style={{ borderWidth: "2px", height: "38px", fontFamily: "'Roboto', sans-serif", fontWeight: 500, minWidth: "300px", width: "400px", paddingRight: "30px" }}
                     />
+                    {searchTerm && (
+                        <button
+                            className="btn btn-link position-absolute top-50 translate-middle-y text-decoration-none text-muted"
+                            style={{ right: '10px', zIndex: 10, padding: 0, width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            onClick={() => {
+                                setSearchTerm('');
+                                setSearchResults([]);
+                                setShowDropdown(false);
+                                searchInputRef.current?.focus();
+                            }}
+                        >
+                            <i className="fas fa-times"></i>
+                        </button>
+                    )}
 
                     {/* Search Dropdown */}
                     {showDropdown && searchMenuPosition && (
@@ -3959,7 +3997,7 @@ export default function AppointmentTable() {
                                     {searchError}
                                 </div>
                             ) : (
-                                <div className="p-3 text-muted text-center">No patients found</div>
+                                <div className="p-3 text-muted text-center">No patient Found</div>
                             )}
                         </div>
                     )}
@@ -3974,6 +4012,9 @@ export default function AppointmentTable() {
                         onChange={(e) => {
                             console.log('Doctor dropdown changed to:', e.target.value);
                             setSelectedDoctorId(e.target.value);
+                            setSearchTerm("");
+                            setSearchResults([]);
+                            setShowDropdown(false);
                         }}
                         disabled={loadingDoctors}
                         key={`doctor-select-${allDoctors.length}-${selectedDoctorId}`} // Force re-render when doctors or selection changes
@@ -4009,12 +4050,17 @@ export default function AppointmentTable() {
                     onClick={handleBookAppointment}
                     disabled={isBooking}
                 >
-                    {isBooking ? 'Booking...' : 'Book Appointment'}
+                    {isBooking ? 'Book Appointment' : 'Book Appointment'}
                 </button>
                 <button
                     className="btn"
                     style={buttonStyle}
-                    onClick={() => setShowAddPatient(true)}
+                    onClick={() => {
+                        setShowAddPatient(true);
+                        setSearchTerm("");
+                        setSearchResults([]);
+                        setShowDropdown(false);
+                    }}
                 >
                     New Patient
                 </button>
@@ -4024,8 +4070,13 @@ export default function AppointmentTable() {
                 <select
                     className="form-select"
                     value={filterStatus}
-                    onChange={(e) => setFilterStatus(e.target.value)}
-                    style={{ height: '38px', width: '160px', color: filterStatus ? '#212121' : '#6c757d', padding: '6px 12px', lineHeight: '1.5', fontSize: '1rem' }}
+                    onChange={(e) => {
+                        setFilterStatus(e.target.value);
+                        setSearchTerm("");
+                        setSearchResults([]);
+                        setShowDropdown(false);
+                    }}
+                    style={{ height: '38px', width: '200px', color: filterStatus ? '#212121' : '#6c757d', padding: '6px 12px', lineHeight: '1.5', fontSize: '1rem' }}
                 >
                     <option value="">Select Status</option>
                     {(() => {
@@ -4137,12 +4188,12 @@ export default function AppointmentTable() {
                         <div className="table-responsive position-relative">
                             {/* Loading overlay for appointments refresh */}
                             {loadingAppointments && (
-                                <div className="position-absolute top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center" 
-                                     style={{ 
-                                         backgroundColor: 'rgba(255, 255, 255, 0.8)', 
-                                         zIndex: 10,
-                                         minHeight: '200px'
-                                     }}>
+                                <div className="position-absolute top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
+                                    style={{
+                                        backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                                        zIndex: 10,
+                                        minHeight: '200px'
+                                    }}>
                                     <div className="spinner-border text-primary" role="status">
                                         <span className="visually-hidden">Refreshing...</span>
                                     </div>
@@ -4171,13 +4222,13 @@ export default function AppointmentTable() {
                                             <tr key={i} style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 500 }}>
                                                 <td className="sr-col">{a.sr}</td>
                                                 <td className="name-col">
-                                                    <a 
-                                                        href="#" 
-                                                        onClick={(e) => { 
-                                                            e.preventDefault(); 
+                                                    <a
+                                                        href="#"
+                                                        onClick={(e) => {
+                                                            e.preventDefault();
                                                             setSelectedPatientForQuickReg(a);
                                                             setShowQuickRegistration(true);
-                                                        }} 
+                                                        }}
                                                         style={{ textDecoration: "underline", color: "#1E88E5", cursor: "pointer" }}
                                                     >
                                                         {a.patient}
@@ -4524,18 +4575,18 @@ export default function AppointmentTable() {
 
                                                                     console.log('Update response:', response);
 
-                                                                        if (response.success) {
+                                                                    if (response.success) {
                                                                         setSnackbarMessage('Appointment updated successfully');
                                                                         setShowSnackbar(true);
                                                                         setTimeout(() => setShowSnackbar(false), 3000);
-                                                                            // Commit pending status to saved fields
-                                                                            if ((appointments[originalIndex] as any).statusPending) {
-                                                                                const committed = (appointments[originalIndex] as any).statusPending;
-                                                                                updateAppointmentField(originalIndex, 'status', committed);
-                                                                                updateAppointmentField(originalIndex, 'statusColor', getStatusColor(committed));
-                                                                                updateAppointmentField(originalIndex, 'statusPending' as any, undefined);
-                                                                                updateAppointmentField(originalIndex, 'statusColorPending' as any, undefined);
-                                                                            }
+                                                                        // Commit pending status to saved fields
+                                                                        if ((appointments[originalIndex] as any).statusPending) {
+                                                                            const committed = (appointments[originalIndex] as any).statusPending;
+                                                                            updateAppointmentField(originalIndex, 'status', committed);
+                                                                            updateAppointmentField(originalIndex, 'statusColor', getStatusColor(committed));
+                                                                            updateAppointmentField(originalIndex, 'statusPending' as any, undefined);
+                                                                            updateAppointmentField(originalIndex, 'statusColorPending' as any, undefined);
+                                                                        }
                                                                         // If the appointment was moved to another provider, remove it locally
                                                                         const movedToDifferentDoctor = String(doctor) !== String(selectedDoctorId);
                                                                         if (movedToDifferentDoctor) {
@@ -4647,13 +4698,13 @@ export default function AppointmentTable() {
                                                                     }
                                                                     const confirmDelete = window.confirm('Delete this appointment?');
                                                                     if (!confirmDelete) return;
-                                                                    
-                                                                    await appointmentService.deleteAppointment({ 
-                                                                        patientId: String(pid), 
-                                                                        visitDate: String(vdatetime), 
-                                                                        doctorId: String(did), 
+
+                                                                    await appointmentService.deleteAppointment({
+                                                                        patientId: String(pid),
+                                                                        visitDate: String(vdatetime),
+                                                                        doctorId: String(did),
                                                                         clinicId: sessionData?.clinicId || '',
-                                                                        userId: String(sessionData?.userId || 'system') 
+                                                                        userId: String(sessionData?.userId || 'system')
                                                                     });
                                                                     setSnackbarMessage('Appointment deleted');
                                                                     setShowSnackbar(true);
@@ -4943,96 +4994,96 @@ export default function AppointmentTable() {
 
                                                         {/* Treatment Button - Hidden for Reception login */}
                                                         {!isReceptionist && (
-                                                        <div
-                                                            title={(() => {
-                                                                const normalizedStatus = normalizeStatusLabel(a.status);
-                                                                const isEnabled = normalizedStatus === 'COLLECTION';
-                                                                return isEnabled ? "Treatment" : "Treatment (Disabled - Only enabled for Collection status)";
-                                                            })()}
-                                                            onClick={() => {
-                                                                const normalizedStatus = normalizeStatusLabel(a.status);
-                                                                const isEnabled = normalizedStatus === 'COLLECTION';
-                                                                if (isEnabled) {
-                                                                    console.log('Treatment clicked for patient:', a.patientId);
-                                                                    navigate('/treatment', {
-                                                                        state: {
-                                                                            patientId: a.patientId,
-                                                                            patientName: a.patient,
-                                                                            visitNumber: a.visitNumber,
-                                                                            doctorId: a.doctorId,
-                                                                            clinicId: clinicId,
-                                                                            shiftId: Number(a.shiftId || 1),
-                                                                            visitDate: String(a.visitDate || ''),
-                                                                            appointmentId: a.appointmentId,
-                                                                            age: a.age,
-                                                                            gender: a.gender,
-                                                                            contact: a.contact,
-                                                                            status: a.status,
-                                                                            statusId: mapStatusLabelToId(a.status)
-                                                                        }
-                                                                    });
-                                                                }
-                                                            }}
-                                                            style={{
-                                                                display: 'inline-flex',
-                                                                alignItems: 'center',
-                                                                justifyContent: 'center',
-                                                                width: '28px',
-                                                                height: '28px',
-                                                                cursor: (() => {
+                                                            <div
+                                                                title={(() => {
                                                                     const normalizedStatus = normalizeStatusLabel(a.status);
                                                                     const isEnabled = normalizedStatus === 'COLLECTION';
-                                                                    return isEnabled ? 'pointer' : 'not-allowed';
-                                                                })(),
-                                                                color: (() => {
+                                                                    return isEnabled ? "Treatment" : "Treatment (Disabled - Only enabled for Collection status)";
+                                                                })()}
+                                                                onClick={() => {
                                                                     const normalizedStatus = normalizeStatusLabel(a.status);
                                                                     const isEnabled = normalizedStatus === 'COLLECTION';
-                                                                    return isEnabled ? '#607D8B' : '#BDBDBD';
-                                                                })(),
-                                                                backgroundColor: 'transparent',
-                                                                borderRadius: '4px',
-                                                                border: (() => {
-                                                                    const normalizedStatus = normalizeStatusLabel(a.status);
-                                                                    const isEnabled = normalizedStatus === 'COLLECTION';
-                                                                    return isEnabled ? '1px solid #ddd' : '1px solid #E0E0E0';
-                                                                })(),
-                                                                opacity: (() => {
-                                                                    const normalizedStatus = normalizeStatusLabel(a.status);
-                                                                    const isEnabled = normalizedStatus === 'COLLECTION';
-                                                                    return isEnabled ? 1 : 0.5;
-                                                                })()
-                                                            }}
-                                                            onMouseEnter={(e) => {
-                                                                const normalizedStatus = normalizeStatusLabel(a.status);
-                                                                const isEnabled = normalizedStatus === 'COLLECTION';
-                                                                if (isEnabled) {
-                                                                    e.currentTarget.style.backgroundColor = '#FFF3E0';
-                                                                    e.currentTarget.style.borderColor = '#FF9800';
-                                                                }
-                                                            }}
-                                                            onMouseLeave={(e) => {
-                                                                const normalizedStatus = normalizeStatusLabel(a.status);
-                                                                const isEnabled = normalizedStatus === 'COLLECTION';
-                                                                if (isEnabled) {
-                                                                    e.currentTarget.style.backgroundColor = 'transparent';
-                                                                    e.currentTarget.style.borderColor = '#ddd';
-                                                                }
-                                                            }}
-                                                        >
-                                                            <img 
-                                                                src="/images/avatar/Treatment.svg" 
-                                                                alt="Treatment" 
-                                                                style={{ 
-                                                                    width: 16, 
-                                                                    height: 16,
-                                                                    filter: (() => {
+                                                                    if (isEnabled) {
+                                                                        console.log('Treatment clicked for patient:', a.patientId);
+                                                                        navigate('/treatment', {
+                                                                            state: {
+                                                                                patientId: a.patientId,
+                                                                                patientName: a.patient,
+                                                                                visitNumber: a.visitNumber,
+                                                                                doctorId: a.doctorId,
+                                                                                clinicId: clinicId,
+                                                                                shiftId: Number(a.shiftId || 1),
+                                                                                visitDate: String(a.visitDate || ''),
+                                                                                appointmentId: a.appointmentId,
+                                                                                age: a.age,
+                                                                                gender: a.gender,
+                                                                                contact: a.contact,
+                                                                                status: a.status,
+                                                                                statusId: mapStatusLabelToId(a.status)
+                                                                            }
+                                                                        });
+                                                                    }
+                                                                }}
+                                                                style={{
+                                                                    display: 'inline-flex',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'center',
+                                                                    width: '28px',
+                                                                    height: '28px',
+                                                                    cursor: (() => {
                                                                         const normalizedStatus = normalizeStatusLabel(a.status);
                                                                         const isEnabled = normalizedStatus === 'COLLECTION';
-                                                                        return isEnabled ? 'none' : 'grayscale(100%)';
+                                                                        return isEnabled ? 'pointer' : 'not-allowed';
+                                                                    })(),
+                                                                    color: (() => {
+                                                                        const normalizedStatus = normalizeStatusLabel(a.status);
+                                                                        const isEnabled = normalizedStatus === 'COLLECTION';
+                                                                        return isEnabled ? '#607D8B' : '#BDBDBD';
+                                                                    })(),
+                                                                    backgroundColor: 'transparent',
+                                                                    borderRadius: '4px',
+                                                                    border: (() => {
+                                                                        const normalizedStatus = normalizeStatusLabel(a.status);
+                                                                        const isEnabled = normalizedStatus === 'COLLECTION';
+                                                                        return isEnabled ? '1px solid #ddd' : '1px solid #E0E0E0';
+                                                                    })(),
+                                                                    opacity: (() => {
+                                                                        const normalizedStatus = normalizeStatusLabel(a.status);
+                                                                        const isEnabled = normalizedStatus === 'COLLECTION';
+                                                                        return isEnabled ? 1 : 0.5;
                                                                     })()
-                                                                }} 
-                                                            />
-                                                        </div>
+                                                                }}
+                                                                onMouseEnter={(e) => {
+                                                                    const normalizedStatus = normalizeStatusLabel(a.status);
+                                                                    const isEnabled = normalizedStatus === 'COLLECTION';
+                                                                    if (isEnabled) {
+                                                                        e.currentTarget.style.backgroundColor = '#FFF3E0';
+                                                                        e.currentTarget.style.borderColor = '#FF9800';
+                                                                    }
+                                                                }}
+                                                                onMouseLeave={(e) => {
+                                                                    const normalizedStatus = normalizeStatusLabel(a.status);
+                                                                    const isEnabled = normalizedStatus === 'COLLECTION';
+                                                                    if (isEnabled) {
+                                                                        e.currentTarget.style.backgroundColor = 'transparent';
+                                                                        e.currentTarget.style.borderColor = '#ddd';
+                                                                    }
+                                                                }}
+                                                            >
+                                                                <img
+                                                                    src="/images/avatar/Treatment.svg"
+                                                                    alt="Treatment"
+                                                                    style={{
+                                                                        width: 16,
+                                                                        height: 16,
+                                                                        filter: (() => {
+                                                                            const normalizedStatus = normalizeStatusLabel(a.status);
+                                                                            const isEnabled = normalizedStatus === 'COLLECTION';
+                                                                            return isEnabled ? 'none' : 'grayscale(100%)';
+                                                                        })()
+                                                                    }}
+                                                                />
+                                                            </div>
                                                         )}
                                                     </div>
                                                 </td>
@@ -5049,12 +5100,12 @@ export default function AppointmentTable() {
                         <div className="card-grid position-relative">
                             {/* Loading overlay for appointments refresh */}
                             {loadingAppointments && (
-                                <div className="position-absolute top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center" 
-                                     style={{ 
-                                         backgroundColor: 'rgba(255, 255, 255, 0.8)', 
-                                         zIndex: 10,
-                                         minHeight: '200px'
-                                     }}>
+                                <div className="position-absolute top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
+                                    style={{
+                                        backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                                        zIndex: 10,
+                                        minHeight: '200px'
+                                    }}>
                                     <div className="spinner-border text-primary" role="status">
                                         <span className="visually-hidden">Refreshing...</span>
                                     </div>
@@ -5068,14 +5119,14 @@ export default function AppointmentTable() {
                                             <div className="card-header">
                                                 <div className="d-flex align-items-center" style={{ gap: '8px' }}>
                                                     <span className={`d-inline-block rounded-circle ${appointment.statusColor === 'bg-orange-custom' ? '' : appointment.statusColor}`} style={{ width: '10px', height: '10px', backgroundColor: appointment.statusColor === 'bg-orange-custom' ? '#FF9800' : undefined }}></span>
-                                                    <a 
-                                                        href="#" 
-                                                        onClick={(e) => { 
-                                                            e.preventDefault(); 
+                                                    <a
+                                                        href="#"
+                                                        onClick={(e) => {
+                                                            e.preventDefault();
                                                             setSelectedPatientForQuickReg(appointment);
                                                             setShowQuickRegistration(true);
-                                                        }} 
-                                                        className="patient-name" 
+                                                        }}
+                                                        className="patient-name"
                                                         style={{ textDecoration: 'underline', color: '#1E88E5', cursor: 'pointer' }}
                                                     >
                                                         {appointment.patient}
@@ -5185,39 +5236,39 @@ export default function AppointmentTable() {
                                                 <div className="kv"><span className="k">Age:</span><span className="v">{appointment.age}</span></div>
                                                 <div className="kv">
                                                     <span className="k">Last Visit:</span>
-                                                        <span className="v">
-                                                            {(() => {
-                                                                if (loadingVisits[appointment.patientId]) {
-                                                                    return (
-                                                                        <span className="text-muted">
-                                                                            <i className="fas fa-spinner fa-spin me-1"></i>
-                                                                            Loading...
-                                                                        </span>
-                                                                    );
-                                                                }
-                                                                const lastVisitText = formatLastVisitDisplay(
-                                                                    appointment.patientId,
-                                                                    appointment.reports_received,
-                                                                    appointment.visitNumber === 1
-                                                                );
-                                                                if (lastVisitText === "-") {
-                                                                    return <span>{lastVisitText}</span>;
-                                                                }
+                                                    <span className="v">
+                                                        {(() => {
+                                                            if (loadingVisits[appointment.patientId]) {
                                                                 return (
-                                                                    <a
-                                                                        href="#"
-                                                                        title={`View visit history`}
-                                                                        style={{ textDecoration: 'underline', color: '#1E88E5', cursor: 'pointer' }}
-                                                                        onClick={(e) => {
-                                                                            e.preventDefault();
-                                                                            handleLastVisitClick(appointment.patientId, appointment.patient, appointment);
-                                                                        }}
-                                                                    >
-                                                                        {lastVisitText}
-                                                                    </a>
+                                                                    <span className="text-muted">
+                                                                        <i className="fas fa-spinner fa-spin me-1"></i>
+                                                                        Loading...
+                                                                    </span>
                                                                 );
-                                                            })()}
-                                                        </span>
+                                                            }
+                                                            const lastVisitText = formatLastVisitDisplay(
+                                                                appointment.patientId,
+                                                                appointment.reports_received,
+                                                                appointment.visitNumber === 1
+                                                            );
+                                                            if (lastVisitText === "-") {
+                                                                return <span>{lastVisitText}</span>;
+                                                            }
+                                                            return (
+                                                                <a
+                                                                    href="#"
+                                                                    title={`View visit history`}
+                                                                    style={{ textDecoration: 'underline', color: '#1E88E5', cursor: 'pointer' }}
+                                                                    onClick={(e) => {
+                                                                        e.preventDefault();
+                                                                        handleLastVisitClick(appointment.patientId, appointment.patient, appointment);
+                                                                    }}
+                                                                >
+                                                                    {lastVisitText}
+                                                                </a>
+                                                            );
+                                                        })()}
+                                                    </span>
                                                 </div>
                                                 <div className="kv"><span className="k">Gender:</span><span className="v">{appointment.gender}</span></div>
                                                 <div className="kv"><span className="k">Provider:</span><span className="v">
@@ -5455,13 +5506,13 @@ export default function AppointmentTable() {
                                                                 }
                                                                 const confirmDelete = window.confirm('Delete this appointment?');
                                                                 if (!confirmDelete) return;
-                                                                
-                                                                await appointmentService.deleteAppointment({ 
-                                                                    patientId: String(pid), 
-                                                                    visitDate: String(vdatetime), 
-                                                                    doctorId: String(did), 
+
+                                                                await appointmentService.deleteAppointment({
+                                                                    patientId: String(pid),
+                                                                    visitDate: String(vdatetime),
+                                                                    doctorId: String(did),
                                                                     clinicId: sessionData?.clinicId || '',
-                                                                    userId: String(sessionData?.userId || 'system') 
+                                                                    userId: String(sessionData?.userId || 'system')
                                                                 });
                                                                 // Remove from UI
                                                                 setSnackbarMessage('Appointment deleted successfully.');
@@ -5531,7 +5582,7 @@ export default function AppointmentTable() {
                                                             setSelectedPatientForVisit(appointment as any);
                                                             setShowVisitDetails(true);
                                                         }}
-                                                        style={{ 
+                                                        style={{
                                                             cursor: (() => {
                                                                 const statusId = mapStatusLabelToId(appointment.status);
                                                                 const shouldDisable = isReceptionist && statusId >= 2;
@@ -5564,14 +5615,14 @@ export default function AppointmentTable() {
                                                             })()
                                                         }}
                                                     >
-                                                        <img 
-                                                            src="/images/avatar/Visit_details.svg" 
-                                                            alt="Visit Details" 
-                                                            style={{ 
-                                                                width: 16, 
+                                                        <img
+                                                            src="/images/avatar/Visit_details.svg"
+                                                            alt="Visit Details"
+                                                            style={{
+                                                                width: 16,
                                                                 height: 16,
                                                                 filter: appointment.status === 'WITH DOCTOR' ? 'brightness(0.3)' : 'none'
-                                                            }} 
+                                                            }}
                                                         />
                                                     </div>
                                                     <div className="kv">
@@ -5588,17 +5639,17 @@ export default function AppointmentTable() {
                                                         </span>
                                                     </div>
                                                 </div>
-                                                    <div
-                                                        className="crm-btn ms-auto"
-                                                        title={(() => {
-                                                            const statusId = mapStatusLabelToId(appointment.status);
-                                                            const isCollectible = statusId === 4 || statusId === 5 || statusId === 6;
-                                                            // Allow statusId 4, 5 (Complete), and 6 even for reception, otherwise disable for reception when statusId >= 2
-                                                            const shouldDisable = isReceptionist && statusId >= 2 && !isCollectible;
-                                                            if (shouldDisable) return "Collection (Disabled - Status >= 2)";
-                                                            const shouldEnable = !isReceptionist || isCollectible;
-                                                            if (!shouldEnable) return "Collection (Disabled for Reception)";
-                                                            return !isCollectible ? "Collection (Disabled - Status not Complete/Submited)" : "Collection";
+                                                <div
+                                                    className="crm-btn ms-auto"
+                                                    title={(() => {
+                                                        const statusId = mapStatusLabelToId(appointment.status);
+                                                        const isCollectible = statusId === 4 || statusId === 5 || statusId === 6;
+                                                        // Allow statusId 4, 5 (Complete), and 6 even for reception, otherwise disable for reception when statusId >= 2
+                                                        const shouldDisable = isReceptionist && statusId >= 2 && !isCollectible;
+                                                        if (shouldDisable) return "Collection (Disabled - Status >= 2)";
+                                                        const shouldEnable = !isReceptionist || isCollectible;
+                                                        if (!shouldEnable) return "Collection (Disabled for Reception)";
+                                                        return !isCollectible ? "Collection (Disabled - Status not Complete/Submited)" : "Collection";
                                                     })()}
                                                     onClick={() => {
                                                         const statusId = mapStatusLabelToId(appointment.status);
@@ -5691,74 +5742,74 @@ export default function AppointmentTable() {
                                                             const normalizedStatus = normalizeStatusLabel(appointment.status);
                                                             const isEnabled = normalizedStatus === 'COLLECTION' || statusId === 5;
                                                             if (isEnabled) {
-                                                            console.log('Treatment clicked for patient:', appointment.patientId);
-                                                            navigate('/treatment', {
-                                                                state: {
-                                                                    patientId: appointment.patientId,
-                                                                    patientName: appointment.patient,
-                                                                    visitNumber: appointment.visitNumber,
-                                                                    doctorId: appointment.doctorId,
-                                                                    clinicId: clinicId,
-                                                                    shiftId: Number(appointment.shiftId || 1),
-                                                                    visitDate: String(appointment.visitDate || ''),
-                                                                    appointmentId: appointment.appointmentId,
-                                                                    age: appointment.age,
-                                                                    gender: appointment.gender,
-                                                                    contact: appointment.contact,
-                                                                    status: appointment.status,
-                                                                    statusId: mapStatusLabelToId(appointment.status)
-                                                                }
-                                                            });
-                                                        }
-                                                    }}
-                                                    style={{
-                                                        cursor: (() => {
-                                                            const statusId = mapStatusLabelToId(appointment.status);
-                                                            const normalizedStatus = normalizeStatusLabel(appointment.status);
-                                                            const isEnabled = normalizedStatus === 'COLLECTION' || statusId === 5;
-                                                            return isEnabled ? 'pointer' : 'not-allowed';
-                                                        })(),
-                                                        backgroundColor: (() => {
-                                                            const statusId = mapStatusLabelToId(appointment.status);
-                                                            const normalizedStatus = normalizeStatusLabel(appointment.status);
-                                                            const isEnabled = normalizedStatus === 'COLLECTION' || statusId === 5;
-                                                            return isEnabled ? '#ECEFF1' : '#F5F5F5';
-                                                        })(),
-                                                        color: (() => {
-                                                            const statusId = mapStatusLabelToId(appointment.status);
-                                                            const normalizedStatus = normalizeStatusLabel(appointment.status);
-                                                            const isEnabled = normalizedStatus === 'COLLECTION' || statusId === 5;
-                                                            return isEnabled ? '#607D8B' : '#BDBDBD';
-                                                        })(),
-                                                        border: (() => {
-                                                            const statusId = mapStatusLabelToId(appointment.status);
-                                                            const normalizedStatus = normalizeStatusLabel(appointment.status);
-                                                            const isEnabled = normalizedStatus === 'COLLECTION' || statusId === 5;
-                                                            return isEnabled ? '1px solid #CFD8DC' : '1px solid #E0E0E0';
-                                                        })(),
-                                                        opacity: (() => {
-                                                            const statusId = mapStatusLabelToId(appointment.status);
-                                                            const normalizedStatus = normalizeStatusLabel(appointment.status);
-                                                            const isEnabled = normalizedStatus === 'COLLECTION' || statusId === 5;
-                                                            return isEnabled ? 1 : 0.5;
-                                                        })()
-                                                    }}
-                                                >
-                                                    <img 
-                                                        src="/images/avatar/Treatment.svg" 
-                                                        alt="Treatment" 
-                                                        style={{ 
-                                                            width: 16, 
-                                                            height: 16, 
-                                                            filter: (() => {
+                                                                console.log('Treatment clicked for patient:', appointment.patientId);
+                                                                navigate('/treatment', {
+                                                                    state: {
+                                                                        patientId: appointment.patientId,
+                                                                        patientName: appointment.patient,
+                                                                        visitNumber: appointment.visitNumber,
+                                                                        doctorId: appointment.doctorId,
+                                                                        clinicId: clinicId,
+                                                                        shiftId: Number(appointment.shiftId || 1),
+                                                                        visitDate: String(appointment.visitDate || ''),
+                                                                        appointmentId: appointment.appointmentId,
+                                                                        age: appointment.age,
+                                                                        gender: appointment.gender,
+                                                                        contact: appointment.contact,
+                                                                        status: appointment.status,
+                                                                        statusId: mapStatusLabelToId(appointment.status)
+                                                                    }
+                                                                });
+                                                            }
+                                                        }}
+                                                        style={{
+                                                            cursor: (() => {
                                                                 const statusId = mapStatusLabelToId(appointment.status);
                                                                 const normalizedStatus = normalizeStatusLabel(appointment.status);
                                                                 const isEnabled = normalizedStatus === 'COLLECTION' || statusId === 5;
-                                                                return isEnabled ? 'brightness(0)' : 'grayscale(100%) brightness(0.5)';
+                                                                return isEnabled ? 'pointer' : 'not-allowed';
+                                                            })(),
+                                                            backgroundColor: (() => {
+                                                                const statusId = mapStatusLabelToId(appointment.status);
+                                                                const normalizedStatus = normalizeStatusLabel(appointment.status);
+                                                                const isEnabled = normalizedStatus === 'COLLECTION' || statusId === 5;
+                                                                return isEnabled ? '#ECEFF1' : '#F5F5F5';
+                                                            })(),
+                                                            color: (() => {
+                                                                const statusId = mapStatusLabelToId(appointment.status);
+                                                                const normalizedStatus = normalizeStatusLabel(appointment.status);
+                                                                const isEnabled = normalizedStatus === 'COLLECTION' || statusId === 5;
+                                                                return isEnabled ? '#607D8B' : '#BDBDBD';
+                                                            })(),
+                                                            border: (() => {
+                                                                const statusId = mapStatusLabelToId(appointment.status);
+                                                                const normalizedStatus = normalizeStatusLabel(appointment.status);
+                                                                const isEnabled = normalizedStatus === 'COLLECTION' || statusId === 5;
+                                                                return isEnabled ? '1px solid #CFD8DC' : '1px solid #E0E0E0';
+                                                            })(),
+                                                            opacity: (() => {
+                                                                const statusId = mapStatusLabelToId(appointment.status);
+                                                                const normalizedStatus = normalizeStatusLabel(appointment.status);
+                                                                const isEnabled = normalizedStatus === 'COLLECTION' || statusId === 5;
+                                                                return isEnabled ? 1 : 0.5;
                                                             })()
-                                                        }} 
-                                                    />
-                                                </div>
+                                                        }}
+                                                    >
+                                                        <img
+                                                            src="/images/avatar/Treatment.svg"
+                                                            alt="Treatment"
+                                                            style={{
+                                                                width: 16,
+                                                                height: 16,
+                                                                filter: (() => {
+                                                                    const statusId = mapStatusLabelToId(appointment.status);
+                                                                    const normalizedStatus = normalizeStatusLabel(appointment.status);
+                                                                    const isEnabled = normalizedStatus === 'COLLECTION' || statusId === 5;
+                                                                    return isEnabled ? 'brightness(0)' : 'grayscale(100%) brightness(0.5)';
+                                                                })()
+                                                            }}
+                                                        />
+                                                    </div>
                                                 )}
                                             </div>
                                         </div>
@@ -5846,10 +5897,10 @@ export default function AppointmentTable() {
                 onSave={async (patientData) => {
                     try {
                         console.log('🔄 Refreshing appointments after patient addition:', patientData);
-                        
+
                         // Use the existing refresh function that properly handles session data
                         await refreshAppointmentsForSelectedDoctor();
-                        
+
                         console.log('✅ Appointments refreshed successfully after patient addition');
                     } catch (error) {
                         console.error('❌ Failed to refresh appointments after adding patient:', error);
