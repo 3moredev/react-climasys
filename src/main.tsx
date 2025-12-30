@@ -189,13 +189,13 @@ function App() {
                 </MainLayout>
               </AuthGuard>
             } />
-            {/* <Route path="/update-discharge-card" element={
+            <Route path="/update-discharge-card" element={
               <AuthGuard>
                 <MainLayout>
                   <UpdateDischargeCard />
                 </MainLayout>
               </AuthGuard>
-            } /> */}
+            } />
             <Route path="/manage-hospital-bill" element={
               <AuthGuard>
                 <MainLayout>

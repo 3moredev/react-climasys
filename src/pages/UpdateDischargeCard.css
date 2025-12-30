@@ -1,0 +1,94 @@
+/* Force text color and background for CKEditor 5 */
+.ck-editor__editable_inline {
+    color: #000000 !important;
+    background-color: #ffffff !important;
+    min-height: 150px;
+    /* Ensure it has some height */
+}
+
+/* Fix for toolbar icons and text */
+.ck.ck-toolbar {
+    background-color: #f8f9fa !important;
+    border-color: #dee2e6 !important;
+}
+
+.ck.ck-button,
+.ck.ck-dropdown .ck-button.ck-dropdown__button {
+    color: #333333 !important;
+    cursor: pointer !important;
+}
+
+.ck.ck-button svg,
+.ck.ck-dropdown .ck-button.ck-dropdown__button svg {
+    fill: #333333 !important;
+}
+
+/* Hover states */
+.ck.ck-button:hover,
+.ck.ck-button.ck-on {
+    background-color: #e2e6ea !important;
+    color: #000000 !important;
+}
+
+/* Dropdown panels */
+.ck.ck-dropdown__panel {
+    background-color: #ffffff !important;
+    border: 1px solid #dee2e6 !important;
+}
+
+.ck.ck-list__item .ck-button {
+    color: #333333 !important;
+}
+
+.ck.ck-list__item .ck-button:hover {
+    background-color: #f8f9fa !important;
+}
+
+/* Input fields inside CKEditor (like link input) */
+.ck.ck-input {
+    color: #000000 !important;
+    background-color: #ffffff !important;
+}
+
+/* Additional Reset for potential global overrides */
+.ck-editor * {
+    box-sizing: border-box;
+}
+
+.ck-content p {
+    color: #000000 !important;
+}
+
+.ck.ck-balloon-panel.ck-balloon-panel_visible {
+    display: none !important;
+}
+
+
+.special-container {
+    max-width: 90vw !important;
+}
+
+/* Utility to make editor fill height */
+.h-100-editor {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.h-100-editor .ck-editor {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.h-100-editor .ck-editor__main {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.h-100-editor .ck-editor__editable {
+    flex-grow: 1;
+    height: auto !important;
+    /* Override min-height or fixed height */
+}
