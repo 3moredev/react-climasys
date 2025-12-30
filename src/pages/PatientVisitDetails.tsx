@@ -436,6 +436,20 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
         return providerValue || 'N/A';
     }, [patientData?.provider, (patientData as any)?.doctorId, allDoctors]);
 
+    // Determine In-Person checkbox state based on status
+    // Check statusPending first (if status was changed but not saved), then fall back to status
+    const inPersonChecked = React.useMemo(() => {
+        const currentStatus = (patientData as any)?.statusPending || patientData?.status;
+        if (!currentStatus) return true; // Default to true if no status
+        const status = String(currentStatus).trim().toUpperCase();
+        const normalizedStatus = status === 'ON CALL' ? 'CONSULT ON CALL' : status;
+        // If status is "CONSULT ON CALL" or other non-in-person statuses, set to false
+        if (normalizedStatus === 'CONSULT ON CALL' || (normalizedStatus !== 'WAITING' && normalizedStatus !== 'WITH DOCTOR')) {
+            return false;
+        }
+        return true; // Default to true for WAITING or WITH DOCTOR
+    }, [patientData?.status, (patientData as any)?.statusPending]);
+
     // Load complaints from API when dialog opens
     React.useEffect(() => {
         let cancelled = false;
@@ -1290,7 +1304,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                 habitDetails: '',
                 allergyDetails: '',
                 observation: '',
-                inPerson: true, // Always true, cannot be changed
+                inPerson: inPersonChecked, // Set based on status (false for ON CALL, true for WAITING/WITH DOCTOR)
                 symptomComment: '',
                 reason: '',
                 impression: '',
@@ -1653,7 +1667,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     <span>In-Person:</span>
                                     <input
                                         type="checkbox"
-                                        checked={true}
+                                        checked={inPersonChecked}
                                         disabled={true}
                                         readOnly
                                     />

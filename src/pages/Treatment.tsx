@@ -128,7 +128,7 @@ const durationCommentStyles = `
     width: auto !important;
     padding: 0 !important;
     border: none !important;
-    border-radius: 0 !important;
+    border-radius: 0 !important; 
     background: transparent !important;
     font-size: inherit !important;
     font-family: inherit !important;
@@ -2634,7 +2634,23 @@ export default function Treatment() {
                 priority: response?.priority ?? response?.priority_value ?? 999
             };
 
+            // Check for duplicate diagnosis before adding (using functional update to get current state)
+            let diagnosisAdded = false;
             setDiagnosisRows(prev => {
+                // Check for duplicate by diagnosis name (case-insensitive)
+                const existingDiagnosis = prev.find(
+                    row => row.diagnosis?.toLowerCase().trim() === responseLabel.toLowerCase().trim()
+                );
+                
+                if (existingDiagnosis) {
+                    // Show error in snackbar instead of diagnosis error section
+                    setSnackbarMessage(`Diagnosis "${responseLabel}" is already added.`);
+                    setSnackbarOpen(true);
+                    setDiagnosesError(null); // Clear any existing error
+                    return prev; // Return previous state without adding
+                }
+                
+                diagnosisAdded = true; // Mark that diagnosis was successfully added
                 const next = [...prev, newDiagnosis];
                 // Sort by priority (lower priority number = higher priority)
                 return next.sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999));
@@ -2653,6 +2669,14 @@ export default function Treatment() {
                 ];
             });
             setShowDiagnosisPopup(false);
+            
+            // Show success message after popup closes (only if diagnosis was actually added)
+            if (diagnosisAdded) {
+                setTimeout(() => {
+                    setSnackbarMessage('Diagnosis added successfully!');
+                    setSnackbarOpen(true);
+                }, 100); // Small delay to ensure popup is closed
+            }
         } catch (error: any) {
             console.error('Failed to create diagnosis from Treatment screen:', error);
             setDiagnosesError(error?.message || 'Failed to create diagnosis. Please try again.');
@@ -2705,13 +2729,30 @@ export default function Treatment() {
             priority: normalizedPriority || 999
         };
         
+        // Check for duplicate medicine before adding (using functional update to get current state)
+        let medicineAdded = false;
         setMedicineRows(prev => {
+            // Check for duplicate by short_description (case-insensitive)
+            const existingMedicine = prev.find(
+                row => row.short_description?.toLowerCase().trim() === trimmedShortDescription.toLowerCase().trim()
+            );
+            
+            if (existingMedicine) {
+                // Show error in snackbar instead of medicine error section
+                setSnackbarMessage(`Medicine "${trimmedShortDescription}" is already added.`);
+                setSnackbarOpen(true);
+                setMedicinesError(null); // Clear any existing error
+                return prev; // Return previous state without adding
+            }
+            
+            medicineAdded = true; // Mark that medicine was successfully added
             const next = [...prev, newMedicine];
             // Sort by priority (lower priority number = higher priority)
             return next.sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999));
         });
-        // Only add to search dropdown if user marked it as active
-        if (isActive) {
+        
+        // Only add to search dropdown if user marked it as active and medicine was added
+        if (isActive && medicineAdded) {
             setMedicinesOptions(prev => {
                 const exists = prev.some(opt => opt.value === optionValue);
                 if (exists) return prev;
@@ -2733,7 +2774,16 @@ export default function Treatment() {
                 ];
             });
         }
+        
         setShowMedicinePopup(false);
+        
+        // Show success message after popup closes (only if medicine was actually added)
+        if (medicineAdded) {
+            setTimeout(() => {
+                setSnackbarMessage('Medicine added successfully!');
+                setSnackbarOpen(true);
+            }, 100); // Small delay to ensure popup is closed
+        }
     };
 
     const handleAddCustomPrescription = () => {
@@ -2808,28 +2858,23 @@ export default function Treatment() {
         const normalizedName = labTestName;
         const normalizedNameLower = normalizedName.toLowerCase();
 
-        setInvestigationsOptions(prev => {
-            const exists = prev.some(opt =>
-                opt.label?.toLowerCase() === normalizedNameLower ||
-                opt.value?.toLowerCase() === normalizedNameLower
-            );
-            if (exists) {
-                return prev;
-            }
-            const newOption: InvestigationOption = {
-                value: normalizedName,
-                label: normalizedName,
-                short_description: normalizedName,
-                description: normalizedName
-            };
-            return [...prev, newOption];
-        });
-
+        // Check for duplicate investigation before adding (using functional update to get current state)
+        let investigationAdded = false;
         setInvestigationRows(prev => {
-            const exists = prev.some(row => row.investigation?.toLowerCase() === normalizedNameLower);
-            if (exists) {
-                return prev;
+            // Check for duplicate by investigation name (case-insensitive)
+            const existingInvestigation = prev.find(
+                row => row.investigation?.toLowerCase().trim() === normalizedNameLower
+            );
+            
+            if (existingInvestigation) {
+                // Show error in snackbar instead of investigation error section
+                setSnackbarMessage(`Investigation "${normalizedName}" is already added.`);
+                setSnackbarOpen(true);
+                setInvestigationsError(null); // Clear any existing error
+                return prev; // Return previous state without adding
             }
+            
+            investigationAdded = true; // Mark that investigation was successfully added
             const newRow: InvestigationRow = {
                 id: `custom_inv_${Date.now()}`,
                 investigation: normalizedName
@@ -2837,7 +2882,35 @@ export default function Treatment() {
             return [...prev, newRow];
         });
 
+        // Only add to options if investigation was actually added
+        if (investigationAdded) {
+            setInvestigationsOptions(prev => {
+                const exists = prev.some(opt =>
+                    opt.label?.toLowerCase() === normalizedNameLower ||
+                    opt.value?.toLowerCase() === normalizedNameLower
+                );
+                if (exists) {
+                    return prev;
+                }
+                const newOption: InvestigationOption = {
+                    value: normalizedName,
+                    label: normalizedName,
+                    short_description: normalizedName,
+                    description: normalizedName
+                };
+                return [...prev, newOption];
+            });
+        }
+
         setShowTestLabPopup(false);
+        
+        // Show success message after popup closes (only if investigation was actually added)
+        if (investigationAdded) {
+            setTimeout(() => {
+                setSnackbarMessage('Investigation added successfully!');
+                setSnackbarOpen(true);
+            }, 100); // Small delay to ensure popup is closed
+        }
     };
 
     // Function to collect all form fields into an array
@@ -4021,19 +4094,38 @@ export default function Treatment() {
         if (selectedDiagnoses.length === 0) return;
         setDiagnosisRows(prev => {
             const existingValues = new Set(prev.map(r => r.value));
+            const existingDiagnoses = new Set(prev.map(r => r.diagnosis?.toLowerCase().trim()));
             const newRows: DiagnosisRow[] = [];
+            const duplicateDiagnoses: string[] = [];
+            
             selectedDiagnoses.forEach(val => {
-                if (!existingValues.has(val)) {
-                    const diagnosisOption = diagnosesOptions.find(opt => opt.value === val);
+                const diagnosisOption = diagnosesOptions.find(opt => opt.value === val);
+                const diagnosisLabel = diagnosisOption?.label || val;
+                const diagnosisLower = diagnosisLabel.toLowerCase().trim();
+                
+                // Check for duplicates by both value and diagnosis name
+                if (existingValues.has(val)) {
+                    duplicateDiagnoses.push(diagnosisLabel);
+                } else if (existingDiagnoses.has(diagnosisLower)) {
+                    duplicateDiagnoses.push(diagnosisLabel);
+                } else {
                     newRows.push({
                         id: Date.now().toString() + Math.random(),
                         value: val,
-                        diagnosis: diagnosisOption?.label || val,
+                        diagnosis: diagnosisLabel,
                         comment: '',
                         priority: diagnosisOption?.priority ?? diagnosisOption?.priority_value ?? 999
                     });
                 }
             });
+            
+            // Show error if duplicates found
+            if (duplicateDiagnoses.length > 0) {
+                setDiagnosesError(`The following diagnosis(es) are already added: ${duplicateDiagnoses.join(', ')}`);
+            } else {
+                setDiagnosesError(null);
+            }
+            
             const next = [...prev, ...newRows];
             // Sort by priority (lower priority number = higher priority)
             return next.sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999));
@@ -4059,26 +4151,45 @@ export default function Treatment() {
 
     const handleAddMedicine = () => {
         if (selectedMedicines.length > 0) {
-            const newRows: MedicineRow[] = [];
-            selectedMedicines.forEach(medicineValue => {
-                const medicineOption = medicinesOptions.find(opt => opt.value === medicineValue);
-                if (medicineOption) {
-                    newRows.push({
-                        id: Date.now().toString() + Math.random(),
-                        medicine: medicineOption.short_description,
-                        short_description: medicineOption.short_description,
-                        morning: medicineOption.morning,
-                        afternoon: medicineOption.afternoon,
-                        b: medicineOption.morning.toString(),
-                        l: medicineOption.afternoon.toString(),
-                        d: (medicineOption.night ?? 0).toString(),
-                        days: (medicineOption.no_of_days ?? 1).toString(),
-                        instruction: medicineOption.instruction || '',
-                        priority: medicineOption.priority ?? medicineOption.priority_value ?? 999
-                    });
-                }
-            });
             setMedicineRows(prev => {
+                const existingShortDescriptions = new Set(prev.map(r => r.short_description?.toLowerCase().trim()));
+                const newRows: MedicineRow[] = [];
+                const duplicateMedicines: string[] = [];
+                
+                selectedMedicines.forEach(medicineValue => {
+                    const medicineOption = medicinesOptions.find(opt => opt.value === medicineValue);
+                    if (medicineOption) {
+                        const shortDesc = medicineOption.short_description?.toLowerCase().trim() || '';
+                        
+                        // Check for duplicates by short_description
+                        if (existingShortDescriptions.has(shortDesc)) {
+                            duplicateMedicines.push(medicineOption.short_description);
+                        } else {
+                            newRows.push({
+                                id: Date.now().toString() + Math.random(),
+                                medicine: medicineOption.short_description,
+                                short_description: medicineOption.short_description,
+                                morning: medicineOption.morning ?? 0,
+                                afternoon: medicineOption.afternoon ?? 0,
+                                b: (medicineOption.morning ?? 0).toString(),
+                                l: (medicineOption.afternoon ?? 0).toString(),
+                                d: (medicineOption.night ?? 0).toString(),
+                                days: (medicineOption.no_of_days ?? 1).toString(),
+                                instruction: medicineOption.instruction || '',
+                                priority: medicineOption.priority ?? medicineOption.priority_value ?? 999
+                            });
+                            existingShortDescriptions.add(shortDesc);
+                        }
+                    }
+                });
+                
+                // Show error if duplicates found
+                if (duplicateMedicines.length > 0) {
+                    setMedicinesError(`The following medicine(s) are already added: ${duplicateMedicines.join(', ')}`);
+                } else {
+                    setMedicinesError(null);
+                }
+                
                 const next = [...prev, ...newRows];
                 // Sort by priority (lower priority number = higher priority)
                 return next.sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999));
@@ -4157,13 +4268,31 @@ export default function Treatment() {
     const handleAddInvestigations = () => {
         if (selectedInvestigations.length === 0) return;
         setInvestigationRows(prev => {
-            const existingValues = new Set(prev.map(r => r.investigation));
+            const existingInvestigationLabels = new Set(prev.map(r => r.investigation.toLowerCase()));
             const newRows: InvestigationRow[] = [];
+            const duplicateInvestigations: string[] = [];
+            
             selectedInvestigations.forEach(val => {
-                if (!existingValues.has(val)) {
-                    newRows.push({ id: `inv_${Date.now()}_${val}`, investigation: val });
+                const investigationOption = investigationsOptions.find(opt => opt.value === val);
+                const investigationLabel = (investigationOption?.label || val).toLowerCase();
+                
+                // Check for duplicates by investigation name (case-insensitive)
+                if (existingInvestigationLabels.has(investigationLabel)) {
+                    duplicateInvestigations.push(investigationOption?.label || val);
+                } else {
+                    newRows.push({ id: `inv_${Date.now()}_${val}`, investigation: investigationOption?.label || val });
+                    existingInvestigationLabels.add(investigationLabel);
                 }
             });
+            
+            // Show error if duplicates found
+            if (duplicateInvestigations.length > 0) {
+                setSnackbarMessage(`The following investigation(s) are already added: ${duplicateInvestigations.join(', ')}`);
+                setSnackbarOpen(true);
+            } else {
+                setInvestigationsError(null);
+            }
+            
             return [...prev, ...newRows];
         });
         setSelectedInvestigations([]);
@@ -4268,9 +4397,15 @@ export default function Treatment() {
 
     return (
         // <>
-        <div className="page">
+        <div className="page" >
             <style dangerouslySetInnerHTML={{ __html: durationCommentStyles }} />
-            <div className="body">
+            <style>{`
+                /* Override Material-UI container overflow to prevent duplicate scrollbar */
+                [class*="css-1kjibxc"] {
+                    overflow: hidden !important;
+                }
+            `}</style>
+            <div className="body" style={{ overflowY: 'auto' }}>
                 {/* Header */}
                 <div className="dashboard-header" style={{ background: 'transparent', display: 'flex', alignItems: 'center', padding: '12px 16px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -4279,7 +4414,7 @@ export default function Treatment() {
                 </div>
 
                 {/* Main Content - Two Column Layout */}
-                <div style={{ display: 'flex', minHeight: 'calc(100vh - 120px)', fontFamily: "'Roboto', sans-serif", overflowY: 'auto', ...disabledStyle }}>
+                <div style={{ display: 'flex', minHeight: 'calc(100vh - 120px)', fontFamily: "'Roboto', sans-serif", ...disabledStyle }}>
                     {/* Left Sidebar - Previous Visits and Attachments */}
                     <div style={{ 
                         width: '240px', 
@@ -6110,7 +6245,11 @@ export default function Treatment() {
                                     disabled={isFormDisabled}
                                     title="Show instruction groups"
                                     style={{
-                                        backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
+                                        backgroundColor: isFormDisabled 
+                                            ? '#ccc' 
+                                            : (selectedInstructionGroups && selectedInstructionGroups.length > 0 
+                                                ? '#ffc107' 
+                                                : '#1976d2'),
                                         color: 'white',
                                         border: 'none',
                                         padding: '6px',
@@ -6126,10 +6265,18 @@ export default function Treatment() {
                                         transition: 'background-color 0.2s'
                                     }}
                                     onMouseEnter={(e) => {
-                                        if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1565c0';
+                                        if (!isFormDisabled) {
+                                            e.currentTarget.style.backgroundColor = (selectedInstructionGroups && selectedInstructionGroups.length > 0) 
+                                                ? '#ffb300' 
+                                                : '#1565c0';
+                                        }
                                     }}
                                     onMouseLeave={(e) => {
-                                        if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1976d2';
+                                        if (!isFormDisabled) {
+                                            e.currentTarget.style.backgroundColor = (selectedInstructionGroups && selectedInstructionGroups.length > 0) 
+                                                ? '#ffc107' 
+                                                : '#1976d2';
+                                        }
                                     }}
                                 >
                                     i
@@ -7265,6 +7412,10 @@ export default function Treatment() {
                 open={showMedicinePopup}
                 onClose={() => setShowMedicinePopup(false)}
                 onSave={handleSaveMedicine}
+                onError={(message) => {
+                    setSnackbarMessage(message);
+                    setSnackbarOpen(true);
+                }}
                 doctorId={treatmentData?.doctorId || sessionData?.doctorId}
                 clinicId={treatmentData?.clinicId || sessionData?.clinicId}
             />
@@ -7363,6 +7514,10 @@ export default function Treatment() {
                 open={showTestLabPopup}
                 onClose={() => setShowTestLabPopup(false)}
                 onSave={handleSaveTestLab}
+                onError={(message) => {
+                    setSnackbarMessage(message);
+                    setSnackbarOpen(true);
+                }}
                 doctorId={treatmentData?.doctorId || sessionData?.doctorId}
                 clinicId={treatmentData?.clinicId || sessionData?.clinicId}
             />
@@ -7618,7 +7773,7 @@ export default function Treatment() {
                 sx={{
                     zIndex: 99999, // Ensure snackbar appears above everything
                     '& .MuiSnackbarContent-root': {
-                        backgroundColor: snackbarMessage.toLowerCase().includes('error') || snackbarMessage.toLowerCase().includes('failed') ? '#f44336' : '#4caf50',
+                        backgroundColor: snackbarMessage.toLowerCase().includes('error') || snackbarMessage.toLowerCase().includes('failed') || snackbarMessage.toLowerCase().includes('already added') ? '#f44336' : '#4caf50',
                         color: 'white',
                         fontWeight: 'bold'
                     }

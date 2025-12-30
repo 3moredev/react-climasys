@@ -20,12 +20,13 @@ interface AddMedicinePopupProps {
     open: boolean;
     onClose: () => void;
     onSave: (data: MedicineData) => void;
+    onError?: (message: string) => void;
     editData?: MedicineData;
     doctorId?: string;
     clinicId?: string;
 }
 
-const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSave, editData, doctorId, clinicId }) => {
+const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSave, onError, editData, doctorId, clinicId }) => {
     const [shortDescription, setShortDescription] = useState('');
     const [medicineName, setMedicineName] = useState('');
     const [priority, setPriority] = useState('');
@@ -164,10 +165,6 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                 await medicineService.createMedicine(medicineData);
             }
 
-            // Show success snackbar
-            setSnackbarMessage(isEditMode ? 'Medicine updated successfully!' : 'Medicine created successfully!');
-            setSnackbarOpen(true);
-            
             // Call parent onSave callback for UI update
             onSave({
                 shortDescription: newShortDescription,
@@ -192,14 +189,38 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
             setInstruction('');
             setAddToActiveList(true);
             
-            // Close popup after showing success message
-            setTimeout(() => {
-                onClose();
-            }, 1500);
+            // Close popup immediately - success message will be shown in parent component
+            onClose();
         } catch (error: any) {
             console.error('Error saving medicine:', error);
-            setSnackbarMessage(error.message || 'Failed to save medicine');
-            setSnackbarOpen(true);
+            
+            // Check if error is about duplicate medicine
+            const errorMessage = error?.message || error?.toString() || 'Failed to save medicine';
+            const isDuplicateError = errorMessage.toLowerCase().includes('already exists') || 
+                                     errorMessage.toLowerCase().includes('already exist');
+            
+            let userFriendlyMessage = '';
+            if (isDuplicateError) {
+                // Extract short description from error message if possible
+                // Error format: "Medicine with short description 'TEST' already exists..."
+                const match = errorMessage.match(/short description ['"]([^'"]+)['"]/i);
+                const shortDesc = match ? match[1] : newShortDescription;
+                userFriendlyMessage = `Medicine "${shortDesc}" is already added.`;
+            } else {
+                userFriendlyMessage = errorMessage;
+            }
+            
+            // Close popup and show error in parent component snackbar (like diagnosis)
+            onClose();
+            if (onError) {
+                setTimeout(() => {
+                    onError(userFriendlyMessage);
+                }, 100); // Small delay to ensure popup is closed
+            } else {
+                // Fallback to popup snackbar if onError not provided
+                setSnackbarMessage(userFriendlyMessage);
+                setSnackbarOpen(true);
+            }
         } finally {
             setLoading(false);
         }
