@@ -155,6 +155,15 @@ const durationCommentStyles = `
     border: none !important;
     box-shadow: none !important;
   }
+  /* Hide number input spinners */
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type="number"] {
+    -moz-appearance: textfield;
+  }
 `;
 
 interface TreatmentData {
@@ -4739,31 +4748,63 @@ export default function Treatment() {
                                             { key: 'sugar', label: 'Sugar' },
                                             { key: 'tft', label: 'TFT' },
                                             { key: 'pallorHb', label: 'Pallor/HB' }
-                                        ].map(({ key, label }) => (
-                                            <div key={key}>
-                                                <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                                    {label}
-                                                </label>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                                    <input
-                                                        type="text"
-                                                        value={formData[key as keyof typeof formData] as string}
-                                                        onChange={(e) => handleInputChange(key, e.target.value)}
-                                                        disabled={key === 'bmi' || isFormDisabled}
-                                                        style={{
-                                                            flex: 1,
-                                                            padding: '6px 10px',
-                                                            border: '1px solid #ccc',
-                                                            borderRadius: '4px',
-                                                            fontSize: '13px',
-                                                            backgroundColor: key === 'bmi' || isFormDisabled ? '#f5f5f5' : 'white',
-                                                            color: key === 'bmi' || isFormDisabled ? '#666' : '#333',
-                                                            cursor: key === 'bmi' || isFormDisabled ? 'not-allowed' : 'text'
-                                                        }}
-                                                    />
+                                        ].map(({ key, label }) => {
+                                            const isNumberField = key === 'pulse' || key === 'height' || key === 'weight';
+                                            return (
+                                                <div key={key}>
+                                                    <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                                                        {label}
+                                                    </label>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                                        <input
+                                                            type={isNumberField ? "number" : "text"}
+                                                            value={formData[key as keyof typeof formData] as string}
+                                                            onChange={(e) => {
+                                                                const value = e.target.value;
+                                                                if (isNumberField) {
+                                                                    // Allow empty string or non-negative numbers
+                                                                    if (value === '' || (!isNaN(parseFloat(value)) && parseFloat(value) >= 0)) {
+                                                                        handleInputChange(key, value);
+                                                                    }
+                                                                } else {
+                                                                    handleInputChange(key, value);
+                                                                }
+                                                            }}
+                                                            onKeyDown={(e) => {
+                                                                if (isNumberField) {
+                                                                    // Prevent minus key from being entered
+                                                                    if (e.key === '-' || e.key === 'e' || e.key === 'E' || e.key === '+') {
+                                                                        e.preventDefault();
+                                                                    }
+                                                                }
+                                                            }}
+                                                            onBlur={(e) => {
+                                                                if (isNumberField) {
+                                                                    // Ensure value is not negative on blur
+                                                                    const numValue = parseFloat(e.target.value);
+                                                                    if (isNaN(numValue) || numValue < 0) {
+                                                                        handleInputChange(key, '');
+                                                                    }
+                                                                }
+                                                            }}
+                                                            min={isNumberField ? "0" : undefined}
+                                                            step={isNumberField ? (key === 'pulse' ? "1" : "0.1") : undefined}
+                                                            disabled={key === 'bmi' || isFormDisabled}
+                                                            style={{
+                                                                flex: 1,
+                                                                padding: '6px 10px',
+                                                                border: '1px solid #ccc',
+                                                                borderRadius: '4px',
+                                                                fontSize: '13px',
+                                                                backgroundColor: key === 'bmi' || isFormDisabled ? '#f5f5f5' : 'white',
+                                                                color: key === 'bmi' || isFormDisabled ? '#666' : '#333',
+                                                                cursor: key === 'bmi' || isFormDisabled ? 'not-allowed' : 'text'
+                                                            }}
+                                                        />
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'flex-end' }}>
