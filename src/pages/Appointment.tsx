@@ -119,58 +119,26 @@ export default function AppointmentTable() {
         const fetchSessionData = async () => {
             setLoadingSessionData(true);
             try {
-                console.log('=== FETCHING SESSION DATA ===');
                 const result = await sessionService.getSessionInfo();
+                const sessionPersist = sessionPersistence.loadAuthState()
                 if (result.success && result.data) {
-                    console.log('Session data received:', result.data);
                     const sessionData = result.data;
                     setSessionData(sessionData);
                     setDoctorId(sessionData.doctorId);
                     setClinicId(sessionData.clinicId);
-
-                    // Determine user role based on sessionType or userId
-                    const sessionType = sessionData.sessionType?.toLowerCase() || '';
-                    const userId = sessionData.userId;
-
-                    // Set role based on sessionType or userId
-                    if (sessionType.includes('receptionist') || userId === 1) {
-                        setUserRole('Receptionist');
+                    if (sessionPersist?.user?.roleId === 1) {
+                        setUserRole(sessionPersist?.user?.roleName);
                         setIsReceptionist(true);
                         setIsDoctor(false);
-                    } else if (sessionType.includes('doctor') || userId === 7) {
-                        setUserRole('Doctor');
+                    } else if (sessionPersist?.user?.roleId === 2) {
+                        setUserRole(sessionPersist?.user?.roleName);
                         setIsReceptionist(false);
                         setIsDoctor(true);
-                    } else {
-                        // Default fallback - check userId
-                        if (userId === 1) {
-                            setUserRole('Receptionist');
-                            setIsReceptionist(true);
-                            setIsDoctor(false);
-                        } else if (userId === 2) {
-                            setUserRole('Doctor');
-                            setIsReceptionist(false);
-                            setIsDoctor(true);
-                        } else {
-                            // Default to receptionist if role cannot be determined
-                            setUserRole('Receptionist');
-                            setIsReceptionist(true);
-                            setIsDoctor(false);
-                        }
                     }
-
-                    console.log('User role determined:', userRole, 'isReceptionist:', isReceptionist, 'isDoctor:', isDoctor);
-                    console.log('Doctor ID set to:', sessionData.doctorId);
-                    console.log('Clinic ID set to:', sessionData.clinicId);
-                    
-                    // Set default doctor ID from session if available and not already set
                     if (sessionData.doctorId && !selectedDoctorId) {
                         setSelectedDoctorId(sessionData.doctorId);
-                        console.log('Set selectedDoctorId from session:', sessionData.doctorId);
                     }
                 } else {
-                    // Session expired or invalid - redirect to login
-                    console.warn('Session expired or invalid, redirecting to login');
                     sessionPersistence.clearAll();
                     navigate('/login', { replace: true });
                 }
@@ -194,7 +162,6 @@ export default function AppointmentTable() {
             
             setLoadingDoctors(true);
             try {
-                console.log('Fetching OPD doctors for provider dropdown...');
                 // Backend will automatically use default_doctor from user_master table based on session
                 const doctors = await doctorService.getOpdDoctors();
                 setAllDoctors(doctors);
@@ -203,9 +170,6 @@ export default function AppointmentTable() {
                 // Backend sorts doctors with default_doctor from user_master first
                 if (doctors.length > 0) {
                     const currentSelectedId = selectedDoctorId;
-                    console.log('Current selectedDoctorId:', currentSelectedId);
-                    console.log('Available doctors:', doctors.map(d => ({ id: d.id, name: d.name })));
-                    console.log('First doctor (should be default):', doctors[0]?.id, doctors[0]?.name);
                     
                     // Determine which doctor should be selected
                     let doctorToSelect = null;
@@ -213,22 +177,17 @@ export default function AppointmentTable() {
                     // First priority: use existing selection if it's valid
                     if (currentSelectedId && currentSelectedId !== '' && doctors.find(d => d.id === currentSelectedId)) {
                         doctorToSelect = doctors.find(d => d.id === currentSelectedId);
-                        console.log('Keeping existing selection:', currentSelectedId);
                     } 
                     // Second priority: use first doctor (should be default doctor sorted by backend from user_master.default_doctor)
                     else {
                         doctorToSelect = doctors[0];
-                        console.log('Selecting first doctor (default from user_master):', doctorToSelect.id, doctorToSelect.name);
                     }
                     
                     // Set the selected doctor
                     if (doctorToSelect && doctorToSelect.id !== currentSelectedId) {
-                        setSelectedDoctorId(doctorToSelect.id);
-                        console.log('✅ Default doctor selected:', doctorToSelect.id, doctorToSelect.name);
+                        setSelectedDoctorId(doctorToSelect.id)
                     }
                 }
-
-                console.log('All doctors loaded:', doctors);
             } catch (error) {
                 console.error('Error fetching all doctors:', error);
             } finally {
@@ -252,7 +211,6 @@ export default function AppointmentTable() {
                 const defaultDoctor = allDoctors[0];
                 
                 if (defaultDoctor) {
-                    console.log('🔄 Fallback: Setting default doctor from useEffect (first in list):', defaultDoctor.id, defaultDoctor.name);
                     setSelectedDoctorId(defaultDoctor.id);
                 }
             }
