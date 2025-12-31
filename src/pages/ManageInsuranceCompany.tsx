@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
-import { Edit, Search, Refresh, FirstPage, LastPage } from "@mui/icons-material";
+import { Edit, Search, Refresh } from "@mui/icons-material";
 import { CircularProgress } from "@mui/material";
 import { insuranceCompanyService, InsuranceCompany } from "../services/insuranceCompanyService";
 import GlobalSnackbar from "../components/GlobalSnackbar";
@@ -59,6 +59,15 @@ export default function ManageInsuranceCompany() {
     useEffect(() => {
         fetchInsuranceCompanies();
     }, [fetchInsuranceCompanies]);
+
+    const handlePageChange = (page: number) => {
+        setCurrentPage(page);
+    };
+
+    const handlePageSizeChange = (newPageSize: number) => {
+        setPageSize(newPageSize);
+        setCurrentPage(1);
+    };
 
     const handleSearch = () => {
         setCurrentPage(1);
@@ -122,23 +131,6 @@ export default function ManageInsuranceCompany() {
             setSnackbarMessage(err.response?.data?.error || "Failed to update insurance company");
             setShowSnackbar(true);
         }
-    };
-
-    // Generate page numbers for pagination
-    const getPageNumbers = () => {
-        const pages = [];
-        const maxPagesToShow = 4;
-        let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
-        let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
-        
-        if (endPage - startPage < maxPagesToShow - 1) {
-            startPage = Math.max(1, endPage - maxPagesToShow + 1);
-        }
-        
-        for (let i = startPage; i <= endPage; i++) {
-            pages.push(i);
-        }
-        return pages;
     };
 
     return (
@@ -282,33 +274,75 @@ export default function ManageInsuranceCompany() {
           display: flex;
           align-items: center;
         }
+        /* Pagination styles */
         .pagination-container {
           display: flex;
-          justify-content: center;
+          justify-content: space-between;
           align-items: center;
           margin-top: 20px;
           padding: 15px 0;
-          gap: 8px;
+          border-top: 1px solid #e0e0e0;
         }
-        .pagination-btn {
-          padding: 6px 12px;
-          border: 1px solid #ddd;
-          background: #fff;
-          cursor: pointer;
-          border-radius: 4px;
-          min-width: 40px;
+        .pagination-info {
           display: flex;
           align-items: center;
-          justify-content: center;
+          gap: 15px;
+          font-size: 0.9rem;
+          color: #666;
         }
-        .pagination-btn.active {
-          background: #007bff;
+        .page-size-selector {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          white-space: nowrap;
+        }
+        .pagination-controls {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .page-btn {
+          padding: 6px 12px;
+          border: 1px solid #ddd;
+          background: rgba(0, 0, 0, 0.35);
+          color: #333;
+          cursor: pointer;
+          border-radius: 4px;
+          font-size: 0.9rem;
+          transition: all 0.2s ease;
+        }
+        .page-btn:hover:not(:disabled) {
+          border-color: #999;
+        }
+        .page-btn.active {
+          background: #1E88E5;
           color: white;
-          border-color: #007bff;
+          border-color: #1E88E5;
         }
-        .pagination-btn:disabled {
+        .page-btn:disabled {
           opacity: 0.5;
           cursor: not-allowed;
+        }
+        /* Prev/Next buttons */
+        .nav-btn {
+          background: #1E88E5;
+          color: #fff;
+          border-color: #000;
+        }
+        .nav-btn:hover:not(:disabled) {
+          color: #fff;
+          border-color: #000;
+        }
+        .nav-btn:disabled {
+          background: #000;
+          color: #fff;
+          opacity: 0.35;
+        }
+        .page-size-select {
+          padding: 4px 8px;
+          border: 1px solid #ddd;
+          border-radius: 4px;
+          font-size: 0.9rem;
         }
       `}</style>
 
@@ -329,7 +363,7 @@ export default function ManageInsuranceCompany() {
                             onChange={(e) => setFormData({ ...formData, insuranceCompanyName: e.target.value })}
                         />
                     </div>
-                    <button 
+                    <button
                         className="btn-add"
                         onClick={editData ? handleUpdate : handleAddNew}
                     >
@@ -416,47 +450,69 @@ export default function ManageInsuranceCompany() {
             </div>
 
             {/* Pagination */}
-            {filteredInsuranceCompanies.length > 0 && totalPages > 1 && (
+            {filteredInsuranceCompanies.length > 0 && (
                 <div className="pagination-container">
-                    <button
-                        className="pagination-btn"
-                        onClick={() => setCurrentPage(1)}
-                        disabled={currentPage === 1}
-                        title="First Page"
-                    >
-                        <FirstPage style={{ fontSize: '20px' }} />
-                    </button>
-                    <button
-                        className="pagination-btn"
-                        onClick={() => setCurrentPage(c => Math.max(1, c - 1))}
-                        disabled={currentPage === 1}
-                    >
-                        Previous
-                    </button>
-                    {getPageNumbers().map((pageNum) => (
+                    <div className="pagination-info">
+                        <span>
+                            Showing {startIndex + 1} to {Math.min(endIndex, filteredInsuranceCompanies.length)} of {filteredInsuranceCompanies.length} insurance companies
+                        </span>
+                        <div className="page-size-selector">
+                            <span>Show:</span>
+                            <select
+                                className="page-size-select"
+                                value={pageSize}
+                                onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                            >
+                                <option value={5}>5</option>
+                                <option value={10}>10</option>
+                                <option value={20}>20</option>
+                                <option value={50}>50</option>
+                            </select>
+                            <span style={{ whiteSpace: 'nowrap' }}>per page</span>
+                        </div>
+                    </div>
+
+                    <div className="pagination-controls">
                         <button
-                            key={pageNum}
-                            className={`pagination-btn ${currentPage === pageNum ? 'active' : ''}`}
-                            onClick={() => setCurrentPage(pageNum)}
+                            className="page-btn nav-btn"
+                            onClick={() => handlePageChange(currentPage - 1)}
+                            disabled={currentPage === 1}
                         >
-                            {pageNum}
+                            Previous
                         </button>
-                    ))}
-                    <button
-                        className="pagination-btn"
-                        onClick={() => setCurrentPage(c => Math.min(totalPages, c + 1))}
-                        disabled={currentPage === totalPages}
-                    >
-                        Next
-                    </button>
-                    <button
-                        className="pagination-btn"
-                        onClick={() => setCurrentPage(totalPages)}
-                        disabled={currentPage === totalPages}
-                        title="Last Page"
-                    >
-                        <LastPage style={{ fontSize: '20px' }} />
-                    </button>
+
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                            if (
+                                page === 1 ||
+                                page === totalPages ||
+                                (page >= currentPage - 1 && page <= currentPage + 1)
+                            ) {
+                                return (
+                                    <button
+                                        key={page}
+                                        className={`page-btn ${currentPage === page ? 'active' : ''}`}
+                                        onClick={() => handlePageChange(page)}
+                                    >
+                                        {page}
+                                    </button>
+                                );
+                            } else if (
+                                page === currentPage - 2 ||
+                                page === currentPage + 2
+                            ) {
+                                return <span key={page} className="page-btn" style={{ border: 'none', background: 'none' }}>...</span>;
+                            }
+                            return null;
+                        })}
+
+                        <button
+                            className="page-btn nav-btn"
+                            onClick={() => handlePageChange(currentPage + 1)}
+                            disabled={currentPage === totalPages}
+                        >
+                            Next
+                        </button>
+                    </div>
                 </div>
             )}
 

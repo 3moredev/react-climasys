@@ -62,6 +62,15 @@ export default function ManageSubCategory() {
         fetchSubCategories();
     }, [fetchSubCategories]);
 
+    const handlePageChange = (page: number) => {
+        setCurrentPage(page);
+    };
+
+    const handlePageSizeChange = (newPageSize: number) => {
+        setPageSize(newPageSize);
+        setCurrentPage(1);
+    };
+
     const handleSearch = () => {
         setCurrentPage(1);
     };
@@ -243,25 +252,66 @@ export default function ManageSubCategory() {
           padding: 15px 0;
           border-top: 1px solid #e0e0e0;
         }
+        .pagination-info {
+          display: flex;
+          align-items: center;
+          gap: 15px;
+          font-size: 0.9rem;
+          color: #666;
+        }
+        .page-size-selector {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          white-space: nowrap;
+        }
         .pagination-controls {
           display: flex;
+          align-items: center;
           gap: 8px;
         }
         .page-btn {
           padding: 6px 12px;
           border: 1px solid #ddd;
-          background: #fff;
+          background: rgba(0, 0, 0, 0.35);
+          color: #333;
           cursor: pointer;
           border-radius: 4px;
+          font-size: 0.9rem;
+          transition: all 0.2s ease;
+        }
+        .page-btn:hover:not(:disabled) {
+          border-color: #999;
         }
         .page-btn.active {
-          background: #007bff;
+          background: #1E88E5;
           color: white;
-          border-color: #007bff;
+          border-color: #1E88E5;
         }
         .page-btn:disabled {
           opacity: 0.5;
           cursor: not-allowed;
+        }
+        /* Prev/Next buttons */
+        .nav-btn {
+          background: #1E88E5;
+          color: #fff;
+          border-color: #000;
+        }
+        .nav-btn:hover:not(:disabled) {
+          color: #fff;
+          border-color: #000;
+        }
+        .nav-btn:disabled {
+          background: #000;
+          color: #fff;
+          opacity: 0.35;
+        }
+        .page-size-select {
+          padding: 4px 8px;
+          border: 1px solid #ddd;
+          border-radius: 4px;
+          font-size: 0.9rem;
         }
       `}</style>
 
@@ -354,20 +404,62 @@ export default function ManageSubCategory() {
             {/* Pagination */}
             {filteredSubCategories.length > 0 && (
                 <div className="pagination-container">
-                    <div>
-                        Showing {startIndex + 1} to {Math.min(endIndex, filteredSubCategories.length)} of {filteredSubCategories.length} entries
+                    <div className="pagination-info">
+                        <span>
+                            Showing {startIndex + 1} to {Math.min(endIndex, filteredSubCategories.length)} of {filteredSubCategories.length} sub-categories
+                        </span>
+                        <div className="page-size-selector">
+                            <span>Show:</span>
+                            <select
+                                className="page-size-select"
+                                value={pageSize}
+                                onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                            >
+                                <option value={5}>5</option>
+                                <option value={10}>10</option>
+                                <option value={20}>20</option>
+                                <option value={50}>50</option>
+                            </select>
+                            <span style={{ whiteSpace: 'nowrap' }}>per page</span>
+                        </div>
                     </div>
+
                     <div className="pagination-controls">
                         <button
-                            className="page-btn"
-                            onClick={() => setCurrentPage(c => Math.max(1, c - 1))}
+                            className="page-btn nav-btn"
+                            onClick={() => handlePageChange(currentPage - 1)}
                             disabled={currentPage === 1}
                         >
                             Previous
                         </button>
+
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                            if (
+                                page === 1 ||
+                                page === totalPages ||
+                                (page >= currentPage - 1 && page <= currentPage + 1)
+                            ) {
+                                return (
+                                    <button
+                                        key={page}
+                                        className={`page-btn ${currentPage === page ? 'active' : ''}`}
+                                        onClick={() => handlePageChange(page)}
+                                    >
+                                        {page}
+                                    </button>
+                                );
+                            } else if (
+                                page === currentPage - 2 ||
+                                page === currentPage + 2
+                            ) {
+                                return <span key={page} className="page-btn" style={{ border: 'none', background: 'none' }}>...</span>;
+                            }
+                            return null;
+                        })}
+
                         <button
-                            className="page-btn"
-                            onClick={() => setCurrentPage(c => Math.min(totalPages, c + 1))}
+                            className="page-btn nav-btn"
+                            onClick={() => handlePageChange(currentPage + 1)}
                             disabled={currentPage === totalPages}
                         >
                             Next
