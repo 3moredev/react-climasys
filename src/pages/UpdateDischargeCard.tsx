@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { CKEditor } from '@ckeditor/ckeditor5-react';
 import {
     ClassicEditor,
@@ -30,6 +30,7 @@ import './UpdateDischargeCard.css';
 import "bootstrap/dist/css/bootstrap.min.css";
 
 import { useLocation } from 'react-router-dom';
+import { getKeywords } from '../services/referenceService';
 
 const UpdateDischargeCard = () => {
     const location = useLocation();
@@ -62,7 +63,22 @@ const UpdateDischargeCard = () => {
     });
 
     const [fileName, setFileName] = useState<string>('');
+    const [keywords, setKeywords] = useState<string[]>([]);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        const fetchKeywords = async () => {
+            try {
+                const data = await getKeywords();
+                setKeywords(data);
+            } catch (error) {
+                console.error("Error fetching keywords:", error);
+                // Fallback or retry logic could go here
+            }
+        };
+
+        fetchKeywords();
+    }, []);
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -179,6 +195,9 @@ const UpdateDischargeCard = () => {
                                 <label className="form-label small fw-bold text-muted mb-1">Keyword (Operation)</label>
                                 <select className="form-select form-select-sm text-muted">
                                     <option>--Select--</option>
+                                    {keywords.map((keyword, index) => (
+                                        <option key={keyword} value={keyword}>{keyword}</option>
+                                    ))}
                                 </select>
                             </div>
                             <div className="col">
@@ -289,7 +308,7 @@ const UpdateDischargeCard = () => {
                                 </div>
                             </div>
                             <div className="col-md-6">
-                                <LabelInput label="Operative Notes" value="" isTextarea rows={8} />
+                                <LabelInput label="Condition on Discharge (Max. 1000 Chars)" value="" isTextarea rows={8} />
                             </div>
                             <div className="col-md-6">
                                 <LabelInput label="Reason for Discharge" value="" isTextarea rows={4} />
@@ -405,34 +424,128 @@ const DateInput: React.FC<DateInputProps> = ({ label, required }) => (
     </div>
 );
 
+
+interface CustomSelectProps {
+    value?: string;
+    onChange?: (value: string) => void;
+    options: string[];
+    placeholder: string;
+    style?: React.CSSProperties;
+}
+
+const CustomSelect: React.FC<CustomSelectProps> = ({ value, onChange, options, placeholder, style }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [internalValue, setInternalValue] = useState(value);
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        setInternalValue(value);
+    }, [value]);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
+
+    const handleSelect = (option: string) => {
+        setInternalValue(option);
+        if (onChange) {
+            onChange(option);
+        }
+        setIsOpen(false);
+    };
+
+    return (
+        <div className="position-relative flex-fill" style={style} ref={containerRef}>
+            <div
+                className="form-select form-select-sm text-truncate"
+                onClick={() => setIsOpen(!isOpen)}
+                style={{ cursor: 'pointer', paddingRight: '20px' }} // Default padding might cover text
+            >
+                {internalValue || placeholder}
+            </div>
+            {isOpen && (
+                <div
+                    className="position-absolute w-100 bg-white border rounded shadow-sm"
+                    style={{
+                        top: '100%',
+                        left: 0,
+                        zIndex: 1050,
+                        maxHeight: '200px',
+                        overflowY: 'auto'
+                    }}
+                >
+                    {/* Placeholder option to clear or show default */}
+                    <div
+                        className="px-2 py-1"
+                        style={{ cursor: 'pointer', backgroundColor: internalValue === placeholder ? '#e9ecef' : 'transparent' }}
+                        onClick={() => handleSelect('')}
+                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8f9fa')}
+                        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                    >
+                        {placeholder}
+                    </div>
+                    {options.map((option) => (
+                        <div
+                            key={option}
+                            className="px-2 py-1"
+                            style={{ cursor: 'pointer', backgroundColor: internalValue === option ? '#e9ecef' : 'transparent' }}
+                            onClick={() => handleSelect(option)}
+                            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8f9fa')}
+                            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = internalValue === option ? '#e9ecef' : 'transparent')}
+                        >
+                            {option}
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+};
+
 interface TimeInputProps {
     label: string;
     required?: boolean;
     simpleLabel?: boolean;
 }
 
-const TimeInput: React.FC<TimeInputProps> = ({ label, required, simpleLabel }) => (
-    <div className="mb-1">
-        {!simpleLabel && <label className="form-label small fw-bold text-muted mb-1">
-            {label} {required && <span className="text-danger">*</span>}
-        </label>}
-        {simpleLabel && <label className="form-label small fw-bold text-muted mb-1 d-block text-truncate" title={label}>
-            {label} {required && <span className="text-danger">*</span>}
-        </label>}
-        <div className="d-flex gap-1 w-100">
-            <select className="form-select form-select-sm flex-fill" style={{ minWidth: '60px' }}>
-                <option>HH</option>
-            </select>
-            <select className="form-select form-select-sm flex-fill" style={{ minWidth: '60px' }}>
-                <option>MM</option>
-            </select>
-            <select className="form-select form-select-sm flex-fill" style={{ minWidth: '60px' }}>
-                <option>AM</option>
-                <option>PM</option>
-            </select>
+const TimeInput: React.FC<TimeInputProps> = ({ label, required, simpleLabel }) => {
+    // Generate Hours 1-12
+    const hours = [];
+    for (let i = 1; i <= 12; i++) {
+        hours.push((i < 10 ? '0' : '') + i);
+    }
+
+    // Generate Minutes 0-59
+    const minutes = [];
+    for (let i = 0; i < 60; i++) {
+        minutes.push((i < 10 ? '0' : '') + i);
+    }
+
+    return (
+        <div className="mb-1">
+            {!simpleLabel && <label className="form-label small fw-bold text-muted mb-1">
+                {label} {required && <span className="text-danger">*</span>}
+            </label>}
+            {simpleLabel && <label className="form-label small fw-bold text-muted mb-1 d-block text-truncate" title={label}>
+                {label} {required && <span className="text-danger">*</span>}
+            </label>}
+            <div className="d-flex gap-1 w-100">
+                <CustomSelect options={hours} placeholder="HH" style={{ minWidth: '60px' }} />
+                <CustomSelect options={minutes} placeholder="MM" style={{ minWidth: '60px' }} />
+                <CustomSelect options={['AM', 'PM']} placeholder="AM" style={{ minWidth: '60px' }} />
+            </div>
         </div>
-    </div>
-);
+    );
+};
 
 interface EditorFieldProps {
     label: string;

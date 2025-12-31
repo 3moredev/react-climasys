@@ -176,18 +176,18 @@ export async function getStateNameByStateId(stateId: string, languageId: number 
     // First try to get from all states
     const allStates = await getStates()
     const state = allStates.find(s => {
-      const matches = s.id === stateId || 
-                     s.id?.toUpperCase() === stateId.toUpperCase() ||
-                     String(s.id) === String(stateId)
+      const matches = s.id === stateId ||
+        s.id?.toUpperCase() === stateId.toUpperCase() ||
+        String(s.id) === String(stateId)
       return matches
     })
     if (state && state.name && state.name !== state.id) {
       return state.name
     }
-    
+
     // If not found or name is just the ID, try using getAreaDetails with a dummy area
     // Actually, we can't do that without an area name
-    
+
     // Return null if we can't find a proper name
     return null
   } catch (error) {
@@ -215,6 +215,16 @@ export async function getAreaDetails(areaName: string, languageId: number = 1): 
   } catch (error) {
     console.error('Error fetching area details:', error)
     return null
+  }
+}
+
+export async function getKeywords(): Promise<string[]> {
+  try {
+    const response = await api.get('/reference/keywords')
+    return Array.isArray(response.data) ? response.data : []
+  } catch (error) {
+    console.error('Error fetching keywords:', error)
+    return []
   }
 }
 
