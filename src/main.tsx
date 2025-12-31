@@ -105,13 +105,13 @@ function App() {
                 </MainLayout>
               </AuthGuard>
             } />
-            <Route path="/billing" element={
+            {/* <Route path="/billing" element={
               <AuthGuard>
                 <MainLayout>
                   <Billing />
                 </MainLayout>
               </AuthGuard>
-            } />
+            } /> */}
             <Route path="/registration" element={
               <AuthGuard>
                 <MainLayout>
@@ -168,7 +168,7 @@ function App() {
                 </MainLayout>
               </AuthGuard>
             } />
-            <Route path="/manage-admission-card" element={
+            {/* <Route path="/manage-admission-card" element={
               <AuthGuard>
                 <MainLayout>
                   <ManageAdmissionCard />
@@ -189,20 +189,20 @@ function App() {
                 </MainLayout>
               </AuthGuard>
             } />
-            {/* <Route path="/update-discharge-card" element={
+            <Route path="/update-discharge-card" element={
               <AuthGuard>
                 <MainLayout>
                   <UpdateDischargeCard />
                 </MainLayout>
               </AuthGuard>
-            } /> */}
+            } />
             <Route path="/manage-hospital-bill" element={
               <AuthGuard>
                 <MainLayout>
                   <ManageHospitalBill />
                 </MainLayout>
               </AuthGuard>
-            } />
+            } /> */}
 
             <Route path="/manage-complaints" element={
               <AuthGuard>

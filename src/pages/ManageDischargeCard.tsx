@@ -33,10 +33,10 @@ export default function ManageDischargeCard() {
 
     // Dynamic data from API
     const [dischargeCards, setDischargeCards] = useState<DischargeCard[]>([]);
-    
+
     // Search results for first table
     const [searchResultsTable, setSearchResultsTable] = useState<DischargeCard[]>([]);
-    
+
     // Pagination state
     const [currentPage, setCurrentPage] = useState<number>(1);
     const [pageSize, setPageSize] = useState<number>(10);
@@ -63,17 +63,17 @@ export default function ManageDischargeCard() {
                 const patientId = (card.patientId || '').toLowerCase();
                 const ipdNo = (card.ipdNo || '').toLowerCase();
                 const ipdFileNo = (card.ipdFileNo || '').toLowerCase();
-                
+
                 // Check if search term matches patient ID, patient name, IPD number, or IPD file number
                 if (patientId.includes(q) || ipdNo.includes(q) || ipdFileNo.includes(q)) {
                     return true;
                 }
-                
+
                 // For patient name, check if all query words are found in the name
                 if (queryWords.length > 0) {
                     return queryWords.every(word => patientName.includes(word));
                 }
-                
+
                 return patientName.includes(q);
             });
 
@@ -81,7 +81,7 @@ export default function ManageDischargeCard() {
             // Limit to first 20 results to avoid too many API calls
             const limitedCards = matchedCards.slice(0, 20);
             const patientResults: Patient[] = [];
-            
+
             // Fetch patient details in parallel for better performance
             const patientPromises = limitedCards
                 .filter(card => card.patientId)
@@ -96,7 +96,7 @@ export default function ManageDischargeCard() {
                         const firstName = nameParts[0] || '';
                         const middleName = nameParts.length > 2 ? nameParts.slice(1, -1).join(' ') : '';
                         const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : '';
-                        
+
                         return {
                             id: card.patientId!,
                             folder_no: '',
@@ -115,7 +115,7 @@ export default function ManageDischargeCard() {
                         } as Patient;
                     }
                 });
-            
+
             const fetchedPatients = await Promise.all(patientPromises);
             patientResults.push(...fetchedPatients);
 
@@ -133,7 +133,7 @@ export default function ManageDischargeCard() {
                     if (id === q) score += 1000;
                     else if (id.startsWith(q)) score += 800;
                     else if (id.includes(q)) score += 600;
-                    
+
                     if (queryWords.length > 1) {
                         const allWordsFound = queryWords.every(word => fullName.includes(word));
                         if (allWordsFound) {
@@ -183,7 +183,7 @@ export default function ManageDischargeCard() {
         setSearchTerm(patientFullName);
         setSearchResults([]);
         setShowDropdown(false);
-        
+
         console.log("Selected patient:", patient);
         // Note: Table will be populated when user clicks the Search button
     };
@@ -198,9 +198,9 @@ export default function ManageDischargeCard() {
         try {
             setSearchingDischargeCards(true);
             setSearchError("");
-            
+
             const searchQuery = searchTerm.trim().toLowerCase();
-            
+
             // Check if dischargeCards is loaded
             if (dischargeCards.length === 0) {
                 console.warn('Discharge cards list is empty. Please wait for the list to load.');
@@ -209,18 +209,18 @@ export default function ManageDischargeCard() {
                 setSearchingDischargeCards(false);
                 return;
             }
-            
+
             // Search through the dischargeCards list (admitted patients)
             const filteredResults = dischargeCards.filter((card) => {
                 const patientName = (card.patientName || '').toLowerCase().trim();
                 const patientId = (card.patientId || '').toLowerCase().trim();
                 const ipdNo = (card.ipdNo || '').toLowerCase().trim();
                 const ipdFileNo = (card.ipdFileNo || '').toLowerCase().trim();
-                
+
                 // Normalize search query - remove extra spaces
                 const normalizedQuery = searchQuery.replace(/\s+/g, ' ').trim();
                 const normalizedPatientName = patientName.replace(/\s+/g, ' ').trim();
-                
+
                 // Check if search term matches patient ID, patient name, IPD number, or IPD file number
                 // For patient name, check both exact match and contains match
                 return (
@@ -234,16 +234,16 @@ export default function ManageDischargeCard() {
                     ipdFileNo.includes(normalizedQuery)
                 );
             });
-            
+
             // Map results with sequential serial numbers
             const mappedResults: DischargeCard[] = filteredResults.map((card, index) => ({
                 ...card,
                 sr: index + 1
             }));
-            
+
             // Populate the first table with search results
             setSearchResultsTable(mappedResults);
-            
+
             if (mappedResults.length > 0) {
                 console.log(`Search completed. Found ${mappedResults.length} discharge card(s) matching: "${searchTerm}"`);
                 console.log('Search results:', mappedResults);
@@ -270,6 +270,7 @@ export default function ManageDischargeCard() {
 
     const handleEdit = (card: DischargeCard) => {
         console.log("Editing:", card);
+        navigate('/update-discharge-card', { state: { patientId: card.patientId } });
     };
 
     // Pagination handlers
@@ -308,9 +309,9 @@ export default function ManageDischargeCard() {
                 };
 
                 const response = await admissionService.getAdmissionCards(params);
-                
+
                 console.log('Discharge Cards API Response:', response);
-                
+
                 if (response.success && response.data && Array.isArray(response.data)) {
                     // Map the API response to DischargeCard format
                     // Use reasonOfAdmission for keywordOperation
@@ -325,7 +326,7 @@ export default function ManageDischargeCard() {
                         keywordOperation: card.reasonOfAdmission || '--', // Use reasonOfAdmission from API
                         advance: typeof card.advanceRs === 'number' ? card.advanceRs : 0.00
                     }));
-                    
+
                     console.log(`Mapped ${mappedCards.length} discharge cards from admission list:`, mappedCards);
                     setDischargeCards(mappedCards);
                 } else {
@@ -499,9 +500,9 @@ export default function ManageDischargeCard() {
             `}</style>
 
             <div className="mb-4">
-                <h2 style={{ 
-                    fontWeight: 'bold', 
-                    fontSize: '1.5rem', 
+                <h2 style={{
+                    fontWeight: 'bold',
+                    fontSize: '1.5rem',
                     color: '#212121',
                     marginBottom: '0'
                 }}>
@@ -601,9 +602,9 @@ export default function ManageDischargeCard() {
             </div>
 
             <div className="mb-4">
-                <h5 style={{ 
-                    fontWeight: '600', 
-                    fontSize: '1.1rem', 
+                <h5 style={{
+                    fontWeight: '600',
+                    fontSize: '1.1rem',
                     color: '#212121',
                     marginBottom: '16px'
                 }}>
@@ -683,9 +684,9 @@ export default function ManageDischargeCard() {
             </div>
 
             <div className="mt-4">
-                <h5 style={{ 
-                    fontWeight: '600', 
-                    fontSize: '1.1rem', 
+                <h5 style={{
+                    fontWeight: '600',
+                    fontSize: '1.1rem',
                     color: '#212121',
                     marginBottom: '16px'
                 }}>
