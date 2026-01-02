@@ -68,6 +68,15 @@ export default function ManageKeyword() {
         setCurrentPage(1);
     };
 
+    const handlePageChange = (page: number) => {
+        setCurrentPage(page);
+    };
+
+    const handlePageSizeChange = (newPageSize: number) => {
+        setPageSize(newPageSize);
+        setCurrentPage(1);
+    };
+
     const handleAddNew = () => {
         setEditData(null);
         setFormData({
@@ -130,6 +139,12 @@ export default function ManageKeyword() {
             setSnackbarMessage(err.response?.data?.error || "Failed to delete keyword");
             setShowSnackbar(true);
         }
+    };
+
+    const handleRefresh = () => {
+        setSearchTerm("");
+        setCurrentPage(1);
+        fetchKeywords();
     };
 
     return (
@@ -223,7 +238,7 @@ export default function ManageKeyword() {
           display: flex;
           align-items: center;
         }
-         /* Pagination styles */
+        /* Pagination styles */
         .pagination-container {
           display: flex;
           justify-content: space-between;
@@ -232,25 +247,66 @@ export default function ManageKeyword() {
           padding: 15px 0;
           border-top: 1px solid #e0e0e0;
         }
+        .pagination-info {
+          display: flex;
+          align-items: center;
+          gap: 15px;
+          font-size: 0.9rem;
+          color: #666;
+        }
+        .page-size-selector {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          white-space: nowrap;
+        }
         .pagination-controls {
           display: flex;
+          align-items: center;
           gap: 8px;
         }
         .page-btn {
           padding: 6px 12px;
           border: 1px solid #ddd;
-          background: #fff;
+          background: rgba(0, 0, 0, 0.35);
+          color: #333;
           cursor: pointer;
           border-radius: 4px;
+          font-size: 0.9rem;
+          transition: all 0.2s ease;
+        }
+        .page-btn:hover:not(:disabled) {
+          border-color: #999;
         }
         .page-btn.active {
-          background: #007bff;
+          background: #1E88E5;
           color: white;
-          border-color: #007bff;
+          border-color: #1E88E5;
         }
         .page-btn:disabled {
           opacity: 0.5;
           cursor: not-allowed;
+        }
+        /* Prev/Next buttons */
+        .nav-btn {
+          background: #1E88E5;
+          color: #fff;
+          border-color: #000;
+        }
+        .nav-btn:hover:not(:disabled) {
+          color: #fff;
+          border-color: #000;
+        }
+        .nav-btn:disabled {
+          background: #000;
+          color: #fff;
+          opacity: 0.35;
+        }
+        .page-size-select {
+          padding: 4px 8px;
+          border: 1px solid #ddd;
+          border-radius: 4px;
+          font-size: 0.9rem;
         }
       `}</style>
 
@@ -280,7 +336,7 @@ export default function ManageKeyword() {
                     Add New Keyword
                 </button>
 
-                <button className="btn-icon" onClick={fetchKeywords} title="Refresh">
+                <button className="btn-icon" onClick={handleRefresh} title="Refresh">
                     <Refresh style={{ fontSize: '20px' }} />
                 </button>
             </div>
@@ -343,20 +399,62 @@ export default function ManageKeyword() {
             {/* Pagination */}
             {filteredKeywords.length > 0 && (
                 <div className="pagination-container">
-                    <div>
-                        Showing {startIndex + 1} to {Math.min(endIndex, filteredKeywords.length)} of {filteredKeywords.length} entries
+                    <div className="pagination-info">
+                        <span>
+                            Showing {startIndex + 1} to {Math.min(endIndex, filteredKeywords.length)} of {filteredKeywords.length} keywords
+                        </span>
+                        <div className="page-size-selector">
+                            <span>Show:</span>
+                            <select
+                                className="page-size-select"
+                                value={pageSize}
+                                onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                            >
+                                <option value={5}>5</option>
+                                <option value={10}>10</option>
+                                <option value={20}>20</option>
+                                <option value={50}>50</option>
+                            </select>
+                            <span style={{ whiteSpace: 'nowrap' }}>per page</span>
+                        </div>
                     </div>
+
                     <div className="pagination-controls">
                         <button
-                            className="page-btn"
-                            onClick={() => setCurrentPage(c => Math.max(1, c - 1))}
+                            className="page-btn nav-btn"
+                            onClick={() => handlePageChange(currentPage - 1)}
                             disabled={currentPage === 1}
                         >
                             Previous
                         </button>
+
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                            if (
+                                page === 1 ||
+                                page === totalPages ||
+                                (page >= currentPage - 1 && page <= currentPage + 1)
+                            ) {
+                                return (
+                                    <button
+                                        key={page}
+                                        className={`page-btn ${currentPage === page ? 'active' : ''}`}
+                                        onClick={() => handlePageChange(page)}
+                                    >
+                                        {page}
+                                    </button>
+                                );
+                            } else if (
+                                page === currentPage - 2 ||
+                                page === currentPage + 2
+                            ) {
+                                return <span key={page} className="page-btn" style={{ border: 'none', background: 'none' }}>...</span>;
+                            }
+                            return null;
+                        })}
+
                         <button
-                            className="page-btn"
-                            onClick={() => setCurrentPage(c => Math.min(totalPages, c + 1))}
+                            className="page-btn nav-btn"
+                            onClick={() => handlePageChange(currentPage + 1)}
                             disabled={currentPage === totalPages}
                         >
                             Next
@@ -375,7 +473,7 @@ export default function ManageKeyword() {
                     alignItems: 'center',
                     padding: '20px 24px'
                 }}>
-                    <span>{editData ? 'Add Keyword (Operation)' : 'Add Keyword (Operation)'}</span>
+                    <span>{editData ? 'Edit Keyword (Operation)' : 'Add Keyword (Operation)'}</span>
                     <IconButton
                         onClick={handleClosePopup}
                         size="small"
@@ -428,6 +526,9 @@ export default function ManageKeyword() {
                                     style: { color: '#000', fontWeight: 'bold' },
                                     shrink: true
                                 }}
+                                InputProps={{
+                                    notched: false
+                                }}
                                 inputProps={{
                                     style: { textAlign: 'left', padding: '8px 12px' }
                                 }}
@@ -445,6 +546,9 @@ export default function ManageKeyword() {
                                     style: { color: '#000', fontWeight: 'bold' },
                                     shrink: true
                                 }}
+                                InputProps={{
+                                    notched: false
+                                }}
                                 inputProps={{
                                     style: { textAlign: 'left', padding: '8px 12px' }
                                 }}
@@ -460,20 +564,6 @@ export default function ManageKeyword() {
                         style={{ backgroundColor: '#007bff', textTransform: 'none', minWidth: '80px' }}
                     >
                         Submit
-                    </Button>
-                    <Button
-                        onClick={handleClosePopup}
-                        variant="contained"
-                        style={{ backgroundColor: '#007bff', textTransform: 'none', minWidth: '80px' }}
-                    >
-                        Cancel
-                    </Button>
-                    <Button
-                        onClick={handleClosePopup}
-                        variant="contained"
-                        style={{ backgroundColor: '#007bff', textTransform: 'none', minWidth: '80px' }}
-                    >
-                        Back
                     </Button>
                 </DialogActions>
             </Dialog>

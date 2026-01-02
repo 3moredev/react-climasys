@@ -1,66 +1,78 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
-import { Edit, Delete, Search, Refresh, Add, Close } from "@mui/icons-material";
-import { CircularProgress, Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, IconButton } from "@mui/material";
-import { subCategoryService, SubCategory } from "../services/subCategoryService";
+import { Edit, Delete, Search, Refresh } from "@mui/icons-material";
+import { CircularProgress, Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, IconButton, MenuItem } from "@mui/material";
+import { Close } from "@mui/icons-material";
 import GlobalSnackbar from "../components/GlobalSnackbar";
 
-export default function ManageSubCategory() {
+// Charge type definition
+type Charge = {
+    id: number;
+    chargesCategory: string;
+    chargesSubCategory: string;
+    calculationType: string;
+    sortOrder: number;
+    comments: string;
+    advance: number;
+};
+
+// Static data
+const STATIC_CHARGES: Charge[] = [
+    { id: 1, chargesCategory: "DR MRUNMAYA PANDA (GASTRO)", chargesSubCategory: "FEES", calculationType: "Units", sortOrder: 1, comments: "", advance: 1200.00 },
+    { id: 2, chargesCategory: "Dr Naresh Rao (Urologist)", chargesSubCategory: "FEES", calculationType: "Units", sortOrder: 1, comments: "", advance: 1200.00 },
+    { id: 3, chargesCategory: "Dr Nemade (Gastroenterology)", chargesSubCategory: "FEES", calculationType: "Units", sortOrder: 1, comments: "", advance: 800.00 },
+    { id: 4, chargesCategory: "DR NITIN GANDHI (SURGEON)", chargesSubCategory: "FEES", calculationType: "Units", sortOrder: 1, comments: "", advance: 500.00 },
+    { id: 5, chargesCategory: "Dr PRAAKASH KULKARNI (ENT)", chargesSubCategory: "FEES", calculationType: "Units", sortOrder: 1, comments: "", advance: 1200.00 },
+    { id: 6, chargesCategory: "DR PRASHANT KAMAT (PHYSIO)", chargesSubCategory: "FEES", calculationType: "Units", sortOrder: 1, comments: "", advance: 1200.00 },
+    { id: 7, chargesCategory: "Dr Ranjit More (Cardio)", chargesSubCategory: "FEES", calculationType: "Units", sortOrder: 1, comments: "", advance: 800.00 },
+    { id: 8, chargesCategory: "DR SACHIN HUNDEKAR (CARDIO)", chargesSubCategory: "FEES", calculationType: "Units", sortOrder: 1, comments: "", advance: 500.00 },
+    { id: 9, chargesCategory: "Lab Test - Blood Count", chargesSubCategory: "LABORATORY", calculationType: "Units", sortOrder: 2, comments: "Complete Blood Count", advance: 350.00 },
+    { id: 10, chargesCategory: "X-Ray Chest PA View", chargesSubCategory: "RADIOLOGY", calculationType: "Units", sortOrder: 3, comments: "", advance: 450.00 },
+    { id: 11, chargesCategory: "ECG 12 Lead", chargesSubCategory: "DIAGNOSTIC", calculationType: "Units", sortOrder: 4, comments: "", advance: 200.00 },
+    { id: 12, chargesCategory: "ICU Per Day Charges", chargesSubCategory: "ROOM CHARGES", calculationType: "Days", sortOrder: 5, comments: "", advance: 3500.00 },
+];
+
+export default function ManageCharges() {
     const [searchTerm, setSearchTerm] = useState<string>("");
     const [currentPage, setCurrentPage] = useState<number>(1);
     const [pageSize, setPageSize] = useState<number>(10);
-
-    // Data state
-    const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
+    const [charges, setCharges] = useState<Charge[]>(STATIC_CHARGES);
     const [loading, setLoading] = useState<boolean>(false);
-    const [error, setError] = useState<string | null>(null);
 
     // Popup state
     const [showAddPopup, setShowAddPopup] = useState<boolean>(false);
-    const [editData, setEditData] = useState<SubCategory | null>(null);
-    const [formData, setFormData] = useState<SubCategory>({
+    const [editData, setEditData] = useState<Charge | null>(null);
+    const [formData, setFormData] = useState<Charge>({
+        id: 0,
+        chargesCategory: "",
         chargesSubCategory: "",
-        sortOrder: 0
+        calculationType: "Units",
+        sortOrder: 1,
+        comments: "",
+        advance: 0
     });
 
     // Snackbar state
     const [showSnackbar, setShowSnackbar] = useState<boolean>(false);
     const [snackbarMessage, setSnackbarMessage] = useState<string>('');
 
-    // Filter sub categories based on search term
-    const filteredSubCategories = subCategories.filter(item => {
+    // Filter charges based on search term
+    const filteredCharges = charges.filter(charge => {
         if (!searchTerm.trim()) return true;
         const search = searchTerm.toLowerCase();
         return (
-            item.chargesSubCategory.toLowerCase().includes(search)
+            charge.chargesCategory.toLowerCase().includes(search) ||
+            charge.chargesSubCategory.toLowerCase().includes(search) ||
+            charge.comments.toLowerCase().includes(search) ||
+            charge.advance.toString().includes(search)
         );
     });
 
     // Pagination calculations
-    const totalPages = Math.ceil(filteredSubCategories.length / pageSize);
+    const totalPages = Math.ceil(filteredCharges.length / pageSize);
     const startIndex = (currentPage - 1) * pageSize;
     const endIndex = startIndex + pageSize;
-    const currentSubCategories = filteredSubCategories.slice(startIndex, endIndex);
-
-    const fetchSubCategories = useCallback(async () => {
-        setLoading(true);
-        setError(null);
-        try {
-            const data = await subCategoryService.getAllSubCategories();
-            setSubCategories(data);
-            setCurrentPage(1);
-        } catch (err: any) {
-            console.error('Error fetching sub categories:', err);
-            setError(err.response?.data?.error || err.message || 'Failed to fetch sub categories');
-            setSubCategories([]);
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
-    useEffect(() => {
-        fetchSubCategories();
-    }, [fetchSubCategories]);
+    const currentCharges = filteredCharges.slice(startIndex, endIndex);
 
     const handlePageChange = (page: number) => {
         setCurrentPage(page);
@@ -78,15 +90,20 @@ export default function ManageSubCategory() {
     const handleAddNew = () => {
         setEditData(null);
         setFormData({
+            id: 0,
+            chargesCategory: "",
             chargesSubCategory: "",
-            sortOrder: 0
+            calculationType: "Units",
+            sortOrder: 1,
+            comments: "",
+            advance: 0
         });
         setShowAddPopup(true);
     };
 
-    const handleEdit = (subCategory: SubCategory) => {
-        setEditData(subCategory);
-        setFormData({ ...subCategory });
+    const handleEdit = (charge: Charge) => {
+        setEditData(charge);
+        setFormData({ ...charge });
         setShowAddPopup(true);
     };
 
@@ -97,68 +114,62 @@ export default function ManageSubCategory() {
 
     const handleClear = () => {
         setFormData({
+            id: 0,
+            chargesCategory: "",
             chargesSubCategory: "",
-            sortOrder: 0
+            calculationType: "Units",
+            sortOrder: 1,
+            comments: "",
+            advance: 0
         });
     };
 
-    const handleSave = async () => {
-        if (!formData.chargesSubCategory.trim()) {
-            setSnackbarMessage("Charges SubCategory is required");
+    const handleSave = () => {
+        if (!formData.chargesCategory.trim() || !formData.chargesSubCategory.trim()) {
+            setSnackbarMessage("Charges Category and Sub-Category are required");
             setShowSnackbar(true);
             return;
         }
 
-        try {
-            if (editData && editData.id) {
-                await subCategoryService.updateSubCategory(editData.id, formData);
-                setSnackbarMessage("Sub Category updated successfully");
-            } else {
-                await subCategoryService.createSubCategory(formData);
-                setSnackbarMessage("Sub Category created successfully");
-            }
-            setShowSnackbar(true);
-            handleClosePopup();
-            fetchSubCategories();
-        } catch (err: any) {
-            console.error('Error saving sub category:', err);
-            setSnackbarMessage(err.response?.data?.error || "Failed to save sub category");
-            setShowSnackbar(true);
+        if (editData && editData.id) {
+            // Update existing charge
+            setCharges(charges.map(c => c.id === editData.id ? { ...formData, id: editData.id } : c));
+            setSnackbarMessage("Charge updated successfully");
+        } else {
+            // Add new charge
+            const newId = Math.max(...charges.map(c => c.id), 0) + 1;
+            setCharges([...charges, { ...formData, id: newId }]);
+            setSnackbarMessage("Charge created successfully");
         }
+
+        setShowSnackbar(true);
+        handleClosePopup();
     };
 
-    const handleDelete = async (subCategory: SubCategory) => {
-        if (!subCategory.id) return;
-        if (!window.confirm(`Are you sure you want to delete "${subCategory.chargesSubCategory}"?`)) {
+    const handleDelete = (charge: Charge) => {
+        if (!window.confirm(`Are you sure you want to delete "${charge.chargesCategory}"?`)) {
             return;
         }
 
-        try {
-            await subCategoryService.deleteSubCategory(subCategory.id);
-            setSnackbarMessage("Sub Category deleted successfully");
-            setShowSnackbar(true);
-            fetchSubCategories();
-        } catch (err: any) {
-            console.error('Error deleting sub category:', err);
-            setSnackbarMessage(err.response?.data?.error || "Failed to delete sub category");
-            setShowSnackbar(true);
-        }
+        setCharges(charges.filter(c => c.id !== charge.id));
+        setSnackbarMessage("Charge deleted successfully");
+        setShowSnackbar(true);
     };
 
     const handleRefresh = () => {
         setSearchTerm("");
         setCurrentPage(1);
-        fetchSubCategories();
+        setCharges(STATIC_CHARGES);
     };
 
     return (
         <div className="container-fluid" style={{ fontFamily: "'Roboto', sans-serif", padding: "20px" }}>
             <style>{`
-        .subcategory-table {
+        .charges-table {
           width: 100%;
           border-collapse: collapse;
         }
-        .subcategory-table thead th {
+        .charges-table thead th {
           background-color: rgb(0, 123, 255);
           color: #ffffff;
           padding: 12px;
@@ -167,21 +178,18 @@ export default function ManageSubCategory() {
           font-size: 0.9rem;
           border: 1px solid #dee2e6;
         }
-        .subcategory-table thead th:nth-child(3) {
-          text-align: center;
-        }
-        .subcategory-table tbody td {
+        .charges-table tbody td {
           padding: 12px;
           border: 1px solid #dee2e6;
           font-size: 0.9rem;
         }
-        .subcategory-table tbody td:nth-child(3) {
-          text-align: center;
-        }
-        .subcategory-table tbody tr:nth-child(even) {
+        .charges-table tbody tr:nth-child(even) {
           background-color: #f8f9fa;
         }
-        .subcategory-table tbody tr:hover {
+        .charges-table tbody tr:nth-child(odd) {
+          background-color: #ffffff;
+        }
+        .charges-table tbody tr:hover {
           background-color: #e9ecef;
         }
         .action-icons {
@@ -192,13 +200,18 @@ export default function ManageSubCategory() {
         }
         .action-icons > div {
           cursor: pointer;
+          display: flex;
+          align-items: center;
+          transition: color 0.2s;
+        }
+        .action-icons svg {
           color: #666;
           transition: color 0.2s;
         }
-        .action-icons > div:hover {
+        .action-icons > div:hover svg {
           color: rgb(0, 123, 255);
         }
-         .search-section {
+        .search-section {
           display: flex;
           align-items: center;
           gap: 12px;
@@ -238,6 +251,11 @@ export default function ManageSubCategory() {
           display: flex;
           align-items: center;
           gap: 6px;
+          transition: background-color 0.2s;
+          white-space: nowrap;
+        }
+        .btn-primary-custom:hover {
+          background-color: rgb(0, 100, 200);
         }
         .btn-icon {
           background: rgb(0, 123, 255);
@@ -245,11 +263,15 @@ export default function ManageSubCategory() {
           cursor: pointer;
           color: #ffffff;
           padding: 4px;
-          border-radius: 4px;
           display: flex;
           align-items: center;
+          transition: background-color 0.2s;
+          border-radius: 4px;
         }
-         /* Pagination styles */
+        .btn-icon:hover {
+          background-color: rgb(0, 100, 200);
+        }
+        /* Pagination styles */
         .pagination-container {
           display: flex;
           justify-content: space-between;
@@ -298,7 +320,6 @@ export default function ManageSubCategory() {
           opacity: 0.5;
           cursor: not-allowed;
         }
-        /* Prev/Next buttons */
         .nav-btn {
           background: #1E88E5;
           color: #fff;
@@ -322,8 +343,13 @@ export default function ManageSubCategory() {
       `}</style>
 
             {/* Page Title */}
-            <h1 style={{ fontWeight: 'bold', fontSize: '1.8rem', color: '#212121', marginBottom: '24px' }}>
-                Manage Sub-Category
+            <h1 style={{
+                fontWeight: 'bold',
+                fontSize: '1.8rem',
+                color: '#212121',
+                marginBottom: '24px'
+            }}>
+                Manage Hospital Charges Master
             </h1>
 
             {/* Search and Action Section */}
@@ -331,10 +357,14 @@ export default function ManageSubCategory() {
                 <div className="search-input-wrapper">
                     <input
                         type="text"
-                        placeholder="Enter Sub-Category"
+                        placeholder="Enter Category / Sub-Category / Comments / Amount"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                        onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                                handleSearch();
+                            }
+                        }}
                     />
                     <Search className="search-icon" style={{ fontSize: '20px' }} />
                 </div>
@@ -344,7 +374,7 @@ export default function ManageSubCategory() {
                 </button>
 
                 <button className="btn-primary-custom" onClick={handleAddNew}>
-                    Add New
+                    Add New Charges
                 </button>
 
                 <button className="btn-icon" onClick={handleRefresh} title="Refresh">
@@ -352,43 +382,47 @@ export default function ManageSubCategory() {
                 </button>
             </div>
 
-            {/* Error Message */}
-            {error && (
-                <div style={{ padding: '12px', marginBottom: '20px', backgroundColor: '#f8d7da', color: '#721c24', borderRadius: '4px' }}>
-                    {error}
-                </div>
-            )}
-
-            {/* Sub Category Table */}
-            <div className="table-responsive" style={pageSize > 10 ? { maxHeight: '60vh', overflowY: 'auto' } : undefined}>
+            {/* Charges Table */}
+            <div
+                className="table-responsive"
+                style={pageSize > 10 ? { maxHeight: '60vh', overflowY: 'auto' } : undefined}
+            >
                 {loading ? (
                     <div style={{ textAlign: 'center', padding: '40px' }}>
-                        <CircularProgress />
-                        <p style={{ marginTop: '16px', color: '#666' }}>Loading sub categories...</p>
+                        <CircularProgress style={{ color: 'rgb(0, 123, 255)' }} />
+                        <p style={{ marginTop: '16px', color: '#666' }}>Loading charges...</p>
                     </div>
                 ) : (
-                    <table className="subcategory-table">
+                    <table className="charges-table">
                         <thead>
                             <tr>
                                 <th style={{ width: '5%' }}>Sr.</th>
-                                <th style={{ width: '40%' }}>Charges Sub Category</th>
-                                <th style={{ width: '20%' }}>Sort Order</th>
-                                <th style={{ width: '15%' }}>Action</th>
+                                <th style={{ width: '25%' }}>Charges Category</th>
+                                <th style={{ width: '15%' }}>Charges Sub Category</th>
+                                <th style={{ width: '12%' }}>Calculation Type</th>
+                                <th style={{ width: '8%' }}>Sort Order</th>
+                                <th style={{ width: '15%' }}>Comments</th>
+                                <th style={{ width: '10%' }}>Advance (Rs)</th>
+                                <th style={{ width: '10%' }}>Action</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {currentSubCategories.length > 0 ? (
-                                currentSubCategories.map((item, index) => (
-                                    <tr key={item.id}>
+                            {currentCharges.length > 0 ? (
+                                currentCharges.map((charge, index) => (
+                                    <tr key={charge.id}>
                                         <td>{startIndex + index + 1}</td>
-                                        <td>{item.chargesSubCategory}</td>
-                                        <td>{item.sortOrder}</td>
+                                        <td>{charge.chargesCategory}</td>
+                                        <td>{charge.chargesSubCategory}</td>
+                                        <td>{charge.calculationType}</td>
+                                        <td>{charge.sortOrder}</td>
+                                        <td>{charge.comments || '–'}</td>
+                                        <td>{charge.advance.toFixed(2)}</td>
                                         <td>
                                             <div className="action-icons">
-                                                <div title="Edit" onClick={() => handleEdit(item)}>
+                                                <div title="Edit" onClick={() => handleEdit(charge)}>
                                                     <Edit style={{ fontSize: '20px' }} />
                                                 </div>
-                                                <div title="Delete" onClick={() => handleDelete(item)}>
+                                                <div title="Delete" onClick={() => handleDelete(charge)}>
                                                     <Delete style={{ fontSize: '20px' }} />
                                                 </div>
                                             </div>
@@ -397,8 +431,8 @@ export default function ManageSubCategory() {
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan={4} style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
-                                        {error ? 'Error loading data' : 'No sub categories found'}
+                                    <td colSpan={8} style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
+                                        No charges found
                                     </td>
                                 </tr>
                             )}
@@ -408,11 +442,11 @@ export default function ManageSubCategory() {
             </div>
 
             {/* Pagination */}
-            {filteredSubCategories.length > 0 && (
+            {filteredCharges.length > 0 && (
                 <div className="pagination-container">
                     <div className="pagination-info">
                         <span>
-                            Showing {startIndex + 1} to {Math.min(endIndex, filteredSubCategories.length)} of {filteredSubCategories.length} sub-categories
+                            Showing {startIndex + 1} to {Math.min(endIndex, filteredCharges.length)} of {filteredCharges.length} charges
                         </span>
                         <div className="page-size-selector">
                             <span>Show:</span>
@@ -484,7 +518,7 @@ export default function ManageSubCategory() {
                     alignItems: 'center',
                     padding: '20px 24px'
                 }}>
-                    <span>{editData ? 'Edit Sub-Category' : 'Add Sub-Category'}</span>
+                    <span>{editData ? 'Edit Charge' : 'Add New Charge'}</span>
                     <IconButton
                         onClick={handleClosePopup}
                         size="small"
@@ -526,13 +560,13 @@ export default function ManageSubCategory() {
                     <div className="d-flex flex-column gap-3">
                         <div className="modal-textfield">
                             <TextField
-                                label="Charges SubCategory"
-                                value={formData.chargesSubCategory}
-                                onChange={(e) => setFormData({ ...formData, chargesSubCategory: e.target.value })}
+                                label="Charges Category"
+                                value={formData.chargesCategory}
+                                onChange={(e) => setFormData({ ...formData, chargesCategory: e.target.value })}
                                 fullWidth
                                 required
                                 variant="outlined"
-                                placeholder="Charges SubCategory"
+                                placeholder="Charges Category"
                                 InputLabelProps={{
                                     style: { color: '#000', fontWeight: 'bold' },
                                     shrink: true
@@ -544,6 +578,52 @@ export default function ManageSubCategory() {
                                     style: { textAlign: 'left', padding: '8px 12px' }
                                 }}
                             />
+                        </div>
+                        <div className="modal-textfield">
+                            <TextField
+                                label="Charges Sub Category"
+                                value={formData.chargesSubCategory}
+                                onChange={(e) => setFormData({ ...formData, chargesSubCategory: e.target.value })}
+                                fullWidth
+                                required
+                                variant="outlined"
+                                placeholder="Charges Sub Category"
+                                InputLabelProps={{
+                                    style: { color: '#000', fontWeight: 'bold' },
+                                    shrink: true
+                                }}
+                                InputProps={{
+                                    notched: false
+                                }}
+                                inputProps={{
+                                    style: { textAlign: 'left', padding: '8px 12px' }
+                                }}
+                            />
+                        </div>
+                        <div className="modal-textfield">
+                            <TextField
+                                label="Calculation Type"
+                                value={formData.calculationType}
+                                onChange={(e) => setFormData({ ...formData, calculationType: e.target.value })}
+                                fullWidth
+                                select
+                                variant="outlined"
+                                InputLabelProps={{
+                                    style: { color: '#000', fontWeight: 'bold' },
+                                    shrink: true
+                                }}
+                                InputProps={{
+                                    notched: false
+                                }}
+                                inputProps={{
+                                    style: { textAlign: 'left', padding: '8px 12px' }
+                                }}
+                            >
+                                <MenuItem value="Units">Units</MenuItem>
+                                <MenuItem value="Days">Days</MenuItem>
+                                <MenuItem value="Percentage">Percentage</MenuItem>
+                                <MenuItem value="Fixed">Fixed</MenuItem>
+                            </TextField>
                         </div>
                         <div className="modal-textfield">
                             <TextField
@@ -563,6 +643,50 @@ export default function ManageSubCategory() {
                                 }}
                                 inputProps={{
                                     style: { textAlign: 'left', padding: '8px 12px' }
+                                }}
+                            />
+                        </div>
+                        <div className="modal-textfield">
+                            <TextField
+                                label="Comments"
+                                value={formData.comments}
+                                onChange={(e) => setFormData({ ...formData, comments: e.target.value })}
+                                fullWidth
+                                variant="outlined"
+                                placeholder="Comments"
+                                multiline
+                                rows={2}
+                                InputLabelProps={{
+                                    style: { color: '#000', fontWeight: 'bold' },
+                                    shrink: true
+                                }}
+                                InputProps={{
+                                    notched: false
+                                }}
+                                inputProps={{
+                                    style: { textAlign: 'left', padding: '8px 12px' }
+                                }}
+                            />
+                        </div>
+                        <div className="modal-textfield">
+                            <TextField
+                                label="Advance (Rs)"
+                                value={formData.advance || ''}
+                                onChange={(e) => setFormData({ ...formData, advance: parseFloat(e.target.value) || 0 })}
+                                fullWidth
+                                variant="outlined"
+                                type="number"
+                                placeholder="Advance Amount"
+                                InputLabelProps={{
+                                    style: { color: '#000', fontWeight: 'bold' },
+                                    shrink: true
+                                }}
+                                InputProps={{
+                                    notched: false
+                                }}
+                                inputProps={{
+                                    style: { textAlign: 'left', padding: '8px 12px' },
+                                    step: "0.01"
                                 }}
                             />
                         </div>
@@ -594,4 +718,3 @@ export default function ManageSubCategory() {
         </div>
     );
 }
-

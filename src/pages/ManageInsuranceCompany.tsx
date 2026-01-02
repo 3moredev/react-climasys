@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
-import { Edit, Search, Refresh } from "@mui/icons-material";
+import { Edit, Search, Refresh, Delete } from "@mui/icons-material";
 import { CircularProgress } from "@mui/material";
 import { insuranceCompanyService, InsuranceCompany } from "../services/insuranceCompanyService";
 import GlobalSnackbar from "../components/GlobalSnackbar";
@@ -133,6 +133,30 @@ export default function ManageInsuranceCompany() {
         }
     };
 
+    const handleDelete = async (insuranceCompany: InsuranceCompany) => {
+        if (!insuranceCompany.id) return;
+        if (!window.confirm(`Are you sure you want to delete "${insuranceCompany.insuranceCompanyName}"?`)) {
+            return;
+        }
+
+        try {
+            await insuranceCompanyService.deleteInsuranceCompany(insuranceCompany.id);
+            setSnackbarMessage("Insurance Company deleted successfully");
+            setShowSnackbar(true);
+            fetchInsuranceCompanies();
+        } catch (err: any) {
+            console.error('Error deleting insurance company:', err);
+            setSnackbarMessage(err.response?.data?.error || "Failed to delete insurance company");
+            setShowSnackbar(true);
+        }
+    };
+
+    const handleRefresh = () => {
+        setSearchTerm("");
+        setCurrentPage(1);
+        fetchInsuranceCompanies();
+    };
+
     return (
         <div className="container-fluid" style={{ fontFamily: "'Roboto', sans-serif", padding: "20px" }}>
             <style>{`
@@ -176,7 +200,7 @@ export default function ManageInsuranceCompany() {
         }
         .add-section {
           background-color: #f8f9fa;
-          padding: 20px;
+          padding: 20px 0;
           border-radius: 4px;
           margin-bottom: 20px;
         }
@@ -185,43 +209,60 @@ export default function ManageInsuranceCompany() {
           margin-bottom: 8px;
           display: block;
           color: #212121;
+          font-size: 0.9rem;
         }
         .add-section-input-group {
           display: flex;
           gap: 12px;
-          align-items: flex-end;
+          align-items: center;
         }
         .add-section-input-wrapper {
           flex: 1;
+          max-width: 600px;
         }
         .add-section-input-wrapper input {
           width: 100%;
-          padding: 8px 12px;
+          padding: 9px 12px;
           border: 1px solid #ced4da;
           border-radius: 4px;
           font-size: 0.9rem;
+          height: 38px;
+          box-sizing: border-box;
         }
         .btn-add {
           background-color: rgb(0, 123, 255);
           color: #ffffff;
           border: none;
-          padding: 8px 16px;
+          padding: 9px 16px;
           border-radius: 4px;
           font-size: 0.9rem;
           font-weight: 500;
           cursor: pointer;
-          min-width: 150px;
+          min-width: 180px;
+          height: 38px;
+          box-sizing: border-box;
+          white-space: nowrap;
+          transition: background-color 0.2s;
+        }
+        .btn-add:hover {
+          background-color: rgb(0, 100, 200);
         }
         .btn-cancel {
           background-color: #6c757d;
           color: #ffffff;
           border: none;
-          padding: 8px 16px;
+          padding: 9px 16px;
           border-radius: 4px;
           font-size: 0.9rem;
           font-weight: 500;
           cursor: pointer;
           min-width: 100px;
+          height: 38px;
+          box-sizing: border-box;
+          transition: background-color 0.2s;
+        }
+        .btn-cancel:hover {
+          background-color: #5a6268;
         }
         .search-section {
           display: flex;
@@ -394,7 +435,7 @@ export default function ManageInsuranceCompany() {
                     Search
                 </button>
 
-                <button className="btn-icon" onClick={fetchInsuranceCompanies} title="Refresh">
+                <button className="btn-icon" onClick={handleRefresh} title="Refresh">
                     <Refresh style={{ fontSize: '20px' }} />
                 </button>
             </div>
@@ -432,6 +473,9 @@ export default function ManageInsuranceCompany() {
                                             <div className="action-icons">
                                                 <div title="Edit" onClick={() => handleEdit(item)}>
                                                     <Edit style={{ fontSize: '20px' }} />
+                                                </div>
+                                                <div title="Delete" onClick={() => handleDelete(item)}>
+                                                    <Delete style={{ fontSize: '20px' }} />
                                                 </div>
                                             </div>
                                         </td>
