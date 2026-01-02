@@ -293,7 +293,7 @@ export default function Treatment() {
     const [discountError, setDiscountError] = useState<string | null>(null);
     const [snackbarOpen, setSnackbarOpen] = useState(false);
     const [snackbarMessage, setSnackbarMessage] = useState('');
-    
+
     // Form data state
     const [formData, setFormData] = useState({
         referralBy: 'Self',
@@ -349,16 +349,16 @@ export default function Treatment() {
 
     // Complaint popup state
     const [showComplaintPopup, setShowComplaintPopup] = useState(false);
-    
+
     // Diagnosis popup state
     const [showDiagnosisPopup, setShowDiagnosisPopup] = useState(false);
-    
+
     // Medicine popup state
     const [showMedicinePopup, setShowMedicinePopup] = useState(false);
-    
+
     // Prescription popup state
     const [showPrescriptionPopup, setShowPrescriptionPopup] = useState(false);
-    
+
     // Test Lab popup state
     const [showTestLabPopup, setShowTestLabPopup] = useState(false);
     const [showLabTestEntry, setShowLabTestEntry] = useState<boolean>(false);
@@ -366,7 +366,7 @@ export default function Treatment() {
     const [labTestResults, setLabTestResults] = useState<any[] | null>(null);
     // Use ref to store latest lab test results for closure access
     const labTestResultsRef = useRef<any[] | null>(null);
-    
+
     // Handler to receive lab test results from LabTestEntry popup
     const handleLabTestResultsFetched = (results: any[] | null) => {
         if (results && results.length > 0) {
@@ -383,7 +383,7 @@ export default function Treatment() {
             labTestResultsRef.current = null;
         }
     };
-    
+
     // Past Services popup state
     const [showPastServicesPopup, setShowPastServicesPopup] = useState(false);
     const [selectedPastServiceDate, setSelectedPastServiceDate] = useState<string | null>(null);
@@ -406,7 +406,7 @@ export default function Treatment() {
 
     // Complaints and diagnosis data
     const [complaintsRows, setComplaintsRows] = useState<ComplaintRow[]>([]);
-    
+
     // Enhanced complaints multi-select state
     const [selectedComplaints, setSelectedComplaints] = useState<string[]>([]);
     const [complaintSearch, setComplaintSearch] = useState('');
@@ -422,17 +422,17 @@ export default function Treatment() {
     const medicineRowsLoadedFromSaveResponseRef = React.useRef(false);
     const prescriptionRowsLoadedFromSaveResponseRef = React.useRef(false);
     const investigationRowsLoadedFromSaveResponseRef = React.useRef(false);
-    
+
     const filteredComplaints = React.useMemo(() => {
         const term = complaintSearch.trim().toLowerCase();
-        
+
         // Helper function to sort by priority (lower priority number = higher priority)
         const sortByPriority = (a: ComplaintOption, b: ComplaintOption) => {
             const priorityA = a.priority ?? a.priority_value ?? 999;
             const priorityB = b.priority ?? b.priority_value ?? 999;
             return priorityA - priorityB;
         };
-        
+
         if (!term) {
             // No search term - show all options with selected ones first, sorted by priority
             const selectedOptions = complaintsOptions
@@ -445,19 +445,19 @@ export default function Treatment() {
         } else {
             // Search term provided - show selected items first, then search results, both sorted by priority
             const selectedOptions = complaintsOptions
-                .filter(opt => 
+                .filter(opt =>
                     selectedComplaints.includes(opt.value) && opt.label.toLowerCase().includes(term)
                 )
                 .sort(sortByPriority);
             const unselectedSearchResults = complaintsOptions
-                .filter(opt => 
+                .filter(opt =>
                     !selectedComplaints.includes(opt.value) && opt.label.toLowerCase().includes(term)
                 )
                 .sort(sortByPriority);
             return [...selectedOptions, ...unselectedSearchResults];
         }
     }, [complaintsOptions, complaintSearch, selectedComplaints]);
-    
+
     // Medicine multi-select state
     const [selectedMedicines, setSelectedMedicines] = useState<string[]>([]);
     const [medicineSearch, setMedicineSearch] = useState('');
@@ -466,17 +466,17 @@ export default function Treatment() {
     const [medicinesOptions, setMedicinesOptions] = useState<MedicineOption[]>([]);
     const [medicinesLoading, setMedicinesLoading] = useState(false);
     const [medicinesError, setMedicinesError] = useState<string | null>(null);
-    
+
     const filteredMedicines = React.useMemo(() => {
         const term = medicineSearch.trim().toLowerCase();
-        
+
         // Helper function to sort by priority (lower priority number = higher priority)
         const sortByPriority = (a: MedicineOption, b: MedicineOption) => {
             const priorityA = a.priority ?? a.priority_value ?? 999;
             const priorityB = b.priority ?? b.priority_value ?? 999;
             return priorityA - priorityB;
         };
-        
+
         if (!term) {
             // No search term - show all options with selected ones first, sorted by priority
             const selectedOptions = medicinesOptions
@@ -489,19 +489,19 @@ export default function Treatment() {
         } else {
             // Search term provided - show selected items first, then search results, both sorted by priority
             const selectedOptions = medicinesOptions
-                .filter(opt => 
+                .filter(opt =>
                     selectedMedicines.includes(opt.value) && opt.label.toLowerCase().includes(term)
                 )
                 .sort(sortByPriority);
             const unselectedSearchResults = medicinesOptions
-                .filter(opt => 
+                .filter(opt =>
                     !selectedMedicines.includes(opt.value) && opt.label.toLowerCase().includes(term)
                 )
                 .sort(sortByPriority);
             return [...selectedOptions, ...unselectedSearchResults];
         }
     }, [medicinesOptions, medicineSearch, selectedMedicines]);
-    
+
     // Diagnosis multi-select state
     const [selectedDiagnoses, setSelectedDiagnoses] = useState<string[]>([]);
     const [diagnosisSearch, setDiagnosisSearch] = useState('');
@@ -510,17 +510,17 @@ export default function Treatment() {
     const [diagnosesOptions, setDiagnosesOptions] = useState<DiagnosisOption[]>([]);
     const [diagnosesLoading, setDiagnosesLoading] = useState(false);
     const [diagnosesError, setDiagnosesError] = useState<string | null>(null);
-    
+
     const filteredDiagnoses = React.useMemo(() => {
         const term = diagnosisSearch.trim().toLowerCase();
-        
+
         // Helper function to sort by priority (lower priority number = higher priority)
         const sortByPriority = (a: DiagnosisOption, b: DiagnosisOption) => {
             const priorityA = a.priority ?? a.priority_value ?? 999;
             const priorityB = b.priority ?? b.priority_value ?? 999;
             return priorityA - priorityB;
         };
-        
+
         if (!term) {
             // No search term - show all options with selected ones first, sorted by priority
             const selectedOptions = diagnosesOptions
@@ -533,19 +533,19 @@ export default function Treatment() {
         } else {
             // Search term provided - show selected items first, then search results, both sorted by priority
             const selectedOptions = diagnosesOptions
-                .filter(opt => 
+                .filter(opt =>
                     selectedDiagnoses.includes(opt.value) && opt.label.toLowerCase().includes(term)
                 )
                 .sort(sortByPriority);
             const unselectedSearchResults = diagnosesOptions
-                .filter(opt => 
+                .filter(opt =>
                     !selectedDiagnoses.includes(opt.value) && opt.label.toLowerCase().includes(term)
                 )
                 .sort(sortByPriority);
             return [...selectedOptions, ...unselectedSearchResults];
         }
     }, [diagnosesOptions, diagnosisSearch, selectedDiagnoses]);
-    
+
     const [diagnosisRows, setDiagnosisRows] = useState<DiagnosisRow[]>([]);
     const [medicineRows, setMedicineRows] = useState<MedicineRow[]>([]);
     const [prescriptionRows, setPrescriptionRows] = useState<PrescriptionRow[]>([]);
@@ -555,7 +555,7 @@ export default function Treatment() {
     const [rxSuggestions, setRxSuggestions] = useState<string[]>([]);
     const [isRxOpen, setIsRxOpen] = useState(false);
     const rxRef = React.useRef<HTMLDivElement | null>(null);
-    
+
     // Investigation multi-select state (mirrors Diagnosis)
     const [selectedInvestigations, setSelectedInvestigations] = useState<string[]>([]);
     const [investigationSearch, setInvestigationSearch] = useState('');
@@ -572,10 +572,10 @@ export default function Treatment() {
             const unselectedOptions = investigationsOptions.filter(opt => !selectedInvestigations.includes(opt.value));
             return [...selectedOptions, ...unselectedOptions];
         } else {
-            const selectedOptions = investigationsOptions.filter(opt => 
+            const selectedOptions = investigationsOptions.filter(opt =>
                 selectedInvestigations.includes(opt.value) && opt.label.toLowerCase().includes(term)
             );
-            const unselectedSearchResults = investigationsOptions.filter(opt => 
+            const unselectedSearchResults = investigationsOptions.filter(opt =>
                 !selectedInvestigations.includes(opt.value) && opt.label.toLowerCase().includes(term)
             );
             return [...selectedOptions, ...unselectedSearchResults];
@@ -583,13 +583,13 @@ export default function Treatment() {
     }, [investigationsOptions, investigationSearch, selectedInvestigations]);
 
     const [investigationRows, setInvestigationRows] = useState<InvestigationRow[]>([]);
-    
+
     // Dressing multi-select state (mirrors Diagnosis/Investigation)
     const [selectedDressings, setSelectedDressings] = useState<string[]>([]);
-    
+
     // Instruction groups state
     const [selectedInstructionGroups, setSelectedInstructionGroups] = useState<InstructionGroup[]>([]);
-    
+
     // Helper function to normalize InstructionGroup - ensure only required fields (id, name, nameHindi, instructions)
     const normalizeInstructionGroup = (group: any): InstructionGroup => {
         return {
@@ -599,13 +599,13 @@ export default function Treatment() {
             instructions: String(group?.instructions || '')
         };
     };
-    
+
     // Helper function to normalize array of InstructionGroups
     const normalizeInstructionGroups = (groups: any[]): InstructionGroup[] => {
         if (!Array.isArray(groups)) return [];
         return groups.map(normalizeInstructionGroup);
     };
-    
+
     React.useEffect(() => {
         console.log('*** selectedInstructionGroups state updated ***');
         console.log('New selectedInstructionGroups:', selectedInstructionGroups);
@@ -628,10 +628,10 @@ export default function Treatment() {
             const unselectedOptions = dressingsOptions.filter(opt => !selectedDressings.includes(opt.value));
             return [...selectedOptions, ...unselectedOptions];
         } else {
-            const selectedOptions = dressingsOptions.filter(opt => 
+            const selectedOptions = dressingsOptions.filter(opt =>
                 selectedDressings.includes(opt.value) && opt.label.toLowerCase().includes(term)
             );
-            const unselectedSearchResults = dressingsOptions.filter(opt => 
+            const unselectedSearchResults = dressingsOptions.filter(opt =>
                 !selectedDressings.includes(opt.value) && opt.label.toLowerCase().includes(term)
             );
             return [...selectedOptions, ...unselectedSearchResults];
@@ -639,11 +639,11 @@ export default function Treatment() {
     }, [dressingsOptions, dressingSearch, selectedDressings]);
 
     const [dressingRows, setDressingRows] = useState<DressingRow[]>([]);
-    
+
     // Previous visit prescriptions state
     const [showPreviousVisit, setShowPreviousVisit] = useState(false);
     const [previousVisitPrescriptions, setPreviousVisitPrescriptions] = useState<PrescriptionRow[]>([]);
-    
+
     // Additional form data
     const [followUpData, setFollowUpData] = useState({
         followUpType: '',
@@ -656,21 +656,21 @@ export default function Treatment() {
     const [followUpTypesOptions, setFollowUpTypesOptions] = useState<FollowUpTypeItem[]>([]);
     const [followUpTypesLoading, setFollowUpTypesLoading] = useState(false);
     const [followUpTypesError, setFollowUpTypesError] = useState<string | null>(null);
-    
+
     const [billingData, setBillingData] = useState({
         billed: '',
         discount: '',
         acBalance: '',
         dues: ''
     });
-    
+
     // Folder amount API response data
     const [folderAmountData, setFolderAmountData] = useState<{
         success?: boolean;
         totalAcBalance?: number;
         rows?: any[];
     } | null>(null);
-    
+
     // Attachments data
     const [attachments, setAttachments] = useState<Attachment[]>([
         { id: '1', name: 'AniruddhaTongaonkar.Pdf', type: 'pdf' },
@@ -768,28 +768,28 @@ export default function Treatment() {
         const headerImageUrl = getHeaderImageUrl();
         // Get current date and time
         const now = new Date();
-        const dateStr = now.toLocaleDateString('en-GB', { 
-            day: '2-digit', 
-            month: '2-digit', 
-            year: '2-digit' 
+        const dateStr = now.toLocaleDateString('en-GB', {
+            day: '2-digit',
+            month: '2-digit',
+            year: '2-digit'
         });
-        const timeStr = now.toLocaleTimeString('en-US', { 
-            hour: '2-digit', 
+        const timeStr = now.toLocaleTimeString('en-US', {
+            hour: '2-digit',
             minute: '2-digit',
-            hour12: true 
+            hour12: true
         });
 
         // Format visit date
-        const visitDate = treatmentData?.visitNumber 
-            ? new Date().toLocaleDateString('en-GB', { 
-                day: '2-digit', 
-                month: 'short', 
-                year: 'numeric' 
+        const visitDate = treatmentData?.visitNumber
+            ? new Date().toLocaleDateString('en-GB', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric'
             }).replace(/ /g, '-')
-            : new Date().toLocaleDateString('en-GB', { 
-                day: '2-digit', 
-                month: 'short', 
-                year: 'numeric' 
+            : new Date().toLocaleDateString('en-GB', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric'
             }).replace(/ /g, '-');
 
         // Get patient info
@@ -803,21 +803,21 @@ export default function Treatment() {
         const bmi = escapeHtml(formData.bmi || '-');
 
         // Get medical details
-        const complaints = complaintsRows.length > 0 
+        const complaints = complaintsRows.length > 0
             ? complaintsRows.map(c => escapeHtml(c.label)).join(', ')
-            : (selectedComplaints.length > 0 
+            : (selectedComplaints.length > 0
                 ? complaintsOptions.filter(opt => selectedComplaints.includes(opt.value))
                     .map(opt => escapeHtml(opt.label)).join(', ')
                 : '-');
-        
+
         const examinationFindings = escapeHtml(formData.importantFindings || formData.examinationFindings || '-');
-        const diagnosis = diagnosisRows.length > 0 
+        const diagnosis = diagnosisRows.length > 0
             ? diagnosisRows.map(d => escapeHtml(d.diagnosis)).join(', ')
             : (selectedDiagnoses.length > 0
                 ? diagnosesOptions.filter(opt => selectedDiagnoses.includes(opt.value))
                     .map(opt => escapeHtml(opt.label)).join(', ')
                 : escapeHtml(selectedDiagnosis || '-'));
-        
+
         const pulse = escapeHtml(formData.pulse || '-');
         const bp = escapeHtml(formData.bp || '-');
         const sugar = escapeHtml(formData.sugar || '-');
@@ -841,17 +841,17 @@ export default function Treatment() {
                 }
                 const groupName = group.name ? escapeHtml(group.name) : '';
                 let instructionText = group.instructions.trim();
-                
+
                 // Escape HTML first
                 instructionText = escapeHtml(instructionText);
-                
+
                 // Replace multiple spaces (2 or more) with line breaks to separate instruction items
                 // This handles cases like "item1        item2        item3"
                 let formattedText = instructionText.replace(/\s{2,}/g, '<br/>');
-                
+
                 // Also handle explicit line breaks
                 formattedText = formattedText.replace(/\n/g, '<br/>');
-                
+
                 return `
                     <div style="margin-top: 15px; margin-bottom: 10px;">
                         ${groupName ? `<div style="font-size: 14px; font-weight: bold; margin-bottom: 8px;">${groupName}</div>` : ''}
@@ -923,145 +923,145 @@ export default function Treatment() {
             instructionsHTML
         });
 
-		// Print within the same tab using a hidden iframe
-		const iframe = document.createElement('iframe');
-		iframe.style.position = 'fixed';
-		iframe.style.right = '0';
-		iframe.style.bottom = '0';
-		iframe.style.width = '0';
-		iframe.style.height = '0';
-		iframe.style.border = '0';
-		// Use srcdoc so we don't navigate away or open a new tab
-		iframe.srcdoc = printHTML;
-		document.body.appendChild(iframe);
-		
-		// Flag to track if we've already triggered lab results print
-		let labResultsPrinted = false;
-		
-		// Function to handle printing lab results after prescription print
-		const handleLabResultsPrint = () => {
-			// Use ref to get labTestsAsked from API (instead of popup data)
-			const currentLabTestsAsked = labTestsAskedRef.current;
-			console.log('🔍 handleLabResultsPrint called');
-			console.log('🔍 labResultsPrinted:', labResultsPrinted);
-			console.log('🔍 currentLabTestsAsked (from ref):', currentLabTestsAsked);
-			console.log('🔍 currentLabTestsAsked length:', currentLabTestsAsked?.length);
-			console.log('🔍 currentLabTestsAsked is array:', Array.isArray(currentLabTestsAsked));
-			
-			if (!labResultsPrinted) {
-				// Check if labTestsAsked exist using ref
-				if (currentLabTestsAsked && Array.isArray(currentLabTestsAsked) && currentLabTestsAsked.length > 0) {
-					labResultsPrinted = true;
-					console.log('✅ Triggering lab test results print with', currentLabTestsAsked.length, 'lab tests...');
-					// Delay to ensure first print dialog is fully closed
-					setTimeout(() => {
-						try {
-							printLabTestResults();
-						} catch (error) {
-							console.error('❌ Error in printLabTestResults:', error);
-						}
-					}, 1000); // 1 second delay after first print closes
-				} else {
-					console.log('❌ Cannot print lab results - no labTestsAsked available:', {
-						alreadyPrinted: labResultsPrinted,
-						hasLabTestsAsked: !!currentLabTestsAsked,
-						isArray: Array.isArray(currentLabTestsAsked),
-						labTestsAskedLength: currentLabTestsAsked?.length || 0
-					});
-				}
-			} else {
-				console.log('❌ Already printed lab results');
-			}
-		};
-		
-		iframe.onload = () => {
-			try {
-				const win = iframe.contentWindow;
-				if (win) {
-					let cleanupDone = false;
-					
-					const cleanup = () => {
-						if (cleanupDone) return;
-						cleanupDone = true;
-						setTimeout(() => {
-							if (iframe.parentNode) {
-								iframe.parentNode.removeChild(iframe);
-							}
-						}, 100);
-					};
-					
-					// Method 1: Listen for afterprint event
-					const handleAfterPrint = () => {
-						console.log('✅ afterprint event detected');
-						cleanup();
-						handleLabResultsPrint();
-					};
-					
-					// Add listeners to both iframe and main window
-					win.addEventListener('afterprint', handleAfterPrint);
-					window.addEventListener('afterprint', handleAfterPrint);
-					
-					// Method 2: Use window focus/blur events (more reliable)
-					let printDialogOpened = false;
-					
-					const handleWindowBlur = () => {
-						console.log('Window blurred - print dialog opened');
-						printDialogOpened = true;
-					};
-					
-					const handleWindowFocus = () => {
-						if (printDialogOpened) {
-							console.log('✅ Window focused - print dialog closed');
-							window.removeEventListener('blur', handleWindowBlur);
-							window.removeEventListener('focus', handleWindowFocus);
-							cleanup();
-							// Small delay to ensure print dialog is fully closed
-							setTimeout(() => {
-								handleLabResultsPrint();
-							}, 300);
-						}
-					};
-					
-					// Add focus/blur listeners
-					window.addEventListener('blur', handleWindowBlur);
-					window.addEventListener('focus', handleWindowFocus);
-					
-					// Clean up listeners after 10 seconds
-					setTimeout(() => {
-						window.removeEventListener('blur', handleWindowBlur);
-						window.removeEventListener('focus', handleWindowFocus);
-						window.removeEventListener('afterprint', handleAfterPrint);
-					}, 10000);
-					
-					// Method 3: Simple timeout fallback (like old application pattern)
-					// After calling print(), wait a reasonable time then show second print
-					win.focus();
-					win.print();
-					
-					// Fallback timeout - triggers second print after 2 seconds
-					// This ensures second print shows even if events don't fire
-					setTimeout(() => {
-						if (!labResultsPrinted) {
-							console.log('✅ Fallback timeout: triggering lab results print');
-							window.removeEventListener('blur', handleWindowBlur);
-							window.removeEventListener('focus', handleWindowFocus);
-							window.removeEventListener('afterprint', handleAfterPrint);
-							cleanup();
-							handleLabResultsPrint();
-						}
-					}, 2000); // 2 second fallback (similar to old app's 500ms-5s pattern)
-				}
-			} catch (error) {
-				console.error('Error printing prescription:', error);
-				// Fallback: remove iframe and check for lab results after timeout
-				setTimeout(() => {
-					if (iframe.parentNode) {
-						iframe.parentNode.removeChild(iframe);
-					}
-					handleLabResultsPrint();
-				}, 2000);
-			}
-		};
+        // Print within the same tab using a hidden iframe
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'fixed';
+        iframe.style.right = '0';
+        iframe.style.bottom = '0';
+        iframe.style.width = '0';
+        iframe.style.height = '0';
+        iframe.style.border = '0';
+        // Use srcdoc so we don't navigate away or open a new tab
+        iframe.srcdoc = printHTML;
+        document.body.appendChild(iframe);
+
+        // Flag to track if we've already triggered lab results print
+        let labResultsPrinted = false;
+
+        // Function to handle printing lab results after prescription print
+        const handleLabResultsPrint = () => {
+            // Use ref to get labTestsAsked from API (instead of popup data)
+            const currentLabTestsAsked = labTestsAskedRef.current;
+            console.log('🔍 handleLabResultsPrint called');
+            console.log('🔍 labResultsPrinted:', labResultsPrinted);
+            console.log('🔍 currentLabTestsAsked (from ref):', currentLabTestsAsked);
+            console.log('🔍 currentLabTestsAsked length:', currentLabTestsAsked?.length);
+            console.log('🔍 currentLabTestsAsked is array:', Array.isArray(currentLabTestsAsked));
+
+            if (!labResultsPrinted) {
+                // Check if labTestsAsked exist using ref
+                if (currentLabTestsAsked && Array.isArray(currentLabTestsAsked) && currentLabTestsAsked.length > 0) {
+                    labResultsPrinted = true;
+                    console.log('✅ Triggering lab test results print with', currentLabTestsAsked.length, 'lab tests...');
+                    // Delay to ensure first print dialog is fully closed
+                    setTimeout(() => {
+                        try {
+                            printLabTestResults();
+                        } catch (error) {
+                            console.error('❌ Error in printLabTestResults:', error);
+                        }
+                    }, 1000); // 1 second delay after first print closes
+                } else {
+                    console.log('❌ Cannot print lab results - no labTestsAsked available:', {
+                        alreadyPrinted: labResultsPrinted,
+                        hasLabTestsAsked: !!currentLabTestsAsked,
+                        isArray: Array.isArray(currentLabTestsAsked),
+                        labTestsAskedLength: currentLabTestsAsked?.length || 0
+                    });
+                }
+            } else {
+                console.log('❌ Already printed lab results');
+            }
+        };
+
+        iframe.onload = () => {
+            try {
+                const win = iframe.contentWindow;
+                if (win) {
+                    let cleanupDone = false;
+
+                    const cleanup = () => {
+                        if (cleanupDone) return;
+                        cleanupDone = true;
+                        setTimeout(() => {
+                            if (iframe.parentNode) {
+                                iframe.parentNode.removeChild(iframe);
+                            }
+                        }, 100);
+                    };
+
+                    // Method 1: Listen for afterprint event
+                    const handleAfterPrint = () => {
+                        console.log('✅ afterprint event detected');
+                        cleanup();
+                        handleLabResultsPrint();
+                    };
+
+                    // Add listeners to both iframe and main window
+                    win.addEventListener('afterprint', handleAfterPrint);
+                    window.addEventListener('afterprint', handleAfterPrint);
+
+                    // Method 2: Use window focus/blur events (more reliable)
+                    let printDialogOpened = false;
+
+                    const handleWindowBlur = () => {
+                        console.log('Window blurred - print dialog opened');
+                        printDialogOpened = true;
+                    };
+
+                    const handleWindowFocus = () => {
+                        if (printDialogOpened) {
+                            console.log('✅ Window focused - print dialog closed');
+                            window.removeEventListener('blur', handleWindowBlur);
+                            window.removeEventListener('focus', handleWindowFocus);
+                            cleanup();
+                            // Small delay to ensure print dialog is fully closed
+                            setTimeout(() => {
+                                handleLabResultsPrint();
+                            }, 300);
+                        }
+                    };
+
+                    // Add focus/blur listeners
+                    window.addEventListener('blur', handleWindowBlur);
+                    window.addEventListener('focus', handleWindowFocus);
+
+                    // Clean up listeners after 10 seconds
+                    setTimeout(() => {
+                        window.removeEventListener('blur', handleWindowBlur);
+                        window.removeEventListener('focus', handleWindowFocus);
+                        window.removeEventListener('afterprint', handleAfterPrint);
+                    }, 10000);
+
+                    // Method 3: Simple timeout fallback (like old application pattern)
+                    // After calling print(), wait a reasonable time then show second print
+                    win.focus();
+                    win.print();
+
+                    // Fallback timeout - triggers second print after 2 seconds
+                    // This ensures second print shows even if events don't fire
+                    setTimeout(() => {
+                        if (!labResultsPrinted) {
+                            console.log('✅ Fallback timeout: triggering lab results print');
+                            window.removeEventListener('blur', handleWindowBlur);
+                            window.removeEventListener('focus', handleWindowFocus);
+                            window.removeEventListener('afterprint', handleAfterPrint);
+                            cleanup();
+                            handleLabResultsPrint();
+                        }
+                    }, 2000); // 2 second fallback (similar to old app's 500ms-5s pattern)
+                }
+            } catch (error) {
+                console.error('Error printing prescription:', error);
+                // Fallback: remove iframe and check for lab results after timeout
+                setTimeout(() => {
+                    if (iframe.parentNode) {
+                        iframe.parentNode.removeChild(iframe);
+                    }
+                    handleLabResultsPrint();
+                }, 2000);
+            }
+        };
     };
 
     // Print lab test results
@@ -1072,25 +1072,25 @@ export default function Treatment() {
         console.log('🔍 currentLabTestsAsked (from ref):', currentLabTestsAsked);
         console.log('🔍 currentLabTestsAsked length:', currentLabTestsAsked?.length);
         console.log('🔍 currentLabTestsAsked is array:', Array.isArray(currentLabTestsAsked));
-        
+
         if (!currentLabTestsAsked || !Array.isArray(currentLabTestsAsked) || currentLabTestsAsked.length === 0) {
             console.log('❌ No lab tests asked to print - invalid or empty data');
             return;
         }
-        
+
         console.log('✅ Starting lab test results print with', currentLabTestsAsked.length, 'lab tests...');
 
         // Format visit date (same as prescription print)
-        const visitDate = treatmentData?.visitNumber 
-            ? new Date().toLocaleDateString('en-GB', { 
-                day: '2-digit', 
-                month: 'short', 
-                year: 'numeric' 
+        const visitDate = treatmentData?.visitNumber
+            ? new Date().toLocaleDateString('en-GB', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric'
             }).replace(/ /g, '-')
-            : new Date().toLocaleDateString('en-GB', { 
-                day: '2-digit', 
-                month: 'short', 
-                year: 'numeric' 
+            : new Date().toLocaleDateString('en-GB', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric'
             }).replace(/ /g, '-');
 
         // Get patient info (same as prescription print)
@@ -1362,13 +1362,13 @@ export default function Treatment() {
             const doctorId = treatmentData?.doctorId || sessionData?.doctorId;
             const clinicId = treatmentData?.clinicId || sessionData?.clinicId;
             if (!doctorId || !clinicId) return;
-            
+
             setComplaintsLoading(true);
             setComplaintsError(null);
-            
+
             try {
                 console.log('Loading complaints for doctor:', doctorId, 'clinic:', clinicId);
-                
+
                 const complaints = await complaintService.getAllComplaintsForDoctor(doctorId, clinicId);
                 if (!cancelled) {
                     setComplaintsOptions(complaints);
@@ -1385,7 +1385,7 @@ export default function Treatment() {
                 }
             }
         }
-        
+
         loadComplaints();
         return () => {
             cancelled = true;
@@ -1409,15 +1409,15 @@ export default function Treatment() {
         let cancelled = false;
         async function loadMedicines() {
             if (!treatmentData?.doctorId || !sessionData?.clinicId) return;
-            
+
             setMedicinesLoading(true);
             setMedicinesError(null);
-            
+
             try {
                 const doctorId = treatmentData.doctorId;
                 const clinicId = sessionData.clinicId;
                 console.log('Loading medicines for doctor:', doctorId, 'and clinic:', clinicId);
-                
+
                 const medicines = await medicineService.getActiveMedicinesByDoctorAndClinic(doctorId, clinicId);
                 if (!cancelled) {
                     setMedicinesOptions(medicines);
@@ -1434,7 +1434,7 @@ export default function Treatment() {
                 }
             }
         }
-        
+
         loadMedicines();
         return () => { cancelled = true; };
     }, [treatmentData?.doctorId, sessionData?.clinicId]);
@@ -1456,15 +1456,15 @@ export default function Treatment() {
         let cancelled = false;
         async function loadDiagnoses() {
             if (!treatmentData?.doctorId || !sessionData?.clinicId) return;
-            
+
             setDiagnosesLoading(true);
             setDiagnosesError(null);
-            
+
             try {
                 const doctorId = treatmentData.doctorId;
                 const clinicId = sessionData.clinicId;
                 console.log('Loading diagnoses for doctor:', doctorId, 'and clinic:', clinicId);
-                
+
                 const diagnoses = await diagnosisService.getDiagnosesFromPatientProfile(doctorId, clinicId);
                 if (!cancelled) {
                     setDiagnosesOptions(diagnoses);
@@ -1481,7 +1481,7 @@ export default function Treatment() {
                 }
             }
         }
-        
+
         loadDiagnoses();
         return () => { cancelled = true; };
     }, [treatmentData?.doctorId, sessionData?.clinicId]);
@@ -1492,7 +1492,7 @@ export default function Treatment() {
         async function loadFollowUpTypes() {
             setFollowUpTypesLoading(true);
             setFollowUpTypesError(null);
-            
+
             try {
                 const options = await getFollowUpTypes();
                 if (!cancelled) {
@@ -1509,7 +1509,7 @@ export default function Treatment() {
                 }
             }
         }
-        
+
         loadFollowUpTypes();
         return () => { cancelled = true; };
     }, []);
@@ -1589,7 +1589,7 @@ export default function Treatment() {
         let cancelled = false;
         async function loadBillingFromMasterLists() {
             // Only load if we have all required parameters
-            if (!treatmentData?.patientId || !treatmentData?.doctorId || !sessionData?.clinicId || 
+            if (!treatmentData?.patientId || !treatmentData?.doctorId || !sessionData?.clinicId ||
                 !treatmentData?.visitNumber) {
                 console.log('⏳ Skipping master-lists load: missing context', {
                     hasPatientId: !!treatmentData?.patientId,
@@ -1605,7 +1605,7 @@ export default function Treatment() {
                 console.log('🔄 Fetching master-lists data for instruction groups...');
                 // Use today's date for visitDate
                 const visitDate = toYyyyMmDd(new Date());
-                
+
                 const params = new URLSearchParams();
                 params.set('patientId', String(treatmentData.patientId));
                 params.set('shiftId', String((sessionData as any)?.shiftId || 1));
@@ -1625,7 +1625,7 @@ export default function Treatment() {
 
                 // Extract billing array from response
                 const billingArray = data?.data?.billing || [];
-                
+
                 // Store in ref for later matching
                 if (Array.isArray(billingArray) && billingArray.length > 0) {
                     masterListsBillingRef.current = billingArray;
@@ -1646,7 +1646,7 @@ export default function Treatment() {
                 // Extract instructionGroups array from response (this contains the selected groups)
                 const instructionGroupsArray = data?.data?.instructionGroups || [];
                 const instructionsArray = data?.data?.instructions || [];
-                
+
                 if (Array.isArray(instructionGroupsArray) && instructionGroupsArray.length > 0) {
                     // Map instructionGroups to InstructionGroup format
                     // Match with instructions array to get full instruction text
@@ -1654,21 +1654,21 @@ export default function Treatment() {
                     const mappedInstructionGroups: InstructionGroup[] = instructionGroupsArray.map((group: any, idx: number) => {
                         const groupDescRaw = group?.group_description ?? group?.Group_Description ?? group?.groupName ?? group?.name ?? '';
                         const groupNameUpper = normalize(groupDescRaw);
-                        
+
                         // Find matching instruction text from instructions array
-                        const matchingInstruction = Array.isArray(instructionsArray) 
+                        const matchingInstruction = Array.isArray(instructionsArray)
                             ? instructionsArray.find((instr: any) => {
                                 const instrGroupDesc = instr?.group_description ?? instr?.Group_Description ?? instr?.groupDescription ?? instr?.GroupDescription ?? '';
                                 return normalize(instrGroupDesc) === groupNameUpper;
                             })
                             : null;
-                        
-                        const instrDesc = matchingInstruction 
+
+                        const instrDesc = matchingInstruction
                             ? (matchingInstruction?.instructions_description ?? matchingInstruction?.Instructions_Description ?? matchingInstruction?.instructionText ?? '')
                             : '';
                         const trimmedInstructions = String(instrDesc ?? '').trim();
                         const sequenceNo = matchingInstruction?.sequence_no ?? matchingInstruction?.Sequence_No ?? group?.sequence_no ?? group?.Sequence_No ?? idx + 1;
-                        
+
                         return {
                             id: String(sequenceNo),
                             name: groupNameUpper,
@@ -1676,7 +1676,7 @@ export default function Treatment() {
                             instructions: trimmedInstructions
                         };
                     });
-                    
+
                     if (!cancelled) {
                         console.log('=== TREATMENT SCREEN: Setting selectedInstructionGroups from master-lists API ===');
                         console.log('Raw instructionGroupsArray from API:', instructionGroupsArray);
@@ -1716,8 +1716,8 @@ export default function Treatment() {
         }
         loadBillingFromMasterLists();
         return () => { cancelled = true; };
-    }, [treatmentData?.patientId, treatmentData?.doctorId, treatmentData?.visitNumber, 
-        sessionData?.clinicId, (sessionData as any)?.shiftId]);
+    }, [treatmentData?.patientId, treatmentData?.doctorId, treatmentData?.visitNumber,
+    sessionData?.clinicId, (sessionData as any)?.shiftId]);
 
     // Match and pre-select billing items after billing options are loaded
     React.useEffect(() => {
@@ -1731,18 +1731,18 @@ export default function Treatment() {
 
         // Match billing items from master-lists to existing billing options by fields
         const matchedIds: string[] = [];
-        
+
         billingArray.forEach((billingItem: any) => {
             // Find matching option by comparing billing fields (case-insensitive, trimmed)
             const match = billingDetailsOptions.find(opt => {
                 const optGroup = (opt.billing_group_name || '').trim().toLowerCase();
                 const optSubgroup = (opt.billing_subgroup_name || '').trim().toLowerCase();
                 const optDetails = (opt.billing_details || '').trim().toLowerCase();
-                
+
                 const itemGroup = (billingItem.billing_group_name || '').trim().toLowerCase();
                 const itemSubgroup = (billingItem.billing_subgroup_name || '').trim().toLowerCase();
                 const itemDetails = (billingItem.billing_details || '').trim().toLowerCase();
-                
+
                 return optGroup === itemGroup && optSubgroup === itemSubgroup && optDetails === itemDetails;
             });
 
@@ -1750,8 +1750,8 @@ export default function Treatment() {
                 matchedIds.push(match.id);
                 console.log('✓ Matched:', billingItem.billing_details, '→ ID:', match.id);
             } else {
-                console.warn('✗ Could not match:', billingItem.billing_details, 
-                    'Group:', billingItem.billing_group_name, 
+                console.warn('✗ Could not match:', billingItem.billing_details,
+                    'Group:', billingItem.billing_group_name,
                     'Subgroup:', billingItem.billing_subgroup_name);
             }
         });
@@ -1765,7 +1765,7 @@ export default function Treatment() {
                     console.log('Billing items already selected');
                     return prev;
                 }
-                
+
                 // Merge with existing selections, avoiding duplicates
                 const combined = [...new Set([...prev, ...matchedIds])];
                 console.log('Pre-selected billing IDs:', combined);
@@ -1859,7 +1859,7 @@ export default function Treatment() {
             setLoadingPreviousVisits(true);
             setPreviousVisitsError(null);
             const todaysVisitDate = new Date().toISOString().split('T')[0];
-            
+
             const response = await appointmentService.getPatientPreviousVisits({
                 patientId: treatmentData.patientId,
                 doctorId: sessionData.doctorId,
@@ -1885,7 +1885,7 @@ export default function Treatment() {
 
                 const sortedVisits = [...visits].sort((a, b) => parseVisitDate(a) - parseVisitDate(b));
                 setAllVisits(sortedVisits);
-                
+
                 // Extract visit dates for navigation (same as Appointment page)
                 const dates = sortedVisits
                     .map((visit: any) => visit.visit_date || visit.Visit_Date || visit.appointmentDate || visit.appointment_date || '')
@@ -1897,20 +1897,20 @@ export default function Treatment() {
                     // Extract doctor name from visit data
                     const getDoctorName = (visit: any): string => {
                         // Try different possible doctor name fields
-                        const doctorName = visit.DoctorName || visit.doctor_name || visit.Doctor_Name || 
-                                         visit.doctorName || visit.provider || '';
-                        
+                        const doctorName = visit.DoctorName || visit.doctor_name || visit.Doctor_Name ||
+                            visit.doctorName || visit.provider || '';
+
                         if (doctorName) {
                             return doctorName;
                         }
-                        
+
                         // If no direct doctor name, try to get from doctor ID
                         const doctorId = visit.doctor_id || visit.Doctor_ID || visit.doctorId;
                         if (doctorId) {
                             const doctor = allDoctors.find(d => d.id === doctorId);
                             return doctor ? `${doctor.firstName} ${doctor.lastName}`.trim() : '';
                         }
-                        
+
                         return 'Unknown Doctor';
                     };
 
@@ -1950,7 +1950,7 @@ export default function Treatment() {
                 if (sortedVisits.length > 0) {
                     const latestVisit = sortedVisits[sortedVisits.length - 1];
                     console.log('Latest visit for prescription extraction:', latestVisit);
-                    
+
                     // Extract prescriptions using the same logic as mapPreviousVisitToInitialData
                     const rxArray = ((): any[] => {
                         // First try the existing prescription fields
@@ -2060,7 +2060,7 @@ export default function Treatment() {
                 params.set('patientId', patientId);
 
                 const response = await fetch(`/api/fees/folder-amount?${params.toString()}`);
-                
+
                 if (cancelled) return;
 
                 if (!response.ok) {
@@ -2073,7 +2073,7 @@ export default function Treatment() {
                 console.log('API URL:', `/api/fees/folder-amount?${params.toString()}`);
                 console.log('Response Data:', data);
                 console.log('==========================================');
-                
+
                 if (!cancelled && data) {
                     setFolderAmountData(data);
                     // Update A/C Balance with totalAcBalance
@@ -2115,11 +2115,11 @@ export default function Treatment() {
 
             const selectedVisit = allVisits[visitIndex];
             const patientName = treatmentData?.patientName || '';
-            
-            setSelectedPatientForForm({ 
-                id: treatmentData?.patientId, 
-                name: patientName, 
-                appointmentRow: null 
+
+            setSelectedPatientForForm({
+                id: treatmentData?.patientId,
+                name: patientName,
+                appointmentRow: null
             });
 
             // Map the selected visit to form data (similar to Appointment page)
@@ -2424,16 +2424,16 @@ export default function Treatment() {
     const calculateBMI = (height: string, weight: string): string => {
         const heightNum = parseFloat(height);
         const weightNum = parseFloat(weight);
-        
+
         if (isNaN(heightNum) || isNaN(weightNum) || heightNum <= 0 || weightNum <= 0) {
             return '';
         }
-        
+
         // BMI = weight (kg) / height (m)²
         // Height is in cm, so convert to meters
         const heightInMeters = heightNum / 100;
         const bmi = weightNum / (heightInMeters * heightInMeters);
-        
+
         return bmi.toFixed(1);
     };
 
@@ -2466,10 +2466,10 @@ export default function Treatment() {
                 if (!existingValues.has(val)) {
                     const opt = complaintsOptions.find(o => o.value === val);
                     if (opt) {
-                        newRows.push({ 
-                            id: `${val}`, 
-                            value: val, 
-                            label: opt.label, 
+                        newRows.push({
+                            id: `${val}`,
+                            value: val,
+                            label: opt.label,
                             comment: '',
                             priority: opt.priority ?? opt.priority_value ?? 999
                         });
@@ -2641,7 +2641,7 @@ export default function Treatment() {
                 const existingDiagnosis = prev.find(
                     row => row.diagnosis?.toLowerCase().trim() === responseLabel.toLowerCase().trim()
                 );
-                
+
                 if (existingDiagnosis) {
                     // Show error in snackbar instead of diagnosis error section
                     setSnackbarMessage(`Diagnosis "${responseLabel}" is already added.`);
@@ -2649,7 +2649,7 @@ export default function Treatment() {
                     setDiagnosesError(null); // Clear any existing error
                     return prev; // Return previous state without adding
                 }
-                
+
                 diagnosisAdded = true; // Mark that diagnosis was successfully added
                 const next = [...prev, newDiagnosis];
                 // Sort by priority (lower priority number = higher priority)
@@ -2669,7 +2669,7 @@ export default function Treatment() {
                 ];
             });
             setShowDiagnosisPopup(false);
-            
+
             // Show success message after popup closes (only if diagnosis was actually added)
             if (diagnosisAdded) {
                 setTimeout(() => {
@@ -2728,7 +2728,7 @@ export default function Treatment() {
             instruction: medicineData.instruction || '',
             priority: normalizedPriority || 999
         };
-        
+
         // Check for duplicate medicine before adding (using functional update to get current state)
         let medicineAdded = false;
         setMedicineRows(prev => {
@@ -2736,7 +2736,7 @@ export default function Treatment() {
             const existingMedicine = prev.find(
                 row => row.short_description?.toLowerCase().trim() === trimmedShortDescription.toLowerCase().trim()
             );
-            
+
             if (existingMedicine) {
                 // Show error in snackbar instead of medicine error section
                 setSnackbarMessage(`Medicine "${trimmedShortDescription}" is already added.`);
@@ -2744,13 +2744,13 @@ export default function Treatment() {
                 setMedicinesError(null); // Clear any existing error
                 return prev; // Return previous state without adding
             }
-            
+
             medicineAdded = true; // Mark that medicine was successfully added
             const next = [...prev, newMedicine];
             // Sort by priority (lower priority number = higher priority)
             return next.sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999));
         });
-        
+
         // Only add to search dropdown if user marked it as active and medicine was added
         if (isActive && medicineAdded) {
             setMedicinesOptions(prev => {
@@ -2774,9 +2774,9 @@ export default function Treatment() {
                 ];
             });
         }
-        
+
         setShowMedicinePopup(false);
-        
+
         // Show success message after popup closes (only if medicine was actually added)
         if (medicineAdded) {
             setTimeout(() => {
@@ -2865,7 +2865,7 @@ export default function Treatment() {
             const existingInvestigation = prev.find(
                 row => row.investigation?.toLowerCase().trim() === normalizedNameLower
             );
-            
+
             if (existingInvestigation) {
                 // Show error in snackbar instead of investigation error section
                 setSnackbarMessage(`Investigation "${normalizedName}" is already added.`);
@@ -2873,7 +2873,7 @@ export default function Treatment() {
                 setInvestigationsError(null); // Clear any existing error
                 return prev; // Return previous state without adding
             }
-            
+
             investigationAdded = true; // Mark that investigation was successfully added
             const newRow: InvestigationRow = {
                 id: `custom_inv_${Date.now()}`,
@@ -2903,7 +2903,7 @@ export default function Treatment() {
         }
 
         setShowTestLabPopup(false);
-        
+
         // Show success message after popup closes (only if investigation was actually added)
         if (investigationAdded) {
             setTimeout(() => {
@@ -2926,7 +2926,7 @@ export default function Treatment() {
             { field: 'medicines', value: formData.medicines },
             { field: 'visitComments', value: formData.visitComments },
             { field: 'pc', value: formData.pc },
-            
+
             // Vitals
             { field: 'height', value: formData.height },
             { field: 'weight', value: formData.weight },
@@ -2936,7 +2936,7 @@ export default function Treatment() {
             { field: 'sugar', value: formData.sugar },
             { field: 'tft', value: formData.tft },
             { field: 'pallorHb', value: formData.pallorHb },
-            
+
             // Medical history checkboxes
             { field: 'medicalHistory.hypertension', value: formData.medicalHistory.hypertension },
             { field: 'medicalHistory.diabetes', value: formData.medicalHistory.diabetes },
@@ -2947,49 +2947,49 @@ export default function Treatment() {
             { field: 'medicalHistory.smoking', value: formData.medicalHistory.smoking },
             { field: 'medicalHistory.tobacco', value: formData.medicalHistory.tobacco },
             { field: 'medicalHistory.alcohol', value: formData.medicalHistory.alcohol },
-            
+
             // Clinical data
             { field: 'detailedHistory', value: formData.detailedHistory },
             { field: 'examinationFindings', value: formData.examinationFindings },
             { field: 'additionalComments', value: formData.additionalComments },
             { field: 'procedurePerformed', value: formData.procedurePerformed },
             { field: 'dressingBodyParts', value: formData.dressingBodyParts },
-            
+
             // Selected complaints
             { field: 'selectedComplaints', value: selectedComplaints },
             { field: 'complaintsRows', value: complaintsRows },
-            
+
             // Selected diagnoses
             { field: 'selectedDiagnoses', value: selectedDiagnoses },
             { field: 'diagnosisRows', value: diagnosisRows },
-            
+
             // Selected medicines
             { field: 'selectedMedicines', value: selectedMedicines },
             { field: 'medicineRows', value: medicineRows },
-            
+
             // Prescriptions
             { field: 'prescriptionRows', value: prescriptionRows },
-            
+
             // Selected investigations
             { field: 'selectedInvestigations', value: selectedInvestigations },
             { field: 'investigationRows', value: investigationRows },
-            
+
             // Follow-up data
             { field: 'followUpData.followUpType', value: followUpData.followUpType },
             { field: 'followUpData.followUp', value: followUpData.followUp },
-            
+
             // Billing data
             { field: 'billingData.billed', value: billingData.billed },
             { field: 'billingData.discount', value: billingData.discount },
-            
+
             // Attachments
             { field: 'attachments', value: attachments },
-            
+
             // Session data
             { field: 'sessionData', value: sessionData },
             { field: 'treatmentData', value: treatmentData }
         ];
-        
+
         return allFields;
     };
 
@@ -3162,7 +3162,7 @@ export default function Treatment() {
                             followUpValue = normalized.followUpFlag === 1;
                         }
                     }
-                    
+
                     next.visitType = {
                         ...(next.visitType || {}),
                         inPerson: typeof normalized.inPerson === 'boolean' ? normalized.inPerson : (next.visitType?.inPerson ?? true),
@@ -3212,7 +3212,7 @@ export default function Treatment() {
                 } else if (numValue === 2 || followUpTypeValue.toUpperCase() === 'F' || followUpTypeValue === 'Follow-up' || followUpTypeValue === 'Followup') {
                     followUpTypeId = '2';
                 }
-                
+
                 if (followUpTypeId) {
                     setFollowUpData(prev => ({
                         ...prev,
@@ -3475,13 +3475,13 @@ export default function Treatment() {
             console.log('Treatment data:', treatmentData);
             console.log('Session data:', sessionData);
             console.log('Is Submit:', isSubmit);
-            
+
             setIsSubmitting(true);
             setSubmitError(null);
             setSubmitSuccess(null);
             setSnackbarOpen(false);
             setSnackbarMessage('');
-            
+
             // Fetch session data for dynamic values if not already available
             let currentSessionData = sessionData;
             if (!currentSessionData) {
@@ -3495,14 +3495,14 @@ export default function Treatment() {
                     console.warn('Could not load session data:', sessionError);
                 }
             }
-            
+
             // Validate required fields are present
             const doctorId = treatmentData?.doctorId || currentSessionData?.doctorId;
             const clinicId = treatmentData?.clinicId || currentSessionData?.clinicId;
             // Get shiftId from session, must be numeric - never use clinicId as fallback since it's not numeric (e.g., "CL-00001")
             const shiftId = (currentSessionData as any)?.shiftId || 1;
             const userId = currentSessionData?.userId;
-            
+
             if (!doctorId) {
                 throw new Error('Doctor ID is required but not found in treatment data or session');
             }
@@ -3512,13 +3512,13 @@ export default function Treatment() {
             if (!userId) {
                 throw new Error('User ID is required but not found in session data');
             }
-            
+
             // Validate patient visit number
             const patientVisitNo = treatmentData?.visitNumber;
             if (!patientVisitNo) {
                 throw new Error('Patient Visit Number is required but not found in treatment data');
             }
-            
+
             console.log('=== VALIDATION PASSED ===');
             console.log('Doctor ID:', doctorId);
             console.log('Clinic ID:', clinicId);
@@ -3535,7 +3535,7 @@ export default function Treatment() {
                 shiftId: String(shiftId || 1), // Convert to string - must be numeric (backend parses as Short)
                 visitDate: `${toYyyyMmDd(new Date())} ${new Date().toTimeString().slice(0, 8)}`,
                 patientVisitNo: String(patientVisitNo || 0), // Convert to string
-                
+
                 // Referral information
                 referBy: (formData.referralBy === 'Self')
                     ? 'S'
@@ -3544,7 +3544,7 @@ export default function Treatment() {
                 referralContact: formData.referralBy === 'Self' ? '' : '',
                 referralEmail: formData.referralBy === 'Self' ? '' : '',
                 referralAddress: formData.referralBy === 'Self' ? '' : '',
-                
+
                 // Vital signs
                 pulse: parseInt(formData.pulse) || 0,
                 heightInCms: parseFloat(formData.height) || 0,
@@ -3552,7 +3552,7 @@ export default function Treatment() {
                 bloodPressure: formData.bp,
                 sugar: formData.sugar,
                 tft: formData.tft,
-                
+
                 // Medical history
                 pastSurgicalHistory: formData.surgicalHistory,
                 previousVisitPlan: formData.visitComments,
@@ -3561,7 +3561,7 @@ export default function Treatment() {
                 currentMedicines: formData.medicines,
                 instructions: followUpData.planAdv ? String(followUpData.planAdv) : '',
                 additionalInstructions: followUpData.remarkComments ? String(followUpData.remarkComments) : '',
-                
+
                 // Medical conditions from form data
                 hypertension: formData.medicalHistory.hypertension,
                 diabetes: formData.medicalHistory.diabetes,
@@ -3572,7 +3572,7 @@ export default function Treatment() {
                 smoking: formData.medicalHistory.smoking,
                 tobaco: formData.medicalHistory.tobacco,
                 alchohol: formData.medicalHistory.alcohol,
-                
+
                 // Additional fields
                 habitDetails: formData.medicalHistoryText || '',
                 allergyDetails: formData.allergy,
@@ -3590,7 +3590,7 @@ export default function Treatment() {
                 followUpFlag: formData.visitType.followUp,
                 currentComplaint: Array.from(new Set(selectedComplaints)).join(','),
                 visitCommentsField: formData.visitComments,
-                
+
                 // Clinical fields
                 tpr: '',
                 importantFindings: formData.importantFindings,
@@ -3599,7 +3599,7 @@ export default function Treatment() {
                 odeama: '',
                 pallor: formData.pallorHb,
                 gc: '',
-                
+
                 // Gynecological fields
                 fmp: '',
                 prmc: '',
@@ -3613,19 +3613,19 @@ export default function Treatment() {
                 pregnant: false,
                 edd: new Date().toISOString().slice(0, 19),
                 followUpType: followUpData.followUpType ? String(followUpData.followUpType).charAt(0) : '0', // Single character: first char of followUpType or '0'
-                
+
                 // Financial fields
                 feesToCollect: parseFloat(billingData.billed) || 0,
                 feesPaid: 0,
                 discount: parseFloat(billingData.discount) || 0,
                 originalDiscount: parseFloat(billingData.discount) || 0,
-                
+
                 // Status and user - Use different status IDs for save vs submit
                 // Based on climasys2.0 Constants.cs: SUBMITTED_STATUS_ID = 6, Save_STATUS_ID = 9
                 statusId: isSubmit ? 4 : 9, // Status 6 for submit (SUBMITTED), Status 9 for save
                 userId: String(userId),
                 isSubmitPatientVisitDetails: isSubmit, // true for submit, false for save
-                
+
                 // Complaints rows - map to API format
                 complaintsRows: complaintsRows.map(row => {
                     // Extract short_description: if value contains "*", take the part before "*"
@@ -3636,20 +3636,20 @@ export default function Treatment() {
                     } else {
                         shortDescription = row.value || row.label || '';
                     }
-                    
+
                     return {
                         short_description: shortDescription,
                         complaint_description: row.label || '',
                         complaint_comment: row.comment || ''
                     };
                 }),
-                
+
                 // Diagnosis rows - minimal API shape
                 diagnosisRows: diagnosisRows.map(row => ({
                     short_description: row.value || '',
                     diagnosis: row.diagnosis || ''
                 })),
-                
+
                 // Medicine rows - map to API format (ensure numeric days)
                 medicineRows: medicineRows.map(row => {
                     // Use user input values (b, l, d) instead of default morning/afternoon values
@@ -3659,19 +3659,19 @@ export default function Treatment() {
                     } else if (row.morning) {
                         morning = row.morning;
                     }
-                    
+
                     let afternoon = 0;
                     if (row.l && !isNaN(parseFloat(row.l))) {
                         afternoon = parseFloat(row.l) || 0;
                     } else if (row.afternoon) {
                         afternoon = row.afternoon;
                     }
-                    
+
                     let night = 0;
                     if (row.d && !isNaN(parseFloat(row.d))) {
                         night = parseFloat(row.d) || 0;
                     }
-                    
+
                     const daysNum = isNaN(Number(row.days)) ? 0 : Number(row.days);
                     return {
                         short_description: row.short_description || '',
@@ -3683,7 +3683,7 @@ export default function Treatment() {
                         instruction: row.instruction || ''
                     };
                 }),
-                
+
                 // Prescription rows - numeric b/l/d/days
                 prescriptionRows: prescriptionRows.map(row => ({
                     prescription: row.prescription || '',
@@ -3693,12 +3693,12 @@ export default function Treatment() {
                     days: isNaN(Number(row.days)) ? 0 : Number(row.days),
                     instruction: row.instruction || ''
                 })),
-                
+
                 // Investigation rows - map to API format
                 investigationRows: investigationRows.map(row => ({
                     investigation: row.investigation || ''
                 })),
-                
+
                 // Instruction groups - map to API format
                 // Backend expects: groupDescription, instructionsDescription, sequenceNo
                 // Table: visit_groups_instructions
@@ -3746,7 +3746,7 @@ export default function Treatment() {
             } else {
                 console.warn('⚠️ NO INSTRUCTION GROUPS IN REQUEST! selectedInstructionGroups:', JSON.stringify(selectedInstructionGroups, null, 2));
             }
-            
+
             // Check for null/undefined values that might cause validation errors
             const nullFields = [];
             if (!visitData.patientId) nullFields.push('patientId');
@@ -3758,24 +3758,24 @@ export default function Treatment() {
             if (!visitData.statusId) nullFields.push('statusId');
             if (visitData.discount === null || visitData.discount === undefined) nullFields.push('discount');
             if (!visitData.userId) nullFields.push('userId');
-            
+
             if (nullFields.length > 0) {
                 console.error('=== NULL/UNDEFINED FIELDS DETECTED ===');
                 console.error('Fields with null/undefined values:', nullFields);
                 throw new Error(`Required fields are missing: ${nullFields.join(', ')}`);
             }
-            
+
             const result = await visitService.saveComprehensiveVisitData(visitData);
-            
+
             console.log('=== API RESPONSE ===');
             console.log('API Response:', result);
             console.log('Success status:', result.success);
-            
+
             if (result.success) {
                 console.log(`=== TREATMENT ${actionType}ED SUCCESSFULLY ===`);
                 setSnackbarMessage(`Treatment ${isSubmit ? 'submitted' : 'saved'} successfully!`);
                 setSnackbarOpen(true);
-                
+
                 // Load rows directly from save response if available
                 // Load complaints rows from save response first (to preserve deletions)
                 if (result.complaintsRows && Array.isArray(result.complaintsRows)) {
@@ -3805,7 +3805,7 @@ export default function Treatment() {
                         console.log('Cleared complaints rows (empty array from save response)');
                     }
                 }
-                
+
                 // Load diagnosis rows from save response (to preserve deletions)
                 if (result.diagnosisRows && Array.isArray(result.diagnosisRows)) {
                     if (result.diagnosisRows.length > 0) {
@@ -3832,7 +3832,7 @@ export default function Treatment() {
                         console.log('Cleared diagnosis rows (empty array from save response)');
                     }
                 }
-                
+
                 // Load medicine rows from save response (to preserve deletions)
                 if (result.medicineRows && Array.isArray(result.medicineRows)) {
                     if (result.medicineRows.length > 0) {
@@ -3871,7 +3871,7 @@ export default function Treatment() {
                         console.log('Cleared medicine rows (empty array from save response)');
                     }
                 }
-                
+
                 // Load prescription rows from save response (to preserve deletions)
                 if (result.prescriptionRows && Array.isArray(result.prescriptionRows)) {
                     if (result.prescriptionRows.length > 0) {
@@ -3894,7 +3894,7 @@ export default function Treatment() {
                         console.log('Cleared prescription rows (empty array from save response)');
                     }
                 }
-                
+
                 // Load investigation rows from save response (to preserve deletions)
                 if (result.investigationRows && Array.isArray(result.investigationRows)) {
                     if (result.investigationRows.length > 0) {
@@ -3912,7 +3912,7 @@ export default function Treatment() {
                         console.log('Cleared investigation rows (empty array from save response)');
                     }
                 }
-                
+
                 // Fetch latest appointment details and patch values before navigating away
                 try {
                     const apptParams = {
@@ -3933,12 +3933,12 @@ export default function Treatment() {
                     setSnackbarOpen(false);
                     setSnackbarMessage('');
                     // Navigate back to appointments with refresh trigger
-                    navigate('/appointment', { 
-                        state: { 
+                    navigate('/appointment', {
+                        state: {
                             refreshAppointments: true,
                             treatmentSubmitted: true,
-                            patientId: treatmentData?.patientId 
-                        } 
+                            patientId: treatmentData?.patientId
+                        }
                     });
                 }, 2000);
             } else {
@@ -4020,7 +4020,7 @@ export default function Treatment() {
             return; // Don't overwrite if rows already exist
         }
         if (complaintsRowsBuiltFromApiRef.current) return; // Don't run if we've already built from API
-        
+
         // Build rows from selectedComplaints (only on initial load from appointment data)
         const newRows: ComplaintRow[] = selectedComplaints.map(val => {
             const opt = complaintsOptions.find(o => o.value === val);
@@ -4032,7 +4032,7 @@ export default function Treatment() {
                 priority: opt?.priority ?? opt?.priority_value ?? 999
             };
         });
-        
+
         // Sort by priority (lower priority number = higher priority)
         const sortedRows = newRows.sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999));
         setComplaintsRows(sortedRows);
@@ -4097,12 +4097,12 @@ export default function Treatment() {
             const existingDiagnoses = new Set(prev.map(r => r.diagnosis?.toLowerCase().trim()));
             const newRows: DiagnosisRow[] = [];
             const duplicateDiagnoses: string[] = [];
-            
+
             selectedDiagnoses.forEach(val => {
                 const diagnosisOption = diagnosesOptions.find(opt => opt.value === val);
                 const diagnosisLabel = diagnosisOption?.label || val;
                 const diagnosisLower = diagnosisLabel.toLowerCase().trim();
-                
+
                 // Check for duplicates by both value and diagnosis name
                 if (existingValues.has(val)) {
                     duplicateDiagnoses.push(diagnosisLabel);
@@ -4118,14 +4118,14 @@ export default function Treatment() {
                     });
                 }
             });
-            
+
             // Show error if duplicates found
             if (duplicateDiagnoses.length > 0) {
                 setDiagnosesError(`The following diagnosis(es) are already added: ${duplicateDiagnoses.join(', ')}`);
             } else {
                 setDiagnosesError(null);
             }
-            
+
             const next = [...prev, ...newRows];
             // Sort by priority (lower priority number = higher priority)
             return next.sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999));
@@ -4144,7 +4144,7 @@ export default function Treatment() {
     };
 
     const handleDiagnosisCommentChangeById = (id: string, comment: string) => {
-        setDiagnosisRows(prev => prev.map(row => 
+        setDiagnosisRows(prev => prev.map(row =>
             row.id === id ? { ...row, comment } : row
         ));
     };
@@ -4155,12 +4155,12 @@ export default function Treatment() {
                 const existingShortDescriptions = new Set(prev.map(r => r.short_description?.toLowerCase().trim()));
                 const newRows: MedicineRow[] = [];
                 const duplicateMedicines: string[] = [];
-                
+
                 selectedMedicines.forEach(medicineValue => {
                     const medicineOption = medicinesOptions.find(opt => opt.value === medicineValue);
                     if (medicineOption) {
                         const shortDesc = medicineOption.short_description?.toLowerCase().trim() || '';
-                        
+
                         // Check for duplicates by short_description
                         if (existingShortDescriptions.has(shortDesc)) {
                             duplicateMedicines.push(medicineOption.short_description);
@@ -4182,14 +4182,14 @@ export default function Treatment() {
                         }
                     }
                 });
-                
+
                 // Show error if duplicates found
                 if (duplicateMedicines.length > 0) {
                     setMedicinesError(`The following medicine(s) are already added: ${duplicateMedicines.join(', ')}`);
                 } else {
                     setMedicinesError(null);
                 }
-                
+
                 const next = [...prev, ...newRows];
                 // Sort by priority (lower priority number = higher priority)
                 return next.sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999));
@@ -4203,13 +4203,13 @@ export default function Treatment() {
     };
 
     const handleMedicineFieldChange = (id: string, field: string, value: string) => {
-        setMedicineRows(prev => prev.map(row => 
+        setMedicineRows(prev => prev.map(row =>
             row.id === id ? { ...row, [field]: value } : row
         ));
     };
 
     const handleMedicineInstructionChange = (id: string, instruction: string) => {
-        setMedicineRows(prev => prev.map(row => 
+        setMedicineRows(prev => prev.map(row =>
             row.id === id ? { ...row, instruction } : row
         ));
     };
@@ -4253,13 +4253,13 @@ export default function Treatment() {
     };
 
     const handlePrescriptionInstructionChange = (id: string, instruction: string) => {
-        setPrescriptionRows(prev => prev.map(row => 
+        setPrescriptionRows(prev => prev.map(row =>
             row.id === id ? { ...row, instruction } : row
         ));
     };
 
     const handlePrescriptionFieldChange = (id: string, field: string, value: string) => {
-        setPrescriptionRows(prev => prev.map(row => 
+        setPrescriptionRows(prev => prev.map(row =>
             row.id === id ? { ...row, [field]: value } : row
         ));
     };
@@ -4271,11 +4271,11 @@ export default function Treatment() {
             const existingInvestigationLabels = new Set(prev.map(r => r.investigation.toLowerCase()));
             const newRows: InvestigationRow[] = [];
             const duplicateInvestigations: string[] = [];
-            
+
             selectedInvestigations.forEach(val => {
                 const investigationOption = investigationsOptions.find(opt => opt.value === val);
                 const investigationLabel = (investigationOption?.label || val).toLowerCase();
-                
+
                 // Check for duplicates by investigation name (case-insensitive)
                 if (existingInvestigationLabels.has(investigationLabel)) {
                     duplicateInvestigations.push(investigationOption?.label || val);
@@ -4284,7 +4284,7 @@ export default function Treatment() {
                     existingInvestigationLabels.add(investigationLabel);
                 }
             });
-            
+
             // Show error if duplicates found
             if (duplicateInvestigations.length > 0) {
                 setSnackbarMessage(`The following investigation(s) are already added: ${duplicateInvestigations.join(', ')}`);
@@ -4292,7 +4292,7 @@ export default function Treatment() {
             } else {
                 setInvestigationsError(null);
             }
-            
+
             return [...prev, ...newRows];
         });
         setSelectedInvestigations([]);
@@ -4357,14 +4357,14 @@ export default function Treatment() {
             const next = { ...prev, [field]: value };
             const billedNum = parseFloat(next.billed) || 0;
             const discountNum = parseFloat(next.discount) || 0;
-            
+
             // Validate discount is not greater than billed amount
             if (discountNum > billedNum && billedNum > 0) {
                 setDiscountError('Discount cannot be greater than billed amount');
             } else {
                 setDiscountError(null);
             }
-            
+
             // Calculate remaining amount after discount (Dues)
             const remainingAmount = Math.max(0, billedNum - discountNum);
             // Keep acBalance as is - don't recalculate, just show the value from API
@@ -4416,9 +4416,9 @@ export default function Treatment() {
                 {/* Main Content - Two Column Layout */}
                 <div style={{ display: 'flex', minHeight: 'calc(100vh - 120px)', fontFamily: "'Roboto', sans-serif", ...disabledStyle }}>
                     {/* Left Sidebar - Previous Visits and Attachments */}
-                    <div style={{ 
-                        width: '240px', 
-                        backgroundColor: '#f8f9fa', 
+                    <div style={{
+                        width: '240px',
+                        backgroundColor: '#f8f9fa',
                         borderRight: '1px solid #dee2e6',
                         display: 'flex',
                         flexDirection: 'column',
@@ -4429,10 +4429,10 @@ export default function Treatment() {
                     }}>
                         {/* Previous Visits Section */}
                         <div>
-                            <div style={{ 
-                                backgroundColor: '#1976d2', 
-                                color: 'white', 
-                                padding: '12px 15px', 
+                            <div style={{
+                                backgroundColor: '#1976d2',
+                                color: 'white',
+                                padding: '12px 15px',
                                 fontWeight: 'bold',
                                 fontSize: '14px'
                             }}>
@@ -4440,9 +4440,9 @@ export default function Treatment() {
                             </div>
                             <div style={{ padding: '0' }}>
                                 {loadingPreviousVisits ? (
-                                    <div style={{ 
-                                        padding: '20px', 
-                                        textAlign: 'center', 
+                                    <div style={{
+                                        padding: '20px',
+                                        textAlign: 'center',
                                         color: '#666',
                                         fontSize: '12px'
                                     }}>
@@ -4450,7 +4450,7 @@ export default function Treatment() {
                                     </div>
                                 ) : previousVisits.length > 0 ? (
                                     previousVisits.slice(-10).reverse().map((visit, index) => (
-                                        <div 
+                                        <div
                                             key={visit.id}
                                             style={{
                                                 padding: '10px 15px',
@@ -4470,14 +4470,14 @@ export default function Treatment() {
                                         >
                                             <div style={{ fontWeight: '500', color: '#333' }}>
                                                 <div style={{ fontSize: '12px', fontWeight: 'bold' }}>
-                                                    <a 
+                                                    <a
                                                         href="#"
                                                         onClick={(e) => {
                                                             e.preventDefault();
                                                             handlePreviousVisitClick(visit);
                                                         }}
-                                                        style={{ 
-                                                            textDecoration: 'underline', 
+                                                        style={{
+                                                            textDecoration: 'underline',
                                                             color: '#1976d2',
                                                             cursor: 'pointer',
                                                             fontWeight: 'bold'
@@ -4499,9 +4499,9 @@ export default function Treatment() {
                                         </div>
                                     ))
                                 ) : previousVisitsError ? (
-                                    <div style={{ 
-                                        padding: '20px', 
-                                        textAlign: 'center', 
+                                    <div style={{
+                                        padding: '20px',
+                                        textAlign: 'center',
                                         color: '#d32f2f',
                                         fontSize: '12px',
                                         backgroundColor: '#ffebee',
@@ -4528,9 +4528,9 @@ export default function Treatment() {
                                         </button>
                                     </div>
                                 ) : (
-                                    <div style={{ 
-                                        padding: '20px', 
-                                        textAlign: 'center', 
+                                    <div style={{
+                                        padding: '20px',
+                                        textAlign: 'center',
                                         color: '#666',
                                         fontSize: '12px'
                                     }}>
@@ -4542,10 +4542,10 @@ export default function Treatment() {
 
                         {/* Attachments Section */}
                         <div style={{ marginTop: '2px' }}>
-                            <div style={{ 
-                                backgroundColor: '#1976d2', 
-                                color: 'white', 
-                                padding: '12px 15px', 
+                            <div style={{
+                                backgroundColor: '#1976d2',
+                                color: 'white',
+                                padding: '12px 15px',
                                 fontWeight: 'bold',
                                 fontSize: '14px'
                             }}>
@@ -4553,9 +4553,9 @@ export default function Treatment() {
                             </div>
                             <div style={{ padding: '10px', maxWidth: '100%', overflowX: 'hidden', boxSizing: 'border-box' }}>
                                 {isLoadingDocuments && (
-                                    <div style={{ 
-                                        display: 'flex', 
-                                        alignItems: 'center', 
+                                    <div style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
                                         gap: '8px',
                                         color: '#2e7d32',
                                         fontSize: '12px'
@@ -4586,7 +4586,7 @@ export default function Treatment() {
                                             const isOpening = openingDocumentId === docId;
                                             const isProcessing = isDownloading || isOpening;
                                             return (
-                                                <span key={`existing-${index}`} style={{ 
+                                                <span key={`existing-${index}`} style={{
                                                     display: 'inline-flex',
                                                     alignItems: 'center',
                                                     padding: '4px 8px',
@@ -4602,32 +4602,32 @@ export default function Treatment() {
                                                     opacity: isProcessing ? 0.7 : 1,
                                                     transition: 'opacity 0.2s'
                                                 }}
-                                                onClick={() => { 
-                                                    if (docId && !isProcessing) {
-                                                        handleOpenDocument(doc);
-                                                    }
-                                                }}
-                                                onMouseEnter={(e) => {
-                                                    if (docId && !isProcessing) {
-                                                        e.currentTarget.style.backgroundColor = '#d4edda';
-                                                    }
-                                                }}
-                                                onMouseLeave={(e) => {
-                                                    if (docId && !isProcessing) {
-                                                        e.currentTarget.style.backgroundColor = '#e8f5e8';
-                                                    }
-                                                }}
-                                                title={isProcessing ? (isOpening ? 'Opening...' : 'Downloading...') : docId ? 'Click to open document' : ''}
+                                                    onClick={() => {
+                                                        if (docId && !isProcessing) {
+                                                            handleOpenDocument(doc);
+                                                        }
+                                                    }}
+                                                    onMouseEnter={(e) => {
+                                                        if (docId && !isProcessing) {
+                                                            e.currentTarget.style.backgroundColor = '#d4edda';
+                                                        }
+                                                    }}
+                                                    onMouseLeave={(e) => {
+                                                        if (docId && !isProcessing) {
+                                                            e.currentTarget.style.backgroundColor = '#e8f5e8';
+                                                        }
+                                                    }}
+                                                    title={isProcessing ? (isOpening ? 'Opening...' : 'Downloading...') : docId ? 'Click to open document' : ''}
                                                 >
                                                     <span style={{ marginRight: '5px' }}>📄</span>
                                                     <span style={{ maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                                         {doc.documentName || `Document ${index + 1}`}
                                                     </span>
                                                     {doc.fileSize && (
-                                                        <span style={{ 
-                                                            marginLeft: '6px', 
-                                                            fontSize: '11px', 
-                                                            color: '#2e7d32', 
+                                                        <span style={{
+                                                            marginLeft: '6px',
+                                                            fontSize: '11px',
+                                                            color: '#2e7d32',
                                                             fontWeight: 400
                                                         }}>
                                                             ({(() => {
@@ -4646,9 +4646,9 @@ export default function Treatment() {
                                                     )}
                                                     {docId && (
                                                         <span
-                                                            onClick={(e) => { 
+                                                            onClick={(e) => {
                                                                 e.stopPropagation(); // Prevent triggering the parent onClick
-                                                                if (!isProcessing) handleDownloadDocument(doc); 
+                                                                if (!isProcessing) handleDownloadDocument(doc);
                                                             }}
                                                             style={{
                                                                 marginLeft: '8px',
@@ -4675,10 +4675,10 @@ export default function Treatment() {
 
                         {/* Past Services Section */}
                         <div style={{ marginTop: '2px' }}>
-                            <div style={{ 
-                                backgroundColor: '#1976d2', 
-                                color: 'white', 
-                                padding: '12px 15px', 
+                            <div style={{
+                                backgroundColor: '#1976d2',
+                                color: 'white',
+                                padding: '12px 15px',
                                 fontWeight: 'bold',
                                 fontSize: '14px'
                             }}>
@@ -4686,7 +4686,7 @@ export default function Treatment() {
                             </div>
                             <div style={{ padding: '0' }}>
                                 {loadingPastServices ? (
-                                    <div style={{ 
+                                    <div style={{
                                         padding: '10px 15px',
                                         textAlign: 'center',
                                         color: '#666',
@@ -4695,7 +4695,7 @@ export default function Treatment() {
                                         Loading...
                                     </div>
                                 ) : pastServicesError ? (
-                                    <div style={{ 
+                                    <div style={{
                                         padding: '10px 15px',
                                         textAlign: 'center',
                                         color: '#d32f2f',
@@ -4707,7 +4707,7 @@ export default function Treatment() {
                                         {pastServicesError}
                                     </div>
                                 ) : pastServiceDates.length === 0 ? (
-                                    <div style={{ 
+                                    <div style={{
                                         padding: '10px 15px',
                                         textAlign: 'center',
                                         color: '#666',
@@ -4717,7 +4717,7 @@ export default function Treatment() {
                                     </div>
                                 ) : (
                                     pastServiceDates.map((dateStr, idx) => (
-                                        <div 
+                                        <div
                                             key={`${dateStr}_${idx}`}
                                             style={{
                                                 padding: '10px 15px',
@@ -4728,8 +4728,8 @@ export default function Treatment() {
                                         >
                                             <a
                                                 href="#"
-                                                onClick={(e) => { 
-                                                    e.preventDefault(); 
+                                                onClick={(e) => {
+                                                    e.preventDefault();
                                                     handlePastServiceDateClick(dateStr);
                                                 }}
                                                 style={{ color: '#1976d2', textDecoration: 'underline', cursor: 'pointer' }}
@@ -4746,416 +4746,209 @@ export default function Treatment() {
                     {/* Right Content - Treatment Form */}
                     <div style={{ flex: 1, padding: '15px', display: 'flex', flexDirection: 'column' }}>
                         <div style={{ flex: 1, overflowY: 'auto', paddingBottom: '20px' }}>
-                        {/* Patient Header */}
-                        <div style={{ 
-                            marginBottom: '15px', 
-                            padding: '0', 
-                            backgroundColor: '#f8f9fa', 
-                            borderRadius: '4px'
-                        }}>
-                            <div style={{ 
-                                display: 'flex', 
-                                justifyContent: 'space-between', 
-                                alignItems: 'center'
+                            {/* Patient Header */}
+                            <div style={{
+                                marginBottom: '15px',
+                                padding: '0',
+                                backgroundColor: '#f8f9fa',
+                                borderRadius: '4px'
                             }}>
-                                <div 
-                                    onClick={() => {
-                                        if (treatmentData?.patientId) {
-                                            setShowQuickRegistration(true);
-                                        }
-                                    }}
-                                    style={{ 
-                                        fontSize: '16px', 
-                                        fontWeight: 'bold', 
-                                        color: '#2e7d32',
-                                        cursor: treatmentData?.patientId ? 'pointer' : 'default',
-                                        textDecoration: treatmentData?.patientId ? 'underline' : 'none'
-                                    }}
-                                    title={treatmentData?.patientId ? 'Click to view patient details' : ''}
-                                >
-                                    {treatmentData?.patientName || 'Amit Kalamkar'} / {treatmentData?.gender || 'Male'} / {treatmentData?.age || 48} Y / {treatmentData?.contact || 'N/A'}
-                                </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px', whiteSpace: 'nowrap' }}>Referred By:</label>
-                                        <span style={{
-                                            fontSize: '12px',
-                                            color: '#333',
-                                            fontWeight: 500
-                                        }}>Self</span>
+                                <div style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center'
+                                }}>
+                                    <div
+                                        onClick={() => {
+                                            if (treatmentData?.patientId) {
+                                                setShowQuickRegistration(true);
+                                            }
+                                        }}
+                                        style={{
+                                            fontSize: '16px',
+                                            fontWeight: 'bold',
+                                            color: '#2e7d32',
+                                            cursor: treatmentData?.patientId ? 'pointer' : 'default',
+                                            textDecoration: treatmentData?.patientId ? 'underline' : 'none'
+                                        }}
+                                        title={treatmentData?.patientId ? 'Click to view patient details' : ''}
+                                    >
+                                        {treatmentData?.patientName || 'Amit Kalamkar'} / {treatmentData?.gender || 'Male'} / {treatmentData?.age || 48} Y / {treatmentData?.contact || 'N/A'}
                                     </div>
-                                    <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: isFormDisabled ? 'not-allowed' : 'pointer', fontSize: '12px', whiteSpace: 'nowrap' }}>
-                                        <input
-                                            type="checkbox"
-                                            checked={formData.visitType.inPerson}
-                                            onChange={(e) => handleVisitTypeChange('inPerson', e.target.checked)}
-                                            disabled={isFormDisabled}
-                                        />
-                                        In-Person
-                                    </label>
-                                    <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: isFormDisabled ? 'not-allowed' : 'pointer', fontSize: '12px', whiteSpace: 'nowrap' }}>
-                                        <input
-                                            type="checkbox"
-                                            checked={formData.visitType.followUp}
-                                            onChange={(e) => handleVisitTypeChange('followUp', e.target.checked)}
-                                            disabled={isFormDisabled}
-                                        />
-                                        Follow-up
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Medical History Checkboxes */}
-                        <div style={{ marginBottom: '15px' }}>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
-                                {Object.entries(formData.medicalHistory).map(([key, value]) => (
-                                    <label key={key} style={{ 
-                                        display: 'flex', 
-                                        alignItems: 'center', 
-                                        gap: '5px', 
-                                        cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                        fontSize: '13px',
-                                        borderRadius: '4px'
-                                    }}>
-                                        <input
-                                            type="checkbox"
-                                            checked={value}
-                                            onChange={(e) => handleMedicalHistoryChange(key, e.target.checked)}
-                                            disabled={isFormDisabled}
-                                            style={{ margin: 0 }}
-                                        />
-                                        <span style={{ textTransform: 'capitalize', fontWeight: '500' }}>
-                                            {key === 'ihd' ? 'IHD' : key === 'th' ? 'TH' : key.charAt(0).toUpperCase() + key.slice(1)}
-                                        </span>
-                                    </label>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Input Fields Row 1 */}
-                        <div style={{ marginBottom: '15px' }}>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 180px)' as const, gap: '12px' }}>
-                                {[
-                                    { key: 'allergy', label: 'Allergy' },
-                                    { key: 'medicalHistoryText', label: 'Medical History' },
-                                    { key: 'surgicalHistory', label: 'Surgical History' },
-                                    { key: 'medicines', label: 'Medicines' },
-                                    { key: 'visitComments', label: 'Visit Comments' },
-                                    { key: 'pc', label: 'PC' }
-                                ].map(({ key, label }) => (
-                                    <div key={key}>
-                                        <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                            {label}
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px', whiteSpace: 'nowrap' }}>Referred By:</label>
+                                            <span style={{
+                                                fontSize: '12px',
+                                                color: '#333',
+                                                fontWeight: 500
+                                            }}>Self</span>
+                                        </div>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: isFormDisabled ? 'not-allowed' : 'pointer', fontSize: '12px', whiteSpace: 'nowrap' }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={formData.visitType.inPerson}
+                                                onChange={(e) => handleVisitTypeChange('inPerson', e.target.checked)}
+                                                disabled={isFormDisabled}
+                                            />
+                                            In-Person
                                         </label>
-                                        <input
-                                            type="text"
-                                            value={formData[key as keyof typeof formData] as string}
-                                            onChange={(e) => handleInputChange(key, e.target.value)}
-                                            disabled={key === 'pc' || isFormDisabled}
-                                            style={{
-                                                width: '100%',
-                                                padding: '6px 10px',
-                                                border: '1px solid #ccc',
-                                                borderRadius: '4px',
-                                                fontSize: '13px',
-                                                backgroundColor: key === 'pc' || isFormDisabled ? '#f5f5f5' : 'white',
-                                                color: key === 'pc' || isFormDisabled ? '#666' : '#333',
-                                                cursor: key === 'pc' || isFormDisabled ? 'not-allowed' : 'text'
-                                            }}
-                                        />
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: isFormDisabled ? 'not-allowed' : 'pointer', fontSize: '12px', whiteSpace: 'nowrap' }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={formData.visitType.followUp}
+                                                onChange={(e) => handleVisitTypeChange('followUp', e.target.checked)}
+                                                disabled={isFormDisabled}
+                                            />
+                                            Follow-up
+                                        </label>
                                     </div>
-                                ))}
+                                </div>
                             </div>
-                        </div>
 
-                        {/* Vitals Row */}
-                        <div style={{ marginBottom: '15px' }}>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'stretch' }}>
-                                <div style={{ flex: '1 1 700px', minWidth: '260px' }}>
-                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '12px' }}>
-                                        {[
-                                            { key: 'height', label: 'Height (Cm)' },
-                                            { key: 'weight', label: 'Weight (Kg)' },
-                                            { key: 'bmi', label: 'BMI' },
-                                            { key: 'pulse', label: 'Pulse (min)' },
-                                            { key: 'bp', label: 'BP' },
-                                            { key: 'sugar', label: 'Sugar' },
-                                            { key: 'tft', label: 'TFT' },
-                                            { key: 'pallorHb', label: 'Pallor/HB' }
-                                        ].map(({ key, label }) => {
-                                            const isNumberField = key === 'pulse' || key === 'height' || key === 'weight';
-                                            return (
-                                                <div key={key}>
-                                                    <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                                        {label}
-                                                    </label>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                                        <input
-                                                            type={isNumberField ? "number" : "text"}
-                                                            value={formData[key as keyof typeof formData] as string}
-                                                            onChange={(e) => {
-                                                                const value = e.target.value;
-                                                                if (isNumberField) {
-                                                                    // Allow empty string or non-negative numbers
-                                                                    if (value === '' || (!isNaN(parseFloat(value)) && parseFloat(value) >= 0)) {
+                            {/* Medical History Checkboxes */}
+                            <div style={{ marginBottom: '15px' }}>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+                                    {Object.entries(formData.medicalHistory).map(([key, value]) => (
+                                        <label key={key} style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '5px',
+                                            cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                            fontSize: '13px',
+                                            borderRadius: '4px'
+                                        }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={value}
+                                                onChange={(e) => handleMedicalHistoryChange(key, e.target.checked)}
+                                                disabled={isFormDisabled}
+                                                style={{ margin: 0 }}
+                                            />
+                                            <span style={{ textTransform: 'capitalize', fontWeight: '500' }}>
+                                                {key === 'ihd' ? 'IHD' : key === 'th' ? 'TH' : key.charAt(0).toUpperCase() + key.slice(1)}
+                                            </span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Input Fields Row 1 */}
+                            <div style={{ marginBottom: '15px' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 180px)' as const, gap: '12px' }}>
+                                    {[
+                                        { key: 'allergy', label: 'Allergy' },
+                                        { key: 'medicalHistoryText', label: 'Medical History' },
+                                        { key: 'surgicalHistory', label: 'Surgical History' },
+                                        { key: 'medicines', label: 'Medicines' },
+                                        { key: 'visitComments', label: 'Visit Comments' },
+                                        { key: 'pc', label: 'PC' }
+                                    ].map(({ key, label }) => (
+                                        <div key={key}>
+                                            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                                                {label}
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={formData[key as keyof typeof formData] as string}
+                                                onChange={(e) => handleInputChange(key, e.target.value)}
+                                                disabled={key === 'pc' || isFormDisabled}
+                                                style={{
+                                                    width: '100%',
+                                                    padding: '6px 10px',
+                                                    border: '1px solid #ccc',
+                                                    borderRadius: '4px',
+                                                    fontSize: '13px',
+                                                    backgroundColor: key === 'pc' || isFormDisabled ? '#f5f5f5' : 'white',
+                                                    color: key === 'pc' || isFormDisabled ? '#666' : '#333',
+                                                    cursor: key === 'pc' || isFormDisabled ? 'not-allowed' : 'text'
+                                                }}
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Vitals Row */}
+                            <div style={{ marginBottom: '15px' }}>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'stretch' }}>
+                                    <div style={{ flex: '1 1 700px', minWidth: '260px' }}>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '12px' }}>
+                                            {[
+                                                { key: 'height', label: 'Height (Cm)' },
+                                                { key: 'weight', label: 'Weight (Kg)' },
+                                                { key: 'bmi', label: 'BMI' },
+                                                { key: 'pulse', label: 'Pulse (min)' },
+                                                { key: 'bp', label: 'BP' },
+                                                { key: 'sugar', label: 'Sugar' },
+                                                { key: 'tft', label: 'TFT' },
+                                                { key: 'pallorHb', label: 'Pallor/HB' }
+                                            ].map(({ key, label }) => {
+                                                const isNumberField = key === 'pulse' || key === 'height' || key === 'weight';
+                                                return (
+                                                    <div key={key}>
+                                                        <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                                                            {label}
+                                                        </label>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                                            <input
+                                                                type={isNumberField ? "number" : "text"}
+                                                                value={formData[key as keyof typeof formData] as string}
+                                                                onChange={(e) => {
+                                                                    const value = e.target.value;
+                                                                    if (isNumberField) {
+                                                                        // Allow empty string or non-negative numbers
+                                                                        if (value === '' || (!isNaN(parseFloat(value)) && parseFloat(value) >= 0)) {
+                                                                            handleInputChange(key, value);
+                                                                        }
+                                                                    } else {
                                                                         handleInputChange(key, value);
                                                                     }
-                                                                } else {
-                                                                    handleInputChange(key, value);
-                                                                }
-                                                            }}
-                                                            onKeyDown={(e) => {
-                                                                if (isNumberField) {
-                                                                    // Prevent minus key from being entered
-                                                                    if (e.key === '-' || e.key === 'e' || e.key === 'E' || e.key === '+') {
-                                                                        e.preventDefault();
-                                                                    }
-                                                                }
-                                                            }}
-                                                            onBlur={(e) => {
-                                                                if (isNumberField) {
-                                                                    // Ensure value is not negative on blur
-                                                                    const numValue = parseFloat(e.target.value);
-                                                                    if (isNaN(numValue) || numValue < 0) {
-                                                                        handleInputChange(key, '');
-                                                                    }
-                                                                }
-                                                            }}
-                                                            min={isNumberField ? "0" : undefined}
-                                                            step={isNumberField ? (key === 'pulse' ? "1" : "0.1") : undefined}
-                                                            disabled={key === 'bmi' || isFormDisabled}
-                                                            style={{
-                                                                flex: 1,
-                                                                padding: '6px 10px',
-                                                                border: '1px solid #ccc',
-                                                                borderRadius: '4px',
-                                                                fontSize: '13px',
-                                                                backgroundColor: key === 'bmi' || isFormDisabled ? '#f5f5f5' : 'white',
-                                                                color: key === 'bmi' || isFormDisabled ? '#666' : '#333',
-                                                                cursor: key === 'bmi' || isFormDisabled ? 'not-allowed' : 'text'
-                                                            }}
-                                                        />
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                                <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-                                    <button
-                                        type="button"
-                                        disabled={isFormDisabled}
-                                        title="Show vitals trend"
-                                        style={{
-                                            padding: '0 14px',
-                                            backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
-                                            color: 'white',
-                                            border: 'none',
-                                            borderRadius: '6px',
-                                            cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                            fontSize: '12px',
-                                            fontWeight: '500',
-                                            height: '32px',
-                                            transition: 'background-color 0.2s',
-                                            whiteSpace: 'nowrap'
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1565c0';
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1976d2';
-                                        }}
-                                        onClick={() => setShowVitalsTrend(true)}
-                                    >
-                                        Trend
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-
-                        {/* Complaints Section */}
-                        <div style={{ marginBottom: '15px' }}>
-                            <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', alignItems: 'flex-start' }}>
-                                <div style={{ position: 'relative', flex: 1 }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px', width: '88%', gap: '8px' }}>
-                                        <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Complaints</label>
-                                    </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <div ref={complaintsRef} style={{ position: 'relative', flex: 1 }}>
-                                            <div
-                                                onClick={() => !isFormDisabled && setIsComplaintsOpen(prev => !prev)}
-                                            style={{
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'space-between',
-                                                height: '32px',
-                                                    padding: '4px 8px',
-                                                    border: '2px solid #B7B7B7',
-                                                    borderRadius: '6px',
-                                                    fontSize: '12px',
-                                                    fontFamily: "'Roboto', sans-serif",
-                                                    fontWeight: 500,
-                                                    backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
-                                                    cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                                    userSelect: 'none',
-                                                    opacity: isFormDisabled ? 0.6 : 1
-                                                }}
-                                                onMouseEnter={(e) => {
-                                                    (e.currentTarget as HTMLDivElement).style.borderColor = '#1E88E5';
-                                                }}
-                                                onMouseLeave={(e) => {
-                                                    (e.currentTarget as HTMLDivElement).style.borderColor = '#B7B7B7';
-                                                }}
-                                            >
-                                                <span style={{ color: selectedComplaints.length ? '#000' : '#9e9e9e' }}>
-                                                    {selectedComplaints.length === 0 && 'Select Complaints'}
-                                                    {selectedComplaints.length === 1 && '1 selected'}
-                                                    {selectedComplaints.length > 1 && `${selectedComplaints.length} selected`}
-                                                </span>
-                                                <span style={{ marginLeft: '8px', color: '#666', fontSize: '16px', lineHeight: '1' }}>▾</span>
-                                            </div>
-
-                                            {isComplaintsOpen && (
-                                                <div style={{
-                                                    position: 'absolute',
-                                                    top: '100%',
-                                                    left: 0,
-                                                    right: 0,
-                                                    backgroundColor: 'white',
-                                                    border: '1px solid #B7B7B7',
-                                                    borderRadius: '6px',
-                                                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                                                    zIndex: 1000,
-                                                    marginTop: '4px'
-                                                }}>
-                                                    {/* Search Field inside dropdown */}
-                                                    <div style={{ padding: '6px' }}>
-                                                        <input
-                                                            type="text"
-                                                            value={complaintSearch}
-                                                            onChange={(e) => setComplaintSearch(e.target.value)}
-                                                            placeholder="Search complaints"
-                                                            style={{
-                                                                width: '100%',
-                                                                height: '28px',
-                                                                padding: '4px 8px',
-                                                                border: '1px solid #B7B7B7',
-                                                                borderRadius: '4px',
-                                                                fontSize: '12px',
-                                                                outline: 'none'
-                                                            }}
-                                                            onFocus={(e) => {
-                                                                (e.target as HTMLInputElement).style.borderColor = '#1E88E5';
-                                                            }}
-                                                            onBlur={(e) => {
-                                                                (e.target as HTMLInputElement).style.borderColor = '#B7B7B7';
-                                                            }}
-                                                        />
-                                                    </div>
-
-                                                    <div className="complaints-dropdown" style={{ maxHeight: '200px', overflowY: 'auto', padding: '4px 6px', display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', columnGap: '8px', rowGap: '6px' }}>
-                                                        {complaintsLoading && (
-                                                            <div style={{ padding: '6px', fontSize: '12px', color: '#777', gridColumn: '1 / -1', textAlign: 'center' }}>
-                                                                Loading complaints...
-                                                            </div>
-                                                        )}
-                                                        {complaintsError && (
-                                                            <div style={{ padding: '6px', fontSize: '12px', color: '#d32f2f', gridColumn: '1 / -1', textAlign: 'center' }}>
-                                                                {complaintsError}
-                                        <button
-                                                                    onClick={() => {
-                                                                        const doctorId = treatmentData?.doctorId || sessionData?.doctorId;
-                                                                        const clinicId = treatmentData?.clinicId || sessionData?.clinicId;
-                                                                        if (!doctorId || !clinicId) {
-                                                                            setComplaintsError('Doctor or clinic details are missing. Please reload the visit.');
-                                                                            return;
+                                                                }}
+                                                                onKeyDown={(e) => {
+                                                                    if (isNumberField) {
+                                                                        // Prevent minus key from being entered
+                                                                        if (e.key === '-' || e.key === 'e' || e.key === 'E' || e.key === '+') {
+                                                                            e.preventDefault();
                                                                         }
-                                                                        
-                                                                        setComplaintsError(null);
-                                                                        setComplaintsLoading(true);
-                                                                        
-                                                                        complaintService.getAllComplaintsForDoctor(doctorId, clinicId)
-                                                                            .then(setComplaintsOptions)
-                                                                            .catch(e => setComplaintsError(e.message))
-                                                                            .finally(() => setComplaintsLoading(false));
-                                                                    }}
-                                            style={{
-                                                                        marginLeft: '8px', 
-                                                                        padding: '2px 6px', 
-                                                                        fontSize: '10px', 
-                                                backgroundColor: '#1976d2',
-                                                color: 'white',
-                                                border: 'none',
-                                                                        borderRadius: '3px', 
-                                                                        cursor: 'pointer' 
-                                                                    }}
-                                                                >
-                                                                    Retry
-                                                                </button>
-                                                            </div>
-                                                        )}
-                                                        {!complaintsLoading && !complaintsError && filteredComplaints.length === 0 && (
-                                                            <div style={{ padding: '6px', fontSize: '12px', color: '#777', gridColumn: '1 / -1' }}>No complaints found</div>
-                                                        )}
-                                                        {!complaintsLoading && !complaintsError && filteredComplaints.map((opt, index) => {
-                                                            const checked = selectedComplaints.includes(opt.value);
-                                                            const isFirstUnselected = !checked && index > 0 && selectedComplaints.includes(filteredComplaints[index - 1].value);
-                                                            
-                                                            return (
-                                                                <React.Fragment key={opt.value}>
-                                                                    {isFirstUnselected && (
-                                                                        <div style={{ 
-                                                                            gridColumn: '1 / -1', 
-                                                                            height: '1px', 
-                                                                            backgroundColor: '#e0e0e0', 
-                                                                            margin: '4px 0' 
-                                                                        }} />
-                                                                    )}
-                                                                    <label 
-                                                                        style={{ 
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                                            gap: '4px', 
-                                                                            padding: '4px 2px', 
-                                                                            cursor: 'pointer', 
-                                                                            fontSize: '12px', 
-                                                                            border: 'none',
-                                                                            backgroundColor: 'transparent',
-                                                                            borderRadius: '3px',
-                                                                            fontWeight: 400
-                                                                        }}
-                                                                    >
-                                                                        <input
-                                                                            type="checkbox"
-                                                                            checked={checked}
-                                                                            onChange={(e) => {
-                                                                                setSelectedComplaints(prev => {
-                                                                                    if (e.target.checked) {
-                                                                                        if (prev.includes(opt.value)) return prev;
-                                                                                        return [...prev, opt.value];
-                                                                                    } else {
-                                                                                        return prev.filter(v => v !== opt.value);
-                                                                                    }
-                                                                                });
-                                                                            }}
-                                                                            style={{ margin: 0 }}
-                                                                        />
-                                                                        <span style={{ whiteSpace: 'nowrap' }}>{opt.label}</span>
-                                                                    </label>
-                                                                </React.Fragment>
-                                                            );
-                                                        })}
+                                                                    }
+                                                                }}
+                                                                onBlur={(e) => {
+                                                                    if (isNumberField) {
+                                                                        // Ensure value is not negative on blur
+                                                                        const numValue = parseFloat(e.target.value);
+                                                                        if (isNaN(numValue) || numValue < 0) {
+                                                                            handleInputChange(key, '');
+                                                                        }
+                                                                    }
+                                                                }}
+                                                                min={isNumberField ? "0" : undefined}
+                                                                step={isNumberField ? (key === 'pulse' ? "1" : "0.1") : undefined}
+                                                                disabled={key === 'bmi' || isFormDisabled}
+                                                                style={{
+                                                                    flex: 1,
+                                                                    padding: '6px 10px',
+                                                                    border: '1px solid #ccc',
+                                                                    borderRadius: '4px',
+                                                                    fontSize: '13px',
+                                                                    backgroundColor: key === 'bmi' || isFormDisabled ? '#f5f5f5' : 'white',
+                                                                    color: key === 'bmi' || isFormDisabled ? '#666' : '#333',
+                                                                    cursor: key === 'bmi' || isFormDisabled ? 'not-allowed' : 'text'
+                                                                }}
+                                                            />
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            )}
+                                                );
+                                            })}
                                         </div>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'flex-end' }}>
                                         <button
+                                            type="button"
                                             disabled={isFormDisabled}
-                                            title="Add selected complaints"
+                                            title="Show vitals trend"
                                             style={{
-                                                padding: '0 10px',
+                                                padding: '0 14px',
                                                 backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
                                                 color: 'white',
                                                 border: 'none',
@@ -5164,7 +4957,8 @@ export default function Treatment() {
                                                 fontSize: '12px',
                                                 fontWeight: '500',
                                                 height: '32px',
-                                                transition: 'background-color 0.2s'
+                                                transition: 'background-color 0.2s',
+                                                whiteSpace: 'nowrap'
                                             }}
                                             onMouseEnter={(e) => {
                                                 if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1565c0';
@@ -5172,2158 +4966,2364 @@ export default function Treatment() {
                                             onMouseLeave={(e) => {
                                                 if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1976d2';
                                             }}
-                                            onClick={handleAddComplaints}
+                                            onClick={() => setShowVitalsTrend(true)}
                                         >
-                                            Add
+                                            Trend
                                         </button>
+                                    </div>
+                                </div>
+                            </div>
+
+
+                            {/* Complaints Section */}
+                            <div style={{ marginBottom: '15px' }}>
+                                <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', alignItems: 'flex-start' }}>
+                                    <div style={{ position: 'relative', flex: 1 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px', width: '88%', gap: '8px' }}>
+                                            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Complaints</label>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <div ref={complaintsRef} style={{ position: 'relative', flex: 1 }}>
+                                                <div
+                                                    onClick={() => !isFormDisabled && setIsComplaintsOpen(prev => !prev)}
+                                                    style={{
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'space-between',
+                                                        height: '32px',
+                                                        padding: '4px 8px',
+                                                        border: '2px solid #B7B7B7',
+                                                        borderRadius: '6px',
+                                                        fontSize: '12px',
+                                                        fontFamily: "'Roboto', sans-serif",
+                                                        fontWeight: 500,
+                                                        backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
+                                                        cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                                        userSelect: 'none',
+                                                        opacity: isFormDisabled ? 0.6 : 1
+                                                    }}
+                                                    onMouseEnter={(e) => {
+                                                        (e.currentTarget as HTMLDivElement).style.borderColor = '#1E88E5';
+                                                    }}
+                                                    onMouseLeave={(e) => {
+                                                        (e.currentTarget as HTMLDivElement).style.borderColor = '#B7B7B7';
+                                                    }}
+                                                >
+                                                    <span style={{ color: selectedComplaints.length ? '#000' : '#9e9e9e' }}>
+                                                        {selectedComplaints.length === 0 && 'Select Complaints'}
+                                                        {selectedComplaints.length === 1 && '1 selected'}
+                                                        {selectedComplaints.length > 1 && `${selectedComplaints.length} selected`}
+                                                    </span>
+                                                    <span style={{ marginLeft: '8px', color: '#666', fontSize: '16px', lineHeight: '1' }}>▾</span>
+                                                </div>
+
+                                                {isComplaintsOpen && (
+                                                    <div style={{
+                                                        position: 'absolute',
+                                                        top: '100%',
+                                                        left: 0,
+                                                        right: 0,
+                                                        backgroundColor: 'white',
+                                                        border: '1px solid #B7B7B7',
+                                                        borderRadius: '6px',
+                                                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                                                        zIndex: 1000,
+                                                        marginTop: '4px'
+                                                    }}>
+                                                        {/* Search Field inside dropdown */}
+                                                        <div style={{ padding: '6px' }}>
+                                                            <input
+                                                                type="text"
+                                                                value={complaintSearch}
+                                                                onChange={(e) => setComplaintSearch(e.target.value)}
+                                                                placeholder="Search complaints"
+                                                                style={{
+                                                                    width: '100%',
+                                                                    height: '28px',
+                                                                    padding: '4px 8px',
+                                                                    border: '1px solid #B7B7B7',
+                                                                    borderRadius: '4px',
+                                                                    fontSize: '12px',
+                                                                    outline: 'none'
+                                                                }}
+                                                                onFocus={(e) => {
+                                                                    (e.target as HTMLInputElement).style.borderColor = '#1E88E5';
+                                                                }}
+                                                                onBlur={(e) => {
+                                                                    (e.target as HTMLInputElement).style.borderColor = '#B7B7B7';
+                                                                }}
+                                                            />
+                                                        </div>
+
+                                                        <div className="complaints-dropdown" style={{ maxHeight: '200px', overflowY: 'auto', padding: '4px 6px', display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', columnGap: '8px', rowGap: '6px' }}>
+                                                            {complaintsLoading && (
+                                                                <div style={{ padding: '6px', fontSize: '12px', color: '#777', gridColumn: '1 / -1', textAlign: 'center' }}>
+                                                                    Loading complaints...
+                                                                </div>
+                                                            )}
+                                                            {complaintsError && (
+                                                                <div style={{ padding: '6px', fontSize: '12px', color: '#d32f2f', gridColumn: '1 / -1', textAlign: 'center' }}>
+                                                                    {complaintsError}
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            const doctorId = treatmentData?.doctorId || sessionData?.doctorId;
+                                                                            const clinicId = treatmentData?.clinicId || sessionData?.clinicId;
+                                                                            if (!doctorId || !clinicId) {
+                                                                                setComplaintsError('Doctor or clinic details are missing. Please reload the visit.');
+                                                                                return;
+                                                                            }
+
+                                                                            setComplaintsError(null);
+                                                                            setComplaintsLoading(true);
+
+                                                                            complaintService.getAllComplaintsForDoctor(doctorId, clinicId)
+                                                                                .then(setComplaintsOptions)
+                                                                                .catch(e => setComplaintsError(e.message))
+                                                                                .finally(() => setComplaintsLoading(false));
+                                                                        }}
+                                                                        style={{
+                                                                            marginLeft: '8px',
+                                                                            padding: '2px 6px',
+                                                                            fontSize: '10px',
+                                                                            backgroundColor: '#1976d2',
+                                                                            color: 'white',
+                                                                            border: 'none',
+                                                                            borderRadius: '3px',
+                                                                            cursor: 'pointer'
+                                                                        }}
+                                                                    >
+                                                                        Retry
+                                                                    </button>
+                                                                </div>
+                                                            )}
+                                                            {!complaintsLoading && !complaintsError && filteredComplaints.length === 0 && (
+                                                                <div style={{ padding: '6px', fontSize: '12px', color: '#777', gridColumn: '1 / -1' }}>No complaints found</div>
+                                                            )}
+                                                            {!complaintsLoading && !complaintsError && filteredComplaints.map((opt, index) => {
+                                                                const checked = selectedComplaints.includes(opt.value);
+                                                                const isFirstUnselected = !checked && index > 0 && selectedComplaints.includes(filteredComplaints[index - 1].value);
+
+                                                                return (
+                                                                    <React.Fragment key={opt.value}>
+                                                                        {isFirstUnselected && (
+                                                                            <div style={{
+                                                                                gridColumn: '1 / -1',
+                                                                                height: '1px',
+                                                                                backgroundColor: '#e0e0e0',
+                                                                                margin: '4px 0'
+                                                                            }} />
+                                                                        )}
+                                                                        <label
+                                                                            style={{
+                                                                                display: 'flex',
+                                                                                alignItems: 'center',
+                                                                                gap: '4px',
+                                                                                padding: '4px 2px',
+                                                                                cursor: 'pointer',
+                                                                                fontSize: '12px',
+                                                                                border: 'none',
+                                                                                backgroundColor: 'transparent',
+                                                                                borderRadius: '3px',
+                                                                                fontWeight: 400
+                                                                            }}
+                                                                        >
+                                                                            <input
+                                                                                type="checkbox"
+                                                                                checked={checked}
+                                                                                onChange={(e) => {
+                                                                                    setSelectedComplaints(prev => {
+                                                                                        if (e.target.checked) {
+                                                                                            if (prev.includes(opt.value)) return prev;
+                                                                                            return [...prev, opt.value];
+                                                                                        } else {
+                                                                                            return prev.filter(v => v !== opt.value);
+                                                                                        }
+                                                                                    });
+                                                                                }}
+                                                                                style={{ margin: 0 }}
+                                                                            />
+                                                                            <span style={{ whiteSpace: 'nowrap' }}>{opt.label}</span>
+                                                                        </label>
+                                                                    </React.Fragment>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <button
+                                                disabled={isFormDisabled}
+                                                title="Add selected complaints"
+                                                style={{
+                                                    padding: '0 10px',
+                                                    backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
+                                                    color: 'white',
+                                                    border: 'none',
+                                                    borderRadius: '6px',
+                                                    cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                                    fontSize: '12px',
+                                                    fontWeight: '500',
+                                                    height: '32px',
+                                                    transition: 'background-color 0.2s'
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                    if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1565c0';
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1976d2';
+                                                }}
+                                                onClick={handleAddComplaints}
+                                            >
+                                                Add
+                                            </button>
+                                            <button
+                                                type="button"
+                                                disabled={isFormDisabled}
+                                                title="Add custom complaint"
+                                                style={{
+                                                    backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
+                                                    color: 'white',
+                                                    border: 'none',
+                                                    padding: '6px',
+                                                    borderRadius: '6px',
+                                                    cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                                    width: '32px',
+                                                    height: '32px',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    fontSize: '14px',
+                                                    transition: 'background-color 0.2s'
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                    if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1565c0';
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1976d2';
+                                                }}
+                                                onClick={handleAddCustomComplaint}
+                                            >
+                                                <Add fontSize="small" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Complaints Table */}
+                                {complaintsRows.length > 0 && (
+                                    <div
+                                        style={{
+                                            border: '1px solid #ccc',
+                                            borderRadius: '4px',
+                                            overflow: 'hidden',
+                                            opacity: isFormDisabled ? 0.6 : 1
+                                        }}
+                                    >
+                                        <div style={{
+                                            display: 'grid',
+                                            gridTemplateColumns: '60px 1.5fr 1.5fr 80px' as const,
+                                            backgroundColor: '#1976d2',
+                                            color: 'white',
+                                            fontWeight: 'bold',
+                                            fontSize: '11px'
+                                        }}>
+                                            <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Sr.</div>
+                                            <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Complaint Description</div>
+                                            <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Duration / Comment</div>
+                                            <div style={{ padding: '6px' }}>Action</div>
+                                        </div>
+                                        {[...complaintsRows].sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999)).map((row, index) => (
+                                            <div key={row.id} style={{
+                                                display: 'grid',
+                                                gridTemplateColumns: '60px 1.5fr 1.5fr 80px' as const,
+                                                backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white',
+                                                borderBottom: '1px solid #e0e0e0'
+                                            }}>
+                                                <div style={{ padding: '6px', borderRight: '1px solid #e0e0e0', fontSize: '12px' }}>{index + 1}</div>
+                                                <div style={{ padding: '6px', borderRight: '1px solid #e0e0e0', fontSize: '12px' }}>{row.label}</div>
+                                                <div style={{ padding: '0', borderRight: '1px solid #e0e0e0' }}>
+                                                    <input
+                                                        type="text"
+                                                        value={row.comment}
+                                                        onChange={(e) => handleComplaintCommentChange(row.value, e.target.value)}
+                                                        disabled={isFormDisabled}
+                                                        placeholder="Enter duration/comment"
+                                                        className="duration-comment-input duration-comment-table-input"
+                                                        style={{
+                                                            width: '100%',
+                                                            height: '100%',
+                                                            padding: '8px 10px',
+                                                            border: 'none',
+                                                            borderRadius: 0,
+                                                            outline: 'none',
+                                                            backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
+                                                            boxShadow: 'none',
+                                                            fontSize: '11px',
+                                                            color: isFormDisabled ? '#666' : '#333',
+                                                            cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                                        }}
+                                                    />
+                                                </div>
+                                                <div style={{ padding: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                    <div
+                                                        onClick={() => {
+                                                            if (isFormDisabled) return;
+                                                            handleRemoveComplaint(row.value);
+                                                        }}
+                                                        title="Remove"
+                                                        style={{
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            width: '24px',
+                                                            height: '24px',
+                                                            cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                                            color: isFormDisabled ? '#9e9e9e' : '#000000',
+                                                            backgroundColor: 'transparent'
+                                                        }}
+                                                        onMouseEnter={(e) => {
+                                                            if (isFormDisabled) return;
+                                                            (e.currentTarget as HTMLDivElement).style.color = '#EF5350';
+                                                        }}
+                                                        onMouseLeave={(e) => {
+                                                            (e.currentTarget as HTMLDivElement).style.color = isFormDisabled ? '#9e9e9e' : '#000000';
+                                                        }}
+                                                    >
+                                                        <Delete fontSize="small" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Detailed Text Areas */}
+                            <div style={{ marginBottom: '15px' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr' as const, gap: '12px' }}>
+                                    <div>
+                                        <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                                            Detailed History
+                                        </label>
+                                        <textarea
+                                            value={formData.detailedHistory}
+                                            onChange={(e) => handleInputChange('detailedHistory', e.target.value)}
+                                            disabled={isFormDisabled}
+                                            rows={3}
+                                            style={{
+                                                width: '100%',
+                                                padding: '6px 10px',
+                                                border: '1px solid #ccc',
+                                                borderRadius: '4px',
+                                                fontSize: '13px',
+                                                resize: 'vertical',
+                                                backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
+                                                color: isFormDisabled ? '#666' : '#333',
+                                                cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                            }}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                                            Examination Findings
+                                        </label>
+                                        <textarea
+                                            value={formData.importantFindings}
+                                            onChange={(e) => handleInputChange('importantFindings', e.target.value)}
+                                            disabled={isFormDisabled}
+                                            rows={3}
+                                            style={{
+                                                width: '100%',
+                                                padding: '6px 10px',
+                                                border: '1px solid #ccc',
+                                                borderRadius: '4px',
+                                                fontSize: '13px',
+                                                resize: 'vertical',
+                                                backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
+                                                color: isFormDisabled ? '#666' : '#333',
+                                                cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                            }}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                                            Additional Comments
+                                        </label>
+                                        <textarea
+                                            value={formData.additionalComments}
+                                            onChange={(e) => handleInputChange('additionalComments', e.target.value)}
+                                            disabled={isFormDisabled}
+                                            rows={3}
+                                            style={{
+                                                width: '100%',
+                                                padding: '6px 10px',
+                                                border: '1px solid #ccc',
+                                                borderRadius: '4px',
+                                                fontSize: '13px',
+                                                resize: 'vertical',
+                                                backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
+                                                color: isFormDisabled ? '#666' : '#333',
+                                                cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Procedure Performed */}
+                            <div style={{ marginBottom: '15px' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr' as const, gap: '12px' }}>
+                                    <div>
+                                        <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                                            Procedure Performed
+                                        </label>
+                                        <textarea
+                                            value={formData.procedurePerformed}
+                                            onChange={(e) => handleInputChange('procedurePerformed', e.target.value)}
+                                            disabled={isFormDisabled}
+                                            rows={3}
+                                            style={{
+                                                width: '100%',
+                                                padding: '6px 10px',
+                                                border: '1px solid #ccc',
+                                                borderRadius: '4px',
+                                                fontSize: '13px',
+                                                resize: 'vertical',
+                                                backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
+                                                color: isFormDisabled ? '#666' : '#333',
+                                                cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                            }}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                                            Dressing (body parts)
+                                        </label>
+                                        <textarea
+                                            value={formData.dressingBodyParts}
+                                            onChange={(e) => handleInputChange('dressingBodyParts', e.target.value)}
+                                            disabled={isFormDisabled}
+                                            rows={3}
+                                            style={{
+                                                width: '100%',
+                                                padding: '6px 10px',
+                                                border: '1px solid #ccc',
+                                                borderRadius: '4px',
+                                                fontSize: '13px',
+                                                resize: 'vertical',
+                                                backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
+                                                color: isFormDisabled ? '#666' : '#333',
+                                                cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                            }}
+                                        />
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                                        <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px', visibility: 'hidden' }}>
+                                            Button Label
+                                        </label>
                                         <button
                                             type="button"
                                             disabled={isFormDisabled}
-                                            title="Add custom complaint"
+                                            title="Record lab test results"
                                             style={{
+                                                width: '100%',
+                                                height: '40px',
+                                                padding: '6px 10px',
                                                 backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
                                                 color: 'white',
                                                 border: 'none',
-                                                padding: '6px',
-                                                borderRadius: '6px',
+                                                borderRadius: '4px',
+                                                fontSize: '13px',
+                                                fontWeight: 'bold',
                                                 cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                                width: '32px',
-                                                height: '32px',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                fontSize: '14px',
-                                                transition: 'background-color 0.2s'
+                                                textTransform: 'uppercase'
                                             }}
-                                            onMouseEnter={(e) => {
-                                                if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1565c0';
+                                            onClick={() => {
+                                                const appointmentRow: any = {
+                                                    patient: treatmentData?.patientName || '',
+                                                    patientId: String(treatmentData?.patientId || ''),
+                                                    age: Number(treatmentData?.age || 0),
+                                                    gender: treatmentData?.gender || '',
+                                                    contact: treatmentData?.contact || '',
+                                                    doctorId: treatmentData?.doctorId || '',
+                                                    clinicId: treatmentData?.clinicId || '',
+                                                    visitNumber: Number(treatmentData?.visitNumber || 0),
+                                                    provider: getDoctorLabelById(treatmentData?.doctorId),
+                                                    shiftId: 1,
+                                                    visitDate: new Date().toISOString().slice(0, 10)
+                                                };
+                                                setSelectedPatientForLab(appointmentRow);
+                                                setShowLabTestEntry(true);
                                             }}
-                                            onMouseLeave={(e) => {
-                                                if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1976d2';
-                                            }}
-                                            onClick={handleAddCustomComplaint}
                                         >
-                                            <Add fontSize="small" />
+                                            RECORD TEST RESULT
                                         </button>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Complaints Table */}
-                            {complaintsRows.length > 0 && (
-                                <div
-                                    style={{
-                                        border: '1px solid #ccc',
-                                        borderRadius: '4px',
-                                        overflow: 'hidden',
-                                        opacity: isFormDisabled ? 0.6 : 1
-                                    }}
-                                >
-                                    <div style={{ 
-                                        display: 'grid', 
-                                        gridTemplateColumns: '60px 1.5fr 1.5fr 80px' as const, 
-                                        backgroundColor: '#1976d2', 
-                                        color: 'white',
-                                        fontWeight: 'bold',
-                                        fontSize: '11px'
-                                    }}>
-                                        <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Sr.</div>
-                                        <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Complaint Description</div>
-                                        <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Duration / Comment</div>
-                                        <div style={{ padding: '6px' }}>Action</div>
-                                    </div>
-                                    {[...complaintsRows].sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999)).map((row, index) => (
-                                        <div key={row.id} style={{ 
-                                            display: 'grid', 
-                                            gridTemplateColumns: '60px 1.5fr 1.5fr 80px' as const,
-                                            backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white',
-                                            borderBottom: '1px solid #e0e0e0'
-                                        }}>
-                                            <div style={{ padding: '6px', borderRight: '1px solid #e0e0e0', fontSize: '12px' }}>{index + 1}</div>
-                                            <div style={{ padding: '6px', borderRight: '1px solid #e0e0e0', fontSize: '12px' }}>{row.label}</div>
-                                            <div style={{ padding: '0', borderRight: '1px solid #e0e0e0' }}>
-                                                <input
-                                                    type="text"
-                                                    value={row.comment}
-                                                    onChange={(e) => handleComplaintCommentChange(row.value, e.target.value)}
-                                                    disabled={isFormDisabled}
-                                                    placeholder="Enter duration/comment"
-                                                    className="duration-comment-input duration-comment-table-input"
-                                                    style={{
-                                                        width: '100%',
-                                                        height: '100%',
-                                                        padding: '8px 10px',
-                                                        border: 'none',
-                                                        borderRadius: 0,
-                                                        outline: 'none',
-                                                        backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
-                                                        boxShadow: 'none',
-                                                        fontSize: '11px',
-                                                        color: isFormDisabled ? '#666' : '#333',
-                                                        cursor: isFormDisabled ? 'not-allowed' : 'text'
-                                                    }}
-                                                />
-                                            </div>
-                                            <div style={{ padding: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                <div
-                                                    onClick={() => {
-                                                        if (isFormDisabled) return;
-                                                        handleRemoveComplaint(row.value);
-                                                    }}
-                                                    title="Remove"
-                                                    style={{
-                                                        display: 'inline-flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        width: '24px',
-                                                        height: '24px',
-                                                        cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                                        color: isFormDisabled ? '#9e9e9e' : '#000000',
-                                                        backgroundColor: 'transparent'
-                                                    }}
-                                                    onMouseEnter={(e) => {
-                                                        if (isFormDisabled) return;
-                                                        (e.currentTarget as HTMLDivElement).style.color = '#EF5350';
-                                                    }}
-                                                    onMouseLeave={(e) => {
-                                                        (e.currentTarget as HTMLDivElement).style.color = isFormDisabled ? '#9e9e9e' : '#000000';
-                                                    }}
-                                                >
-                                                    <Delete fontSize="small" />
+                            {/* Diagnosis Section */}
+                            <div style={{ marginBottom: '15px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '5px', width: '88%', gap: '8px' }}>
+                                    <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Diagnosis</label>
+                                </div>
+
+                                <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                                    <div style={{ flex: 1, position: 'relative' }} ref={diagnosesRef}>
+                                        <div
+                                            style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'space-between',
+                                                height: '32px',
+                                                padding: '4px 8px',
+                                                border: '2px solid #B7B7B7',
+                                                borderRadius: '6px',
+                                                fontSize: '12px',
+                                                fontFamily: "'Roboto', sans-serif",
+                                                fontWeight: 500,
+                                                backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
+                                                cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                                userSelect: 'none',
+                                                opacity: isFormDisabled ? 0.6 : 1
+                                            }}
+                                            onClick={() => !isFormDisabled && setIsDiagnosesOpen(!isDiagnosesOpen)}
+                                            onMouseEnter={(e) => {
+                                                (e.currentTarget as HTMLDivElement).style.borderColor = '#1E88E5';
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                (e.currentTarget as HTMLDivElement).style.borderColor = '#B7B7B7';
+                                            }}
+                                        >
+                                            <span style={{ color: selectedDiagnoses.length > 0 ? '#000' : '#9e9e9e' }}>
+                                                {selectedDiagnoses.length > 0
+                                                    ? `${selectedDiagnoses.length} diagnosis selected`
+                                                    : 'Select Diagnosis'
+                                                }
+                                            </span>
+                                            <span style={{ marginLeft: '8px', color: '#666', fontSize: '16px', lineHeight: '1' }}>▾</span>
+                                        </div>
+
+                                        {isDiagnosesOpen && (
+                                            <div style={{
+                                                position: 'absolute',
+                                                top: '100%',
+                                                left: 0,
+                                                right: 0,
+                                                backgroundColor: 'white',
+                                                border: '1px solid #B7B7B7',
+                                                borderRadius: '6px',
+                                                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                                                zIndex: 1000,
+                                                marginTop: '4px',
+                                                maxHeight: '300px',
+                                                overflow: 'hidden'
+                                            }}>
+                                                <div style={{ padding: '6px' }}>
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Search diagnoses..."
+                                                        value={diagnosisSearch}
+                                                        onChange={(e) => setDiagnosisSearch(e.target.value)}
+                                                        style={{
+                                                            width: '100%',
+                                                            height: '28px',
+                                                            padding: '4px 8px',
+                                                            border: '1px solid #B7B7B7',
+                                                            borderRadius: '4px',
+                                                            fontSize: '12px',
+                                                            outline: 'none'
+                                                        }}
+                                                        onFocus={(e) => {
+                                                            (e.target as HTMLInputElement).style.borderColor = '#1E88E5';
+                                                        }}
+                                                        onBlur={(e) => {
+                                                            (e.target as HTMLInputElement).style.borderColor = '#B7B7B7';
+                                                        }}
+                                                    />
+                                                </div>
+
+                                                <div className="diagnoses-dropdown" style={{ maxHeight: '200px', overflowY: 'auto', padding: '4px 6px', display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', columnGap: '8px', rowGap: '6px' }}>
+                                                    {diagnosesLoading && (
+                                                        <div style={{ padding: '6px', fontSize: '12px', color: '#777', gridColumn: '1 / -1', textAlign: 'center' }}>
+                                                            Loading diagnoses...
+                                                        </div>
+                                                    )}
+                                                    {diagnosesError && (
+                                                        <div style={{ padding: '6px', fontSize: '12px', color: '#d32f2f', gridColumn: '1 / -1', textAlign: 'center' }}>
+                                                            {diagnosesError}
+                                                            <button
+                                                                onClick={() => {
+                                                                    setDiagnosesError(null);
+                                                                    // Trigger reload by updating a dependency
+                                                                    const doctorId = treatmentData?.doctorId || sessionData?.doctorId;
+                                                                    const clinicId = treatmentData?.clinicId || sessionData?.clinicId;
+                                                                    if (!doctorId || !clinicId) {
+                                                                        setDiagnosesError('Doctor and clinic information are required to reload diagnoses.');
+                                                                        return;
+                                                                    }
+                                                                    diagnosisService.getDiagnosesFromPatientProfile(doctorId, clinicId)
+                                                                        .then(setDiagnosesOptions)
+                                                                        .catch(e => setDiagnosesError(e.message || 'Failed to load diagnoses.'));
+                                                                }}
+                                                                style={{
+                                                                    marginLeft: '8px',
+                                                                    padding: '2px 6px',
+                                                                    fontSize: '10px',
+                                                                    backgroundColor: '#1976d2',
+                                                                    color: 'white',
+                                                                    border: 'none',
+                                                                    borderRadius: '3px',
+                                                                    cursor: 'pointer'
+                                                                }}
+                                                            >
+                                                                Retry
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                    {!diagnosesLoading && !diagnosesError && filteredDiagnoses.length === 0 && (
+                                                        <div style={{ padding: '6px', fontSize: '12px', color: '#777', gridColumn: '1 / -1' }}>No diagnoses found</div>
+                                                    )}
+                                                    {!diagnosesLoading && !diagnosesError && filteredDiagnoses.map((opt, index) => {
+                                                        const checked = selectedDiagnoses.includes(opt.value);
+                                                        const isFirstUnselected = !checked && index > 0 && selectedDiagnoses.includes(filteredDiagnoses[index - 1].value);
+
+                                                        return (
+                                                            <React.Fragment key={opt.value}>
+                                                                {isFirstUnselected && (
+                                                                    <div style={{
+                                                                        gridColumn: '1 / -1',
+                                                                        height: '1px',
+                                                                        backgroundColor: '#e0e0e0',
+                                                                        margin: '4px 0'
+                                                                    }} />
+                                                                )}
+                                                                <label
+                                                                    style={{
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        gap: '4px',
+                                                                        padding: '4px 2px',
+                                                                        cursor: 'pointer',
+                                                                        fontSize: '12px',
+                                                                        border: 'none',
+                                                                        backgroundColor: 'transparent',
+                                                                        borderRadius: '3px',
+                                                                        fontWeight: 400
+                                                                    }}
+                                                                >
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={checked}
+                                                                        onChange={(e) => {
+                                                                            setSelectedDiagnoses(prev => {
+                                                                                if (e.target.checked) {
+                                                                                    if (prev.includes(opt.value)) return prev;
+                                                                                    return [...prev, opt.value];
+                                                                                } else {
+                                                                                    return prev.filter(v => v !== opt.value);
+                                                                                }
+                                                                            });
+                                                                        }}
+                                                                        style={{ margin: 0 }}
+                                                                    />
+                                                                    <span style={{ whiteSpace: 'nowrap' }}>{opt.label}</span>
+                                                                </label>
+                                                            </React.Fragment>
+                                                        );
+                                                    })}
                                                 </div>
                                             </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Detailed Text Areas */}
-                        <div style={{ marginBottom: '15px' }}>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr' as const, gap: '12px' }}>
-                                <div>
-                                    <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                        Detailed History
-                                    </label>
-                                    <textarea
-                                        value={formData.detailedHistory}
-                                        onChange={(e) => handleInputChange('detailedHistory', e.target.value)}
-                                        disabled={isFormDisabled}
-                                        rows={3}
-                                        style={{
-                                            width: '100%',
-                                            padding: '6px 10px',
-                                            border: '1px solid #ccc',
-                                            borderRadius: '4px',
-                                            fontSize: '13px',
-                                            resize: 'vertical',
-                                            backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
-                                            color: isFormDisabled ? '#666' : '#333',
-                                            cursor: isFormDisabled ? 'not-allowed' : 'text'
-                                        }}
-                                    />
-                                </div>
-                                <div>
-                                    <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                        Examination Findings
-                                    </label>
-                                    <textarea
-                                        value={formData.importantFindings}
-                                        onChange={(e) => handleInputChange('importantFindings', e.target.value)}
-                                        disabled={isFormDisabled}
-                                        rows={3}
-                                        style={{
-                                            width: '100%',
-                                            padding: '6px 10px',
-                                            border: '1px solid #ccc',
-                                            borderRadius: '4px',
-                                            fontSize: '13px',
-                                            resize: 'vertical',
-                                            backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
-                                            color: isFormDisabled ? '#666' : '#333',
-                                            cursor: isFormDisabled ? 'not-allowed' : 'text'
-                                        }}
-                                    />
-                                </div>
-                                <div>
-                                    <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                        Additional Comments
-                                    </label>
-                                    <textarea
-                                        value={formData.additionalComments}
-                                        onChange={(e) => handleInputChange('additionalComments', e.target.value)}
-                                        disabled={isFormDisabled}
-                                        rows={3}
-                                        style={{
-                                            width: '100%',
-                                            padding: '6px 10px',
-                                            border: '1px solid #ccc',
-                                            borderRadius: '4px',
-                                            fontSize: '13px',
-                                            resize: 'vertical',
-                                            backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
-                                            color: isFormDisabled ? '#666' : '#333',
-                                            cursor: isFormDisabled ? 'not-allowed' : 'text'
-                                        }}
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Procedure Performed */}
-                        <div style={{ marginBottom: '15px' }}>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr' as const, gap: '12px' }}>
-                                <div>
-                                    <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                        Procedure Performed
-                                    </label>
-                                    <textarea
-                                        value={formData.procedurePerformed}
-                                        onChange={(e) => handleInputChange('procedurePerformed', e.target.value)}
-                                        disabled={isFormDisabled}
-                                        rows={3}
-                                        style={{
-                                            width: '100%',
-                                            padding: '6px 10px',
-                                            border: '1px solid #ccc',
-                                            borderRadius: '4px',
-                                            fontSize: '13px',
-                                            resize: 'vertical',
-                                            backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
-                                            color: isFormDisabled ? '#666' : '#333',
-                                            cursor: isFormDisabled ? 'not-allowed' : 'text'
-                                        }}
-                                    />
-                                </div>
-                                <div>
-                                    <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                        Dressing (body parts)
-                                    </label>
-                                    <textarea
-                                        value={formData.dressingBodyParts}
-                                        onChange={(e) => handleInputChange('dressingBodyParts', e.target.value)}
-                                        disabled={isFormDisabled}
-                                        rows={3}
-                                        style={{
-                                            width: '100%',
-                                            padding: '6px 10px',
-                                            border: '1px solid #ccc',
-                                            borderRadius: '4px',
-                                            fontSize: '13px',
-                                            resize: 'vertical',
-                                            backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
-                                            color: isFormDisabled ? '#666' : '#333',
-                                            cursor: isFormDisabled ? 'not-allowed' : 'text'
-                                        }}
-                                    />
-                                </div>
-                                <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
-                                    <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px', visibility: 'hidden' }}>
-                                        Button Label
-                                    </label>
+                                        )}
+                                    </div>
                                     <button
-                                        type="button"
                                         disabled={isFormDisabled}
-                                        title="Record lab test results"
+                                        title="Add selected diagnoses"
                                         style={{
-                                            width: '100%',
-                                            height: '40px',
-                                            padding: '6px 10px',
+                                            padding: '0 10px',
                                             backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
                                             color: 'white',
                                             border: 'none',
-                                            borderRadius: '4px',
-                                            fontSize: '13px',
-                                            fontWeight: 'bold',
+                                            borderRadius: '6px',
                                             cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                            textTransform: 'uppercase'
+                                            fontSize: '12px',
+                                            height: '32px',
+                                            transition: 'background-color 0.2s'
                                         }}
-                                        onClick={() => {
-                                            const appointmentRow: any = {
-                                                patient: treatmentData?.patientName || '',
-                                                patientId: String(treatmentData?.patientId || ''),
-                                                age: Number(treatmentData?.age || 0),
-                                                gender: treatmentData?.gender || '',
-                                                contact: treatmentData?.contact || '',
-                                                doctorId: treatmentData?.doctorId || '',
-                                                clinicId: treatmentData?.clinicId || '',
-                                                visitNumber: Number(treatmentData?.visitNumber || 0),
-                                                provider: getDoctorLabelById(treatmentData?.doctorId),
-                                                shiftId: 1,
-                                                visitDate: new Date().toISOString().slice(0, 10)
-                                            };
-                                            setSelectedPatientForLab(appointmentRow);
-                                            setShowLabTestEntry(true);
+                                        onMouseEnter={(e) => {
+                                            if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1565c0';
                                         }}
+                                        onMouseLeave={(e) => {
+                                            if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1976d2';
+                                        }}
+                                        onClick={handleAddDiagnoses}
                                     >
-                                        RECORD TEST RESULT
+                                        Add
+                                    </button>
+                                    <button
+                                        type="button"
+                                        disabled={isFormDisabled}
+                                        title="Add custom diagnosis"
+                                        style={{
+                                            backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
+                                            color: 'white',
+                                            border: 'none',
+                                            padding: '6px',
+                                            borderRadius: '6px',
+                                            cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                            width: '32px',
+                                            height: '32px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            fontSize: '14px',
+                                            transition: 'background-color 0.2s'
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1565c0';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1976d2';
+                                        }}
+                                        onClick={handleAddCustomDiagnosis}
+                                    >
+                                        <Add fontSize="small" />
                                     </button>
                                 </div>
-                            </div>
-                        </div>
 
-                        {/* Diagnosis Section */}
-                        <div style={{ marginBottom: '15px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '5px', width: '88%', gap: '8px' }}>
-                                <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Diagnosis</label>
-                            </div>
-                            
-                            <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-                                <div style={{ flex: 1, position: 'relative' }} ref={diagnosesRef}>
+                                {/* Diagnosis Table */}
+                                {diagnosisRows.length > 0 && (
                                     <div
                                         style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'space-between',
-                                            height: '32px',
-                                            padding: '4px 8px',
-                                            border: '2px solid #B7B7B7',
-                                            borderRadius: '6px',
-                                            fontSize: '12px',
-                                            fontFamily: "'Roboto', sans-serif",
-                                            fontWeight: 500,
-                                            backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
-                                            cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                            userSelect: 'none',
+                                            border: '1px solid #ccc',
+                                            borderRadius: '4px',
+                                            overflow: 'hidden',
                                             opacity: isFormDisabled ? 0.6 : 1
                                         }}
-                                        onClick={() => !isFormDisabled && setIsDiagnosesOpen(!isDiagnosesOpen)}
-                                        onMouseEnter={(e) => {
-                                            (e.currentTarget as HTMLDivElement).style.borderColor = '#1E88E5';
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            (e.currentTarget as HTMLDivElement).style.borderColor = '#B7B7B7';
-                                        }}
                                     >
-                                        <span style={{ color: selectedDiagnoses.length > 0 ? '#000' : '#9e9e9e' }}>
-                                            {selectedDiagnoses.length > 0 
-                                                ? `${selectedDiagnoses.length} diagnosis selected`
-                                                : 'Select Diagnosis'
-                                            }
-                                        </span>
-                                        <span style={{ marginLeft: '8px', color: '#666', fontSize: '16px', lineHeight: '1' }}>▾</span>
-                                    </div>
-
-                                    {isDiagnosesOpen && (
                                         <div style={{
-                                            position: 'absolute',
-                                            top: '100%',
-                                            left: 0,
-                                            right: 0,
-                                            backgroundColor: 'white',
-                                            border: '1px solid #B7B7B7',
-                                            borderRadius: '6px',
-                                            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                                            zIndex: 1000,
-                                            marginTop: '4px',
-                                            maxHeight: '300px',
-                                            overflow: 'hidden'
-                                        }}>
-                                            <div style={{ padding: '6px' }}>
-                                                <input
-                                                    type="text"
-                                                    placeholder="Search diagnoses..."
-                                                    value={diagnosisSearch}
-                                                    onChange={(e) => setDiagnosisSearch(e.target.value)}
-                                                    style={{
-                                                        width: '100%',
-                                                        height: '28px',
-                                                        padding: '4px 8px',
-                                                        border: '1px solid #B7B7B7',
-                                                        borderRadius: '4px',
-                                                        fontSize: '12px',
-                                                        outline: 'none'
-                                                    }}
-                                                    onFocus={(e) => {
-                                                        (e.target as HTMLInputElement).style.borderColor = '#1E88E5';
-                                                    }}
-                                                    onBlur={(e) => {
-                                                        (e.target as HTMLInputElement).style.borderColor = '#B7B7B7';
-                                                    }}
-                                                />
-                                            </div>
-
-                                            <div className="diagnoses-dropdown" style={{ maxHeight: '200px', overflowY: 'auto', padding: '4px 6px', display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', columnGap: '8px', rowGap: '6px' }}>
-                                                {diagnosesLoading && (
-                                                    <div style={{ padding: '6px', fontSize: '12px', color: '#777', gridColumn: '1 / -1', textAlign: 'center' }}>
-                                                        Loading diagnoses...
-                                                    </div>
-                                                )}
-                                                {diagnosesError && (
-                                                    <div style={{ padding: '6px', fontSize: '12px', color: '#d32f2f', gridColumn: '1 / -1', textAlign: 'center' }}>
-                                                        {diagnosesError}
-                                                        <button
-                                                            onClick={() => {
-                                                                setDiagnosesError(null);
-                                                                // Trigger reload by updating a dependency
-                                                                const doctorId = treatmentData?.doctorId || sessionData?.doctorId;
-                                                                const clinicId = treatmentData?.clinicId || sessionData?.clinicId;
-                                                                if (!doctorId || !clinicId) {
-                                                                    setDiagnosesError('Doctor and clinic information are required to reload diagnoses.');
-                                                                    return;
-                                                                }
-                                                                diagnosisService.getDiagnosesFromPatientProfile(doctorId, clinicId)
-                                                                    .then(setDiagnosesOptions)
-                                                                    .catch(e => setDiagnosesError(e.message || 'Failed to load diagnoses.'));
-                                                            }}
-                                                            style={{
-                                                                marginLeft: '8px', 
-                                                                padding: '2px 6px', 
-                                                                fontSize: '10px', 
-                                                                backgroundColor: '#1976d2',
-                                                                color: 'white',
-                                                                border: 'none',
-                                                                borderRadius: '3px', 
-                                                                cursor: 'pointer' 
-                                                            }}
-                                                        >
-                                                            Retry
-                                                        </button>
-                                                    </div>
-                                                )}
-                                                {!diagnosesLoading && !diagnosesError && filteredDiagnoses.length === 0 && (
-                                                    <div style={{ padding: '6px', fontSize: '12px', color: '#777', gridColumn: '1 / -1' }}>No diagnoses found</div>
-                                                )}
-                                                {!diagnosesLoading && !diagnosesError && filteredDiagnoses.map((opt, index) => {
-                                                    const checked = selectedDiagnoses.includes(opt.value);
-                                                    const isFirstUnselected = !checked && index > 0 && selectedDiagnoses.includes(filteredDiagnoses[index - 1].value);
-                                                    
-                                                    return (
-                                                        <React.Fragment key={opt.value}>
-                                                            {isFirstUnselected && (
-                                                                <div style={{ 
-                                                                    gridColumn: '1 / -1', 
-                                                                    height: '1px', 
-                                                                    backgroundColor: '#e0e0e0', 
-                                                                    margin: '4px 0' 
-                                                                }} />
-                                                            )}
-                                                            <label 
-                                                                style={{ 
-                                                                    display: 'flex',
-                                                                    alignItems: 'center',
-                                                                    gap: '4px', 
-                                                                    padding: '4px 2px', 
-                                                                    cursor: 'pointer', 
-                                                                    fontSize: '12px', 
-                                                                    border: 'none',
-                                                                    backgroundColor: 'transparent',
-                                                                    borderRadius: '3px',
-                                                                    fontWeight: 400
-                                                                }}
-                                                            >
-                                                                <input
-                                                                    type="checkbox"
-                                                                    checked={checked}
-                                                                    onChange={(e) => {
-                                                                        setSelectedDiagnoses(prev => {
-                                                                            if (e.target.checked) {
-                                                                                if (prev.includes(opt.value)) return prev;
-                                                                                return [...prev, opt.value];
-                                                                            } else {
-                                                                                return prev.filter(v => v !== opt.value);
-                                                                            }
-                                                                        });
-                                                                    }}
-                                                                    style={{ margin: 0 }}
-                                                                />
-                                                                <span style={{ whiteSpace: 'nowrap' }}>{opt.label}</span>
-                                                            </label>
-                                                        </React.Fragment>
-                                                    );
-                                                })}
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                                <button
-                                    disabled={isFormDisabled}
-                                    title="Add selected diagnoses"
-                                    style={{
-                                        padding: '0 10px',
-                                        backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
-                                        color: 'white',
-                                        border: 'none',
-                                        borderRadius: '6px',
-                                        cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                        fontSize: '12px',
-                                        height: '32px',
-                                        transition: 'background-color 0.2s'
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1565c0';
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1976d2';
-                                    }}
-                                    onClick={handleAddDiagnoses}
-                                >
-                                    Add
-                                </button>
-                                <button
-                                    type="button"
-                                    disabled={isFormDisabled}
-                                    title="Add custom diagnosis"
-                                    style={{
-                                        backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
-                                        color: 'white',
-                                        border: 'none',
-                                        padding: '6px',
-                                        borderRadius: '6px',
-                                        cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                        width: '32px',
-                                        height: '32px',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        fontSize: '14px',
-                                        transition: 'background-color 0.2s'
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1565c0';
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1976d2';
-                                    }}
-                                    onClick={handleAddCustomDiagnosis}
-                                >
-                                    <Add fontSize="small" />
-                                </button>
-                            </div>
-
-                            {/* Diagnosis Table */}
-                            {diagnosisRows.length > 0 && (
-                                <div
-                                    style={{
-                                        border: '1px solid #ccc',
-                                        borderRadius: '4px',
-                                        overflow: 'hidden',
-                                        opacity: isFormDisabled ? 0.6 : 1
-                                    }}
-                                >
-                                    <div style={{ 
-                                        display: 'grid', 
-                                        gridTemplateColumns: '60px 1fr 80px' as const, 
-                                        backgroundColor: '#1976d2', 
-                                        color: 'white',
-                                        fontWeight: 'bold',
-                                        fontSize: '11px'
-                                    }}>
-                                        <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Sr.</div>
-                                        <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Provisional Diagnosis</div>
-                                        <div style={{ padding: '6px' }}>Action</div>
-                                    </div>
-                                    {[...diagnosisRows].sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999)).map((row, index) => (
-                                        <div key={row.id} style={{ 
-                                            display: 'grid', 
+                                            display: 'grid',
                                             gridTemplateColumns: '60px 1fr 80px' as const,
-                                            backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white',
-                                            borderBottom: '1px solid #e0e0e0'
+                                            backgroundColor: '#1976d2',
+                                            color: 'white',
+                                            fontWeight: 'bold',
+                                            fontSize: '11px'
                                         }}>
-                                            <div style={{ padding: '6px', borderRight: '1px solid #e0e0e0', fontSize: '12px' }}>{index + 1}</div>
-                                            <div style={{ padding: '6px', borderRight: '1px solid #e0e0e0', fontSize: '12px' }}>{row.diagnosis}</div>
-                                            <div style={{ padding: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                <div
-                                                    onClick={() => {
-                                                        if (isFormDisabled) return;
-                                                        row.value ? handleRemoveDiagnosisFromSelector(row.value) : handleRemoveDiagnosis(row.id);
-                                                    }}
-                                                    title="Remove"
-                                                    style={{
-                                                        display: 'inline-flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        width: '24px',
-                                                        height: '24px',
-                                                        cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                                        color: isFormDisabled ? '#9e9e9e' : '#000000',
-                                                        backgroundColor: 'transparent'
-                                                    }}
-                                                    onMouseEnter={(e) => {
-                                                        if (isFormDisabled) return;
-                                                        (e.currentTarget as HTMLDivElement).style.color = '#EF5350';
-                                                    }}
-                                                    onMouseLeave={(e) => {
-                                                        (e.currentTarget as HTMLDivElement).style.color = isFormDisabled ? '#9e9e9e' : '#000000';
-                                                    }}
-                                                >
-                                                    <Delete fontSize="small" />
+                                            <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Sr.</div>
+                                            <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Provisional Diagnosis</div>
+                                            <div style={{ padding: '6px' }}>Action</div>
+                                        </div>
+                                        {[...diagnosisRows].sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999)).map((row, index) => (
+                                            <div key={row.id} style={{
+                                                display: 'grid',
+                                                gridTemplateColumns: '60px 1fr 80px' as const,
+                                                backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white',
+                                                borderBottom: '1px solid #e0e0e0'
+                                            }}>
+                                                <div style={{ padding: '6px', borderRight: '1px solid #e0e0e0', fontSize: '12px' }}>{index + 1}</div>
+                                                <div style={{ padding: '6px', borderRight: '1px solid #e0e0e0', fontSize: '12px' }}>{row.diagnosis}</div>
+                                                <div style={{ padding: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                    <div
+                                                        onClick={() => {
+                                                            if (isFormDisabled) return;
+                                                            row.value ? handleRemoveDiagnosisFromSelector(row.value) : handleRemoveDiagnosis(row.id);
+                                                        }}
+                                                        title="Remove"
+                                                        style={{
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            width: '24px',
+                                                            height: '24px',
+                                                            cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                                            color: isFormDisabled ? '#9e9e9e' : '#000000',
+                                                            backgroundColor: 'transparent'
+                                                        }}
+                                                        onMouseEnter={(e) => {
+                                                            if (isFormDisabled) return;
+                                                            (e.currentTarget as HTMLDivElement).style.color = '#EF5350';
+                                                        }}
+                                                        onMouseLeave={(e) => {
+                                                            (e.currentTarget as HTMLDivElement).style.color = isFormDisabled ? '#9e9e9e' : '#000000';
+                                                        }}
+                                                    >
+                                                        <Delete fontSize="small" />
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Medicine Section */}
-                        <div style={{ marginBottom: '15px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '5px', width: '88%', gap: '8px' }}>
-                                <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Medicine</label>
-                            </div>
-                            
-                            <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-                                <div style={{ position: 'relative', flex: 1 }} ref={medicinesRef}>
-                                    <div
-                                        onClick={() => !isFormDisabled && setIsMedicinesOpen(!isMedicinesOpen)}
-                                        style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'space-between',
-                                            height: '32px',
-                                            padding: '4px 8px',
-                                            border: '2px solid #B7B7B7',
-                                            borderRadius: '6px',
-                                            fontSize: '12px',
-                                            fontFamily: "'Roboto', sans-serif",
-                                            fontWeight: 500,
-                                            backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
-                                            cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                            userSelect: 'none',
-                                            opacity: isFormDisabled ? 0.6 : 1
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            (e.currentTarget as HTMLDivElement).style.borderColor = '#1E88E5';
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            (e.currentTarget as HTMLDivElement).style.borderColor = '#B7B7B7';
-                                        }}
-                                    >
-                                        <span style={{ color: selectedMedicines.length ? '#000' : '#9e9e9e' }}>
-                                            {selectedMedicines.length === 0 && 'Select Medicines'}
-                                            {selectedMedicines.length === 1 && '1 selected'}
-                                            {selectedMedicines.length > 1 && `${selectedMedicines.length} selected`}
-                                        </span>
-                                        <span style={{ marginLeft: '8px', color: '#666', fontSize: '16px', lineHeight: '1' }}>▾</span>
+                                        ))}
                                     </div>
+                                )}
+                            </div>
 
-                                    {isMedicinesOpen && (
-                                        <div style={{
-                                            position: 'absolute',
-                                            top: '100%',
-                                            left: 0,
-                                            right: 0,
-                                            backgroundColor: 'white',
-                                            border: '1px solid #B7B7B7',
-                                            borderRadius: '6px',
-                                            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                                            zIndex: 1000,
-                                            marginTop: '4px'
-                                        }}>
-                                            {/* Search Field inside dropdown */}
-                                            <div style={{ padding: '6px' }}>
-                                                <input
-                                                    type="text"
-                                                    value={medicineSearch}
-                                                    onChange={(e) => setMedicineSearch(e.target.value)}
-                                                    placeholder="Search medicines"
-                                                    style={{
-                                                        width: '100%',
-                                                        height: '28px',
-                                                        padding: '4px 8px',
-                                                        border: '1px solid #B7B7B7',
-                                                        borderRadius: '4px',
-                                                        fontSize: '12px',
-                                                        outline: 'none'
-                                                    }}
-                                                    onFocus={(e) => {
-                                                        (e.target as HTMLInputElement).style.borderColor = '#1E88E5';
-                                                    }}
-                                                    onBlur={(e) => {
-                                                        (e.target as HTMLInputElement).style.borderColor = '#B7B7B7';
-                                                    }}
-                                                />
-                                            </div>
+                            {/* Medicine Section */}
+                            <div style={{ marginBottom: '15px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '5px', width: '88%', gap: '8px' }}>
+                                    <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Medicine</label>
+                                </div>
 
-                                            <div className="medicines-dropdown" style={{ maxHeight: '200px', overflowY: 'auto', padding: '4px 6px', display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', columnGap: '8px', rowGap: '6px' }}>
-                                                {medicinesLoading && (
-                                                    <div style={{ padding: '6px', fontSize: '12px', color: '#777', gridColumn: '1 / -1', textAlign: 'center' }}>
-                                                        Loading medicines...
-                                                    </div>
-                                                )}
-                                                {medicinesError && (
-                                                    <div style={{ padding: '6px', fontSize: '12px', color: '#d32f2f', gridColumn: '1 / -1', textAlign: 'center' }}>
-                                                        {medicinesError}
-                                                        <button
-                                                            onClick={() => {
-                                                                setMedicinesError(null);
-                                                                // Trigger reload by updating a dependency
-                                                                const doctorId = treatmentData?.doctorId || '1';
-                                                                const clinicId = sessionData?.clinicId || '1';
-                                                                medicineService.getActiveMedicinesByDoctorAndClinic(doctorId, clinicId)
-                                                                    .then(setMedicinesOptions)
-                                                                    .catch(e => setMedicinesError(e.message));
-                                                            }}
-                                                            style={{
-                                                                marginLeft: '8px', 
-                                                                padding: '2px 6px', 
-                                                                fontSize: '10px', 
-                                                                backgroundColor: '#1976d2',
-                                                                color: 'white',
-                                                                border: 'none',
-                                                                borderRadius: '3px', 
-                                                                cursor: 'pointer' 
-                                                            }}
-                                                        >
-                                                            Retry
-                                                        </button>
-                                                    </div>
-                                                )}
-                                                {!medicinesLoading && !medicinesError && filteredMedicines.length === 0 && (
-                                                    <div style={{ padding: '6px', fontSize: '12px', color: '#777', gridColumn: '1 / -1' }}>No medicines found</div>
-                                                )}
-                                                {!medicinesLoading && !medicinesError && filteredMedicines.map((opt, index) => {
-                                                    const checked = selectedMedicines.includes(opt.value);
-                                                    const isFirstUnselected = !checked && index > 0 && selectedMedicines.includes(filteredMedicines[index - 1].value);
-                                                    
-                                                    return (
-                                                        <React.Fragment key={opt.value}>
-                                                            {isFirstUnselected && (
-                                                                <div style={{ 
-                                                                    gridColumn: '1 / -1', 
-                                                                    height: '1px', 
-                                                                    backgroundColor: '#e0e0e0', 
-                                                                    margin: '4px 0' 
-                                                                }} />
-                                                            )}
-                                                            <label 
-                                                                style={{ 
-                                                                    display: 'flex',
-                                                                    alignItems: 'center',
-                                                                    gap: '4px', 
-                                                                    padding: '4px 2px', 
-                                                                    cursor: 'pointer', 
-                                                                    fontSize: '12px', 
+                                <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                                    <div style={{ position: 'relative', flex: 1 }} ref={medicinesRef}>
+                                        <div
+                                            onClick={() => !isFormDisabled && setIsMedicinesOpen(!isMedicinesOpen)}
+                                            style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'space-between',
+                                                height: '32px',
+                                                padding: '4px 8px',
+                                                border: '2px solid #B7B7B7',
+                                                borderRadius: '6px',
+                                                fontSize: '12px',
+                                                fontFamily: "'Roboto', sans-serif",
+                                                fontWeight: 500,
+                                                backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
+                                                cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                                userSelect: 'none',
+                                                opacity: isFormDisabled ? 0.6 : 1
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                (e.currentTarget as HTMLDivElement).style.borderColor = '#1E88E5';
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                (e.currentTarget as HTMLDivElement).style.borderColor = '#B7B7B7';
+                                            }}
+                                        >
+                                            <span style={{ color: selectedMedicines.length ? '#000' : '#9e9e9e' }}>
+                                                {selectedMedicines.length === 0 && 'Select Medicines'}
+                                                {selectedMedicines.length === 1 && '1 selected'}
+                                                {selectedMedicines.length > 1 && `${selectedMedicines.length} selected`}
+                                            </span>
+                                            <span style={{ marginLeft: '8px', color: '#666', fontSize: '16px', lineHeight: '1' }}>▾</span>
+                                        </div>
+
+                                        {isMedicinesOpen && (
+                                            <div style={{
+                                                position: 'absolute',
+                                                top: '100%',
+                                                left: 0,
+                                                right: 0,
+                                                backgroundColor: 'white',
+                                                border: '1px solid #B7B7B7',
+                                                borderRadius: '6px',
+                                                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                                                zIndex: 1000,
+                                                marginTop: '4px'
+                                            }}>
+                                                {/* Search Field inside dropdown */}
+                                                <div style={{ padding: '6px' }}>
+                                                    <input
+                                                        type="text"
+                                                        value={medicineSearch}
+                                                        onChange={(e) => setMedicineSearch(e.target.value)}
+                                                        placeholder="Search medicines"
+                                                        style={{
+                                                            width: '100%',
+                                                            height: '28px',
+                                                            padding: '4px 8px',
+                                                            border: '1px solid #B7B7B7',
+                                                            borderRadius: '4px',
+                                                            fontSize: '12px',
+                                                            outline: 'none'
+                                                        }}
+                                                        onFocus={(e) => {
+                                                            (e.target as HTMLInputElement).style.borderColor = '#1E88E5';
+                                                        }}
+                                                        onBlur={(e) => {
+                                                            (e.target as HTMLInputElement).style.borderColor = '#B7B7B7';
+                                                        }}
+                                                    />
+                                                </div>
+
+                                                <div className="medicines-dropdown" style={{ maxHeight: '200px', overflowY: 'auto', padding: '4px 6px', display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', columnGap: '8px', rowGap: '6px' }}>
+                                                    {medicinesLoading && (
+                                                        <div style={{ padding: '6px', fontSize: '12px', color: '#777', gridColumn: '1 / -1', textAlign: 'center' }}>
+                                                            Loading medicines...
+                                                        </div>
+                                                    )}
+                                                    {medicinesError && (
+                                                        <div style={{ padding: '6px', fontSize: '12px', color: '#d32f2f', gridColumn: '1 / -1', textAlign: 'center' }}>
+                                                            {medicinesError}
+                                                            <button
+                                                                onClick={() => {
+                                                                    setMedicinesError(null);
+                                                                    // Trigger reload by updating a dependency
+                                                                    const doctorId = treatmentData?.doctorId || '1';
+                                                                    const clinicId = sessionData?.clinicId || '1';
+                                                                    medicineService.getActiveMedicinesByDoctorAndClinic(doctorId, clinicId)
+                                                                        .then(setMedicinesOptions)
+                                                                        .catch(e => setMedicinesError(e.message));
+                                                                }}
+                                                                style={{
+                                                                    marginLeft: '8px',
+                                                                    padding: '2px 6px',
+                                                                    fontSize: '10px',
+                                                                    backgroundColor: '#1976d2',
+                                                                    color: 'white',
                                                                     border: 'none',
-                                                                    backgroundColor: 'transparent',
                                                                     borderRadius: '3px',
-                                                                    fontWeight: 400
+                                                                    cursor: 'pointer'
                                                                 }}
                                                             >
-                                                                <input
-                                                                    type="checkbox"
-                                                                    checked={checked}
-                                                                    onChange={(e) => {
-                                                                        setSelectedMedicines(prev => {
-                                                                            if (e.target.checked) {
-                                                                                if (prev.includes(opt.value)) return prev;
-                                                                                return [...prev, opt.value];
-                                                                            } else {
-                                                                                return prev.filter(v => v !== opt.value);
-                                                                            }
-                                                                        });
-                                                                    }}
-                                                                    style={{ margin: 0 }}
-                                                                />
-                                                                <span style={{ whiteSpace: 'nowrap' }}>{opt.label}</span>
-                                                            </label>
-                                                        </React.Fragment>
-                                                    );
-                                                })}
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={handleAddMedicine}
-                                    disabled={isFormDisabled}
-                                    title="Add selected medicines"
-                                    style={{
-                                        backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
-                                        color: 'white',
-                                        border: 'none',
-                                        padding: '6px 12px',
-                                        borderRadius: '4px',
-                                        cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                        fontSize: '12px'
-                                    }}
-                                >
-                                    Add
-                                </button>
-                                <button
-                                    type="button"
-                                    disabled={isFormDisabled}
-                                    title="Add custom medicine"
-                                    style={{
-                                        backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
-                                        color: 'white',
-                                        border: 'none',
-                                        padding: '6px',
-                                        borderRadius: '6px',
-                                        cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                        width: '32px',
-                                        height: '32px',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        fontSize: '14px',
-                                        transition: 'background-color 0.2s'
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1565c0';
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1976d2';
-                                    }}
-                                    onClick={handleAddCustomMedicine}
-                                >
-                                    <Add fontSize="small" />
-                                </button>
-                            </div>
+                                                                Retry
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                    {!medicinesLoading && !medicinesError && filteredMedicines.length === 0 && (
+                                                        <div style={{ padding: '6px', fontSize: '12px', color: '#777', gridColumn: '1 / -1' }}>No medicines found</div>
+                                                    )}
+                                                    {!medicinesLoading && !medicinesError && filteredMedicines.map((opt, index) => {
+                                                        const checked = selectedMedicines.includes(opt.value);
+                                                        const isFirstUnselected = !checked && index > 0 && selectedMedicines.includes(filteredMedicines[index - 1].value);
 
-                            {/* Medicine Table */}
-                            {medicineRows.length > 0 && (
-                                <div
-                                    style={{
-                                        border: '1px solid #ccc',
-                                        borderRadius: '4px',
-                                        overflow: 'hidden',
-                                        opacity: isFormDisabled ? 0.6 : 1
-                                    }}
-                                >
-                                    <div style={{ 
-                                        display: 'grid', 
-                                        gridTemplateColumns: '50px 1fr 50px 50px 50px 50px 1fr 80px' as const, 
-                                        backgroundColor: '#1976d2', 
-                                        color: 'white',
-                                        fontWeight: 'bold',
-                                        fontSize: '11px'
-                                    }}>
-                                        <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Sr.</div>
-                                        <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Medicine</div>
-                                        <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>B</div>
-                                        <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>L</div>
-                                        <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>D</div>
-                                        <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Days</div>
-                                        <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Instruction</div>
-                                        <div style={{ padding: '6px' }}>Action</div>
-                                    </div>
-                                    {[...medicineRows].sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999)).map((row, index) => (
-                                        <div key={row.id} style={{ 
-                                            display: 'grid', 
-                                            gridTemplateColumns: '50px 1fr 50px 50px 50px 50px 1fr 80px' as const,
-                                            backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white',
-                                            borderBottom: '1px solid #e0e0e0'
-                                        }}>
-                                            <div style={{ padding: '6px', borderRight: '1px solid #e0e0e0', fontSize: '12px' }}>{index + 1}</div>
-                                            <div style={{ padding: '6px', borderRight: '1px solid #e0e0e0', fontSize: '12px' }}>{row.short_description || row.medicine}</div>
-                                            <div style={{ padding: '0', borderRight: '1px solid #e0e0e0' }}>
-                                                <input
-                                                    type="text"
-                                                    value={row.b}
-                                                    inputMode="numeric"
-                                                    pattern="[0-9]*"
-                                                    onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
-                                                    onChange={(e) => handleMedicineFieldChange(row.id, 'b', e.target.value.replace(/\D/g, ''))}
-                                                    disabled={isFormDisabled}
-                                                    className="medicine-table-input"
-                                                    style={{
-                                                        width: '100%',
-                                                        height: '100%',
-                                                        padding: '8px 6px',
-                                                        border: 'none',
-                                                        borderRadius: 0,
-                                                        outline: 'none',
-                                                        backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
-                                                        boxShadow: 'none',
-                                                        fontSize: '11px',
-                                                        textAlign: 'center',
-                                                        color: isFormDisabled ? '#666' : '#333',
-                                                        cursor: isFormDisabled ? 'not-allowed' : 'text'
-                                                    }}
-                                                />
-                                            </div>
-                                            <div style={{ padding: '0', borderRight: '1px solid #e0e0e0' }}>
-                                                <input
-                                                    type="text"
-                                                    value={row.l}
-                                                    inputMode="numeric"
-                                                    pattern="[0-9]*"
-                                                    onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
-                                                    onChange={(e) => handleMedicineFieldChange(row.id, 'l', e.target.value.replace(/\D/g, ''))}
-                                                    disabled={isFormDisabled}
-                                                    className="medicine-table-input"
-                                                    style={{
-                                                        width: '100%',
-                                                        height: '100%',
-                                                        padding: '8px 6px',
-                                                        border: 'none',
-                                                        borderRadius: 0,
-                                                        outline: 'none',
-                                                        backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
-                                                        boxShadow: 'none',
-                                                        fontSize: '11px',
-                                                        textAlign: 'center',
-                                                        color: isFormDisabled ? '#666' : '#333',
-                                                        cursor: isFormDisabled ? 'not-allowed' : 'text'
-                                                    }}
-                                                />
-                                            </div>
-                                            <div style={{ padding: '0', borderRight: '1px solid #e0e0e0' }}>
-                                                <input
-                                                    type="text"
-                                                    value={row.d}
-                                                    inputMode="numeric"
-                                                    pattern="[0-9]*"
-                                                    onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
-                                                    onChange={(e) => handleMedicineFieldChange(row.id, 'd', e.target.value.replace(/\D/g, ''))}
-                                                    disabled={isFormDisabled}
-                                                    className="medicine-table-input"
-                                                    style={{
-                                                        width: '100%',
-                                                        height: '100%',
-                                                        padding: '8px 6px',
-                                                        border: 'none',
-                                                        borderRadius: 0,
-                                                        outline: 'none',
-                                                        backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
-                                                        boxShadow: 'none',
-                                                        fontSize: '11px',
-                                                        textAlign: 'center',
-                                                        color: isFormDisabled ? '#666' : '#333',
-                                                        cursor: isFormDisabled ? 'not-allowed' : 'text'
-                                                    }}
-                                                />
-                                            </div>
-                                            <div style={{ padding: '0', borderRight: '1px solid #e0e0e0' }}>
-                                                <input
-                                                    type="text"
-                                                    value={row.days}
-                                                    inputMode="numeric"
-                                                    pattern="[0-9]*"
-                                                    onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
-                                                    onChange={(e) => handleMedicineFieldChange(row.id, 'days', e.target.value.replace(/\D/g, ''))}
-                                                    disabled={isFormDisabled}
-                                                    className="medicine-table-input"
-                                                    style={{
-                                                        width: '100%',
-                                                        height: '100%',
-                                                        padding: '8px 6px',
-                                                        border: 'none',
-                                                        borderRadius: 0,
-                                                        outline: 'none',
-                                                        backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
-                                                        boxShadow: 'none',
-                                                        fontSize: '11px',
-                                                        textAlign: 'center',
-                                                        color: isFormDisabled ? '#666' : '#333',
-                                                        cursor: isFormDisabled ? 'not-allowed' : 'text'
-                                                    }}
-                                                />
-                                            </div>
-                                            <div style={{ padding: '0', borderRight: '1px solid #e0e0e0' }}>
-                                                <input
-                                                    type="text"
-                                                    value={row.instruction}
-                                                    onChange={(e) => handleMedicineInstructionChange(row.id, e.target.value)}
-                                                    disabled={isFormDisabled}
-                                                    placeholder="Enter instruction"
-                                                    className="medicine-table-input"
-                                                    style={{
-                                                        width: '100%',
-                                                        height: '100%',
-                                                        padding: '8px 10px',
-                                                        border: 'none',
-                                                        borderRadius: 0,
-                                                        outline: 'none',
-                                                        backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
-                                                        boxShadow: 'none',
-                                                        fontSize: '11px',
-                                                        color: isFormDisabled ? '#666' : '#333',
-                                                        cursor: isFormDisabled ? 'not-allowed' : 'text'
-                                                    }}
-                                                />
-                                            </div>
-                                            <div style={{ padding: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                <div
-                                                    onClick={() => {
-                                                        if (isFormDisabled) return;
-                                                        handleRemoveMedicine(row.id);
-                                                    }}
-                                                    title="Remove"
-                                                    style={{
-                                                        display: 'inline-flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        width: '24px',
-                                                        height: '24px',
-                                                        cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                                        color: isFormDisabled ? '#9e9e9e' : '#000000',
-                                                        backgroundColor: 'transparent'
-                                                    }}
-                                                    onMouseEnter={(e) => {
-                                                        if (isFormDisabled) return;
-                                                        (e.currentTarget as HTMLDivElement).style.color = '#EF5350';
-                                                    }}
-                                                    onMouseLeave={(e) => {
-                                                        (e.currentTarget as HTMLDivElement).style.color = isFormDisabled ? '#9e9e9e' : '#000000';
-                                                    }}
-                                                >
-                                                    <Delete fontSize="small" />
+                                                        return (
+                                                            <React.Fragment key={opt.value}>
+                                                                {isFirstUnselected && (
+                                                                    <div style={{
+                                                                        gridColumn: '1 / -1',
+                                                                        height: '1px',
+                                                                        backgroundColor: '#e0e0e0',
+                                                                        margin: '4px 0'
+                                                                    }} />
+                                                                )}
+                                                                <label
+                                                                    style={{
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        gap: '4px',
+                                                                        padding: '4px 2px',
+                                                                        cursor: 'pointer',
+                                                                        fontSize: '12px',
+                                                                        border: 'none',
+                                                                        backgroundColor: 'transparent',
+                                                                        borderRadius: '3px',
+                                                                        fontWeight: 400
+                                                                    }}
+                                                                >
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={checked}
+                                                                        onChange={(e) => {
+                                                                            setSelectedMedicines(prev => {
+                                                                                if (e.target.checked) {
+                                                                                    if (prev.includes(opt.value)) return prev;
+                                                                                    return [...prev, opt.value];
+                                                                                } else {
+                                                                                    return prev.filter(v => v !== opt.value);
+                                                                                }
+                                                                            });
+                                                                        }}
+                                                                        style={{ margin: 0 }}
+                                                                    />
+                                                                    <span style={{ whiteSpace: 'nowrap' }}>{opt.label}</span>
+                                                                </label>
+                                                            </React.Fragment>
+                                                        );
+                                                    })}
                                                 </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                        )}
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={handleAddMedicine}
+                                        disabled={isFormDisabled}
+                                        title="Add selected medicines"
+                                        style={{
+                                            backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
+                                            color: 'white',
+                                            border: 'none',
+                                            padding: '6px 12px',
+                                            borderRadius: '4px',
+                                            cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                            fontSize: '12px'
+                                        }}
+                                    >
+                                        Add
+                                    </button>
+                                    <button
+                                        type="button"
+                                        disabled={isFormDisabled}
+                                        title="Add custom medicine"
+                                        style={{
+                                            backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
+                                            color: 'white',
+                                            border: 'none',
+                                            padding: '6px',
+                                            borderRadius: '6px',
+                                            cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                            width: '32px',
+                                            height: '32px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            fontSize: '14px',
+                                            transition: 'background-color 0.2s'
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1565c0';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1976d2';
+                                        }}
+                                        onClick={handleAddCustomMedicine}
+                                    >
+                                        <Add fontSize="small" />
+                                    </button>
                                 </div>
-                            )}
-                        </div>
 
-                        {/* Prescription Section */}
-                        <div style={{ marginBottom: '15px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '5px', width: '88%', gap: '8px' }}>
-                                <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Prescription</label>
+                                {/* Medicine Table */}
+                                {medicineRows.length > 0 && (
+                                    <div
+                                        style={{
+                                            border: '1px solid #ccc',
+                                            borderRadius: '4px',
+                                            overflow: 'hidden',
+                                            opacity: isFormDisabled ? 0.6 : 1
+                                        }}
+                                    >
+                                        <div style={{
+                                            display: 'grid',
+                                            gridTemplateColumns: '50px 1fr 50px 50px 50px 50px 1fr 80px' as const,
+                                            backgroundColor: '#1976d2',
+                                            color: 'white',
+                                            fontWeight: 'bold',
+                                            fontSize: '11px'
+                                        }}>
+                                            <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Sr.</div>
+                                            <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Medicine</div>
+                                            <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>B</div>
+                                            <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>L</div>
+                                            <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>D</div>
+                                            <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Days</div>
+                                            <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Instruction</div>
+                                            <div style={{ padding: '6px' }}>Action</div>
+                                        </div>
+                                        {[...medicineRows].sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999)).map((row, index) => (
+                                            <div key={row.id} style={{
+                                                display: 'grid',
+                                                gridTemplateColumns: '50px 1fr 50px 50px 50px 50px 1fr 80px' as const,
+                                                backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white',
+                                                borderBottom: '1px solid #e0e0e0'
+                                            }}>
+                                                <div style={{ padding: '6px', borderRight: '1px solid #e0e0e0', fontSize: '12px' }}>{index + 1}</div>
+                                                <div style={{ padding: '6px', borderRight: '1px solid #e0e0e0', fontSize: '12px' }}>{row.short_description || row.medicine}</div>
+                                                <div style={{ padding: '0', borderRight: '1px solid #e0e0e0' }}>
+                                                    <input
+                                                        type="text"
+                                                        value={row.b}
+                                                        inputMode="numeric"
+                                                        pattern="[0-9]*"
+                                                        onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
+                                                        onChange={(e) => handleMedicineFieldChange(row.id, 'b', e.target.value.replace(/\D/g, ''))}
+                                                        disabled={isFormDisabled}
+                                                        className="medicine-table-input"
+                                                        style={{
+                                                            width: '100%',
+                                                            height: '100%',
+                                                            padding: '8px 6px',
+                                                            border: 'none',
+                                                            borderRadius: 0,
+                                                            outline: 'none',
+                                                            backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
+                                                            boxShadow: 'none',
+                                                            fontSize: '11px',
+                                                            textAlign: 'center',
+                                                            color: isFormDisabled ? '#666' : '#333',
+                                                            cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                                        }}
+                                                    />
+                                                </div>
+                                                <div style={{ padding: '0', borderRight: '1px solid #e0e0e0' }}>
+                                                    <input
+                                                        type="text"
+                                                        value={row.l}
+                                                        inputMode="numeric"
+                                                        pattern="[0-9]*"
+                                                        onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
+                                                        onChange={(e) => handleMedicineFieldChange(row.id, 'l', e.target.value.replace(/\D/g, ''))}
+                                                        disabled={isFormDisabled}
+                                                        className="medicine-table-input"
+                                                        style={{
+                                                            width: '100%',
+                                                            height: '100%',
+                                                            padding: '8px 6px',
+                                                            border: 'none',
+                                                            borderRadius: 0,
+                                                            outline: 'none',
+                                                            backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
+                                                            boxShadow: 'none',
+                                                            fontSize: '11px',
+                                                            textAlign: 'center',
+                                                            color: isFormDisabled ? '#666' : '#333',
+                                                            cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                                        }}
+                                                    />
+                                                </div>
+                                                <div style={{ padding: '0', borderRight: '1px solid #e0e0e0' }}>
+                                                    <input
+                                                        type="text"
+                                                        value={row.d}
+                                                        inputMode="numeric"
+                                                        pattern="[0-9]*"
+                                                        onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
+                                                        onChange={(e) => handleMedicineFieldChange(row.id, 'd', e.target.value.replace(/\D/g, ''))}
+                                                        disabled={isFormDisabled}
+                                                        className="medicine-table-input"
+                                                        style={{
+                                                            width: '100%',
+                                                            height: '100%',
+                                                            padding: '8px 6px',
+                                                            border: 'none',
+                                                            borderRadius: 0,
+                                                            outline: 'none',
+                                                            backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
+                                                            boxShadow: 'none',
+                                                            fontSize: '11px',
+                                                            textAlign: 'center',
+                                                            color: isFormDisabled ? '#666' : '#333',
+                                                            cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                                        }}
+                                                    />
+                                                </div>
+                                                <div style={{ padding: '0', borderRight: '1px solid #e0e0e0' }}>
+                                                    <input
+                                                        type="text"
+                                                        value={row.days}
+                                                        inputMode="numeric"
+                                                        pattern="[0-9]*"
+                                                        onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
+                                                        onChange={(e) => handleMedicineFieldChange(row.id, 'days', e.target.value.replace(/\D/g, ''))}
+                                                        disabled={isFormDisabled}
+                                                        className="medicine-table-input"
+                                                        style={{
+                                                            width: '100%',
+                                                            height: '100%',
+                                                            padding: '8px 6px',
+                                                            border: 'none',
+                                                            borderRadius: 0,
+                                                            outline: 'none',
+                                                            backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
+                                                            boxShadow: 'none',
+                                                            fontSize: '11px',
+                                                            textAlign: 'center',
+                                                            color: isFormDisabled ? '#666' : '#333',
+                                                            cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                                        }}
+                                                    />
+                                                </div>
+                                                <div style={{ padding: '0', borderRight: '1px solid #e0e0e0' }}>
+                                                    <input
+                                                        type="text"
+                                                        value={row.instruction}
+                                                        onChange={(e) => handleMedicineInstructionChange(row.id, e.target.value)}
+                                                        disabled={isFormDisabled}
+                                                        placeholder="Enter instruction"
+                                                        className="medicine-table-input"
+                                                        style={{
+                                                            width: '100%',
+                                                            height: '100%',
+                                                            padding: '8px 10px',
+                                                            border: 'none',
+                                                            borderRadius: 0,
+                                                            outline: 'none',
+                                                            backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
+                                                            boxShadow: 'none',
+                                                            fontSize: '11px',
+                                                            color: isFormDisabled ? '#666' : '#333',
+                                                            cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                                        }}
+                                                    />
+                                                </div>
+                                                <div style={{ padding: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                    <div
+                                                        onClick={() => {
+                                                            if (isFormDisabled) return;
+                                                            handleRemoveMedicine(row.id);
+                                                        }}
+                                                        title="Remove"
+                                                        style={{
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            width: '24px',
+                                                            height: '24px',
+                                                            cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                                            color: isFormDisabled ? '#9e9e9e' : '#000000',
+                                                            backgroundColor: 'transparent'
+                                                        }}
+                                                        onMouseEnter={(e) => {
+                                                            if (isFormDisabled) return;
+                                                            (e.currentTarget as HTMLDivElement).style.color = '#EF5350';
+                                                        }}
+                                                        onMouseLeave={(e) => {
+                                                            (e.currentTarget as HTMLDivElement).style.color = isFormDisabled ? '#9e9e9e' : '#000000';
+                                                        }}
+                                                    >
+                                                        <Delete fontSize="small" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
-                            
-                            <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-                                <input
-                                    type="text"
-                                    value={prescriptionInput}
-                                    onChange={(e) => !isFormDisabled && setPrescriptionInput(e.target.value)}
+
+                            {/* Prescription Section */}
+                            <div style={{ marginBottom: '15px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '5px', width: '88%', gap: '8px' }}>
+                                    <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Prescription</label>
+                                </div>
+
+                                <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                                    <input
+                                        type="text"
+                                        value={prescriptionInput}
+                                        onChange={(e) => !isFormDisabled && setPrescriptionInput(e.target.value)}
+                                        disabled={isFormDisabled}
+                                        placeholder="Enter Brand Name / Prescription"
+                                        style={{
+                                            flex: 1,
+                                            padding: '6px 10px',
+                                            border: '1px solid #ccc',
+                                            borderRadius: '4px',
+                                            fontSize: '13px',
+                                            backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
+                                            color: isFormDisabled ? '#666' : '#333',
+                                            cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                        }}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={handleAddPrescription}
+                                        disabled={isFormDisabled}
+                                        title="Add prescription"
+                                        style={{
+                                            backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
+                                            color: 'white',
+                                            border: 'none',
+                                            padding: '6px 12px',
+                                            borderRadius: '4px',
+                                            cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                            fontSize: '12px'
+                                        }}
+                                    >
+                                        Add Rx
+                                    </button>
+                                    <button
+                                        type="button"
+                                        disabled={isFormDisabled}
+                                        title="Add custom prescription"
+                                        style={{
+                                            backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
+                                            color: 'white',
+                                            border: 'none',
+                                            padding: '6px',
+                                            borderRadius: '6px',
+                                            cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                            width: '32px',
+                                            height: '32px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            fontSize: '14px',
+                                            transition: 'background-color 0.2s'
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1565c0';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1976d2';
+                                        }}
+                                        onClick={handleAddCustomPrescription}
+                                    >
+                                        <Add fontSize="small" />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowInstructionPopup(true)}
+                                        disabled={isFormDisabled}
+                                        title="Show instruction groups"
+                                        style={{
+                                            backgroundColor: isFormDisabled
+                                                ? '#ccc'
+                                                : (selectedInstructionGroups && selectedInstructionGroups.length > 0
+                                                    ? '#ffc107'
+                                                    : '#1976d2'),
+                                            color: 'white',
+                                            border: 'none',
+                                            padding: '6px',
+                                            borderRadius: '50%',
+                                            cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                            width: '32px',
+                                            height: '32px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            fontSize: '14px',
+                                            fontWeight: 'bold',
+                                            transition: 'background-color 0.2s'
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            if (!isFormDisabled) {
+                                                e.currentTarget.style.backgroundColor = (selectedInstructionGroups && selectedInstructionGroups.length > 0)
+                                                    ? '#ffb300'
+                                                    : '#1565c0';
+                                            }
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            if (!isFormDisabled) {
+                                                e.currentTarget.style.backgroundColor = (selectedInstructionGroups && selectedInstructionGroups.length > 0)
+                                                    ? '#ffc107'
+                                                    : '#1976d2';
+                                            }
+                                        }}
+                                    >
+                                        i
+                                    </button>
+                                </div>
+
+                                {isRxOpen && rxSuggestions.length > 0 && (
+                                    <div ref={rxRef} style={{ border: '1px solid #ccc', borderRadius: '4px', background: '#fff', maxHeight: '180px', overflowY: 'auto', width: '88%', marginBottom: '12px' }}>
+                                        {rxSuggestions.map((item, idx) => (
+                                            <div
+                                                key={idx}
+                                                onClick={() => { setPrescriptionInput(item); setIsRxOpen(false); }}
+                                                style={{ padding: '6px 10px', cursor: 'pointer', fontSize: '12px', borderBottom: '1px solid #eee' }}
+                                                onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = '#f5f5f5'; }}
+                                                onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = '#fff'; }}
+                                                title={item}
+                                            >
+                                                {item}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {/* Prescription Table */}
+                                {prescriptionRows.length > 0 && (
+                                    <div
+                                        style={{
+                                            border: '1px solid #ccc',
+                                            borderRadius: '4px',
+                                            overflow: 'hidden',
+                                            opacity: isFormDisabled ? 0.6 : 1
+                                        }}
+                                    >
+                                        <div style={{
+                                            display: 'grid',
+                                            gridTemplateColumns: '50px 1fr 50px 50px 50px 50px 1fr 80px' as const,
+                                            backgroundColor: '#1976d2',
+                                            color: 'white',
+                                            fontWeight: 'bold',
+                                            fontSize: '11px'
+                                        }}>
+                                            <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Sr.</div>
+                                            <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Prescriptions</div>
+                                            <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>B</div>
+                                            <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>L</div>
+                                            <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>D</div>
+                                            <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Days</div>
+                                            <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Instruction</div>
+                                            <div style={{ padding: '6px' }}>Action</div>
+                                        </div>
+                                        {prescriptionRows.map((row, index) => (
+                                            <div key={row.id} style={{
+                                                display: 'grid',
+                                                gridTemplateColumns: '50px 1fr 50px 50px 50px 50px 1fr 80px' as const,
+                                                backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white',
+                                                borderBottom: '1px solid #e0e0e0'
+                                            }}>
+                                                <div style={{ padding: '6px', borderRight: '1px solid #e0e0e0', fontSize: '12px' }}>{index + 1}</div>
+                                                <div style={{ padding: '6px', borderRight: '1px solid #e0e0e0', fontSize: '12px' }}>{row.prescription}</div>
+                                                <div style={{ padding: '0', borderRight: '1px solid #e0e0e0' }}>
+                                                    <input
+                                                        type="text"
+                                                        value={row.b}
+                                                        inputMode="numeric"
+                                                        pattern="[0-9]*"
+                                                        onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
+                                                        onChange={(e) => handlePrescriptionFieldChange(row.id, 'b', e.target.value.replace(/\D/g, ''))}
+                                                        disabled={isFormDisabled}
+                                                        className="prescription-table-input"
+                                                        style={{
+                                                            width: '100%',
+                                                            height: '100%',
+                                                            padding: '8px 6px',
+                                                            border: 'none',
+                                                            borderRadius: 0,
+                                                            outline: 'none',
+                                                            backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
+                                                            boxShadow: 'none',
+                                                            fontSize: '11px',
+                                                            textAlign: 'center',
+                                                            color: isFormDisabled ? '#666' : '#333',
+                                                            cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                                        }}
+                                                    />
+                                                </div>
+                                                <div style={{ padding: '0', borderRight: '1px solid #e0e0e0' }}>
+                                                    <input
+                                                        type="text"
+                                                        value={row.l}
+                                                        inputMode="numeric"
+                                                        pattern="[0-9]*"
+                                                        onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
+                                                        onChange={(e) => handlePrescriptionFieldChange(row.id, 'l', e.target.value.replace(/\D/g, ''))}
+                                                        disabled={isFormDisabled}
+                                                        className="prescription-table-input"
+                                                        style={{
+                                                            width: '100%',
+                                                            height: '100%',
+                                                            padding: '8px 6px',
+                                                            border: 'none',
+                                                            borderRadius: 0,
+                                                            outline: 'none',
+                                                            backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
+                                                            boxShadow: 'none',
+                                                            fontSize: '11px',
+                                                            textAlign: 'center',
+                                                            color: isFormDisabled ? '#666' : '#333',
+                                                            cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                                        }}
+                                                    />
+                                                </div>
+                                                <div style={{ padding: '0', borderRight: '1px solid #e0e0e0' }}>
+                                                    <input
+                                                        type="text"
+                                                        value={row.d}
+                                                        inputMode="numeric"
+                                                        pattern="[0-9]*"
+                                                        onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
+                                                        onChange={(e) => handlePrescriptionFieldChange(row.id, 'd', e.target.value.replace(/\D/g, ''))}
+                                                        disabled={isFormDisabled}
+                                                        className="prescription-table-input"
+                                                        style={{
+                                                            width: '100%',
+                                                            height: '100%',
+                                                            padding: '8px 6px',
+                                                            border: 'none',
+                                                            borderRadius: 0,
+                                                            outline: 'none',
+                                                            backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
+                                                            boxShadow: 'none',
+                                                            fontSize: '11px',
+                                                            textAlign: 'center',
+                                                            color: isFormDisabled ? '#666' : '#333',
+                                                            cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                                        }}
+                                                    />
+                                                </div>
+                                                <div style={{ padding: '0', borderRight: '1px solid #e0e0e0' }}>
+                                                    <input
+                                                        type="text"
+                                                        value={row.days}
+                                                        inputMode="numeric"
+                                                        pattern="[0-9]*"
+                                                        onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
+                                                        onChange={(e) => handlePrescriptionFieldChange(row.id, 'days', e.target.value.replace(/\D/g, ''))}
+                                                        disabled={isFormDisabled}
+                                                        className="prescription-table-input"
+                                                        style={{
+                                                            width: '100%',
+                                                            height: '100%',
+                                                            padding: '8px 6px',
+                                                            border: 'none',
+                                                            borderRadius: 0,
+                                                            outline: 'none',
+                                                            backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
+                                                            boxShadow: 'none',
+                                                            fontSize: '11px',
+                                                            textAlign: 'center',
+                                                            color: isFormDisabled ? '#666' : '#333',
+                                                            cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                                        }}
+                                                    />
+                                                </div>
+                                                <div style={{ padding: '0', borderRight: '1px solid #e0e0e0' }}>
+                                                    <input
+                                                        type="text"
+                                                        value={row.instruction}
+                                                        onChange={(e) => handlePrescriptionInstructionChange(row.id, e.target.value)}
+                                                        disabled={isFormDisabled}
+                                                        placeholder="Enter instruction"
+                                                        className="prescription-table-input"
+                                                        style={{
+                                                            width: '100%',
+                                                            height: '100%',
+                                                            padding: '8px 10px',
+                                                            border: 'none',
+                                                            borderRadius: 0,
+                                                            outline: 'none',
+                                                            backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
+                                                            boxShadow: 'none',
+                                                            fontSize: '11px',
+                                                            color: isFormDisabled ? '#666' : '#333',
+                                                            cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                                        }}
+                                                    />
+                                                </div>
+                                                <div style={{ padding: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                                                    <div
+                                                        onClick={() => {
+                                                            if (isFormDisabled) return;
+                                                            handleRemovePrescription(row.id);
+                                                        }}
+                                                        title="Remove"
+                                                        style={{
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            width: '24px',
+                                                            height: '24px',
+                                                            cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                                            color: isFormDisabled ? '#9e9e9e' : '#000000',
+                                                            backgroundColor: 'transparent'
+                                                        }}
+                                                        onMouseEnter={(e) => {
+                                                            if (isFormDisabled) return;
+                                                            (e.currentTarget as HTMLDivElement).style.color = '#EF5350';
+                                                        }}
+                                                        onMouseLeave={(e) => {
+                                                            (e.currentTarget as HTMLDivElement).style.color = isFormDisabled ? '#9e9e9e' : '#000000';
+                                                        }}
+                                                    >
+                                                        <Delete fontSize="small" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Previous Visit Section */}
+                            <div style={{ marginBottom: '15px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '5px', width: '100%', gap: '8px' }}>
+                                    <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Prescriptions suggested in previous visit</label>
+                                    <div
+                                        onClick={() => setShowPreviousVisit(!showPreviousVisit)}
+                                        title={showPreviousVisit ? 'Hide previous visit prescriptions' : 'Show previous visit prescriptions'}
+                                        style={{
+                                            cursor: 'pointer',
+                                            fontSize: '13px',
+                                            color: '#000000',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            height: '20px',
+                                            width: '20px',
+                                            lineHeight: '1'
+                                        }}
+                                    >
+                                        {showPreviousVisit ? '▲' : '▼'}
+                                    </div>
+                                </div>
+
+                                {/* Previous Visit Prescriptions Table */}
+                                {showPreviousVisit && (
+                                    <>
+                                        {previousVisitPrescriptions.length > 0 ? (
+                                            <div style={{ border: '1px solid #ccc', borderRadius: '4px', overflow: 'hidden' }}>
+                                                <div style={{
+                                                    display: 'grid',
+                                                    gridTemplateColumns: '50px 1fr 50px 50px 50px 50px 1fr' as const,
+                                                    backgroundColor: '#f5f5f5',
+                                                    color: '#666',
+                                                    fontWeight: 'bold',
+                                                    fontSize: '11px',
+                                                    borderBottom: '1px solid #ccc'
+                                                }}>
+                                                    <div style={{ padding: '6px', borderRight: '1px solid #ccc' }}>Sr.</div>
+                                                    <div style={{ padding: '6px', borderRight: '1px solid #ccc' }}>Prescriptions</div>
+                                                    <div style={{ padding: '6px', borderRight: '1px solid #ccc' }}>B</div>
+                                                    <div style={{ padding: '6px', borderRight: '1px solid #ccc' }}>L</div>
+                                                    <div style={{ padding: '6px', borderRight: '1px solid #ccc' }}>D</div>
+                                                    <div style={{ padding: '6px', borderRight: '1px solid #ccc' }}>Days</div>
+                                                    <div style={{ padding: '6px' }}>Instruction</div>
+                                                </div>
+                                                {previousVisitPrescriptions.map((row, index) => (
+                                                    <div key={row.id} style={{
+                                                        display: 'grid',
+                                                        gridTemplateColumns: '50px 1fr 50px 50px 50px 50px 1fr' as const,
+                                                        backgroundColor: '#f5f5f5',
+                                                        borderBottom: '1px solid #ccc'
+                                                    }}>
+                                                        <div style={{ padding: '6px', borderRight: '1px solid #ccc', fontSize: '12px', color: '#666' }}>{index + 1}</div>
+                                                        <div style={{ padding: '6px', borderRight: '1px solid #ccc', fontSize: '12px', color: '#666' }}>{row.prescription}</div>
+                                                        <div style={{ padding: '6px', borderRight: '1px solid #ccc', fontSize: '12px', color: '#666', textAlign: 'center' }}>{row.b}</div>
+                                                        <div style={{ padding: '6px', borderRight: '1px solid #ccc', fontSize: '12px', color: '#666', textAlign: 'center' }}>{row.l}</div>
+                                                        <div style={{ padding: '6px', borderRight: '1px solid #ccc', fontSize: '12px', color: '#666', textAlign: 'center' }}>{row.d}</div>
+                                                        <div style={{ padding: '6px', borderRight: '1px solid #ccc', fontSize: '12px', color: '#666', textAlign: 'center' }}>{row.days}</div>
+                                                        <div style={{ padding: '6px', fontSize: '12px', color: '#666' }}>{row.instruction}</div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div style={{
+                                                padding: '10px',
+                                                textAlign: 'center',
+                                                color: '#666',
+                                                fontSize: '12px',
+                                                border: '1px solid #ccc',
+                                                borderRadius: '4px',
+                                                backgroundColor: '#f5f5f5'
+                                            }}>
+                                                No Prescriptions suggested in previous visit.
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+                            </div>
+
+                            {/* Investigation Section */}
+                            <div style={{ marginBottom: '15px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '5px', width: '88%', gap: '8px' }}>
+                                    <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Investigation</label>
+                                </div>
+
+                                <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                                    <div style={{ flex: 1, position: 'relative' }} ref={investigationsRef}>
+                                        <div
+                                            style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'space-between',
+                                                height: '32px',
+                                                padding: '4px 8px',
+                                                border: '2px solid #B7B7B7',
+                                                borderRadius: '6px',
+                                                fontSize: '12px',
+                                                fontFamily: "'Roboto', sans-serif",
+                                                fontWeight: 500,
+                                                backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
+                                                cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                                userSelect: 'none',
+                                                opacity: isFormDisabled ? 0.6 : 1
+                                            }}
+                                            onClick={() => !isFormDisabled && setIsInvestigationsOpen(!isInvestigationsOpen)}
+                                            onMouseEnter={(e) => {
+                                                (e.currentTarget as HTMLDivElement).style.borderColor = '#1E88E5';
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                (e.currentTarget as HTMLDivElement).style.borderColor = '#B7B7B7';
+                                            }}
+                                        >
+                                            <span style={{ color: selectedInvestigations.length > 0 ? '#000' : '#9e9e9e' }}>
+                                                {selectedInvestigations.length > 0
+                                                    ? `${selectedInvestigations.length} investigation selected`
+                                                    : 'Select Investigation'
+                                                }
+                                            </span>
+                                            <span style={{ marginLeft: '8px', color: '#666', fontSize: '16px', lineHeight: '1' }}>▾</span>
+                                        </div>
+
+                                        {isInvestigationsOpen && (
+                                            <div style={{
+                                                position: 'absolute',
+                                                top: '100%',
+                                                left: 0,
+                                                right: 0,
+                                                backgroundColor: 'white',
+                                                border: '1px solid #B7B7B7',
+                                                borderRadius: '6px',
+                                                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                                                zIndex: 1000,
+                                                marginTop: '4px',
+                                                maxHeight: '300px',
+                                                overflow: 'hidden'
+                                            }}>
+                                                <div style={{ padding: '6px' }}>
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Search investigations..."
+                                                        value={investigationSearch}
+                                                        onChange={(e) => setInvestigationSearch(e.target.value)}
+                                                        style={{
+                                                            width: '100%',
+                                                            height: '28px',
+                                                            padding: '4px 8px',
+                                                            border: '1px solid #B7B7B7',
+                                                            borderRadius: '4px',
+                                                            fontSize: '12px',
+                                                            outline: 'none'
+                                                        }}
+                                                        onFocus={(e) => {
+                                                            (e.target as HTMLInputElement).style.borderColor = '#1E88E5';
+                                                        }}
+                                                        onBlur={(e) => {
+                                                            (e.target as HTMLInputElement).style.borderColor = '#B7B7B7';
+                                                        }}
+                                                    />
+                                                </div>
+
+                                                <div className="investigations-dropdown" style={{ maxHeight: '200px', overflowY: 'auto', padding: '4px 6px', display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', columnGap: '8px', rowGap: '6px' }}>
+                                                    {investigationsLoading && (
+                                                        <div style={{ padding: '6px', fontSize: '12px', color: '#777', gridColumn: '1 / -1', textAlign: 'center' }}>
+                                                            Loading investigations...
+                                                        </div>
+                                                    )}
+                                                    {investigationsError && (
+                                                        <div style={{ padding: '6px', fontSize: '12px', color: '#d32f2f', gridColumn: '1 / -1', textAlign: 'center' }}>
+                                                            {investigationsError}
+                                                            <button
+                                                                onClick={() => {
+                                                                    setInvestigationsError(null);
+                                                                    const doctorId = treatmentData?.doctorId || '1';
+                                                                    const clinicId = sessionData?.clinicId || '1';
+                                                                    investigationService.getInvestigationsForDoctorAndClinic(doctorId, clinicId)
+                                                                        .then(setInvestigationsOptions)
+                                                                        .catch(e => setInvestigationsError(e.message));
+                                                                }}
+                                                                style={{
+                                                                    marginLeft: '8px',
+                                                                    padding: '2px 6px',
+                                                                    fontSize: '10px',
+                                                                    backgroundColor: '#1976d2',
+                                                                    color: 'white',
+                                                                    border: 'none',
+                                                                    borderRadius: '3px',
+                                                                    cursor: 'pointer'
+                                                                }}
+                                                            >
+                                                                Retry
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                    {!investigationsLoading && !investigationsError && filteredInvestigations.length === 0 && (
+                                                        <div style={{ padding: '6px', fontSize: '12px', color: '#777', gridColumn: '1 / -1' }}>No investigations found</div>
+                                                    )}
+                                                    {!investigationsLoading && !investigationsError && filteredInvestigations.map((opt, index) => {
+                                                        const checked = selectedInvestigations.includes(opt.value);
+                                                        const isFirstUnselected = !checked && index > 0 && selectedInvestigations.includes(filteredInvestigations[index - 1].value);
+                                                        return (
+                                                            <React.Fragment key={opt.value}>
+                                                                {isFirstUnselected && (
+                                                                    <div style={{
+                                                                        gridColumn: '1 / -1',
+                                                                        height: '1px',
+                                                                        backgroundColor: '#e0e0e0',
+                                                                        margin: '4px 0'
+                                                                    }} />
+                                                                )}
+                                                                <label
+                                                                    style={{
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        gap: '4px',
+                                                                        padding: '4px 2px',
+                                                                        cursor: 'pointer',
+                                                                        fontSize: '12px',
+                                                                        border: 'none',
+                                                                        backgroundColor: 'transparent',
+                                                                        borderRadius: '3px',
+                                                                        fontWeight: 400,
+                                                                        color: '#333'
+                                                                    }}
+                                                                >
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={checked}
+                                                                        onChange={(e) => {
+                                                                            setSelectedInvestigations(prev => {
+                                                                                if (e.target.checked) {
+                                                                                    if (prev.includes(opt.value)) return prev;
+                                                                                    return [...prev, opt.value];
+                                                                                } else {
+                                                                                    return prev.filter(v => v !== opt.value);
+                                                                                }
+                                                                            });
+                                                                        }}
+                                                                        style={{ margin: 0 }}
+                                                                    />
+                                                                    <span style={{ whiteSpace: 'nowrap' }}>{opt.label}</span>
+                                                                </label>
+                                                            </React.Fragment>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <button
+                                        disabled={isFormDisabled}
+                                        title="Add selected investigations"
+                                        style={{
+                                            padding: '0 10px',
+                                            backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
+                                            color: 'white',
+                                            border: 'none',
+                                            borderRadius: '6px',
+                                            cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                            fontSize: '12px',
+                                            height: '32px',
+                                            transition: 'background-color 0.2s'
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1565c0';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1976d2';
+                                        }}
+                                        onClick={handleAddInvestigations}
+                                    >
+                                        Add
+                                    </button>
+                                    <button
+                                        type="button"
+                                        disabled={isFormDisabled}
+                                        title="Add custom investigation"
+                                        style={{
+                                            backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
+                                            color: 'white',
+                                            border: 'none',
+                                            padding: '6px',
+                                            borderRadius: '6px',
+                                            cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                            width: '32px',
+                                            height: '32px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            fontSize: '14px',
+                                            transition: 'background-color 0.2s'
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1565c0';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1976d2';
+                                        }}
+                                        onClick={handleAddCustomTestLab}
+                                    >
+                                        <Add fontSize="small" />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        disabled={isFormDisabled}
+                                        title="Show lab trends"
+                                        style={{
+                                            backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
+                                            color: 'white',
+                                            border: 'none',
+                                            padding: '6px',
+                                            borderRadius: '50%',
+                                            cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                            width: '32px',
+                                            height: '32px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            fontSize: '14px',
+                                            fontWeight: 'bold',
+                                            transition: 'background-color 0.2s'
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1565c0';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1976d2';
+                                        }}
+                                        onClick={() => {
+                                            if (!isFormDisabled) {
+                                                setShowLabTrendPopup(true);
+                                            }
+                                        }}
+                                    >
+                                        <TrendingUp fontSize="small" />
+                                    </button>
+                                </div>
+
+                                {/* Investigation Table */}
+                                {investigationRows.length > 0 && (
+                                    <div
+                                        style={{
+                                            border: '1px solid #ccc',
+                                            borderRadius: '4px',
+                                            overflow: 'hidden',
+                                            opacity: isFormDisabled ? 0.6 : 1
+                                        }}
+                                    >
+                                        <div style={{
+                                            display: 'grid',
+                                            gridTemplateColumns: '60px 1fr 80px' as const,
+                                            backgroundColor: '#1976d2',
+                                            color: 'white',
+                                            fontWeight: 'bold',
+                                            fontSize: '11px'
+                                        }}>
+                                            <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Sr.</div>
+                                            <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Investigation</div>
+                                            <div style={{ padding: '6px' }}>Action</div>
+                                        </div>
+                                        {investigationRows.map((row, index) => (
+                                            <div key={row.id} style={{
+                                                display: 'grid',
+                                                gridTemplateColumns: '60px 1fr 80px' as const,
+                                                backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white',
+                                                borderBottom: '1px solid #e0e0e0'
+                                            }}>
+                                                <div style={{ padding: '6px', borderRight: '1px solid #e0e0e0', fontSize: '12px' }}>{index + 1}</div>
+                                                <div style={{ padding: '6px', borderRight: '1px solid #e0e0e0', fontSize: '12px' }}>{row.investigation}</div>
+                                                <div style={{ padding: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                    <div
+                                                        onClick={() => {
+                                                            if (isFormDisabled) return;
+                                                            handleRemoveInvestigation(row.id);
+                                                        }}
+                                                        title="Remove"
+                                                        style={{
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            width: '24px',
+                                                            height: '24px',
+                                                            cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                                            color: isFormDisabled ? '#9e9e9e' : '#000000',
+                                                            backgroundColor: 'transparent'
+                                                        }}
+                                                        onMouseEnter={(e) => {
+                                                            if (isFormDisabled) return;
+                                                            (e.currentTarget as HTMLDivElement).style.color = '#EF5350';
+                                                        }}
+                                                        onMouseLeave={(e) => {
+                                                            (e.currentTarget as HTMLDivElement).style.color = isFormDisabled ? '#9e9e9e' : '#000000';
+                                                        }}
+                                                    >
+                                                        <Delete style={{ fontSize: '16px' }} />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Follow-up Section */}
+                            <div style={{ marginBottom: '15px' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px', marginBottom: '12px' }}>
+                                    <div>
+                                        <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                                            Follow-up Type
+                                        </label>
+                                        <select
+                                            value={followUpData.followUpType}
+                                            onChange={(e) => handleFollowUpChange('followUpType', e.target.value)}
+                                            disabled={followUpTypesLoading || isFormDisabled}
+                                            style={{
+                                                width: '100%',
+                                                padding: '6px 10px',
+                                                border: '1px solid #ccc',
+                                                borderRadius: '4px',
+                                                fontSize: '13px',
+                                                height: '32px',
+                                                opacity: (followUpTypesLoading || isFormDisabled) ? 0.6 : 1,
+                                                backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
+                                                cursor: isFormDisabled ? 'not-allowed' : 'pointer'
+                                            }}
+                                        >
+                                            <option value="">
+                                                {followUpTypesLoading ? 'Loading...' : 'Select Follow-up Type'}
+                                            </option>
+                                            {followUpTypesOptions.map((option) => (
+                                                <option key={option.id} value={option.id}>
+                                                    {option.followUpDescription}
+                                                </option>
+                                            ))}
+                                            {followUpTypesError && (
+                                                <option value="" disabled>
+                                                    Error: {followUpTypesError}
+                                                </option>
+                                            )}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                                            Follow up
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={followUpData.followUp}
+                                            onChange={(e) => handleFollowUpChange('followUp', e.target.value)}
+                                            disabled={isFormDisabled}
+                                            style={{
+                                                width: '100%',
+                                                padding: '6px 10px',
+                                                border: '1px solid #ccc',
+                                                borderRadius: '4px',
+                                                fontSize: '13px',
+                                                backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
+                                                color: isFormDisabled ? '#666' : '#333',
+                                                cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                            }}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                                            Remark Comments
+                                        </label>
+                                        <textarea
+                                            value={followUpData.remarkComments}
+                                            onChange={(e) => handleFollowUpChange('remarkComments', e.target.value)}
+                                            disabled={isFormDisabled}
+                                            rows={1}
+                                            style={{
+                                                width: '100%',
+                                                padding: '6px 10px',
+                                                border: '1px solid #ccc',
+                                                borderRadius: '4px',
+                                                fontSize: '13px',
+                                                resize: 'none',
+                                                height: '32px',
+                                                minHeight: '32px',
+                                                maxHeight: '32px',
+                                                overflow: 'hidden',
+                                                backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
+                                                color: isFormDisabled ? '#666' : '#333',
+                                                cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Plan/Adv Section */}
+                            <div style={{ marginBottom: '15px' }}>
+                                <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                                    Plan / Adv
+                                </label>
+                                <textarea
+                                    value={followUpData.planAdv}
+                                    onChange={(e) => handleFollowUpChange('planAdv', e.target.value)}
                                     disabled={isFormDisabled}
-                                    placeholder="Enter Brand Name / Prescription"
+                                    rows={2}
                                     style={{
-                                        flex: 1,
+                                        width: '100%',
                                         padding: '6px 10px',
                                         border: '1px solid #ccc',
                                         borderRadius: '4px',
                                         fontSize: '13px',
+                                        resize: 'vertical',
                                         backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
                                         color: isFormDisabled ? '#666' : '#333',
                                         cursor: isFormDisabled ? 'not-allowed' : 'text'
                                     }}
                                 />
-                                <button
-                                    type="button"
-                                    onClick={handleAddPrescription}
-                                    disabled={isFormDisabled}
-                                    title="Add prescription"
-                                    style={{
-                                        backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
-                                        color: 'white',
-                                        border: 'none',
-                                        padding: '6px 12px',
-                                        borderRadius: '4px',
-                                        cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                        fontSize: '12px'
-                                    }}
-                                >
-                                    Add Rx
-                                </button>
-                                <button
-                                    type="button"
-                                    disabled={isFormDisabled}
-                                    title="Add custom prescription"
-                                    style={{
-                                        backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
-                                        color: 'white',
-                                        border: 'none',
-                                        padding: '6px',
-                                        borderRadius: '6px',
-                                        cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                        width: '32px',
-                                        height: '32px',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        fontSize: '14px',
-                                        transition: 'background-color 0.2s'
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1565c0';
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1976d2';
-                                    }}
-                                    onClick={handleAddCustomPrescription}
-                                >
-                                    <Add fontSize="small" />
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setShowInstructionPopup(true)}
-                                    disabled={isFormDisabled}
-                                    title="Show instruction groups"
-                                    style={{
-                                        backgroundColor: isFormDisabled 
-                                            ? '#ccc' 
-                                            : (selectedInstructionGroups && selectedInstructionGroups.length > 0 
-                                                ? '#ffc107' 
-                                                : '#1976d2'),
-                                        color: 'white',
-                                        border: 'none',
-                                        padding: '6px',
-                                        borderRadius: '50%',
-                                        cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                        width: '32px',
-                                        height: '32px',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        fontSize: '14px',
-                                        fontWeight: 'bold',
-                                        transition: 'background-color 0.2s'
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        if (!isFormDisabled) {
-                                            e.currentTarget.style.backgroundColor = (selectedInstructionGroups && selectedInstructionGroups.length > 0) 
-                                                ? '#ffb300' 
-                                                : '#1565c0';
-                                        }
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        if (!isFormDisabled) {
-                                            e.currentTarget.style.backgroundColor = (selectedInstructionGroups && selectedInstructionGroups.length > 0) 
-                                                ? '#ffc107' 
-                                                : '#1976d2';
-                                        }
-                                    }}
-                                >
-                                    i
-                                </button>
                             </div>
 
-                            {isRxOpen && rxSuggestions.length > 0 && (
-                                <div ref={rxRef} style={{ border: '1px solid #ccc', borderRadius: '4px', background: '#fff', maxHeight: '180px', overflowY: 'auto', width: '88%', marginBottom: '12px' }}>
-                                    {rxSuggestions.map((item, idx) => (
-                                        <div
-                                            key={idx}
-                                            onClick={() => { setPrescriptionInput(item); setIsRxOpen(false); }}
-                                            style={{ padding: '6px 10px', cursor: 'pointer', fontSize: '12px', borderBottom: '1px solid #eee' }}
-                                            onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = '#f5f5f5'; }}
-                                            onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = '#fff'; }}
-                                            title={item}
-                                        >
-                                            {item}
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
 
-                            {/* Prescription Table */}
-                            {prescriptionRows.length > 0 && (
-                                <div
-                                    style={{
-                                        border: '1px solid #ccc',
-                                        borderRadius: '4px',
-                                        overflow: 'hidden',
-                                        opacity: isFormDisabled ? 0.6 : 1
-                                    }}
-                                >
-                                    <div style={{ 
-                                        display: 'grid', 
-                                        gridTemplateColumns: '50px 1fr 50px 50px 50px 50px 1fr 80px' as const, 
-                                        backgroundColor: '#1976d2', 
-                                        color: 'white',
-                                        fontWeight: 'bold',
-                                        fontSize: '11px'
-                                    }}>
-                                        <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Sr.</div>
-                                        <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Prescriptions</div>
-                                        <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>B</div>
-                                        <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>L</div>
-                                        <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>D</div>
-                                        <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Days</div>
-                                        <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Instruction</div>
-                                        <div style={{ padding: '6px' }}>Action</div>
-                                    </div>
-                                    {prescriptionRows.map((row, index) => (
-                                        <div key={row.id} style={{ 
-                                            display: 'grid', 
-                                            gridTemplateColumns: '50px 1fr 50px 50px 50px 50px 1fr 80px' as const,
-                                            backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white',
-                                            borderBottom: '1px solid #e0e0e0'
-                                        }}>
-                                            <div style={{ padding: '6px', borderRight: '1px solid #e0e0e0', fontSize: '12px' }}>{index + 1}</div>
-                                            <div style={{ padding: '6px', borderRight: '1px solid #e0e0e0', fontSize: '12px' }}>{row.prescription}</div>
-                                            <div style={{ padding: '0', borderRight: '1px solid #e0e0e0' }}>
-                                                <input
-                                                    type="text"
-                                                    value={row.b}
-                                                    inputMode="numeric"
-                                                    pattern="[0-9]*"
-                                                    onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.' ) { e.preventDefault(); } }}
-                                                    onChange={(e) => handlePrescriptionFieldChange(row.id, 'b', e.target.value.replace(/\D/g, ''))}
-                                                    disabled={isFormDisabled}
-                                                    className="prescription-table-input"
-                                                    style={{
-                                                        width: '100%',
-                                                        height: '100%',
-                                                        padding: '8px 6px',
-                                                        border: 'none',
-                                                        borderRadius: 0,
-                                                        outline: 'none',
-                                                        backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
-                                                        boxShadow: 'none',
-                                                        fontSize: '11px',
-                                                        textAlign: 'center',
-                                                        color: isFormDisabled ? '#666' : '#333',
-                                                        cursor: isFormDisabled ? 'not-allowed' : 'text'
-                                                    }}
-                                                />
-                                            </div>
-                                            <div style={{ padding: '0', borderRight: '1px solid #e0e0e0' }}>
-                                                <input
-                                                    type="text"
-                                                    value={row.l}
-                                                    inputMode="numeric"
-                                                    pattern="[0-9]*"
-                                                    onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.' ) { e.preventDefault(); } }}
-                                                    onChange={(e) => handlePrescriptionFieldChange(row.id, 'l', e.target.value.replace(/\D/g, ''))}
-                                                    disabled={isFormDisabled}
-                                                    className="prescription-table-input"
-                                                    style={{
-                                                        width: '100%',
-                                                        height: '100%',
-                                                        padding: '8px 6px',
-                                                        border: 'none',
-                                                        borderRadius: 0,
-                                                        outline: 'none',
-                                                        backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
-                                                        boxShadow: 'none',
-                                                        fontSize: '11px',
-                                                        textAlign: 'center',
-                                                        color: isFormDisabled ? '#666' : '#333',
-                                                        cursor: isFormDisabled ? 'not-allowed' : 'text'
-                                                    }}
-                                                />
-                                            </div>
-                                            <div style={{ padding: '0', borderRight: '1px solid #e0e0e0' }}>
-                                                <input
-                                                    type="text"
-                                                    value={row.d}
-                                                    inputMode="numeric"
-                                                    pattern="[0-9]*"
-                                                    onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.' ) { e.preventDefault(); } }}
-                                                    onChange={(e) => handlePrescriptionFieldChange(row.id, 'd', e.target.value.replace(/\D/g, ''))}
-                                                    disabled={isFormDisabled}
-                                                    className="prescription-table-input"
-                                                    style={{
-                                                        width: '100%',
-                                                        height: '100%',
-                                                        padding: '8px 6px',
-                                                        border: 'none',
-                                                        borderRadius: 0,
-                                                        outline: 'none',
-                                                        backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
-                                                        boxShadow: 'none',
-                                                        fontSize: '11px',
-                                                        textAlign: 'center',
-                                                        color: isFormDisabled ? '#666' : '#333',
-                                                        cursor: isFormDisabled ? 'not-allowed' : 'text'
-                                                    }}
-                                                />
-                                            </div>
-                                            <div style={{ padding: '0', borderRight: '1px solid #e0e0e0' }}>
-                                                <input
-                                                    type="text"
-                                                    value={row.days}
-                                                    inputMode="numeric"
-                                                    pattern="[0-9]*"
-                                                    onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.' ) { e.preventDefault(); } }}
-                                                    onChange={(e) => handlePrescriptionFieldChange(row.id, 'days', e.target.value.replace(/\D/g, ''))}
-                                                    disabled={isFormDisabled}
-                                                    className="prescription-table-input"
-                                                    style={{
-                                                        width: '100%',
-                                                        height: '100%',
-                                                        padding: '8px 6px',
-                                                        border: 'none',
-                                                        borderRadius: 0,
-                                                        outline: 'none',
-                                                        backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
-                                                        boxShadow: 'none',
-                                                        fontSize: '11px',
-                                                        textAlign: 'center',
-                                                        color: isFormDisabled ? '#666' : '#333',
-                                                        cursor: isFormDisabled ? 'not-allowed' : 'text'
-                                                    }}
-                                                />
-                                            </div>
-                                            <div style={{ padding: '0', borderRight: '1px solid #e0e0e0' }}>
-                                                <input
-                                                    type="text"
-                                                    value={row.instruction}
-                                                    onChange={(e) => handlePrescriptionInstructionChange(row.id, e.target.value)}
-                                                    disabled={isFormDisabled}
-                                                    placeholder="Enter instruction"
-                                                    className="prescription-table-input"
-                                                    style={{
-                                                        width: '100%',
-                                                        height: '100%',
-                                                        padding: '8px 10px',
-                                                        border: 'none',
-                                                        borderRadius: 0,
-                                                        outline: 'none',
-                                                        backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
-                                                        boxShadow: 'none',
-                                                        fontSize: '11px',
-                                                        color: isFormDisabled ? '#666' : '#333',
-                                                        cursor: isFormDisabled ? 'not-allowed' : 'text'
-                                                    }}
-                                                />
-                                            </div>
-                                            <div style={{ padding: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-                                                <div
-                                                    onClick={() => {
-                                                        if (isFormDisabled) return;
-                                                        handleRemovePrescription(row.id);
-                                                    }}
-                                                    title="Remove"
-                                                    style={{
-                                                        display: 'inline-flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        width: '24px',
-                                                        height: '24px',
-                                                        cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                                        color: isFormDisabled ? '#9e9e9e' : '#000000',
-                                                        backgroundColor: 'transparent'
-                                                    }}
-                                                    onMouseEnter={(e) => {
-                                                        if (isFormDisabled) return;
-                                                        (e.currentTarget as HTMLDivElement).style.color = '#EF5350';
-                                                    }}
-                                                    onMouseLeave={(e) => {
-                                                        (e.currentTarget as HTMLDivElement).style.color = isFormDisabled ? '#9e9e9e' : '#000000';
-                                                    }}
-                                                >
-                                                    <Delete fontSize="small" />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
 
-                        {/* Previous Visit Section */}
-                        <div style={{ marginBottom: '15px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '5px', width: '100%', gap: '8px' }}>
-                                <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Prescriptions suggested in previous visit</label>
-                                <div
-                                    onClick={() => setShowPreviousVisit(!showPreviousVisit)}
-                                    title={showPreviousVisit ? 'Hide previous visit prescriptions' : 'Show previous visit prescriptions'}
-                                    style={{
-                                        cursor: 'pointer',
-                                        fontSize: '13px',
-                                        color: '#000000',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        height: '20px',
-                                        width: '20px',
-                                        lineHeight: '1'
-                                    }}
-                                >
-                                    {showPreviousVisit ? '▲' : '▼'}
-                                </div>
-                            </div>
-                            
-                            {/* Previous Visit Prescriptions Table */}
-                            {showPreviousVisit && (
-                                <>
-                                    {previousVisitPrescriptions.length > 0 ? (
-                                        <div style={{ border: '1px solid #ccc', borderRadius: '4px', overflow: 'hidden' }}>
-                                            <div style={{ 
-                                                display: 'grid', 
-                                                gridTemplateColumns: '50px 1fr 50px 50px 50px 50px 1fr' as const, 
-                                                backgroundColor: '#f5f5f5', 
-                                                color: '#666',
-                                                fontWeight: 'bold',
-                                                fontSize: '11px',
-                                                borderBottom: '1px solid #ccc'
-                                            }}>
-                                                <div style={{ padding: '6px', borderRight: '1px solid #ccc' }}>Sr.</div>
-                                                <div style={{ padding: '6px', borderRight: '1px solid #ccc' }}>Prescriptions</div>
-                                                <div style={{ padding: '6px', borderRight: '1px solid #ccc' }}>B</div>
-                                                <div style={{ padding: '6px', borderRight: '1px solid #ccc' }}>L</div>
-                                                <div style={{ padding: '6px', borderRight: '1px solid #ccc' }}>D</div>
-                                                <div style={{ padding: '6px', borderRight: '1px solid #ccc' }}>Days</div>
-                                                <div style={{ padding: '6px' }}>Instruction</div>
-                                            </div>
-                                            {previousVisitPrescriptions.map((row, index) => (
-                                                <div key={row.id} style={{ 
-                                                    display: 'grid', 
-                                                    gridTemplateColumns: '50px 1fr 50px 50px 50px 50px 1fr' as const,
+                            {/* Billing Section */}
+                            <div style={{ marginBottom: '15px' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
+                                    <div>
+                                        <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                                            Billed (Rs)
+                                        </label>
+                                        <div style={{ position: 'relative' }}>
+                                            <input
+                                                type="text"
+                                                value={billingData.billed}
+                                                onChange={(e) => handleBillingChange('billed', e.target.value)}
+                                                disabled
+                                                placeholder="Billed Amount"
+                                                style={{
+                                                    width: '100%',
+                                                    padding: '6px 34px 6px 10px',
+                                                    border: billingError ? '1px solid red' : '1px solid #ccc',
+                                                    borderRadius: '4px',
+                                                    fontSize: '13px',
                                                     backgroundColor: '#f5f5f5',
-                                                    borderBottom: '1px solid #ccc'
-                                                }}>
-                                                    <div style={{ padding: '6px', borderRight: '1px solid #ccc', fontSize: '12px', color: '#666' }}>{index + 1}</div>
-                                                    <div style={{ padding: '6px', borderRight: '1px solid #ccc', fontSize: '12px', color: '#666' }}>{row.prescription}</div>
-                                                    <div style={{ padding: '6px', borderRight: '1px solid #ccc', fontSize: '12px', color: '#666', textAlign: 'center' }}>{row.b}</div>
-                                                    <div style={{ padding: '6px', borderRight: '1px solid #ccc', fontSize: '12px', color: '#666', textAlign: 'center' }}>{row.l}</div>
-                                                    <div style={{ padding: '6px', borderRight: '1px solid #ccc', fontSize: '12px', color: '#666', textAlign: 'center' }}>{row.d}</div>
-                                                    <div style={{ padding: '6px', borderRight: '1px solid #ccc', fontSize: '12px', color: '#666', textAlign: 'center' }}>{row.days}</div>
-                                                    <div style={{ padding: '6px', fontSize: '12px', color: '#666' }}>{row.instruction}</div>
-                                                </div>
-                                            ))}
+                                                    color: '#666',
+                                                    cursor: 'not-allowed'
+                                                }}
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowBillingPopup(true)}
+                                                title="Add billed item"
+                                                className="fixed-icon-btn"
+                                                style={{
+                                                    position: 'absolute',
+                                                    right: 6,
+                                                    top: '20%',
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    width: 22,
+                                                    height: 22,
+                                                    borderRadius: 4,
+                                                    border: 'none',
+                                                    backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
+                                                    color: '#fff',
+                                                    fontWeight: 700,
+                                                    lineHeight: '22px',
+                                                    cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                                    padding: 0,
+                                                    boxSizing: 'border-box',
+                                                    outline: 'none',
+                                                    boxShadow: 'none',
+                                                    transition: 'none'
+                                                }}
+                                                disabled={isFormDisabled}
+                                                onMouseDown={(e) => {
+                                                    e.preventDefault();
+                                                }}
+                                            >
+                                                +
+                                            </button>
                                         </div>
-                                    ) : (
-                                        <div style={{ 
-                                            padding: '10px', 
-                                            textAlign: 'center', 
-                                            color: '#666', 
-                                            fontSize: '12px',
-                                            border: '1px solid #ccc', 
-                                            borderRadius: '4px',
-                                            backgroundColor: '#f5f5f5'
-                                        }}>
-                                            No Prescriptions suggested in previous visit.
-                                        </div>
-                                    )}
-                                </>
-                            )}
-                        </div>
-
-                        {/* Investigation Section */}
-                        <div style={{ marginBottom: '15px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '5px', width: '88%', gap: '8px' }}>
-                                <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Investigation</label>
-                            </div>
-
-                            <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-                                <div style={{ flex: 1, position: 'relative' }} ref={investigationsRef}>
-                                    <div
-                                        style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'space-between',
-                                            height: '32px',
-                                            padding: '4px 8px',
-                                            border: '2px solid #B7B7B7',
-                                            borderRadius: '6px',
-                                            fontSize: '12px',
-                                            fontFamily: "'Roboto', sans-serif",
-                                            fontWeight: 500,
-                                            backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
-                                            cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                            userSelect: 'none',
-                                            opacity: isFormDisabled ? 0.6 : 1
-                                        }}
-                                        onClick={() => !isFormDisabled && setIsInvestigationsOpen(!isInvestigationsOpen)}
-                                        onMouseEnter={(e) => {
-                                            (e.currentTarget as HTMLDivElement).style.borderColor = '#1E88E5';
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            (e.currentTarget as HTMLDivElement).style.borderColor = '#B7B7B7';
-                                        }}
-                                    >
-                                        <span style={{ color: selectedInvestigations.length > 0 ? '#000' : '#9e9e9e' }}>
-                                            {selectedInvestigations.length > 0 
-                                                ? `${selectedInvestigations.length} investigation selected`
-                                                : 'Select Investigation'
-                                            }
-                                        </span>
-                                        <span style={{ marginLeft: '8px', color: '#666', fontSize: '16px', lineHeight: '1' }}>▾</span>
-                                    </div>
-
-                                    {isInvestigationsOpen && (
-                                        <div style={{
-                                            position: 'absolute',
-                                            top: '100%',
-                                            left: 0,
-                                            right: 0,
-                                            backgroundColor: 'white',
-                                            border: '1px solid #B7B7B7',
-                                            borderRadius: '6px',
-                                            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                                            zIndex: 1000,
-                                            marginTop: '4px',
-                                            maxHeight: '300px',
-                                            overflow: 'hidden'
-                                        }}>
-                                            <div style={{ padding: '6px' }}>
-                                                <input
-                                                    type="text"
-                                                    placeholder="Search investigations..."
-                                                    value={investigationSearch}
-                                                    onChange={(e) => setInvestigationSearch(e.target.value)}
-                                                    style={{
-                                                        width: '100%',
-                                                        height: '28px',
-                                                        padding: '4px 8px',
-                                                        border: '1px solid #B7B7B7',
-                                                        borderRadius: '4px',
-                                                        fontSize: '12px',
-                                                        outline: 'none'
-                                                    }}
-                                                    onFocus={(e) => {
-                                                        (e.target as HTMLInputElement).style.borderColor = '#1E88E5';
-                                                    }}
-                                                    onBlur={(e) => {
-                                                        (e.target as HTMLInputElement).style.borderColor = '#B7B7B7';
-                                                    }}
-                                                />
+                                        {billingError && (
+                                            <div style={{ color: 'red', fontSize: '12px', marginTop: '4px' }}>
+                                                {billingError}
                                             </div>
-
-                                            <div className="investigations-dropdown" style={{ maxHeight: '200px', overflowY: 'auto', padding: '4px 6px', display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', columnGap: '8px', rowGap: '6px' }}>
-                                                {investigationsLoading && (
-                                                    <div style={{ padding: '6px', fontSize: '12px', color: '#777', gridColumn: '1 / -1', textAlign: 'center' }}>
-                                                        Loading investigations...
-                                                    </div>
-                                                )}
-                                                {investigationsError && (
-                                                    <div style={{ padding: '6px', fontSize: '12px', color: '#d32f2f', gridColumn: '1 / -1', textAlign: 'center' }}>
-                                                        {investigationsError}
-                                                        <button
-                                                            onClick={() => {
-                                                                setInvestigationsError(null);
-                                                                const doctorId = treatmentData?.doctorId || '1';
-                                                                const clinicId = sessionData?.clinicId || '1';
-                                                                investigationService.getInvestigationsForDoctorAndClinic(doctorId, clinicId)
-                                                                    .then(setInvestigationsOptions)
-                                                                    .catch(e => setInvestigationsError(e.message));
-                                                            }}
-                                                            style={{
-                                                                marginLeft: '8px', 
-                                                                padding: '2px 6px', 
-                                                                fontSize: '10px', 
-                                                                backgroundColor: '#1976d2',
-                                                                color: 'white',
-                                                                border: 'none',
-                                                                borderRadius: '3px', 
-                                                                cursor: 'pointer' 
-                                                            }}
-                                                        >
-                                                            Retry
-                                                        </button>
-                                                    </div>
-                                                )}
-                                                {!investigationsLoading && !investigationsError && filteredInvestigations.length === 0 && (
-                                                    <div style={{ padding: '6px', fontSize: '12px', color: '#777', gridColumn: '1 / -1' }}>No investigations found</div>
-                                                )}
-                                                {!investigationsLoading && !investigationsError && filteredInvestigations.map((opt, index) => {
-                                                    const checked = selectedInvestigations.includes(opt.value);
-                                                    const isFirstUnselected = !checked && index > 0 && selectedInvestigations.includes(filteredInvestigations[index - 1].value);
-                                                    return (
-                                                        <React.Fragment key={opt.value}>
-                                                            {isFirstUnselected && (
-                                                                <div style={{ 
-                                                                    gridColumn: '1 / -1', 
-                                                                    height: '1px', 
-                                                                    backgroundColor: '#e0e0e0', 
-                                                                    margin: '4px 0' 
-                                                                }} />
-                                                            )}
-                                                            <label 
-                                                                style={{ 
-                                                                    display: 'flex',
-                                                                    alignItems: 'center',
-                                                                    gap: '4px', 
-                                                                    padding: '4px 2px', 
-                                                                    cursor: 'pointer', 
-                                                                    fontSize: '12px', 
-                                                                    border: 'none',
-                                                                    backgroundColor: 'transparent',
-                                                                    borderRadius: '3px',
-                                                                    fontWeight: 400,
-                                                                    color: '#333'
-                                                                }}
-                                                            >
-                                                                <input
-                                                                    type="checkbox"
-                                                                    checked={checked}
-                                                                    onChange={(e) => {
-                                                                        setSelectedInvestigations(prev => {
-                                                                            if (e.target.checked) {
-                                                                                if (prev.includes(opt.value)) return prev;
-                                                                                return [...prev, opt.value];
-                                                                            } else {
-                                                                                return prev.filter(v => v !== opt.value);
-                                                                            }
-                                                                        });
-                                                                    }}
-                                                                    style={{ margin: 0 }}
-                                                                />
-                                                                <span style={{ whiteSpace: 'nowrap' }}>{opt.label}</span>
-                                                            </label>
-                                                        </React.Fragment>
-                                                    );
-                                                })}
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                                <button
-                                    disabled={isFormDisabled}
-                                    title="Add selected investigations"
-                                    style={{
-                                        padding: '0 10px',
-                                        backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
-                                        color: 'white',
-                                        border: 'none',
-                                        borderRadius: '6px',
-                                        cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                        fontSize: '12px',
-                                        height: '32px',
-                                        transition: 'background-color 0.2s'
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1565c0';
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1976d2';
-                                    }}
-                                    onClick={handleAddInvestigations}
-                                >
-                                    Add
-                                </button>
-                                <button
-                                    type="button"
-                                    disabled={isFormDisabled}
-                                    title="Add custom investigation"
-                                    style={{
-                                        backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
-                                        color: 'white',
-                                        border: 'none',
-                                        padding: '6px',
-                                        borderRadius: '6px',
-                                        cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                        width: '32px',
-                                        height: '32px',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        fontSize: '14px',
-                                        transition: 'background-color 0.2s'
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1565c0';
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1976d2';
-                                    }}
-                                    onClick={handleAddCustomTestLab}
-                                >
-                                    <Add fontSize="small" />
-                                </button>
-                                <button
-                                    type="button"
-                                    disabled={isFormDisabled}
-                                    title="Show lab trends"
-                                    style={{
-                                        backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
-                                        color: 'white',
-                                        border: 'none',
-                                        padding: '6px',
-                                        borderRadius: '50%',
-                                        cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                        width: '32px',
-                                        height: '32px',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        fontSize: '14px',
-                                        fontWeight: 'bold',
-                                        transition: 'background-color 0.2s'
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1565c0';
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1976d2';
-                                    }}
-                                    onClick={() => {
-                                        if (!isFormDisabled) {
-                                            setShowLabTrendPopup(true);
-                                        }
-                                    }}
-                                >
-                                    <TrendingUp fontSize="small" />
-                                </button>
-                            </div>
-
-                            {/* Investigation Table */}
-                            {investigationRows.length > 0 && (
-                                <div
-                                    style={{
-                                        border: '1px solid #ccc',
-                                        borderRadius: '4px',
-                                        overflow: 'hidden',
-                                        opacity: isFormDisabled ? 0.6 : 1
-                                    }}
-                                >
-                                    <div style={{ 
-                                        display: 'grid', 
-                                        gridTemplateColumns: '60px 1fr 80px' as const, 
-                                        backgroundColor: '#1976d2', 
-                                        color: 'white',
-                                        fontWeight: 'bold',
-                                        fontSize: '11px'
-                                    }}>
-                                        <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Sr.</div>
-                                        <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Investigation</div>
-                                        <div style={{ padding: '6px' }}>Action</div>
-                                    </div>
-                                    {investigationRows.map((row, index) => (
-                                        <div key={row.id} style={{ 
-                                            display: 'grid', 
-                                            gridTemplateColumns: '60px 1fr 80px' as const,
-                                            backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white',
-                                            borderBottom: '1px solid #e0e0e0'
-                                        }}>
-                                            <div style={{ padding: '6px', borderRight: '1px solid #e0e0e0', fontSize: '12px' }}>{index + 1}</div>
-                                            <div style={{ padding: '6px', borderRight: '1px solid #e0e0e0', fontSize: '12px' }}>{row.investigation}</div>
-                                            <div style={{ padding: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                <div
-                                                    onClick={() => {
-                                                        if (isFormDisabled) return;
-                                                        handleRemoveInvestigation(row.id);
-                                                    }}
-                                                    title="Remove"
-                                                    style={{
-                                                        display: 'inline-flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        width: '24px',
-                                                        height: '24px',
-                                                        cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                                        color: isFormDisabled ? '#9e9e9e' : '#000000',
-                                                        backgroundColor: 'transparent'
-                                                    }}
-                                                    onMouseEnter={(e) => {
-                                                        if (isFormDisabled) return;
-                                                        (e.currentTarget as HTMLDivElement).style.color = '#EF5350';
-                                                    }}
-                                                    onMouseLeave={(e) => {
-                                                        (e.currentTarget as HTMLDivElement).style.color = isFormDisabled ? '#9e9e9e' : '#000000';
-                                                    }}
-                                                >
-                                                    <Delete style={{ fontSize: '16px' }} />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Follow-up Section */}
-                        <div style={{ marginBottom: '15px' }}>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px', marginBottom: '12px' }}>
-                                <div>
-                                    <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                        Follow-up Type
-                                    </label>
-                                    <select
-                                        value={followUpData.followUpType}
-                                        onChange={(e) => handleFollowUpChange('followUpType', e.target.value)}
-                                        disabled={followUpTypesLoading || isFormDisabled}
-                                        style={{
-                                            width: '100%',
-                                            padding: '6px 10px',
-                                            border: '1px solid #ccc',
-                                            borderRadius: '4px',
-                                            fontSize: '13px',
-                                            height: '32px',
-                                            opacity: (followUpTypesLoading || isFormDisabled) ? 0.6 : 1,
-                                            backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
-                                            cursor: isFormDisabled ? 'not-allowed' : 'pointer'
-                                        }}
-                                    >
-                                        <option value="">
-                                            {followUpTypesLoading ? 'Loading...' : 'Select Follow-up Type'}
-                                        </option>
-                                        {followUpTypesOptions.map((option) => (
-                                            <option key={option.id} value={option.id}>
-                                                {option.followUpDescription}
-                                            </option>
-                                        ))}
-                                        {followUpTypesError && (
-                                            <option value="" disabled>
-                                                Error: {followUpTypesError}
-                                            </option>
                                         )}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                        Follow up
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={followUpData.followUp}
-                                        onChange={(e) => handleFollowUpChange('followUp', e.target.value)}
-                                        disabled={isFormDisabled}
-                                        style={{
-                                            width: '100%',
-                                            padding: '6px 10px',
-                                            border: '1px solid #ccc',
-                                            borderRadius: '4px',
-                                            fontSize: '13px',
-                                            backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
-                                            color: isFormDisabled ? '#666' : '#333',
-                                            cursor: isFormDisabled ? 'not-allowed' : 'text'
-                                        }}
-                                    />
-                                </div>
-                                <div>
-                                    <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                        Remark Comments
-                                    </label>
-                                    <textarea
-                                        value={followUpData.remarkComments}
-                                        onChange={(e) => handleFollowUpChange('remarkComments', e.target.value)}
-                                        disabled={isFormDisabled}
-                                        rows={1}
-                                        style={{
-                                            width: '100%',
-                                            padding: '6px 10px',
-                                            border: '1px solid #ccc',
-                                            borderRadius: '4px',
-                                            fontSize: '13px',
-                                            resize: 'none',
-                                            height: '32px',
-                                            minHeight: '32px',
-                                            maxHeight: '32px',
-                                            overflow: 'hidden',
-                                            backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
-                                            color: isFormDisabled ? '#666' : '#333',
-                                            cursor: isFormDisabled ? 'not-allowed' : 'text'
-                                        }}
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Plan/Adv Section */}
-                        <div style={{ marginBottom: '15px' }}>
-                            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                Plan / Adv
-                            </label>
-                            <textarea
-                                value={followUpData.planAdv}
-                                onChange={(e) => handleFollowUpChange('planAdv', e.target.value)}
-                                disabled={isFormDisabled}
-                                rows={2}
-                                style={{
-                                    width: '100%',
-                                    padding: '6px 10px',
-                                    border: '1px solid #ccc',
-                                    borderRadius: '4px',
-                                    fontSize: '13px',
-                                    resize: 'vertical',
-                                    backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
-                                    color: isFormDisabled ? '#666' : '#333',
-                                    cursor: isFormDisabled ? 'not-allowed' : 'text'
-                                }}
-                            />
-                        </div>
-
-                        
-
-                        {/* Billing Section */}
-                        <div style={{ marginBottom: '15px' }}>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
-                                <div>
-                                    <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                        Billed (Rs)
-                                    </label>
-                                    <div style={{ position: 'relative' }}>
+                                    </div>
+                                    <div>
+                                        <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                                            Discount (Rs)
+                                        </label>
                                         <input
                                             type="text"
-                                            value={billingData.billed}
-                                            onChange={(e) => handleBillingChange('billed', e.target.value)}
-                                            disabled
-                                            placeholder="Billed Amount"
+                                            value={billingData.discount}
+                                            onChange={(e) => handleBillingChange('discount', e.target.value)}
+                                            disabled={isFormDisabled}
+                                            placeholder="0.00"
                                             style={{
                                                 width: '100%',
-                                                padding: '6px 34px 6px 10px',
-                                                border: billingError ? '1px solid red' : '1px solid #ccc',
+                                                padding: '6px 10px',
+                                                border: discountError ? '1px solid red' : '1px solid #ccc',
                                                 borderRadius: '4px',
                                                 fontSize: '13px',
-                                                backgroundColor: '#f5f5f5',
-                                                color: '#666',
-                                                cursor: 'not-allowed'
+                                                backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
+                                                color: isFormDisabled ? '#666' : '#333',
+                                                cursor: isFormDisabled ? 'not-allowed' : 'text'
                                             }}
                                         />
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowBillingPopup(true)}
-                                            title="Add billed item"
-                                            className="fixed-icon-btn"
-                                            style={{
-                                                position: 'absolute',
-                                                right: 6,
-                                                top: '20%',                                   
-                                                display: 'inline-flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                width: 22,
-                                                height: 22,
-                                                borderRadius: 4,
-                                                border: 'none',
-                                                backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
-                                                color: '#fff',
-                                                fontWeight: 700,
-                                                lineHeight: '22px',
-                                                cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                                padding: 0,
-                                                boxSizing: 'border-box',
-                                                outline: 'none',
-                                                boxShadow: 'none',
-                                                transition: 'none'
-                                            }}
-                                            disabled={isFormDisabled}
-                                            onMouseDown={(e) => {
-                                                e.preventDefault();
-                                            }}
-                                        >
-                                            +
-                                        </button>
+                                        {discountError && (
+                                            <div style={{ color: 'red', fontSize: '12px', marginTop: '4px' }}>
+                                                {discountError}
+                                            </div>
+                                        )}
                                     </div>
-                                    {billingError && (
-                                        <div style={{ color: 'red', fontSize: '12px', marginTop: '4px' }}>
-                                            {billingError}
-                                        </div>
-                                    )}
-                                </div>
-                                <div>
-                                    <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                        Discount (Rs)
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={billingData.discount}
-                                        onChange={(e) => handleBillingChange('discount', e.target.value)}
-                                        disabled={isFormDisabled}
-                                        placeholder="0.00"
-                                        style={{
-                                            width: '100%',
-                                            padding: '6px 10px',
-                                            border: discountError ? '1px solid red' : '1px solid #ccc',
-                                            borderRadius: '4px',
-                                            fontSize: '13px',
-                                            backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
-                                            color: isFormDisabled ? '#666' : '#333',
-                                            cursor: isFormDisabled ? 'not-allowed' : 'text'
-                                        }}
-                                    />
-                                    {discountError && (
-                                        <div style={{ color: 'red', fontSize: '12px', marginTop: '4px' }}>
-                                            {discountError}
-                                        </div>
-                                    )}
-                                </div>
-                                <div>
-                                    <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                        Dues (Rs)
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={billingData.dues}
-                                        onChange={(e) => handleBillingChange('dues', e.target.value)}
-                                        disabled
-                                        placeholder="0.00"
-                                        style={{
-                                            width: '100%',
-                                            padding: '6px 10px',
-                                            border: '1px solid #ccc',
-                                            borderRadius: '4px',
-                                            fontSize: '13px',
-                                            backgroundColor: '#f5f5f5',
-                                            color: '#666',
-                                            cursor: 'not-allowed'
-                                        }}
-                                    />
-                                </div>
-                                <div>
-                                    <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                        <span>A/C Balance (Rs)</span>
-                                        <span 
-                                            style={{ 
-                                                color: '#1976d2', 
-                                                fontWeight: 'normal',
-                                                fontSize: '11px',
-                                                cursor: 'pointer',
-                                                userSelect: 'none'
-                                            }}
-                                            onClick={() => setShowAccountsPopup(true)}
-                                            title="View Accounts"
-                                        >payment history</span>
-                                    </label>
-                                    <div style={{ position: 'relative', width: '100%' }}>
+                                    <div>
+                                        <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                                            Dues (Rs)
+                                        </label>
                                         <input
                                             type="text"
-                                            value={Math.abs(parseFloat(billingData.acBalance) || 0).toFixed(2)}
-                                            onChange={(e) => handleBillingChange('acBalance', e.target.value)}
+                                            value={billingData.dues}
+                                            onChange={(e) => handleBillingChange('dues', e.target.value)}
                                             disabled
                                             placeholder="0.00"
                                             style={{
                                                 width: '100%',
                                                 padding: '6px 10px',
-                                                paddingRight: folderAmountData?.totalAcBalance !== undefined && 
-                                                             folderAmountData?.totalAcBalance !== null && 
-                                                             folderAmountData?.rows && 
-                                                             folderAmountData.rows.length > 0 ? '120px' : '10px',
                                                 border: '1px solid #ccc',
                                                 borderRadius: '4px',
                                                 fontSize: '13px',
                                                 backgroundColor: '#f5f5f5',
-                                                color: folderAmountData?.totalAcBalance !== undefined && 
-                                                       folderAmountData?.totalAcBalance !== null && 
-                                                       folderAmountData?.rows && 
-                                                       folderAmountData.rows.length > 0
-                                                       ? (folderAmountData.totalAcBalance < 0 ? '#d32f2f' : '#2e7d32')
-                                                       : '#666',
+                                                color: '#666',
                                                 cursor: 'not-allowed'
                                             }}
                                         />
-                                        {folderAmountData?.totalAcBalance !== undefined && 
-                                         folderAmountData?.totalAcBalance !== null && 
-                                         folderAmountData?.rows && 
-                                         folderAmountData.rows.length > 0 && (
-                                            <span style={{
-                                                position: 'absolute',
-                                                right: '10px',
-                                                top: '50%',
-                                                transform: 'translateY(-50%)',
-                                                fontSize: '11px',
-                                                fontWeight: 'bold',
-                                                color: '#333', // Always black for status text
-                                                whiteSpace: 'nowrap',
-                                                pointerEvents: 'none'
-                                            }}>
-                                                {folderAmountData.totalAcBalance < 0 ? 'Outstanding' : 'Excess'}
-                                            </span>
-                                        )}
+                                    </div>
+                                    <div>
+                                        <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                                            <span>A/C Balance (Rs)</span>
+                                            <span
+                                                style={{
+                                                    color: '#1976d2',
+                                                    fontWeight: 'normal',
+                                                    fontSize: '11px',
+                                                    cursor: 'pointer',
+                                                    userSelect: 'none'
+                                                }}
+                                                onClick={() => setShowAccountsPopup(true)}
+                                                title="View Accounts"
+                                            >payment history</span>
+                                        </label>
+                                        <div style={{ position: 'relative', width: '100%' }}>
+                                            <input
+                                                type="text"
+                                                value={Math.abs(parseFloat(billingData.acBalance) || 0).toFixed(2)}
+                                                onChange={(e) => handleBillingChange('acBalance', e.target.value)}
+                                                disabled
+                                                placeholder="0.00"
+                                                style={{
+                                                    width: '100%',
+                                                    padding: '6px 10px',
+                                                    paddingRight: folderAmountData?.totalAcBalance !== undefined &&
+                                                        folderAmountData?.totalAcBalance !== null &&
+                                                        folderAmountData?.rows &&
+                                                        folderAmountData.rows.length > 0 ? '120px' : '10px',
+                                                    border: '1px solid #ccc',
+                                                    borderRadius: '4px',
+                                                    fontSize: '13px',
+                                                    backgroundColor: '#f5f5f5',
+                                                    color: folderAmountData?.totalAcBalance !== undefined &&
+                                                        folderAmountData?.totalAcBalance !== null &&
+                                                        folderAmountData?.rows &&
+                                                        folderAmountData.rows.length > 0
+                                                        ? (folderAmountData.totalAcBalance < 0 ? '#d32f2f' : '#2e7d32')
+                                                        : '#666',
+                                                    cursor: 'not-allowed'
+                                                }}
+                                            />
+                                            {folderAmountData?.totalAcBalance !== undefined &&
+                                                folderAmountData?.totalAcBalance !== null &&
+                                                folderAmountData?.rows &&
+                                                folderAmountData.rows.length > 0 && (
+                                                    <span style={{
+                                                        position: 'absolute',
+                                                        right: '10px',
+                                                        top: '50%',
+                                                        transform: 'translateY(-50%)',
+                                                        fontSize: '11px',
+                                                        fontWeight: 'bold',
+                                                        color: '#333', // Always black for status text
+                                                        whiteSpace: 'nowrap',
+                                                        pointerEvents: 'none'
+                                                    }}>
+                                                        {folderAmountData.totalAcBalance < 0 ? 'Outstanding' : 'Excess'}
+                                                    </span>
+                                                )}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
 
-                        {/* Action Buttons */}
-                        <div style={{ 
-                            display: 'flex', 
-                            justifyContent: 'flex-end', 
-                            gap: '8px', 
-                            marginTop: '20px', 
-                            marginBottom: '40px', 
-                            flexWrap: 'wrap', 
-                            pointerEvents: 'auto', 
-                            opacity: 1,
-                            position: 'relative',
-                            zIndex: 10
-                        }}>
-                            <button 
-                                type="button" 
-                                onClick={() => isAddendumEnabled && setShowAddendumModal(true)}
-                                disabled={!isAddendumEnabled}
-                                title="Add an addendum to this visit"
-                                style={{
-                                    backgroundColor: isAddendumEnabled ? '#1976d2' : '#ccc',
-                                    color: 'white',
-                                    border: 'none',
-                                    padding: '8px 12px',
-                                    borderRadius: '4px',
-                                    cursor: isAddendumEnabled ? 'pointer' : 'not-allowed',
-                                    fontSize: '12px',
-                                    pointerEvents: 'auto',
-                                    opacity: 1,
-                                    zIndex: 11,
-                                    position: 'relative',
-                                    fontWeight: 'bold',
-                                    boxShadow: isAddendumEnabled ? '0 2px 4px rgba(0,0,0,0.2)' : 'none',
-                                    transition: 'background-color 0.2s, box-shadow 0.2s'
-                                }}
-                                onMouseEnter={(e) => {
-                                    if (isAddendumEnabled) {
+                            {/* Action Buttons */}
+                            <div style={{
+                                display: 'flex',
+                                justifyContent: 'flex-end',
+                                gap: '8px',
+                                marginTop: '20px',
+                                marginBottom: '40px',
+                                flexWrap: 'wrap',
+                                pointerEvents: 'auto',
+                                opacity: 1,
+                                position: 'relative',
+                                zIndex: 10
+                            }}>
+                                <button
+                                    type="button"
+                                    onClick={() => isAddendumEnabled && setShowAddendumModal(true)}
+                                    disabled={!isAddendumEnabled}
+                                    title="Add an addendum to this visit"
+                                    style={{
+                                        backgroundColor: isAddendumEnabled ? '#1976d2' : '#ccc',
+                                        color: 'white',
+                                        border: 'none',
+                                        padding: '8px 12px',
+                                        borderRadius: '4px',
+                                        cursor: isAddendumEnabled ? 'pointer' : 'not-allowed',
+                                        fontSize: '12px',
+                                        pointerEvents: 'auto',
+                                        opacity: 1,
+                                        zIndex: 11,
+                                        position: 'relative',
+                                        fontWeight: 'bold',
+                                        boxShadow: isAddendumEnabled ? '0 2px 4px rgba(0,0,0,0.2)' : 'none',
+                                        transition: 'background-color 0.2s, box-shadow 0.2s'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        if (isAddendumEnabled) {
+                                            e.currentTarget.style.backgroundColor = '#1565c0';
+                                            e.currentTarget.style.boxShadow = '0 3px 6px rgba(0,0,0,0.3)';
+                                        }
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        if (isAddendumEnabled) {
+                                            e.currentTarget.style.backgroundColor = '#1976d2';
+                                            e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
+                                        }
+                                    }}
+                                >
+                                    Addendum
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handlePrint}
+                                    title="Print prescription/report"
+                                    style={{
+                                        backgroundColor: '#1976d2',
+                                        color: 'white',
+                                        border: 'none',
+                                        padding: '8px 12px',
+                                        borderRadius: '4px',
+                                        cursor: 'pointer',
+                                        fontSize: '12px',
+                                        opacity: 1,
+                                        zIndex: 11,
+                                        position: 'relative',
+                                        fontWeight: 'bold',
+                                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                                        transition: 'background-color 0.2s, box-shadow 0.2s'
+                                    }}
+                                    onMouseEnter={(e) => {
                                         e.currentTarget.style.backgroundColor = '#1565c0';
                                         e.currentTarget.style.boxShadow = '0 3px 6px rgba(0,0,0,0.3)';
-                                    }
-                                }}
-                                onMouseLeave={(e) => {
-                                    if (isAddendumEnabled) {
+                                    }}
+                                    onMouseLeave={(e) => {
                                         e.currentTarget.style.backgroundColor = '#1976d2';
                                         e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
-                                    }
-                                }}
-                            >
-                                Addendum
-                            </button>
-                            <button 
-                                type="button" 
-                                onClick={handlePrint}
-                                title="Print prescription/report"
-                                style={{
-                                    backgroundColor: '#1976d2',
-                                    color: 'white',
-                                    border: 'none',
-                                    padding: '8px 12px',
-                                    borderRadius: '4px',
-                                    cursor: 'pointer',
-                                    fontSize: '12px',
-                                    opacity: 1,
-                                    zIndex: 11,
-                                    position: 'relative',
-                                    fontWeight: 'bold',
-                                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                                    transition: 'background-color 0.2s, box-shadow 0.2s'
-                                }}
-                                onMouseEnter={(e) => {
-                                    e.currentTarget.style.backgroundColor = '#1565c0';
-                                    e.currentTarget.style.boxShadow = '0 3px 6px rgba(0,0,0,0.3)';
-                                }}
-                                onMouseLeave={(e) => {
-                                    e.currentTarget.style.backgroundColor = '#1976d2';
-                                    e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
-                                }}
-                            >
-                                Print
-                            </button>
-                            <button 
-                                type="button" 
-                                onClick={handleBackToAppointments}
-                                disabled={isFormDisabled}
-                                title="Cancel and go back to appointments"
-                                style={{
-                                    backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
-                                    color: 'white',
-                                    border: 'none',
-                                    padding: '8px 12px',
-                                    borderRadius: '4px',
-                                    cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                    fontSize: '12px'
-                                }}
-                            >
-                                Cancel
-                            </button>
-                            <button 
-                                type="button" 
-                                onClick={handleTreatmentSave}
-                                disabled={isSubmitting || isFormDisabled}
-                                title="Save treatment"
-                                style={{
-                                    backgroundColor: (isSubmitting || isFormDisabled) ? '#ccc' : '#1976d2',
-                                    color: 'white',
-                                    border: 'none',
-                                    padding: '8px 12px',
-                                    borderRadius: '4px',
-                                    cursor: (isSubmitting || isFormDisabled) ? 'not-allowed' : 'pointer',
-                                    fontSize: '12px'
-                                }}
-                            >
-                                {isSubmitting ? 'Saving...' : 'Save'}
-                            </button>
-                            <button 
-                                type="button" 
-                                onClick={handleTreatmentSubmit}
-                                disabled={isSubmitting || isFormDisabled}
-                                title="Submit treatment"
-                                style={{
-                                    backgroundColor: (isSubmitting || isFormDisabled) ? '#ccc' : '#1976d2',
-                                    color: 'white',
-                                    border: 'none',
-                                    padding: '8px 12px',
-                                    borderRadius: '4px',
-                                    cursor: (isSubmitting || isFormDisabled) ? 'not-allowed' : 'pointer',
-                                    fontSize: '12px'
-                                }}
-                            >
-                                {isSubmitting ? 'Submitting...' : 'Submit'}
-                            </button>
-                        </div>
+                                    }}
+                                >
+                                    Print
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleBackToAppointments}
+                                    disabled={isFormDisabled}
+                                    title="Cancel and go back to appointments"
+                                    style={{
+                                        backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
+                                        color: 'white',
+                                        border: 'none',
+                                        padding: '8px 12px',
+                                        borderRadius: '4px',
+                                        cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                        fontSize: '12px'
+                                    }}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleTreatmentSave}
+                                    disabled={isSubmitting || isFormDisabled}
+                                    title="Save treatment"
+                                    style={{
+                                        backgroundColor: (isSubmitting || isFormDisabled) ? '#ccc' : '#1976d2',
+                                        color: 'white',
+                                        border: 'none',
+                                        padding: '8px 12px',
+                                        borderRadius: '4px',
+                                        cursor: (isSubmitting || isFormDisabled) ? 'not-allowed' : 'pointer',
+                                        fontSize: '12px'
+                                    }}
+                                >
+                                    {isSubmitting ? 'Saving...' : 'Save'}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleTreatmentSubmit}
+                                    disabled={isSubmitting || isFormDisabled}
+                                    title="Submit treatment"
+                                    style={{
+                                        backgroundColor: (isSubmitting || isFormDisabled) ? '#ccc' : '#1976d2',
+                                        color: 'white',
+                                        border: 'none',
+                                        padding: '8px 12px',
+                                        borderRadius: '4px',
+                                        cursor: (isSubmitting || isFormDisabled) ? 'not-allowed' : 'pointer',
+                                        fontSize: '12px'
+                                    }}
+                                >
+                                    {isSubmitting ? 'Submitting...' : 'Submit'}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -7462,10 +7462,10 @@ export default function Treatment() {
                     console.log('Received groups from popup (raw):', groups);
                     console.log('Received groups length:', groups?.length || 0);
                     console.log('Received groups is array:', Array.isArray(groups));
-                    
+
                     // Normalize groups to ensure clean format (only id, name, nameHindi, instructions)
                     const normalizedGroups = normalizeInstructionGroups(groups || []);
-                    
+
                     if (normalizedGroups && normalizedGroups.length > 0) {
                         console.log('=== NORMALIZED GROUPS (clean format) ===');
                         console.log('Normalized groups content:', JSON.stringify(normalizedGroups, null, 2));
@@ -7480,7 +7480,7 @@ export default function Treatment() {
                     } else {
                         console.warn('⚠️ Received EMPTY groups array from popup onChange!');
                     }
-                    
+
                     // Store normalized (clean) groups
                     setSelectedInstructionGroups(normalizedGroups);
                 }}
@@ -7587,6 +7587,14 @@ export default function Treatment() {
                             <div style={{ display: 'flex', gap: 8, marginTop: 14, justifyContent: 'flex-end' }}>
                                 <button
                                     type="button"
+                                    onClick={() => setAddendumText('')}
+                                    title="Reset addendum"
+                                    style={{ backgroundColor: 'rgb(25, 118, 210)', color: '#000', border: 'none', padding: '6px 12px', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
+                                >
+                                    Reset
+                                </button>
+                                <button
+                                    type="button"
                                     onClick={async () => {
                                         try {
                                             const pid = String(treatmentData?.patientId || '').trim();
@@ -7616,14 +7624,6 @@ export default function Treatment() {
                                     style={{ backgroundColor: '#1976d2', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
                                 >
                                     Submit
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setAddendumText('')}
-                                    title="Clear addendum"
-                                    style={{ backgroundColor: 'rgb(25, 118, 210)', color: '#000', border: 'none', padding: '6px 12px', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
-                                >
-                                    Clear
                                 </button>
                                 <button
                                     type="button"

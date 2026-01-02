@@ -581,6 +581,14 @@ export default function ManageDischargeCard() {
 
                 <button
                     className="btn"
+                    style={clearButtonStyle}
+                    onClick={handleClear}
+                >
+                    Reset
+                </button>
+
+                <button
+                    className="btn"
                     style={{
                         ...buttonStyle,
                         opacity: searchingDischargeCards ? 0.7 : 1,
@@ -590,14 +598,6 @@ export default function ManageDischargeCard() {
                     disabled={searchingDischargeCards}
                 >
                     {searchingDischargeCards ? 'Searching...' : 'Search'}
-                </button>
-
-                <button
-                    className="btn"
-                    style={clearButtonStyle}
-                    onClick={handleClear}
-                >
-                    Clear
                 </button>
             </div>
 
