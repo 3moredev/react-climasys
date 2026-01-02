@@ -280,9 +280,9 @@ export default function ManageHospitalBill() {
     return (
         <div className="container-fluid mt-3" style={{ fontFamily: "'Roboto', sans-serif" }}>
             <div className="mb-4">
-                <h2 style={{ 
-                    fontWeight: 'bold', 
-                    fontSize: '1.5rem', 
+                <h2 style={{
+                    fontWeight: 'bold',
+                    fontSize: '1.5rem',
                     color: '#212121',
                     marginBottom: '0'
                 }}>
@@ -1191,7 +1191,7 @@ export default function ManageHospitalBill() {
                     style={buttonStyle}
                     onClick={handleClear}
                 >
-                    Clear
+                    Reset
                 </button>
                 <button
                     className="btn"

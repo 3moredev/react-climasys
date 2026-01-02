@@ -18,13 +18,13 @@ export default function RegistrationPage() {
     e.preventDefault()
     setMessage(null)
     setLoading(true)
-    
+
     if (!user?.doctorId || !user?.clinicId) {
       setMessage('Please login to register patients')
       setLoading(false)
       return
     }
-    
+
     try {
       const payload = {
         doctorId: user.doctorId,
@@ -53,14 +53,14 @@ export default function RegistrationPage() {
         doctorEmail: '',
         clinicId: user.clinicId
       }
-      
-      const res = await fetch('/api/patients', { 
-        method: 'POST', 
-        headers: { 'Content-Type': 'application/json' }, 
-        body: JSON.stringify(payload) 
+
+      const res = await fetch('/api/patients', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
       })
       const data = await res.json()
-      
+
       if (data.SAVE_STATUS === 0) {
         setMessage(`Duplicate patient found. Please check existing records.`)
       } else if (data.SAVE_STATUS === 1) {
@@ -70,7 +70,7 @@ export default function RegistrationPage() {
       } else {
         setMessage(`Patient Registered Successfully! ID: ${data.ID || 'OK'}`)
       }
-      
+
       // Reset form
       setFirstName('')
       setLastName('')
@@ -107,7 +107,7 @@ export default function RegistrationPage() {
           <PersonAdd sx={{ mr: 1, verticalAlign: 'middle' }} />
           Quick Registration Form
         </Typography>
-        
+
         <Box component="form" onSubmit={submit}>
           <Grid container spacing={3}>
             <Grid item xs={12} sm={6}>
@@ -124,7 +124,7 @@ export default function RegistrationPage() {
                 className="form-field"
               />
             </Grid>
-            
+
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
@@ -139,7 +139,7 @@ export default function RegistrationPage() {
                 className="form-field"
               />
             </Grid>
-            
+
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
@@ -155,7 +155,7 @@ export default function RegistrationPage() {
                 className="form-field"
               />
             </Grid>
-            
+
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
@@ -170,7 +170,7 @@ export default function RegistrationPage() {
                 className="form-field"
               />
             </Grid>
-            
+
             <Grid item xs={12} sm={6}>
               <FormControl fullWidth className="form-field">
                 <InputLabel>Gender</InputLabel>
@@ -186,19 +186,8 @@ export default function RegistrationPage() {
               </FormControl>
             </Grid>
           </Grid>
-          
+
           <Box display="flex" gap={2} mt={3}>
-            <Button
-              type="submit"
-              variant="contained"
-              disabled={loading || !firstName.trim() || !lastName.trim() || !mobile.trim()}
-              className="form-button"
-              startIcon={<PersonAdd />}
-              sx={{ py: 1.5, px: 4 }}
-            >
-              {loading ? 'Registering...' : 'Register Patient'}
-            </Button>
-            
             <Button
               type="button"
               variant="outlined"
@@ -212,14 +201,24 @@ export default function RegistrationPage() {
               }}
               className="action-button secondary"
             >
-              Clear Form
+              Reset Form
+            </Button>
+            <Button
+              type="submit"
+              variant="contained"
+              disabled={loading || !firstName.trim() || !lastName.trim() || !mobile.trim()}
+              className="form-button"
+              startIcon={<PersonAdd />}
+              sx={{ py: 1.5, px: 4 }}
+            >
+              {loading ? 'Registering...' : 'Register Patient'}
             </Button>
           </Box>
         </Box>
 
         {message && (
-          <Alert 
-            severity={message.includes('Successfully') ? 'success' : 'error'} 
+          <Alert
+            severity={message.includes('Successfully') ? 'success' : 'error'}
             className="dashboard-alert"
             sx={{ mt: 2 }}
           >
@@ -239,8 +238,8 @@ export default function RegistrationPage() {
               Required Fields
             </Typography>
             <Typography variant="body2">
-              • First Name and Last Name are mandatory<br/>
-              • Mobile number is required for contact<br/>
+              • First Name and Last Name are mandatory<br />
+              • Mobile number is required for contact<br />
               • Patient ID will be generated automatically
             </Typography>
           </Box>
@@ -249,8 +248,8 @@ export default function RegistrationPage() {
               Registration Status
             </Typography>
             <Typography variant="body2">
-              • New patients are registered with "Quick" status<br/>
-              • Full registration can be completed later<br/>
+              • New patients are registered with "Quick" status<br />
+              • Full registration can be completed later<br />
               • All patients receive a unique ID
             </Typography>
           </Box>

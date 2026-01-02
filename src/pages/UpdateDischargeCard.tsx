@@ -371,8 +371,8 @@ const UpdateDischargeCard = () => {
 
                         {/* Actions */}
                         <div className="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
+                            <button className="btn btn-primary px-4">Reset</button>
                             <button className="btn btn-primary px-4">Submit</button>
-                            <button className="btn btn-primary px-4">Clear</button>
                             <button className="btn btn-primary px-4">Close</button>
                             <button className="btn btn-secondary px-3" style={{ opacity: 0.7 }}>PrintDC</button>
                             <button className="btn btn-secondary px-3" style={{ opacity: 0.7 }}>PrintDN</button>
