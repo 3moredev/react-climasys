@@ -53,9 +53,9 @@ const menuItems = [
   { text: 'OPD', path: '/appointment' },
   { text: 'OPD Reports', path: '/reports' },
   { text: 'OPD Master', path: '#' },
-  // { text: 'IPD', path: '#' },
-  // { text: 'IPD Report', path: '#' },
-  // { text: 'IPD Master', path: '#' },
+  { text: 'IPD', path: '#' },
+  { text: 'IPD Report', path: '#' },
+  { text: 'IPD Master', path: '#' },
   // { text: 'Settings', path: '/settings' },
 ]
 
@@ -114,37 +114,37 @@ const subMenus: Record<string, Array<SubMenuItem>> = {
       ],
     },
   ]
-  // ,'IPD': [
-  //   { label: 'Manage Admission Card', path: '/manage-admission-card' },
-  //   { label: 'Manage Advance Collection', path: '/manage-advance-collection' },
-  //   { label: 'Manage Discharge Card', path: '/manage-discharge-card' },
-  //   { label: 'Manage Hospital Bill', path: '/manage-hospital-bill' },
-  // ],
-  // 'IPD Report': [
-  //   { label: 'IPD Collection Statement', path: '/settings?t=treatment' },
-  //   { label: 'List Of Cashless Hospital Bills', path: '/settings?t=prescription' },
-  //   { label: 'Discharge / Admission Card List', path: '/billing' },
-  //   { label: 'Follow-up Patients After Discharge', path: '/billing' },
-  //   { label: 'IPD IIIC Register', path: '/billing' },
-  // ],
-  // 'IPD Master': [
-  //   {
-  //     label: 'Manage Master Data',
-  //     children: [
-  //       { label: 'Manage Keyword (Operation) Master', path: '/settings?t=operation-keyword' },
-  //       { label: 'Manage Sub-Category', path: '/settings?t=sub-category' },
-  //       { label: 'Manage Hospital Charges Master', path: '/settings?t=charges' },
-  //       { label: 'Manage Insurance Company', path: '/settings?t=insurance' },
-  //     ],
-  //   },
-  //   {
-  //     label: 'Attach Master Data',
-  //     children: [
-  //       { label: 'Attach Treatment', path: '/settings?t=attach-treatment' },
-  //       { label: 'Attach Prescription', path: '/settings?t=attach-prescription' },
-  //     ],
-  //   },
-  // ],
+  ,'IPD': [
+    { label: 'Manage Admission Card', path: '/manage-admission-card' },
+    { label: 'Manage Advance Collection', path: '/manage-advance-collection' },
+    { label: 'Manage Discharge Card', path: '/manage-discharge-card' },
+    { label: 'Manage Hospital Bill', path: '/manage-hospital-bill' },
+  ],
+  'IPD Report': [
+    { label: 'IPD Collection Statement', path: '/settings?t=treatment' },
+    { label: 'List Of Cashless Hospital Bills', path: '/settings?t=prescription' },
+    { label: 'Discharge / Admission Card List', path: '/billing' },
+    { label: 'Follow-up Patients After Discharge', path: '/billing' },
+    { label: 'IPD IIIC Register', path: '/billing' },
+  ],
+  'IPD Master': [
+    {
+      label: 'Manage Master Data',
+      children: [
+        { label: 'Manage Keyword (Operation) Master', path: '/settings?t=operation-keyword' },
+        { label: 'Manage Sub-Category', path: '/settings?t=sub-category' },
+        { label: 'Manage Hospital Charges Master', path: '/settings?t=charges' },
+        { label: 'Manage Insurance Company', path: '/settings?t=insurance' },
+      ],
+    },
+    {
+      label: 'Attach Master Data',
+      children: [
+        { label: 'Attach Treatment', path: '/settings?t=attach-treatment' },
+        { label: 'Attach Prescription', path: '/settings?t=attach-prescription' },
+      ],
+    },
+  ],
   // 'Settings': [
   //   { label: 'Settings', path: '/settings' },
   // ],

@@ -14,6 +14,9 @@ export interface AdmissionCardDTO {
   advanceRs: number;
   dateOfAdvance?: string;
   receiptNo?: string;
+  doctorId: string;
+  clinicId: string;
+  ipdRefNo: string;
 }
 
 // Admission Cards request parameters

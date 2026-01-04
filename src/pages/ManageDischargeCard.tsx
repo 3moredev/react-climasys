@@ -10,12 +10,14 @@ type DischargeCard = {
     sr: number;
     patientName: string;
     patientId?: string;
-    ipdNo: string;
+    ipdRefNo: string;    
     ipdFileNo: string;
     admissionDate: string;
     dischargeDate: string;
     keywordOperation: string;
     advance: number;
+    doctorId: string;
+    clinicId: string;
 };
 
 export default function ManageDischargeCard() {
@@ -61,7 +63,7 @@ export default function ManageDischargeCard() {
             const matchedCards = dischargeCards.filter((card) => {
                 const patientName = (card.patientName || '').toLowerCase();
                 const patientId = (card.patientId || '').toLowerCase();
-                const ipdNo = (card.ipdNo || '').toLowerCase();
+                const ipdNo = (card.ipdRefNo || '').toLowerCase();
                 const ipdFileNo = (card.ipdFileNo || '').toLowerCase();
 
                 // Check if search term matches patient ID, patient name, IPD number, or IPD file number
@@ -214,7 +216,7 @@ export default function ManageDischargeCard() {
             const filteredResults = dischargeCards.filter((card) => {
                 const patientName = (card.patientName || '').toLowerCase().trim();
                 const patientId = (card.patientId || '').toLowerCase().trim();
-                const ipdNo = (card.ipdNo || '').toLowerCase().trim();
+                const ipdNo = (card.ipdRefNo || '').toLowerCase().trim();
                 const ipdFileNo = (card.ipdFileNo || '').toLowerCase().trim();
 
                 // Normalize search query - remove extra spaces
@@ -270,7 +272,14 @@ export default function ManageDischargeCard() {
 
     const handleEdit = (card: DischargeCard) => {
         console.log("Editing:", card);
-        navigate('/update-discharge-card', { state: { patientId: card.patientId } });
+        navigate('/update-discharge-card', {
+            state: {
+                patientId: card.patientId,
+                ipdRefNo: card.ipdRefNo,
+                doctorId: card.doctorId,
+                clinicId: card.clinicId
+            }
+        });
     };
 
     // Pagination handlers
@@ -319,12 +328,14 @@ export default function ManageDischargeCard() {
                         sr: index + 1,
                         patientName: card.patientName || '--',
                         patientId: card.patientId,
-                        ipdNo: card.admissionIpdNo || '--',
+                        ipdRefNo: card.ipdRefNo || '--',
                         ipdFileNo: card.ipdFileNo || '--',
                         admissionDate: card.admissionDate || '--',
                         dischargeDate: card.dischargeDate || '--',
                         keywordOperation: card.reasonOfAdmission || '--', // Use reasonOfAdmission from API
-                        advance: typeof card.advanceRs === 'number' ? card.advanceRs : 0.00
+                        advance: typeof card.advanceRs === 'number' ? card.advanceRs : 0.00,
+                        doctorId: card.doctorId,
+                        clinicId: card.clinicId
                     }));
 
                     console.log(`Mapped ${mappedCards.length} discharge cards from admission list:`, mappedCards);
@@ -637,10 +648,10 @@ export default function ManageDischargeCard() {
                                 </tr>
                             ) : searchResultsTable.length > 0 ? (
                                 searchResultsTable.map((card, index) => (
-                                    <tr key={`search-result-${card.patientId || card.ipdNo || index}-${card.sr || index}`}>
+                                    <tr key={`search-result-${card.patientId || card.ipdRefNo || index}-${card.sr || index}`}>
                                         <td className="sr-col">{card.sr || index + 1}</td>
                                         <td className="patient-name-col">{card.patientName || '--'}</td>
-                                        <td className="ipd-no-col">{card.ipdNo || '--'}</td>
+                                        <td className="ipd-no-col">{card.ipdRefNo || '--'}</td>
                                         <td className="ipd-file-col">{card.ipdFileNo || '--'}</td>
                                         <td className="admission-date-col">{card.admissionDate || '--'}</td>
                                         <td className="discharge-date-col">{card.dischargeDate || '--'}</td>
@@ -720,10 +731,10 @@ export default function ManageDischargeCard() {
                                 </tr>
                             ) : dischargeCards.length > 0 ? (
                                 currentDischargeCards.map((card, index) => (
-                                    <tr key={`discharge-card-${card.patientId || card.ipdNo || index}-${startIndex + index}`}>
+                                    <tr key={`discharge-card-${card.patientId || card.ipdRefNo || index}-${startIndex + index}`}>
                                         <td className="sr-col">{startIndex + index + 1}</td>
                                         <td className="patient-name-col">{card.patientName || '--'}</td>
-                                        <td className="ipd-no-col">{card.ipdNo || '--'}</td>
+                                        <td className="ipd-no-col">{card.ipdRefNo || '--'}</td>
                                         <td className="ipd-file-col">{card.ipdFileNo || '--'}</td>
                                         <td className="admission-date-col">{card.admissionDate || '--'}</td>
                                         <td className="discharge-date-col">{card.dischargeDate || '--'}</td>

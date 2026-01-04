@@ -25,8 +25,7 @@ export default function AdmissionCardDialog({
   open,
   onClose,
   onSubmit,
-  patientData,
-  disabled = false,
+  patientData,  
   admissionData,
 }: AdmissionCardDialogProps) {
   const [formData, setFormData] = useState({

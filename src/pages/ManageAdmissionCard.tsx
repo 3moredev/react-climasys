@@ -1152,7 +1152,6 @@ const formatDateToDDMMMYY = (dateString: string): string => {
                     gender: selectedPatient.gender_id.toString(),
                     age: selectedPatient.age_given
                 } : undefined}
-                disabled={!!editingPatient}
                 admissionData={editingPatient ? (fullAdmissionData || {
                     admissionIpdNo: editingPatient.admissionIpdNo,
                     ipdFileNo: editingPatient.ipdFileNo,
