@@ -874,12 +874,24 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
     }
   }, [cityInput, selectedAreaCityId, formData.area, areaOptions])
 
+  // Helper function to handle numeric-only input with max 10 digits
+  const handleNumericInput = (value: string): string => {
+    // Remove all non-numeric characters
+    const numericValue = value.replace(/\D/g, '')
+    // Limit to 10 digits
+    return numericValue.length <= 10 ? numericValue : numericValue.slice(0, 10)
+  }
+
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => {
       // Convert firstName, middleName, and lastName to uppercase
       let processedValue = value
       if (field === 'firstName' || field === 'middleName' || field === 'lastName') {
         processedValue = value.toUpperCase()
+      }
+      // Handle numeric-only input for mobileNumber and referralContact
+      if (field === 'mobileNumber' || field === 'referralContact') {
+        processedValue = handleNumericInput(value)
       }
 
       const next = { ...prev, [field]: processedValue }
@@ -1000,17 +1012,34 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
     if (!formData.gender) newErrors.gender = 'Gender is required'
     if (!formData.area.trim()) newErrors.area = 'Area is required'
 
+    // Validate date of birth
+    if (!formData.dateOfBirth || !formData.dobDate) {
+      newErrors.dateOfBirth = 'Date of birth is required'
+    }
+
     // Validate age
     if (!formData.age.trim()) newErrors.age = 'Age is required'
 
-    // Validate mobile number format
-    if (formData.mobileNumber && !/^\d{10}$/.test(formData.mobileNumber.replace(/\D/g, ''))) {
-      newErrors.mobileNumber = 'Please enter a valid 10-digit mobile number'
+    // Validate mobile number format - must be exactly 10 digits
+    if (formData.mobileNumber && formData.mobileNumber.length !== 10) {
+      newErrors.mobileNumber = formData.mobileNumber.length > 0 
+        ? 'Mobile number must be exactly 10 digits' 
+        : ''
+    }
+
+    // Validate referral contact format - must be exactly 10 digits if provided
+    if (formData.referralContact && formData.referralContact.length > 0 && formData.referralContact.length !== 10) {
+      newErrors.referralContact = 'Referral contact must be exactly 10 digits'
     }
 
     // Validate email if provided
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = 'Please enter a valid email address'
+    }
+
+    // Validate referral email if provided
+    if (formData.referralEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.referralEmail)) {
+      newErrors.referralEmail = 'Please enter a valid email address'
     }
 
     setErrors(newErrors)
@@ -1172,45 +1201,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
 
         // Reset form immediately but keep dialog open briefly to show snackbar
         console.log('=== RESETTING FORM ===')
-        // Reset form
-        setFormData({
-          lastName: '',
-          firstName: '',
-          middleName: '',
-          age: '',
-          dateOfBirth: '',
-          dobDate: null,
-          field1: '',
-          field2: '',
-          gender: '',
-          area: '',
-          city: '',
-          patientId: '',
-          maritalStatus: '',
-          occupation: '',
-          address: '',
-          mobileNumber: '',
-          email: '',
-          state: 'Maharashtra',
-          referredBy: '',
-          referralName: '',
-          referralContact: '',
-          referralEmail: '',
-          referralAddress: '',
-          addToTodaysAppointment: true
-        })
-        // Clear area and city related states
-        setAreaInput('')
-        setCityInput('')
-        setSelectedAreaCityId(null)
-        setAreaOptions([])
-        setCityOptions([])
-        setAreaOpen(false)
-        // Clear doctor referral states
-        setReferralNameSearch('')
-        setReferralNameOptions([])
-        setSelectedDoctor(null)
-        setShowReferralPopup(false)
+        resetForm()
         console.log('Form reset completed')
 
         // Close dialog after a short delay to allow snackbar to be visible
@@ -1246,8 +1237,53 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
     }
   }
 
+  const resetForm = () => {
+    // Reset form data
+    setFormData({
+      lastName: '',
+      firstName: '',
+      middleName: '',
+      age: '',
+      dateOfBirth: '',
+      dobDate: null,
+      field1: '',
+      field2: 'Years',
+      gender: '',
+      area: '',
+      city: '',
+      patientId: '',
+      maritalStatus: '',
+      occupation: '',
+      address: '',
+      mobileNumber: '',
+      email: '',
+      state: 'Maharashtra',
+      referredBy: '',
+      referralName: '',
+      referralContact: '',
+      referralEmail: '',
+      referralAddress: '',
+      addToTodaysAppointment: true
+    })
+    // Clear errors
+    setErrors({})
+    // Clear area and city related states
+    setAreaInput('')
+    setCityInput('')
+    setSelectedAreaCityId(null)
+    setAreaOptions([])
+    setCityOptions([])
+    setAreaOpen(false)
+    // Clear doctor referral states
+    setReferralNameSearch('')
+    setReferralNameOptions([])
+    setSelectedDoctor(null)
+    setShowReferralPopup(false)
+  }
+
   const handleClose = () => {
     if (!loading) {
+      resetForm()
       onClose()
     }
   }
@@ -1429,6 +1465,14 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
         // Local override for headings inside this dialog only
         '& h1, & h2, & h3, & h4, & h5, & h6, & .MuiTypography-h1, & .MuiTypography-h2, & .MuiTypography-h3, & .MuiTypography-h4, & .MuiTypography-h5, & .MuiTypography-h6': {
           margin: '0 0 2px 0 !important'
+        },
+        // Consistent error message styling
+        '& .MuiFormHelperText-root': {
+          fontSize: '0.75rem',
+          lineHeight: 1.66,
+          fontFamily: "'Roboto', sans-serif",
+          margin: '3px 14px 0',
+          minHeight: '1.25rem'
         }
       }}>
         <Grid container spacing={3}>
@@ -1515,9 +1559,14 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     placeholder="Mobile Number(10 Digits)"
                     value={formData.mobileNumber}
                     onChange={(e) => handleInputChange('mobileNumber', e.target.value)}
-                    error={!!errors.mobileNumber}
-                    helperText={errors.mobileNumber}
+                    error={!!errors.mobileNumber || (formData.mobileNumber.length > 0 && formData.mobileNumber.length !== 10)}
+                    helperText={errors.mobileNumber || (formData.mobileNumber.length > 0 && formData.mobileNumber.length !== 10 ? 'Mobile number must be 10 digits' : '')}
                     disabled={loading || readOnly}
+                    inputProps={{
+                      maxLength: 10,
+                      inputMode: 'numeric',
+                      pattern: '[0-9]*'
+                    }}
                   />
                 </Box>
               </Grid>
@@ -1532,8 +1581,27 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         <DateField
                           fullWidth
                           value={formData.dobDate}
-                          slotProps={{ textField: { sx: { mb: 0 } } }}
+                          slotProps={{ 
+                            textField: { 
+                              sx: { 
+                                mb: 0,
+                                '& .MuiFormHelperText-root': {
+                                  whiteSpace: 'nowrap'
+                                }
+                              },
+                              error: !!errors.dateOfBirth,
+                              helperText: errors.dateOfBirth
+                            } 
+                          }}
                           onChange={(newValue: any) => {
+                            // Clear error when date is selected
+                            if (newValue && errors.dateOfBirth) {
+                              setErrors(prev => {
+                                const newErrors = { ...prev }
+                                delete newErrors.dateOfBirth
+                                return newErrors
+                              })
+                            }
                             if (newValue) {
                               const formattedDate = dayjs(newValue).format('YYYY-MM-DD')
                               const today = dayjs()
@@ -1652,7 +1720,20 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                       ))}
                     </Select>
                     {errors.gender && (
-                      <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.75 }}>
+                      <Typography 
+                        component="p"
+                        color="error" 
+                        sx={{ 
+                          mt: 0.5, 
+                          ml: 1.75,
+                          fontSize: '0.75rem !important',
+                          lineHeight: 1.66,
+                          fontFamily: "'Roboto', sans-serif",
+                          minHeight: '1.25rem',
+                          margin: '3px 0 0 14px',
+                          fontWeight: 400
+                        }}
+                      >
                         {errors.gender}
                       </Typography>
                     )}
@@ -2044,7 +2125,12 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                           placeholder="Search City"
                           disabled={loading || readOnly}
                           InputProps={{
-                            ...params.InputProps
+                            ...params.InputProps,
+                            endAdornment: (
+                              <InputAdornment position="end" sx={{ pr: 1 }}>
+                                <Search sx={{ color: '#666' }} />
+                              </InputAdornment>
+                            )
                           }}
                         />
                       )}
@@ -2059,6 +2145,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                   </Typography>
                   <TextField
                     fullWidth
+                    placeholder="State"
                     value={formData.state}
                     onChange={(e) => handleInputChange('state', e.target.value)}
                     disabled={loading || readOnly}
@@ -2350,6 +2437,13 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     value={formData.referralContact}
                     onChange={(e) => handleInputChange('referralContact', e.target.value)}
                     disabled={loading || readOnly || selectedDoctor !== null}
+                    error={!!errors.referralContact || (formData.referralContact.length > 0 && formData.referralContact.length !== 10)}
+                    helperText={errors.referralContact || (formData.referralContact.length > 0 && formData.referralContact.length !== 10 ? 'Referral contact must be 10 digits' : '')}
+                    inputProps={{
+                      maxLength: 10,
+                      inputMode: 'numeric',
+                      pattern: '[0-9]*'
+                    }}
                     sx={{
                       '& .MuiInputBase-input': {
                         backgroundColor: selectedDoctor !== null ? '#f5f5f5' : 'white',
@@ -2370,6 +2464,8 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     value={formData.referralEmail}
                     onChange={(e) => handleInputChange('referralEmail', e.target.value)}
                     disabled={loading || readOnly || selectedDoctor !== null}
+                    error={!!errors.referralEmail}
+                    helperText={errors.referralEmail}
                     sx={{
                       '& .MuiInputBase-input': {
                         backgroundColor: selectedDoctor !== null ? '#f5f5f5' : 'white',
@@ -2427,47 +2523,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
       <DialogActions sx={{ padding: '0 20px 14px', backgroundColor: 'transparent', borderTop: 'none', justifyContent: 'flex-end' }}>
         <Box sx={{ display: 'flex', gap: 1, bgcolor: 'transparent', boxShadow: 'none', borderRadius: 0, p: 0 }}>
           <Button
-            onClick={() => {
-              setFormData({
-                lastName: '',
-                firstName: '',
-                middleName: '',
-                age: '',
-                dateOfBirth: '',
-                dobDate: null,
-                field1: '',
-                field2: '',
-                gender: '',
-                area: '',
-                city: '',
-                patientId: '',
-                maritalStatus: '',
-                occupation: '',
-                address: '',
-                mobileNumber: '',
-                email: '',
-                state: 'Maharashtra',
-                referredBy: '',
-                referralName: '',
-                referralContact: '',
-                referralEmail: '',
-                referralAddress: '',
-                addToTodaysAppointment: true
-              })
-              setErrors({})
-              // Clear area and city related states
-              setAreaInput('')
-              setCityInput('')
-              setSelectedAreaCityId(null)
-              setAreaOptions([])
-              setCityOptions([])
-              setAreaOpen(false)
-              // Clear doctor referral states
-              setReferralNameSearch('')
-              setReferralNameOptions([])
-              setSelectedDoctor(null)
-              setShowReferralPopup(false)
-            }}
+            onClick={resetForm}
             variant="contained"
             disabled={loading || readOnly}
             sx={{
