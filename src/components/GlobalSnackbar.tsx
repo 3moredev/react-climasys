@@ -7,25 +7,29 @@ interface GlobalSnackbarProps {
     autoHideDuration?: number;
 }
 
-const GlobalSnackbar: React.FC<GlobalSnackbarProps> = ({ 
-    show, 
-    message, 
+const GlobalSnackbar: React.FC<GlobalSnackbarProps> = ({
+    show,
+    message,
     onClose,
-    autoHideDuration = 5000 
+    autoHideDuration = 5000
 }) => {
     // Determine if message is an error based on error keywords
-    const isError = message.includes("doesn't have") || 
-                    message.includes("Failed to book") || 
-                    message.includes("Please select") || 
-                    message.includes("existing appointment") || 
-                    message.includes("Unable to determine") || 
-                    message.includes("Missing identifiers") || 
-                    message.includes("Update failed") || 
-                    message.includes("Failed to update") || 
-                    message.includes("Failed to delete") || 
-                    message.includes("but failed to refresh") ||
-                    message.toLowerCase().includes("failed") ||
-                    message.toLowerCase().includes("error");
+    const isError = message.toLowerCase().includes("at least one lab test") ||
+        message.toLowerCase().includes("at least one lab") ||
+        message.toLowerCase().includes("required fields") ||
+        message.toLowerCase().includes("value for each result") ||
+        message.toLowerCase().includes("failed") ||
+        message.toLowerCase().includes("error") ||
+        message.toLowerCase().includes("unable") ||
+        message.toLowerCase().includes("invalid") ||
+        message.toLowerCase().includes("missing") ||
+        message.toLowerCase().includes("required") ||
+        message.toLowerCase().includes("already") ||
+        message.toLowerCase().includes("conflict") ||
+        message.toLowerCase().includes("doesn't have") ||
+        message.toLowerCase().includes("not found") ||
+        message.toLowerCase().includes("failed to") ||
+        message.toLowerCase().includes("please select");
 
     // Auto-hide functionality
     React.useEffect(() => {
@@ -46,7 +50,7 @@ const GlobalSnackbar: React.FC<GlobalSnackbarProps> = ({
                 bottom: '20px',
                 left: '50%',
                 transform: 'translateX(-50%)',
-                backgroundColor: isError ? '#dc3545' : '#28a745',
+                backgroundColor: isError ? '#d32f2f' : '#2e7d32',
                 color: 'white',
                 padding: '12px 20px',
                 borderRadius: '6px',

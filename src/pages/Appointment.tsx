@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { List, CreditCard, MoreVert, Add as AddIcon, Save, Delete, Info, FastForward, Close, ChatBubbleOutline, Phone, SwapHoriz, ShoppingCart } from "@mui/icons-material";
+import { Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button, CircularProgress } from "@mui/material";
 import { appointmentService, Appointment, AppointmentRequest, TodayAppointmentsResponse, getDoctorStatusReference, getStatusOptionsByClinic } from "../services/appointmentService";
 import { doctorService, DoctorDetail, Doctor } from "../services/doctorService";
 import { patientService, Patient, formatVisitDateTime, getVisitStatusText } from "../services/patientService";
@@ -113,6 +114,11 @@ export default function AppointmentTable() {
     const [loadingStatuses, setLoadingStatuses] = useState<boolean>(false);
     const [isInitialLoadComplete, setIsInitialLoadComplete] = useState<boolean>(false);
     const [isBooking, setIsBooking] = useState<boolean>(false); // Prevent duplicate booking requests
+
+    // Delete confirmation state
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState<boolean>(false);
+    const [appointmentToDelete, setAppointmentToDelete] = useState<{ appointment: AppointmentRow, index: number } | null>(null);
+    const [isDeleting, setIsDeleting] = useState<boolean>(false);
 
     // Fetch session data on component mount
     useEffect(() => {
@@ -1645,6 +1651,57 @@ export default function AppointmentTable() {
         if (!selectedId) return options;
         // Move selected to the top
         return options.sort((a, b) => (a.id === selectedId ? -1 : b.id === selectedId ? 1 : a.label.localeCompare(b.label)));
+    };
+
+    const handleInitiateDelete = (appointment: AppointmentRow, index: number) => {
+        setAppointmentToDelete({ appointment, index });
+        setShowDeleteConfirm(true);
+    };
+
+    const handleConfirmDelete = async () => {
+        if (!appointmentToDelete) return;
+
+        const { appointment, index } = appointmentToDelete;
+        const pid = appointment.patientId;
+        const rawVtime = String(appointment.time || '00:00');
+        const today = new Date().toISOString().split('T')[0];
+        const vdatetime = `${today} ${rawVtime}`;
+        const did = appointment.doctorId || selectedDoctorId;
+
+        if (!pid || !vdatetime || !did) {
+            setSnackbarMessage('Missing identifiers to delete appointment');
+            setShowSnackbar(true);
+            setTimeout(() => setShowSnackbar(false), 3000);
+            setShowDeleteConfirm(false);
+            return;
+        }
+
+        setIsDeleting(true);
+        try {
+            await appointmentService.deleteAppointment({
+                patientId: String(pid),
+                visitDate: String(vdatetime),
+                doctorId: String(did),
+                clinicId: clinicId || sessionData?.clinicId || '',
+                userId: String(sessionData?.userId || 'system')
+            });
+
+            setSnackbarMessage('Appointment deleted successfully.');
+            setShowSnackbar(true);
+            setTimeout(() => setShowSnackbar(false), 3000);
+
+            // Update local state
+            setAppointments(prev => prev.filter((_, i) => i !== index));
+        } catch (err) {
+            console.error('Delete appointment failed:', err);
+            setSnackbarMessage('Failed to delete appointment');
+            setShowSnackbar(true);
+            setTimeout(() => setShowSnackbar(false), 3000);
+        } finally {
+            setIsDeleting(false);
+            setShowDeleteConfirm(false);
+            setAppointmentToDelete(null);
+        }
     };
 
     // Refresh appointments for the logged-in doctor (when isDoctor is true) or selected doctor (for receptionist)
@@ -3528,7 +3585,23 @@ export default function AppointmentTable() {
                             position: 'fixed',
                             bottom: '20px',
                             right: '20px',
-                            backgroundColor: snackbarMessage.includes("doesn't have") || snackbarMessage.includes("Failed to book") || snackbarMessage.includes("Please select") || snackbarMessage.includes("existing appointment") || snackbarMessage.includes("Unable to determine") || snackbarMessage.includes("Missing identifiers") || snackbarMessage.includes("Update failed") || snackbarMessage.includes("Failed to update") || snackbarMessage.includes("Failed to delete") || snackbarMessage.includes("but failed to refresh") ? '#dc3545' : '#28a745',
+                            backgroundColor: (
+                                snackbarMessage.toLowerCase().includes("failed") ||
+                                snackbarMessage.toLowerCase().includes("error") ||
+                                snackbarMessage.toLowerCase().includes("unable") ||
+                                snackbarMessage.toLowerCase().includes("invalid") ||
+                                snackbarMessage.toLowerCase().includes("missing") ||
+                                snackbarMessage.toLowerCase().includes("required") ||
+                                snackbarMessage.toLowerCase().includes("already") ||
+                                snackbarMessage.toLowerCase().includes("conflict") ||
+                                snackbarMessage.toLowerCase().includes("doesn't have") ||
+                                snackbarMessage.toLowerCase().includes("not found") ||
+                                snackbarMessage.toLowerCase().includes("failed to") ||
+                                snackbarMessage.toLowerCase().includes("please select") ||
+                                snackbarMessage.toLowerCase().includes("at least one lab test") ||
+                                snackbarMessage.toLowerCase().includes("required fields") ||
+                                snackbarMessage.toLowerCase().includes("value for each result")
+                            ) ? '#d32f2f' : '#2e7d32',
                             color: 'white',
                             padding: '12px 20px',
                             borderRadius: '6px',
@@ -3542,7 +3615,23 @@ export default function AppointmentTable() {
                         }}
                     >
                         <div className="d-flex align-items-center">
-                            <i className={`fas ${snackbarMessage.includes("doesn't have") || snackbarMessage.includes("Failed to book") || snackbarMessage.includes("Please select") || snackbarMessage.includes("existing appointment") || snackbarMessage.includes("Unable to determine") || snackbarMessage.includes("Missing identifiers") || snackbarMessage.includes("Update failed") || snackbarMessage.includes("Failed to update") || snackbarMessage.includes("Failed to delete") || snackbarMessage.includes("but failed to refresh") ? 'fa-exclamation-triangle' : 'fa-check-circle'} me-2`}></i>
+                            <i className={`fas ${(
+                                snackbarMessage.toLowerCase().includes("failed") ||
+                                snackbarMessage.toLowerCase().includes("error") ||
+                                snackbarMessage.toLowerCase().includes("unable") ||
+                                snackbarMessage.toLowerCase().includes("invalid") ||
+                                snackbarMessage.toLowerCase().includes("missing") ||
+                                snackbarMessage.toLowerCase().includes("required") ||
+                                snackbarMessage.toLowerCase().includes("already") ||
+                                snackbarMessage.toLowerCase().includes("conflict") ||
+                                snackbarMessage.toLowerCase().includes("doesn't have") ||
+                                snackbarMessage.toLowerCase().includes("not found") ||
+                                snackbarMessage.toLowerCase().includes("failed to") ||
+                                snackbarMessage.toLowerCase().includes("please select") ||
+                                snackbarMessage.toLowerCase().includes("at least one lab test") ||
+                                snackbarMessage.toLowerCase().includes("required fields") ||
+                                snackbarMessage.toLowerCase().includes("value for each result")
+                            ) ? 'fa-exclamation-triangle' : 'fa-check-circle'} me-2`}></i>
                             <span>{snackbarMessage}</span>
                             <button
                                 onClick={() => setShowSnackbar(false)}
@@ -4667,7 +4756,7 @@ export default function AppointmentTable() {
                                                                 const shouldEnable = !isReceptionist || isWaiting || isComplete;
                                                                 return shouldEnable ? "Delete" : "Delete (Disabled for Reception)";
                                                             })()}
-                                                            onClick={async () => {
+                                                            onClick={() => {
                                                                 const statusId = mapStatusLabelToId(a.status);
                                                                 const shouldDisable = isReceptionist && statusId >= 2;
                                                                 if (shouldDisable) return; // Disable for reception when statusId >= 2
@@ -4675,47 +4764,7 @@ export default function AppointmentTable() {
                                                                 const isComplete = statusId === 5;
                                                                 const shouldEnable = !isReceptionist || isWaiting || isComplete;
                                                                 if (!shouldEnable) return; // Disable for reception login unless WAITING or COMPLETE
-                                                                try {
-                                                                    const pid = a.patientId;
-                                                                    const rawVtime = String(a.time || '00:00');
-                                                                    // Use today's date with the visit time for deletion
-                                                                    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
-                                                                    console.log('=== APPOINTMENT DELETION DEBUG (2nd function) ===');
-                                                                    console.log('Appointment object:', a);
-                                                                    console.log('Raw visit time:', rawVtime);
-                                                                    console.log('Using today\'s date:', today);
-
-                                                                    // Combine today's date with visit time for precise deletion
-                                                                    const vdatetime = `${today} ${rawVtime}`;
-                                                                    console.log('Final visit datetime being sent (today + time):', vdatetime);
-                                                                    console.log('=== END DEBUG ===');
-                                                                    const did = a.doctorId || selectedDoctorId;
-                                                                    if (!pid || !vdatetime || !did) {
-                                                                        setSnackbarMessage('Missing identifiers to delete appointment');
-                                                                        setShowSnackbar(true);
-                                                                        // setTimeout(() => setShowSnackbar(false), 3000);
-                                                                        return;
-                                                                    }
-                                                                    const confirmDelete = window.confirm('Delete this appointment?');
-                                                                    if (!confirmDelete) return;
-
-                                                                    await appointmentService.deleteAppointment({
-                                                                        patientId: String(pid),
-                                                                        visitDate: String(vdatetime),
-                                                                        doctorId: String(did),
-                                                                        clinicId: sessionData?.clinicId || '',
-                                                                        userId: String(sessionData?.userId || 'system')
-                                                                    });
-                                                                    setSnackbarMessage('Appointment deleted');
-                                                                    setShowSnackbar(true);
-                                                                    setTimeout(() => setShowSnackbar(false), 3000);
-                                                                    setAppointments(prev => prev.filter((_, i) => i !== originalIndex));
-                                                                } catch (err) {
-                                                                    console.error('Delete appointment failed:', err);
-                                                                    setSnackbarMessage('Failed to delete appointment');
-                                                                    setShowSnackbar(true);
-                                                                    // setTimeout(() => setShowSnackbar(false), 3000);
-                                                                }
+                                                                handleInitiateDelete(a, originalIndex);
                                                             }}
                                                             style={{
                                                                 display: 'inline-flex',
@@ -5475,7 +5524,7 @@ export default function AppointmentTable() {
                                                             const shouldEnable = !isReceptionist || isWaiting || isComplete;
                                                             return shouldEnable ? "Delete" : "Delete (Disabled for Reception)";
                                                         })()}
-                                                        onClick={async () => {
+                                                        onClick={() => {
                                                             const statusId = mapStatusLabelToId(appointment.status);
                                                             const shouldDisable = isReceptionist && statusId >= 2;
                                                             if (shouldDisable) return; // Disable for reception when statusId >= 2
@@ -5483,48 +5532,7 @@ export default function AppointmentTable() {
                                                             const isComplete = statusId === 5;
                                                             const shouldEnable = !isReceptionist || isWaiting || isComplete;
                                                             if (!shouldEnable) return; // Disable for reception login unless WAITING or COMPLETE
-                                                            try {
-                                                                const pid = appointment.patientId;
-                                                                const rawVtime = String(appointment.time || '00:00');
-                                                                // Use today's date with the visit time for deletion
-                                                                const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
-                                                                console.log('=== APPOINTMENT DELETION DEBUG ===');
-                                                                console.log('Appointment object:', appointment);
-                                                                console.log('Raw visit time:', rawVtime);
-                                                                console.log('Using today\'s date:', today);
-
-                                                                // Combine today's date with visit time for precise deletion
-                                                                const vdatetime = `${today} ${rawVtime}`;
-                                                                console.log('Final visit datetime being sent (today + time):', vdatetime);
-                                                                console.log('=== END DEBUG ===');
-                                                                const did = appointment.doctorId || selectedDoctorId;
-                                                                if (!pid || !vdatetime || !did) {
-                                                                    setSnackbarMessage('Missing identifiers to delete appointment');
-                                                                    setShowSnackbar(true);
-                                                                    setTimeout(() => setShowSnackbar(false), 3000);
-                                                                    return;
-                                                                }
-                                                                const confirmDelete = window.confirm('Delete this appointment?');
-                                                                if (!confirmDelete) return;
-
-                                                                await appointmentService.deleteAppointment({
-                                                                    patientId: String(pid),
-                                                                    visitDate: String(vdatetime),
-                                                                    doctorId: String(did),
-                                                                    clinicId: sessionData?.clinicId || '',
-                                                                    userId: String(sessionData?.userId || 'system')
-                                                                });
-                                                                // Remove from UI
-                                                                setSnackbarMessage('Appointment deleted successfully.');
-                                                                setShowSnackbar(true);
-                                                                setTimeout(() => setShowSnackbar(false), 3000);
-                                                                setAppointments(prev => prev.filter((_, i) => i !== originalIndex));
-                                                            } catch (err) {
-                                                                console.error('Delete appointment failed:', err);
-                                                                setSnackbarMessage('Failed to delete appointment');
-                                                                setShowSnackbar(true);
-                                                                setTimeout(() => setShowSnackbar(false), 3000);
-                                                            }
+                                                            handleInitiateDelete(appointment, originalIndex);
                                                         }}
                                                         style={{
                                                             opacity: (() => {
@@ -6006,6 +6014,55 @@ export default function AppointmentTable() {
                     onVisitDetailsSubmitted={handleVisitDetailsSubmitted}
                 />
             )}
+
+            {/* Delete Appointment Confirmation Dialog */}
+            <Dialog
+                open={showDeleteConfirm}
+                onClose={() => !isDeleting && setShowDeleteConfirm(false)}
+                aria-labelledby="delete-dialog-title"
+                aria-describedby="delete-dialog-description"
+            >
+                <DialogTitle id="delete-dialog-title">
+                    {"Delete Appointment"}
+                </DialogTitle>
+                <DialogContent>
+                    <DialogContentText id="delete-dialog-description">
+                        Are you sure you want to delete the appointment for <strong>{appointmentToDelete?.appointment.patient}</strong>?
+                    </DialogContentText>
+                </DialogContent>
+                <DialogActions>
+                    <Button
+                        onClick={() => setShowDeleteConfirm(false)}
+                        disabled={isDeleting}
+                        variant="contained"
+                        sx={{
+                            bgcolor: '#1E88E5',
+                            color: '#fff',
+                            '&:hover': {
+                                bgcolor: '#1976D2',
+                            }
+                        }}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        onClick={handleConfirmDelete}
+                        variant="contained"
+                        autoFocus
+                        disabled={isDeleting}
+                        startIcon={isDeleting ? <CircularProgress size={20} color="inherit" /> : <Delete />}
+                        sx={{
+                            bgcolor: '#1E88E5',
+                            color: '#fff',
+                            '&:hover': {
+                                bgcolor: '#1976D2',
+                            }
+                        }}
+                    >
+                        {isDeleting ? 'Deleting...' : 'OK'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
 
             {/* Global snackbar (reception / non-doctor view) */}
             <GlobalSnackbar
