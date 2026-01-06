@@ -1179,7 +1179,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                     fontWeight: 'bold',
                                     color: '#333'
                                 }}>
-                                    Lab Tests
+                                    Lab Tests *
                                 </label>
                                 <div ref={labTestsRef} style={{ display: 'flex', gap: '10px', alignItems: 'end' }}>
                                     <div style={{ position: 'relative', flex: 1 }}>
@@ -1460,7 +1460,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                         color: '#333',
                                                         width: '120px'
                                                     }}>
-                                                        Value / Results
+                                                        Value / Results *
                                                     </th>
                                                     <th style={{
                                                         padding: '12px',

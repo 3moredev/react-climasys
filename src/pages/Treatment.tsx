@@ -1265,6 +1265,46 @@ export default function Treatment() {
         return isWaitingForMedicine || isComplete || statusId === 4 || statusId === 6;
     }, [treatmentData?.statusId, treatmentData?.status]);
 
+    // Determine In-Person checkbox state based on status
+    const inPersonChecked = React.useMemo(() => {
+        if (!treatmentData?.status) return true; // Default to true if no status
+        const status = String(treatmentData.status).trim().toUpperCase();
+        const normalizedStatus = status === 'ON CALL' ? 'CONSULT ON CALL' : status;
+        // If status is "CONSULT ON CALL" or other non-in-person statuses, set to false
+        if (normalizedStatus === 'CONSULT ON CALL' || (normalizedStatus !== 'WAITING' && normalizedStatus !== 'WITH DOCTOR')) {
+            return false;
+        }
+        return true; // Default to true for WAITING or WITH DOCTOR
+    }, [treatmentData?.status]);
+
+    // Determine if In-Person checkbox should be disabled based on status
+    const inPersonDisabled = React.useMemo(() => {
+        if (!treatmentData?.status) return isFormDisabled; // Use form disabled state if no status
+        const status = String(treatmentData.status).trim().toUpperCase();
+        const normalizedStatus = status === 'ON CALL' ? 'CONSULT ON CALL' : status;
+        // Disable if status is not WAITING or WITH DOCTOR
+        return normalizedStatus !== 'WAITING' && normalizedStatus !== 'WITH DOCTOR';
+    }, [treatmentData?.status, isFormDisabled]);
+
+    // Update inPerson value when status changes
+    React.useEffect(() => {
+        if (treatmentData?.status) {
+            setFormData(prev => {
+                // Only update if the computed value differs from current value
+                if (prev.visitType.inPerson !== inPersonChecked) {
+                    return {
+                        ...prev,
+                        visitType: {
+                            ...prev.visitType,
+                            inPerson: inPersonChecked
+                        }
+                    };
+                }
+                return prev;
+            });
+        }
+    }, [treatmentData?.status, inPersonChecked]);
+
     // Check if Addendum button should be enabled (for "Waiting for Medicine" and "Complete")
     const isAddendumEnabled = React.useMemo(() => {
         if (!treatmentData) return false;
@@ -2595,6 +2635,36 @@ export default function Treatment() {
             return;
         }
 
+        // Check for duplicate diagnosis before API call (check both value and diagnosis name)
+        const normalizedShortDesc = trimmedShortDescription.toLowerCase().trim();
+        const normalizedDiagnosisDesc = trimmedDiagnosisDescription.toLowerCase().trim();
+        
+        // Check if it already exists in the table
+        const existingByValue = diagnosisRows.find(
+            row => row.value?.toLowerCase().trim() === normalizedShortDesc
+        );
+        const existingByDiagnosis = diagnosisRows.find(
+            row => row.diagnosis?.toLowerCase().trim() === normalizedDiagnosisDesc
+        );
+        
+        // Check if it already exists in diagnosesOptions (dropdown list) - prevent adding if it exists in dropdown
+        const existingInOptions = diagnosesOptions.find(
+            opt => opt.value?.toLowerCase().trim() === normalizedShortDesc ||
+                   opt.label?.toLowerCase().trim() === normalizedDiagnosisDesc
+        );
+
+        if (existingByValue || existingByDiagnosis || existingInOptions) {
+            const duplicateName = existingByDiagnosis?.diagnosis || 
+                                 existingByValue?.diagnosis || 
+                                 existingInOptions?.label ||
+                                 trimmedDiagnosisDescription;
+            setSnackbarMessage(`Diagnosis "${duplicateName}" is already added.`);
+            setSnackbarOpen(true);
+            setDiagnosesError(null);
+            setShowDiagnosisPopup(false);
+            return;
+        }
+
         try {
             setDiagnosesError(null);
 
@@ -2854,9 +2924,32 @@ export default function Treatment() {
             return;
         }
 
-        setInvestigationsError(null);
         const normalizedName = labTestName;
-        const normalizedNameLower = normalizedName.toLowerCase();
+        const normalizedNameLower = normalizedName.toLowerCase().trim();
+
+        // Check for duplicate investigation before adding (check both table and dropdown options)
+        const existingInTable = investigationRows.find(
+            row => row.investigation?.toLowerCase().trim() === normalizedNameLower
+        );
+        
+        // Check if it already exists in investigationsOptions (dropdown list) - prevent adding if it exists in dropdown
+        const existingInOptions = investigationsOptions.find(
+            opt => opt.label?.toLowerCase().trim() === normalizedNameLower ||
+                   opt.value?.toLowerCase().trim() === normalizedNameLower
+        );
+
+        if (existingInTable || existingInOptions) {
+            const duplicateName = existingInTable?.investigation || 
+                                 existingInOptions?.label ||
+                                 normalizedName;
+            setSnackbarMessage(`Investigation "${duplicateName}" is already added.`);
+            setSnackbarOpen(true);
+            setInvestigationsError(null);
+            setShowTestLabPopup(false);
+            return;
+        }
+
+        setInvestigationsError(null);
 
         // Check for duplicate investigation before adding (using functional update to get current state)
         let investigationAdded = false;
@@ -3163,9 +3256,36 @@ export default function Treatment() {
                         }
                     }
 
+                    // Determine inPerson value
+                    let computedInPerson = next.visitType?.inPerson ?? true; // Default to current value or true
+                    
+                    // Get status from appointment data
+                    const status = appointmentData.status || appointmentData.statusDescription || '';
+                    const normalizedStatus = String(status).trim().toUpperCase();
+                    const finalStatus = normalizedStatus === 'ON CALL' ? 'CONSULT ON CALL' : normalizedStatus;
+                    
+                    // Only patch inPerson if status is "SAVED" or "WAITING FOR MEDICINE"
+                    const shouldPatchInPerson = finalStatus === 'SAVE' || 
+                                               finalStatus === 'WAITING FOR MEDICINE' || 
+                                               finalStatus === 'WAITINGFOR MEDICINE' || 
+                                               finalStatus === 'WAITINGFORMEDICINE';
+                    
+                    if (shouldPatchInPerson && typeof normalized.inPerson === 'boolean') {
+                        // Patch with the actual value from API (true or false)
+                        computedInPerson = normalized.inPerson;
+                        console.log('Patching inPerson from API for status', finalStatus, ':', computedInPerson);
+                    } else if (!shouldPatchInPerson) {
+                        // For other statuses, compute based on status logic
+                        if (finalStatus === 'CONSULT ON CALL' || (finalStatus !== 'WAITING' && finalStatus !== 'WITH DOCTOR')) {
+                            computedInPerson = false;
+                        } else if (finalStatus === 'WAITING' || finalStatus === 'WITH DOCTOR') {
+                            computedInPerson = true;
+                        }
+                    }
+
                     next.visitType = {
                         ...(next.visitType || {}),
-                        inPerson: typeof normalized.inPerson === 'boolean' ? normalized.inPerson : (next.visitType?.inPerson ?? true),
+                        inPerson: computedInPerson,
                         followUp: normalized.followUpFlag !== undefined ? followUpValue : (next.visitType?.followUp ?? false)
                     };
                 }
@@ -3430,6 +3550,23 @@ export default function Treatment() {
                 investigationRowsLoadedFromSaveResponseRef.current = false;
             }
 
+            // Update treatmentData status if available from appointment data
+            if (appointmentData.status || appointmentData.statusDescription) {
+                const status = String(appointmentData.status || appointmentData.statusDescription || '').trim();
+                const statusId = appointmentData.statusId || appointmentData.status_id;
+                setTreatmentData(prev => {
+                    if (prev && (prev.status !== status || prev.statusId !== statusId)) {
+                        return {
+                            ...prev,
+                            status: status,
+                            statusId: statusId
+                        };
+                    }
+                    return prev;
+                });
+                console.log('Updated treatmentData status:', status, 'statusId:', statusId);
+            }
+
             console.log('=== FINISHED PATCHING FROM APPOINTMENT DETAILS ===');
         } catch (e) {
             console.warn('Failed to fetch/patch appointment details after save:', e);
@@ -3525,6 +3662,8 @@ export default function Treatment() {
             console.log('Shift ID:', shiftId);
             console.log('User ID:', userId);
             console.log('Patient Visit No:', patientVisitNo);
+            console.log('In-Person (computed):', inPersonChecked);
+            console.log('In-Person (formData):', formData.visitType.inPerson);
 
             // Map form data to API request format
             const visitData: ComprehensiveVisitDataRequest = {
@@ -3578,7 +3717,7 @@ export default function Treatment() {
                 allergyDetails: formData.allergy,
                 observation: formData.procedurePerformed || '',
                 dressingBodyParts: formData.dressingBodyParts || '',
-                inPerson: formData.visitType.inPerson,
+                inPerson: inPersonChecked, // Use computed value to ensure it matches status
                 symptomComment: formData.detailedHistory,
                 reason: '',
                 impression: formData.additionalComments,
@@ -4093,20 +4232,26 @@ export default function Treatment() {
     const handleAddDiagnoses = () => {
         if (selectedDiagnoses.length === 0) return;
         setDiagnosisRows(prev => {
-            const existingValues = new Set(prev.map(r => r.value));
-            const existingDiagnoses = new Set(prev.map(r => r.diagnosis?.toLowerCase().trim()));
+            // Normalize existing values and diagnoses for comparison
+            const existingValues = new Set(prev.map(r => r.value?.toLowerCase().trim()).filter(Boolean));
+            const existingDiagnoses = new Set(prev.map(r => r.diagnosis?.toLowerCase().trim()).filter(Boolean));
             const newRows: DiagnosisRow[] = [];
             const duplicateDiagnoses: string[] = [];
+            // Track what's being added in this batch to prevent duplicates within the same batch
+            const currentBatchValues = new Set<string>();
+            const currentBatchDiagnoses = new Set<string>();
 
             selectedDiagnoses.forEach(val => {
                 const diagnosisOption = diagnosesOptions.find(opt => opt.value === val);
                 const diagnosisLabel = diagnosisOption?.label || val;
-                const diagnosisLower = diagnosisLabel.toLowerCase().trim();
+                const normalizedValue = val?.toLowerCase().trim() || '';
+                const normalizedDiagnosis = diagnosisLabel?.toLowerCase().trim() || '';
 
-                // Check for duplicates by both value and diagnosis name
-                if (existingValues.has(val)) {
-                    duplicateDiagnoses.push(diagnosisLabel);
-                } else if (existingDiagnoses.has(diagnosisLower)) {
+                // Check for duplicates by both value and diagnosis name (case-insensitive)
+                if (existingValues.has(normalizedValue) || 
+                    existingDiagnoses.has(normalizedDiagnosis) ||
+                    currentBatchValues.has(normalizedValue) ||
+                    currentBatchDiagnoses.has(normalizedDiagnosis)) {
                     duplicateDiagnoses.push(diagnosisLabel);
                 } else {
                     newRows.push({
@@ -4116,6 +4261,9 @@ export default function Treatment() {
                         comment: '',
                         priority: diagnosisOption?.priority ?? diagnosisOption?.priority_value ?? 999
                     });
+                    // Track what we're adding in this batch
+                    currentBatchValues.add(normalizedValue);
+                    currentBatchDiagnoses.add(normalizedDiagnosis);
                 }
             });
 
@@ -4784,12 +4932,13 @@ export default function Treatment() {
                                                 fontWeight: 500
                                             }}>Self</span>
                                         </div>
-                                        <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: isFormDisabled ? 'not-allowed' : 'pointer', fontSize: '12px', whiteSpace: 'nowrap' }}>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: (isFormDisabled || inPersonDisabled) ? 'not-allowed' : 'pointer', fontSize: '12px', whiteSpace: 'nowrap' }}>
                                             <input
                                                 type="checkbox"
-                                                checked={formData.visitType.inPerson}
+                                                checked={inPersonChecked}
                                                 onChange={(e) => handleVisitTypeChange('inPerson', e.target.checked)}
-                                                disabled={isFormDisabled}
+                                                disabled={isFormDisabled || inPersonDisabled}
+                                                readOnly={inPersonDisabled}
                                             />
                                             In-Person
                                         </label>
