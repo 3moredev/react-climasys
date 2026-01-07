@@ -8,7 +8,7 @@ import GlobalSnackbar from './GlobalSnackbar';
 interface AddTestLabPopupProps {
     open: boolean;
     onClose: () => void;
-    onSave: (testLabData: TestLabData) => void;
+    onSave: (testLabData: TestLabData) => boolean | void | Promise<boolean | void>;
     onError?: (message: string) => void;
     editData?: {
         labTestName: string;
@@ -152,8 +152,12 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
         try {
             // If editing, use the parent handler
             if (editData) {
-                onSave(testLabData);
-                // Close popup immediately - success message will be shown in parent component
+                const result = await onSave(testLabData);
+                // If parent signals failure (e.g. duplicate), keep popup open
+                if (result === false) {
+                    return;
+                }
+                // Close popup on successful edit - message will be handled by parent
                 onClose();
                 return;
             }
@@ -211,9 +215,14 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
             }
             
             // Call the parent onSave callback for any additional handling
-            onSave(testLabData);
+            const result = await onSave(testLabData);
+
+            // If parent signals failure (e.g. local duplicate), keep popup open
+            if (result === false) {
+                return;
+            }
             
-            // Reset form
+            // Reset form on success
             setTestLabData({
                 labTestName: '',
                 priority: '',
@@ -221,7 +230,7 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
                 labTestRows: []
             });
             
-            // Close popup immediately - success message will be shown in parent component
+            // Close popup - success message will be shown in parent component
             onClose();
         } catch (error: any) {
             console.error('Error saving lab test:', error);
@@ -239,20 +248,28 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
                              errorMessage.match(/description ['"]([^'"]+)['"]/i);
                 const investigationName = match ? match[1] : testLabData.labTestName.trim();
                 userFriendlyMessage = `Investigation "${investigationName}" is already added.`;
+
+                // For duplicate errors, KEEP the popup open and just show the error
+                if (onError) {
+                    onError(userFriendlyMessage);
+                } else {
+                    setSnackbarMessage(userFriendlyMessage);
+                    setSnackbarOpen(true);
+                }
             } else {
                 userFriendlyMessage = errorMessage;
-            }
-            
-            // Close popup and show error in parent component snackbar (like diagnosis/medicine)
-            onClose();
-            if (onError) {
-                setTimeout(() => {
-                    onError(userFriendlyMessage);
-                }, 100); // Small delay to ensure popup is closed
-            } else {
-                // Fallback to popup snackbar if onError not provided
-                setSnackbarMessage(userFriendlyMessage);
-                setSnackbarOpen(true);
+
+                // For non-duplicate errors, close popup and show error in parent/component snackbar
+                onClose();
+                if (onError) {
+                    setTimeout(() => {
+                        onError(userFriendlyMessage);
+                    }, 100); // Small delay to ensure popup is closed
+                } else {
+                    // Fallback to popup snackbar if onError not provided
+                    setSnackbarMessage(userFriendlyMessage);
+                    setSnackbarOpen(true);
+                }
             }
         } finally {
             setIsSaving(false);
