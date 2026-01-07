@@ -170,7 +170,15 @@ export default function AppointmentTable() {
             try {
                 // Backend will automatically use default_doctor from user_master table based on session
                 const doctors = await doctorService.getOpdDoctors();
-                setAllDoctors(doctors);
+
+                // Sort doctors alphabetically by name, ignoring "Dr." prefix
+                const sortedDoctors = [...doctors].sort((a, b) => {
+                    const nameA = (a.name || '').replace(/^Dr\.?\s*/i, '').trim().toLowerCase();
+                    const nameB = (b.name || '').replace(/^Dr\.?\s*/i, '').trim().toLowerCase();
+                    return nameA.localeCompare(nameB);
+                });
+
+                setAllDoctors(sortedDoctors);
 
                 // Always set the default doctor when doctors are loaded
                 // Backend sorts doctors with default_doctor from user_master first
@@ -4875,12 +4883,12 @@ export default function AppointmentTable() {
                                                             title={(() => {
                                                                 const statusId = mapStatusLabelToId(a.status);
                                                                 const shouldDisable = isReceptionist && statusId >= 2;
-                                                                if (shouldDisable) return "Visit Details (Disabled - Status >= 2)";
+                                                                if (shouldDisable) return "Visit Details";
                                                                 const isWaiting = statusId === 1;
                                                                 const isComplete = statusId === 5;
                                                                 const shouldEnable = !isReceptionist || isWaiting || isComplete;
-                                                                if (!shouldEnable) return "Visit Details (Disabled for Reception)";
-                                                                return a.status === 'WITH DOCTOR' ? 'Visit Details (Disabled - Patient with doctor)' : 'Visit Details';
+                                                                if (!shouldEnable) return "Visit Details";
+                                                                return a.status === 'WITH DOCTOR' ? 'Visit Details' : 'Visit Details';
                                                             })()}
                                                             onClick={() => {
                                                                 const statusId = mapStatusLabelToId(a.status);
@@ -4971,10 +4979,10 @@ export default function AppointmentTable() {
                                                                 const isCollectible = statusId === 4 || statusId === 5 || statusId === 6;
                                                                 // Allow statusId 4, 5 (Complete), and 6 even for reception, otherwise disable for reception when statusId >= 2
                                                                 const shouldDisable = isReceptionist && statusId >= 2 && !isCollectible;
-                                                                if (shouldDisable) return "Collection (Disabled - Status >= 2)";
+                                                                if (shouldDisable) return "Collection";
                                                                 const shouldEnable = !isReceptionist || isCollectible;
-                                                                if (!shouldEnable) return "Collection (Disabled for Reception)";
-                                                                return !isCollectible ? "Collection (Disabled - Status not Complete/Submited)" : "Collection";
+                                                                if (!shouldEnable) return "Collection";
+                                                                return !isCollectible ? "Collection" : "Collection";
                                                             })()}
                                                             onClick={() => {
                                                                 const statusId = mapStatusLabelToId(a.status);
@@ -5088,7 +5096,7 @@ export default function AppointmentTable() {
                                                                 title={(() => {
                                                                     const normalizedStatus = normalizeStatusLabel(a.status);
                                                                     const isEnabled = normalizedStatus === 'COLLECTION';
-                                                                    return isEnabled ? "Treatment" : "Treatment (Disabled - Only enabled for Collection status)";
+                                                                    return isEnabled ? "Treatment" : "Treatment";
                                                                 })()}
                                                                 onClick={() => {
                                                                     const normalizedStatus = normalizeStatusLabel(a.status);

@@ -63,17 +63,17 @@ export default function LoginPage() {
       <div className="ptwikki-left-section">
         {/* Medical Background Element */}
         <div className="medical-cross"></div>
-        
+
         <div className="ptwikki-welcome-content">
           <div className="climasys-branding">
             <Typography variant="h2" className="climasys-brand-name">
-              MyHealth
+              OneHealth
             </Typography>
             <Typography variant="h6" className="climasys-tagline">
               A Step towards Smart Clinic...
             </Typography>
           </div>
-          
+
           <div className="climasys-features">
             <div className="feature-item">
               <div className="feature-icon">👨‍⚕️</div>
@@ -81,21 +81,21 @@ export default function LoginPage() {
                 Patient Specific <strong>EHR</strong>
               </div>
             </div>
-            
+
             <div className="feature-item">
               <div className="feature-icon">📝</div>
               <div className="feature-text">
                 Comprehensive <strong>Digital prescription</strong>
               </div>
             </div>
-            
+
             <div className="feature-item">
               <div className="feature-icon">📊</div>
               <div className="feature-text">
                 Real-time <strong>Dashboards and Financials</strong>
               </div>
             </div>
-            
+
             <div className="feature-item">
               <div className="feature-icon">💬</div>
               <div className="feature-text">
@@ -104,7 +104,7 @@ export default function LoginPage() {
             </div>
           </div>
         </div>
-        
+
       </div>
 
       {/* Right Section - Login Form */}
@@ -116,14 +116,14 @@ export default function LoginPage() {
               <div className="ptwikki-logo-icon"></div>
             </div>
             <Typography variant="h5" className="ptwikki-brand-text">
-              MyHealth
+              OneHealth
             </Typography>
           </div>
 
-            <Typography variant="h4" className="ptwikki-form-title">
-              Login
-            </Typography>
-          
+          <Typography variant="h4" className="ptwikki-form-title">
+            Login
+          </Typography>
+
           {error && (
             <Alert severity="error" onClose={() => dispatch(clearError())} className="ptwikki-error">
               {error}
@@ -170,7 +170,7 @@ export default function LoginPage() {
                 )}
               />
             </div>
-            
+
             <div className="ptwikki-input-group">
               <label className="ptwikki-label">Password*</label>
               <Controller
@@ -201,7 +201,7 @@ export default function LoginPage() {
                         e.target.style.borderColor = '#ccc';
                       }}
                     />
-                    <span 
+                    <span
                       className="ptwikki-eye-icon"
                       onClick={() => setShowPassword(!showPassword)}
                       style={{
@@ -219,20 +219,20 @@ export default function LoginPage() {
                         height: '20px'
                       }}
                     >
-                      <svg 
-                        width="16" 
-                        height="16" 
-                        viewBox="0 0 24 24" 
-                        fill="none" 
-                        stroke="currentColor" 
-                        strokeWidth="2" 
-                        strokeLinecap="round" 
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
                         strokeLinejoin="round"
                       >
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                        <circle cx="12" cy="12" r="3"/>
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                        <circle cx="12" cy="12" r="3" />
                         {showPassword && (
-                          <line x1="1" y1="1" x2="23" y2="23" stroke="#ff4444" strokeWidth="2"/>
+                          <line x1="1" y1="1" x2="23" y2="23" stroke="#ff4444" strokeWidth="2" />
                         )}
                       </svg>
                     </span>
@@ -263,16 +263,16 @@ export default function LoginPage() {
             />
 
             <Box className="ptwikki-options">
-              <label style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
+              <label style={{
+                display: 'flex',
+                alignItems: 'center',
                 gap: '8px',
                 color: '#333333',
                 fontSize: '13px',
                 cursor: 'pointer'
               }}>
-                <input 
-                  type="checkbox" 
+                <input
+                  type="checkbox"
                   style={{
                     width: '16px',
                     height: '16px',
@@ -297,10 +297,10 @@ export default function LoginPage() {
           </form>
         </div>
       </div>
-      
+
       {/* Recommended Resolution Text */}
-      <Typography 
-        variant="body2" 
+      <Typography
+        variant="body2"
         style={{
           position: 'absolute',
           bottom: '20px',
