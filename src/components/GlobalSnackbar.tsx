@@ -55,7 +55,7 @@ const GlobalSnackbar: React.FC<GlobalSnackbarProps> = ({
                 padding: '12px 20px',
                 borderRadius: '6px',
                 boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-                zIndex: 9999,
+                zIndex: 999999,
                 fontFamily: "'Roboto', sans-serif",
                 fontWeight: 500,
                 fontSize: '0.9rem',

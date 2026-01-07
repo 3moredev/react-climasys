@@ -2126,7 +2126,48 @@ export default function AppointmentTable() {
     };
 
     const handleOnlineChange = (index: number, value: string) => {
-        updateAppointmentField(index, 'online', value);
+        const prevValue = appointments[index].online || '';
+
+        // Handle backspace/deletion: if simply getting shorter, allow it
+        if (value.length < prevValue.length) {
+            updateAppointmentField(index, 'online', value);
+            return;
+        }
+
+        // Sanitize: allow only digits
+        const digits = value.replace(/\D/g, '');
+
+        // Absolute max length is 4 digits (HHmm), plus colon makes 5 chars max
+        if (digits.length > 4) return;
+
+        let formatted = digits;
+
+        // Formatting and Validation Logic
+        if (digits.length >= 2) {
+            const hh = parseInt(digits.substring(0, 2), 10);
+
+            // Validate Hour (00-23)
+            if (hh > 23) {
+                // Reject invalid hour immediately
+                return;
+            }
+
+            // Auto-insert colon after 2 digits
+            formatted = digits.substring(0, 2) + ':';
+
+            if (digits.length > 2) {
+                const mmStr = digits.substring(2);
+                formatted += mmStr;
+
+                // Validate Minute (00-59)
+                if (mmStr.length === 2) {
+                    const mm = parseInt(mmStr, 10);
+                    if (mm > 59) return; // Reject invalid minutes
+                }
+            }
+        }
+
+        updateAppointmentField(index, 'online', formatted);
     };
 
     const handleProviderChange = (index: number, value: string) => {
