@@ -58,7 +58,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
         comment: '',
         selectedLabTest: ''
     });
-
+    const [patientName, setPatientName] = useState('');
     const [labTestResults, setLabTestResults] = useState<LabTestResult[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -67,7 +67,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
     const [snackbarMessage, setSnackbarMessage] = useState('');
 
     // Dynamic Lab Test selector states (options now include parameters for each test)
-    type LabTestParameter = { id: string; name: string };
+    type LabTestParameter = { id: strisetPatientNameng; name: string };
     type LabTestOption = { value: string; label: string; parameters: LabTestParameter[] };
     const [isLabTestsOpen, setIsLabTestsOpen] = useState(false);
     const [labTestSearch, setLabTestSearch] = useState('');
@@ -116,7 +116,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
     const doctorDisplayName = useMemo(() => {
         // If no provider name, try to get doctor name from allDoctors using doctorId
         const id = (patientData as any)?.doctorId || (appointment as any)?.doctorId || (sessionData as any)?.doctorId;
-        console.log('checking id:', id);
+        console.log('checking id:', id);        
         if (id && allDoctors.length > 0) {
             // First try to find by ID
             let doctor = allDoctors.find(d => d.id === id);
@@ -216,6 +216,8 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
         if (!open) return;
         const doctorId = patientData?.doctorId || (patientData?.provider ?? '').toString();
         const clinicId = patientData?.clinicId || sessionData?.clinicId || 'DEFAULT_CLINIC';
+        const patientString = patientData?.patient +' / '+ patientData?.gender +' / '+ patientData?.age+' Y ' +' / '+ patientData?.contact;
+        setPatientName(patientString);
         if (!doctorId) return;
         setLabTestsLoading(true);
         setLabTestsError(null);
@@ -917,13 +919,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                     }}
                                     title={patientData?.patientId ? 'Click to view patient details' : ''}
                                 >
-                                    <span>{patientData.patient}</span>
-                                    <span>/</span>
-                                    <span>{patientData.gender}</span>
-                                    <span>/</span>
-                                    <span>{patientData.age} Y</span>
-                                    <span>/</span>
-                                    <span>{patientData.contact}</span>
+                                    {patientName}
                                 </div>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
