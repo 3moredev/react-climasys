@@ -3,7 +3,7 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import { useNavigate, useLocation } from "react-router-dom";
 import { visitService, ComprehensiveVisitDataRequest } from '../services/visitService';
 import { sessionService, SessionInfo } from "../services/sessionService";
-import { Delete, Edit, Add, Info, ExpandMore, ExpandLess,Download as DownloadIcon } from '@mui/icons-material';
+import { Delete, Edit, Add, Info, ExpandMore, ExpandLess, Download as DownloadIcon } from '@mui/icons-material';
 import { Snackbar } from '@mui/material';
 import { complaintService, ComplaintOption } from "../services/complaintService";
 import { medicineService, MedicineOption } from "../services/medicineService";
@@ -224,12 +224,12 @@ export default function Treatment() {
     const [snackbarMessage, setSnackbarMessage] = useState('');
     const [hasSubmittedSuccessfully, setHasSubmittedSuccessfully] = useState<boolean>(false);
     const [statusId, setStatusId] = useState<number>(9);
-    
+
     // Update isFormDisabled based on statusId (5 = Complete)
     useEffect(() => {
         setIsFormDisabled(statusId === 5);
     }, [statusId]);
-    
+
     // Form data state
     const [formData, setFormData] = useState({
         referralBy: 'Self',
@@ -291,16 +291,16 @@ export default function Treatment() {
 
     // Complaint popup state
     const [showComplaintPopup, setShowComplaintPopup] = useState(false);
-    
+
     // Diagnosis popup state
     const [showDiagnosisPopup, setShowDiagnosisPopup] = useState(false);
-    
+
     // Medicine popup state
     const [showMedicinePopup, setShowMedicinePopup] = useState(false);
-    
+
     // Prescription popup state
     const [showPrescriptionPopup, setShowPrescriptionPopup] = useState(false);
-    
+
     // Test Lab popup state
     const [showTestLabPopup, setShowTestLabPopup] = useState(false);
 
@@ -309,7 +309,7 @@ export default function Treatment() {
 
     // Complaints and diagnosis data
     const [complaintsRows, setComplaintsRows] = useState<ComplaintRow[]>([]);
-    
+
     // Enhanced complaints multi-select state
     const [selectedComplaints, setSelectedComplaints] = useState<string[]>([]);
     const [complaintSearch, setComplaintSearch] = useState('');
@@ -326,10 +326,10 @@ export default function Treatment() {
     const [showBillingPopup, setShowBillingPopup] = useState<boolean>(false);
     const [showPrintReceiptPopup, setShowPrintReceiptPopup] = useState<boolean>(false);
     const [totalSelectedFees, setTotalSelectedFees] = useState<number>(0);
-    
+
     const filteredComplaints = React.useMemo(() => {
         const term = complaintSearch.trim().toLowerCase();
-        
+
         if (!term) {
             // No search term - show all options with selected ones first
             const selectedOptions = complaintsOptions.filter(opt => selectedComplaints.includes(opt.value));
@@ -337,16 +337,16 @@ export default function Treatment() {
             return [...selectedOptions, ...unselectedOptions];
         } else {
             // Search term provided - show selected items first, then search results
-            const selectedOptions = complaintsOptions.filter(opt => 
+            const selectedOptions = complaintsOptions.filter(opt =>
                 selectedComplaints.includes(opt.value) && opt.label.toLowerCase().includes(term)
             );
-            const unselectedSearchResults = complaintsOptions.filter(opt => 
+            const unselectedSearchResults = complaintsOptions.filter(opt =>
                 !selectedComplaints.includes(opt.value) && opt.label.toLowerCase().includes(term)
             );
             return [...selectedOptions, ...unselectedSearchResults];
         }
     }, [complaintsOptions, complaintSearch, selectedComplaints]);
-    
+
     // Medicine multi-select state
     const [selectedMedicines, setSelectedMedicines] = useState<string[]>([]);
     const [medicineSearch, setMedicineSearch] = useState('');
@@ -355,10 +355,10 @@ export default function Treatment() {
     const [medicinesOptions, setMedicinesOptions] = useState<MedicineOption[]>([]);
     const [medicinesLoading, setMedicinesLoading] = useState(false);
     const [medicinesError, setMedicinesError] = useState<string | null>(null);
-    
+
     const filteredMedicines = React.useMemo(() => {
         const term = medicineSearch.trim().toLowerCase();
-        
+
         if (!term) {
             // No search term - show all options with selected ones first
             const selectedOptions = medicinesOptions.filter(opt => selectedMedicines.includes(opt.value));
@@ -366,16 +366,16 @@ export default function Treatment() {
             return [...selectedOptions, ...unselectedOptions];
         } else {
             // Search term provided - show selected items first, then search results
-            const selectedOptions = medicinesOptions.filter(opt => 
+            const selectedOptions = medicinesOptions.filter(opt =>
                 selectedMedicines.includes(opt.value) && opt.label.toLowerCase().includes(term)
             );
-            const unselectedSearchResults = medicinesOptions.filter(opt => 
+            const unselectedSearchResults = medicinesOptions.filter(opt =>
                 !selectedMedicines.includes(opt.value) && opt.label.toLowerCase().includes(term)
             );
             return [...selectedOptions, ...unselectedSearchResults];
         }
     }, [medicinesOptions, medicineSearch, selectedMedicines]);
-    
+
     // Diagnosis multi-select state
     const [selectedDiagnoses, setSelectedDiagnoses] = useState<string[]>([]);
     const [diagnosisSearch, setDiagnosisSearch] = useState('');
@@ -384,10 +384,10 @@ export default function Treatment() {
     const [diagnosesOptions, setDiagnosesOptions] = useState<DiagnosisOption[]>([]);
     const [diagnosesLoading, setDiagnosesLoading] = useState(false);
     const [diagnosesError, setDiagnosesError] = useState<string | null>(null);
-    
+
     const filteredDiagnoses = React.useMemo(() => {
         const term = diagnosisSearch.trim().toLowerCase();
-        
+
         if (!term) {
             // No search term - show all options with selected ones first
             const selectedOptions = diagnosesOptions.filter(opt => selectedDiagnoses.includes(opt.value));
@@ -395,23 +395,23 @@ export default function Treatment() {
             return [...selectedOptions, ...unselectedOptions];
         } else {
             // Search term provided - show selected items first, then search results
-            const selectedOptions = diagnosesOptions.filter(opt => 
+            const selectedOptions = diagnosesOptions.filter(opt =>
                 selectedDiagnoses.includes(opt.value) && opt.label.toLowerCase().includes(term)
             );
-            const unselectedSearchResults = diagnosesOptions.filter(opt => 
+            const unselectedSearchResults = diagnosesOptions.filter(opt =>
                 !selectedDiagnoses.includes(opt.value) && opt.label.toLowerCase().includes(term)
             );
             return [...selectedOptions, ...unselectedSearchResults];
         }
     }, [diagnosesOptions, diagnosisSearch, selectedDiagnoses]);
-    
+
     const [diagnosisRows, setDiagnosisRows] = useState<DiagnosisRow[]>([]);
     const [medicineRows, setMedicineRows] = useState<MedicineRow[]>([]);
     const [prescriptionRows, setPrescriptionRows] = useState<PrescriptionRow[]>([]);
     const [selectedComplaint, setSelectedComplaint] = useState('');
     const [selectedDiagnosis, setSelectedDiagnosis] = useState('');
     const [prescriptionInput, setPrescriptionInput] = useState('');
-    
+
     // Investigation multi-select state (mirrors Diagnosis)
     const [selectedInvestigations, setSelectedInvestigations] = useState<string[]>([]);
     const [investigationSearch, setInvestigationSearch] = useState('');
@@ -428,10 +428,10 @@ export default function Treatment() {
             const unselectedOptions = investigationsOptions.filter(opt => !selectedInvestigations.includes(opt.value));
             return [...selectedOptions, ...unselectedOptions];
         } else {
-            const selectedOptions = investigationsOptions.filter(opt => 
+            const selectedOptions = investigationsOptions.filter(opt =>
                 selectedInvestigations.includes(opt.value) && opt.label.toLowerCase().includes(term)
             );
-            const unselectedSearchResults = investigationsOptions.filter(opt => 
+            const unselectedSearchResults = investigationsOptions.filter(opt =>
                 !selectedInvestigations.includes(opt.value) && opt.label.toLowerCase().includes(term)
             );
             return [...selectedOptions, ...unselectedSearchResults];
@@ -439,11 +439,11 @@ export default function Treatment() {
     }, [investigationsOptions, investigationSearch, selectedInvestigations]);
 
     const [investigationRows, setInvestigationRows] = useState<InvestigationRow[]>([]);
-    
+
     // Previous visit prescriptions state
     const [showPreviousVisit, setShowPreviousVisit] = useState(false);
     const [previousVisitPrescriptions, setPreviousVisitPrescriptions] = useState<PrescriptionRow[]>([]);
-    
+
     // Additional form data
     const [followUpData, setFollowUpData] = useState({
         followUpType: '',
@@ -460,7 +460,7 @@ export default function Treatment() {
     const [followUpTypesOptions, setFollowUpTypesOptions] = useState<FollowUpTypeItem[]>([]);
     const [followUpTypesLoading, setFollowUpTypesLoading] = useState(false);
     const [followUpTypesError, setFollowUpTypesError] = useState<string | null>(null);
-    
+
     // Master list driven display data for tables
     const [mlComplaints, setMlComplaints] = useState<Array<{ label: string; comment?: string }>>([]);
     const [mlDiagnosis, setMlDiagnosis] = useState<Array<{ label: string }>>([]);
@@ -485,17 +485,17 @@ export default function Treatment() {
         receiptDate: '',
         reason: ''
     });
-    
+
     // Folder amount API response data
     const [folderAmountData, setFolderAmountData] = useState<{
         success?: boolean;
         totalAcBalance?: number;
         rows?: any[];
     } | null>(null);
-    
+
     // Ref to track if folder-amount API has set acBalance (to prevent master-lists from overwriting)
     const folderAmountSetRef = React.useRef<boolean>(false);
-    
+
     // Attachments data
     const [attachments, setAttachments] = useState<Attachment[]>([
         { id: '1', name: 'AniruddhaTongaonkar.Pdf', type: 'pdf' },
@@ -659,17 +659,17 @@ export default function Treatment() {
                 }
                 const groupName = row.prescription ? escapeHtml(row.prescription) : '';
                 let instructionText = row.instruction.trim();
-                
+
                 // Escape HTML first
                 instructionText = escapeHtml(instructionText);
-                
+
                 // Replace multiple spaces (2 or more) with line breaks to separate instruction items
                 // This handles cases like "item1        item2        item3"
                 let formattedText = instructionText.replace(/\s{2,}/g, '<br/>');
-                
+
                 // Also handle explicit line breaks
                 formattedText = formattedText.replace(/\n/g, '<br/>');
-                
+
                 return `
                     <div style="margin-top: 15px; margin-bottom: 10px;">
                         ${groupName ? `<div style="font-size: 14px; font-weight: bold; margin-bottom: 8px;">${groupName}</div>` : ''}
@@ -754,7 +754,7 @@ export default function Treatment() {
 
         // Flag to track if we've already triggered lab results print
         let labResultsPrinted = false;
-        
+
         // Function to handle printing lab results after prescription print
         const handleLabResultsPrint = () => {
             // Use ref to get labTestsAsked from API
@@ -764,7 +764,7 @@ export default function Treatment() {
             console.log('🔍 currentLabTestsAsked (from ref):', currentLabTestsAsked);
             console.log('🔍 currentLabTestsAsked length:', currentLabTestsAsked?.length);
             console.log('🔍 currentLabTestsAsked is array:', Array.isArray(currentLabTestsAsked));
-            
+
             if (!labResultsPrinted) {
                 // Check if labTestsAsked exist using ref
                 if (currentLabTestsAsked && Array.isArray(currentLabTestsAsked) && currentLabTestsAsked.length > 0) {
@@ -796,7 +796,7 @@ export default function Treatment() {
                 const win = iframe.contentWindow;
                 if (win) {
                     let cleanupDone = false;
-                    
+
                     const cleanup = () => {
                         if (cleanupDone) return;
                         cleanupDone = true;
@@ -806,26 +806,26 @@ export default function Treatment() {
                             }
                         }, 100);
                     };
-                    
+
                     // Method 1: Listen for afterprint event
                     const handleAfterPrint = () => {
                         console.log('✅ afterprint event detected');
                         cleanup();
                         handleLabResultsPrint();
                     };
-                    
+
                     // Add listeners to both iframe and main window
                     win.addEventListener('afterprint', handleAfterPrint);
                     window.addEventListener('afterprint', handleAfterPrint);
-                    
+
                     // Method 2: Use window focus/blur events (more reliable)
                     let printDialogOpened = false;
-                    
+
                     const handleWindowBlur = () => {
                         console.log('Window blurred - print dialog opened');
                         printDialogOpened = true;
                     };
-                    
+
                     const handleWindowFocus = () => {
                         if (printDialogOpened) {
                             console.log('✅ Window focused - print dialog closed');
@@ -838,22 +838,22 @@ export default function Treatment() {
                             }, 300);
                         }
                     };
-                    
+
                     // Add focus/blur listeners
                     window.addEventListener('blur', handleWindowBlur);
                     window.addEventListener('focus', handleWindowFocus);
-                    
+
                     // Clean up listeners after 10 seconds
                     setTimeout(() => {
                         window.removeEventListener('blur', handleWindowBlur);
                         window.removeEventListener('focus', handleWindowFocus);
                         window.removeEventListener('afterprint', handleAfterPrint);
                     }, 10000);
-                    
+
                     // Method 3: Simple timeout fallback
                     win.focus();
                     win.print();
-                    
+
                     // Fallback timeout - triggers second print after 2 seconds
                     setTimeout(() => {
                         if (!labResultsPrinted) {
@@ -887,12 +887,12 @@ export default function Treatment() {
         console.log('🔍 currentLabTestsAsked (from ref):', currentLabTestsAsked);
         console.log('🔍 currentLabTestsAsked length:', currentLabTestsAsked?.length);
         console.log('🔍 currentLabTestsAsked is array:', Array.isArray(currentLabTestsAsked));
-        
+
         if (!currentLabTestsAsked || !Array.isArray(currentLabTestsAsked) || currentLabTestsAsked.length === 0) {
             console.log('❌ No lab tests asked to print - invalid or empty data');
             return;
         }
-        
+
         console.log('✅ Starting lab test results print with', currentLabTestsAsked.length, 'lab tests...');
 
         // Format visit date (same as prescription print)
@@ -1035,7 +1035,7 @@ export default function Treatment() {
                     ? raw.map((r: any) => ({
                         value: toStr(r?.id ?? r?.value ?? r?.code ?? r?.paymentById ?? r?.key ?? r),
                         label: toStr(r?.paymentDescription ?? r?.description ?? r?.label ?? r?.name ?? r?.paymentBy ?? r)
-                      })).filter(o => o.label)
+                    })).filter(o => o.label)
                     : [];
                 // Initialize selected value if empty
                 if (options.length > 0) {
@@ -1052,66 +1052,66 @@ export default function Treatment() {
 
     const [paymentByOptions, setPaymentByOptions] = useState<Array<{ value: string; label: string }>>([]);
 
-        // Billing details (from symptom-data API)
-        const [billingDetailsOptions, setBillingDetailsOptions] = useState<BillingDetailOption[]>([]);
-        const [selectedBillingDetailIds, setSelectedBillingDetailIds] = useState<string[]>([]);
-        const [isBillingOpen, setIsBillingOpen] = useState(false);
-        const [billingSearch, setBillingSearch] = useState('');
-        const billingRef = React.useRef<HTMLDivElement | null>(null);
-    
+    // Billing details (from symptom-data API)
+    const [billingDetailsOptions, setBillingDetailsOptions] = useState<BillingDetailOption[]>([]);
+    const [selectedBillingDetailIds, setSelectedBillingDetailIds] = useState<string[]>([]);
+    const [isBillingOpen, setIsBillingOpen] = useState(false);
+    const [billingSearch, setBillingSearch] = useState('');
+    const billingRef = React.useRef<HTMLDivElement | null>(null);
+
     const filteredBillingDetails = React.useMemo(() => {
-            const term = billingSearch.trim().toLowerCase();
-            if (!term) {
-                const selectedOptions = billingDetailsOptions.filter(opt => selectedBillingDetailIds.includes(opt.id));
-                const unselectedOptions = billingDetailsOptions.filter(opt => !selectedBillingDetailIds.includes(opt.id));
-                return [...selectedOptions, ...unselectedOptions];
+        const term = billingSearch.trim().toLowerCase();
+        if (!term) {
+            const selectedOptions = billingDetailsOptions.filter(opt => selectedBillingDetailIds.includes(opt.id));
+            const unselectedOptions = billingDetailsOptions.filter(opt => !selectedBillingDetailIds.includes(opt.id));
+            return [...selectedOptions, ...unselectedOptions];
+        }
+        const matches = (opt: BillingDetailOption) =>
+            (opt.billing_details || '').toLowerCase().includes(term) ||
+            (opt.billing_group_name || '').toLowerCase().includes(term) ||
+            (opt.billing_subgroup_name || '').toLowerCase().includes(term);
+
+        const selectedFiltered = billingDetailsOptions.filter(opt => selectedBillingDetailIds.includes(opt.id) && matches(opt));
+        const unselectedFiltered = billingDetailsOptions.filter(opt => !selectedBillingDetailIds.includes(opt.id) && matches(opt));
+        return [...selectedFiltered, ...unselectedFiltered];
+    }, [billingDetailsOptions, billingSearch, selectedBillingDetailIds]);
+
+    useEffect(() => {
+        let cancelled = false;
+        async function loadBillingDetails() {
+            if (!treatmentData?.doctorId || !sessionData?.clinicId) return;
+            try {
+                const doctorId = encodeURIComponent(treatmentData.doctorId);
+                const clinicId = encodeURIComponent(sessionData.clinicId);
+                const resp = await fetch(`/api/refdata/symptom-data?doctorId=${doctorId}&clinicId=${clinicId}`);
+                if (!resp.ok) throw new Error(`Failed to load billing details (${resp.status})`);
+                const data = await resp.json();
+                const raw: any[] = Array.isArray(data?.billingDetails)
+                    ? data.billingDetails
+                    : Array.isArray(data?.resultSet2)
+                        ? data.resultSet2
+                        : [];
+                const mapped: BillingDetailOption[] = raw.map((item: any, idx: number) => ({
+                    id: String(item.id ?? item.sequence_no ?? idx),
+                    billing_details: String(item.billing_details ?? item.billing_group_name ?? 'Unknown'),
+                    billing_group_name: item.billing_group_name,
+                    billing_subgroup_name: item.billing_subgroup_name,
+                    default_fees: typeof item.default_fees === 'number' ? item.default_fees : Number(item.default_fees ?? 0),
+                    visit_type: item.visit_type,
+                    visit_type_description: item.visit_type_description,
+                    visit_type_id: item.visit_type_id,
+                    isdefault: Boolean(item.isdefault),
+                    sequence_no: typeof item.sequence_no === 'number' ? item.sequence_no : Number(item.sequence_no ?? idx)
+                }));
+                if (!cancelled) setBillingDetailsOptions(mapped);
+            } catch (e) {
+                console.error('Error loading billing details:', e);
+                if (!cancelled) setBillingDetailsOptions([]);
             }
-            const matches = (opt: BillingDetailOption) =>
-                (opt.billing_details || '').toLowerCase().includes(term) ||
-                (opt.billing_group_name || '').toLowerCase().includes(term) ||
-                (opt.billing_subgroup_name || '').toLowerCase().includes(term);
-    
-            const selectedFiltered = billingDetailsOptions.filter(opt => selectedBillingDetailIds.includes(opt.id) && matches(opt));
-            const unselectedFiltered = billingDetailsOptions.filter(opt => !selectedBillingDetailIds.includes(opt.id) && matches(opt));
-            return [...selectedFiltered, ...unselectedFiltered];
-        }, [billingDetailsOptions, billingSearch, selectedBillingDetailIds]);
-    
-        useEffect(() => {
-            let cancelled = false;
-            async function loadBillingDetails() {
-                if (!treatmentData?.doctorId || !sessionData?.clinicId) return;
-                try {
-                    const doctorId = encodeURIComponent(treatmentData.doctorId);
-                    const clinicId = encodeURIComponent(sessionData.clinicId);
-                    const resp = await fetch(`/api/refdata/symptom-data?doctorId=${doctorId}&clinicId=${clinicId}`);
-                    if (!resp.ok) throw new Error(`Failed to load billing details (${resp.status})`);
-                    const data = await resp.json();
-                    const raw: any[] = Array.isArray(data?.billingDetails)
-                        ? data.billingDetails
-                        : Array.isArray(data?.resultSet2)
-                            ? data.resultSet2
-                            : [];
-                    const mapped: BillingDetailOption[] = raw.map((item: any, idx: number) => ({
-                        id: String(item.id ?? item.sequence_no ?? idx),
-                        billing_details: String(item.billing_details ?? item.billing_group_name ?? 'Unknown'),
-                        billing_group_name: item.billing_group_name,
-                        billing_subgroup_name: item.billing_subgroup_name,
-                        default_fees: typeof item.default_fees === 'number' ? item.default_fees : Number(item.default_fees ?? 0),
-                        visit_type: item.visit_type,
-                        visit_type_description: item.visit_type_description,
-                        visit_type_id: item.visit_type_id,
-                        isdefault: Boolean(item.isdefault),
-                        sequence_no: typeof item.sequence_no === 'number' ? item.sequence_no : Number(item.sequence_no ?? idx)
-                    }));
-                    if (!cancelled) setBillingDetailsOptions(mapped);
-                } catch (e) {
-                    console.error('Error loading billing details:', e);
-                    if (!cancelled) setBillingDetailsOptions([]);
-                }
-            }
-            loadBillingDetails();
-            return () => { cancelled = true; };
-        }, [treatmentData?.doctorId, sessionData?.clinicId]);
+        }
+        loadBillingDetails();
+        return () => { cancelled = true; };
+    }, [treatmentData?.doctorId, sessionData?.clinicId]);
 
     // Load master lists for the current visit context
     useEffect(() => {
@@ -1209,18 +1209,18 @@ export default function Treatment() {
                             const uiFields = (dataRoot as any)?.uiFields || {};
                             // Get followUpDescription from response and find matching ID
                             const followUpDesc = (uiFields?.followUpDescription ?? vitals?.follow_up_description ?? vitals?.followUpDescription ?? '') as string;
-                            
+
                             // Store the description for later matching when options load
                             if (followUpDesc) {
                                 setStoredFollowUpDescription(followUpDesc);
                             }
-                            
+
                             let fuTypeId = '';
                             if (followUpDesc && followUpTypesOptions.length > 0) {
                                 // Find the follow-up type by description
                                 const matchedOption = followUpTypesOptions.find(
                                     opt => opt.followUpDescription?.toLowerCase() === followUpDesc.toLowerCase() ||
-                                           opt.followUpDescription === followUpDesc
+                                        opt.followUpDescription === followUpDesc
                                 );
                                 if (matchedOption) {
                                     fuTypeId = matchedOption.id;
@@ -1236,7 +1236,7 @@ export default function Treatment() {
                                 ...prev,
                                 followUpType: fuTypeId ? String(fuTypeId) : prev.followUpType,
                                 followUp: vitals.follow_up_comment !== undefined ? String(vitals.follow_up_comment) : prev.followUp,
-                                followUpDate: fuDate ? String(fuDate) : prev.followUpDate, 
+                                followUpDate: fuDate ? String(fuDate) : prev.followUpDate,
                                 planAdv: vitals.instructions !== undefined ? String(vitals.instructions) : prev.planAdv,
                                 fud: vitals.follow_up_type !== undefined ? String(vitals.follow_up_type) : prev.fud
                             }));
@@ -1246,16 +1246,16 @@ export default function Treatment() {
                                 // Check for billed value from multiple sources: uiFields.billedRs, vitals.fees_to_collect, or vitals.Fees_To_Collect
                                 const billedValue = uiFields?.billedRs ?? vitals?.fees_to_collect ?? vitals?.Fees_To_Collect ?? prev.billed;
                                 const billedStr = billedValue !== undefined && billedValue !== null ? String(billedValue) : prev.billed;
-                                
+
                                 // Don't overwrite acBalance if folder-amount API has already set it
                                 // Use ref to check if folder-amount API has set the value (more reliable than state)
-                                const acBalanceValue = folderAmountSetRef.current ? prev.acBalance : 
+                                const acBalanceValue = folderAmountSetRef.current ? prev.acBalance :
                                     (uiFields?.acBalanceRs !== undefined && uiFields?.acBalanceRs !== null ? String(uiFields.acBalanceRs) : prev.acBalance);
-                                
+
                                 // Check for collectedRs from multiple sources: dataRoot.collectedRs, uiFields.feesCollected, or uiFields.collectedRs
                                 const collectedValue = dataRoot?.collectedRs ?? uiFields?.feesCollected ?? uiFields?.collectedRs ?? prev.feesCollected;
                                 const collectedStr = collectedValue !== undefined && collectedValue !== null ? String(collectedValue) : prev.feesCollected;
-                                
+
                                 // Format receiptDate from ISO string to readable format if available
                                 let receiptDateStr = prev.receiptDate;
                                 if (uiFields?.receiptDate !== undefined && uiFields?.receiptDate !== null) {
@@ -1274,17 +1274,17 @@ export default function Treatment() {
                                         receiptDateStr = String(uiFields.receiptDate);
                                     }
                                 }
-                                
+
                                 // Handle paymentBy - convert to string if it's a number
-                                const paymentByValue = uiFields?.paymentBy !== undefined && uiFields?.paymentBy !== null 
-                                    ? String(uiFields.paymentBy) 
+                                const paymentByValue = uiFields?.paymentBy !== undefined && uiFields?.paymentBy !== null
+                                    ? String(uiFields.paymentBy)
                                     : prev.paymentBy;
-                                
+
                                 // Handle paymentRemark - allow null/empty string to clear the field
-                                const paymentRemarkValue = uiFields?.paymentRemark !== undefined 
+                                const paymentRemarkValue = uiFields?.paymentRemark !== undefined
                                     ? (uiFields.paymentRemark !== null ? String(uiFields.paymentRemark) : '')
                                     : prev.paymentRemark;
-                                
+
                                 // Handle reason - prefer vitals[0].comment, fall back to uiFields/dataRoot, then keep previous
                                 const reasonValue =
                                     vitals?.comment ??
@@ -1295,7 +1295,7 @@ export default function Treatment() {
                                     prev.reason;
                                 const reasonStr = reasonValue !== undefined && reasonValue !== null ? String(reasonValue) : prev.reason;
                                 console.log('reasonValue', reasonValue);
-                                
+
                                 return {
                                     ...prev,
                                     billed: billedStr,
@@ -1310,7 +1310,7 @@ export default function Treatment() {
                                     reason: reasonStr
                                 };
                             });
-                            
+
                             // Load statusId from master lists (vitals or uiFields)
                             const loadedStatusId = vitals?.statusId ?? vitals?.status_id ?? uiFields?.statusId ?? dataRoot?.statusId;
                             if (loadedStatusId !== undefined && loadedStatusId !== null) {
@@ -1387,7 +1387,7 @@ export default function Treatment() {
                         } else {
                             labTestsAskedRef.current = [];
                         }
-                        
+
                         // Store billing array from master-lists API to use collected_fees for receipt details
                         const billingArray = Array.isArray(dataRoot?.billing) ? dataRoot.billing : [];
                         if (Array.isArray(billingArray) && billingArray.length > 0) {
@@ -1427,29 +1427,29 @@ export default function Treatment() {
 
         // Match billing items from master-lists to existing billing options by fields
         const matchedIds: string[] = [];
-        
+
         billingArray.forEach((billingItem: any) => {
             // Find matching option by comparing billing fields (case-insensitive, trimmed)
             // Try exact match first, then try matching by subgroup and group if details don't match
             const itemGroup = (billingItem.billing_group_name || '').trim().toLowerCase();
             const itemSubgroup = (billingItem.billing_subgroup_name || '').trim().toLowerCase();
             const itemDetails = (billingItem.billing_details || '').trim().toLowerCase();
-            
+
             let match = billingDetailsOptions.find(opt => {
                 const optGroup = (opt.billing_group_name || '').trim().toLowerCase();
                 const optSubgroup = (opt.billing_subgroup_name || '').trim().toLowerCase();
                 const optDetails = (opt.billing_details || '').trim().toLowerCase();
-                
+
                 // Exact match: all three fields match
                 return optGroup === itemGroup && optSubgroup === itemSubgroup && optDetails === itemDetails;
             });
-            
+
             // If no exact match, try matching by group and subgroup only (more flexible)
             if (!match) {
                 match = billingDetailsOptions.find(opt => {
                     const optGroup = (opt.billing_group_name || '').trim().toLowerCase();
                     const optSubgroup = (opt.billing_subgroup_name || '').trim().toLowerCase();
-                    
+
                     return optGroup === itemGroup && optSubgroup === itemSubgroup;
                 });
             }
@@ -1485,7 +1485,7 @@ export default function Treatment() {
         if (matchedIds.length > 0) {
             setSelectedBillingDetailIds(matchedIds);
             console.log('Pre-selected billing IDs from master-lists:', matchedIds);
-            
+
             // Calculate and update Billed field based on selected items
             const totalDefaultFees = matchedIds.reduce((sum: number, id: string) => {
                 const opt = billingDetailsOptions.find(o => o.id === id);
@@ -1495,7 +1495,7 @@ export default function Treatment() {
                 }
                 return sum;
             }, 0);
-            
+
             console.log('Calculated total default_fees from selected checkboxes:', totalDefaultFees.toFixed(2));
             setBillingData(prev => ({
                 ...prev,
@@ -1571,13 +1571,13 @@ export default function Treatment() {
             const doctorId = treatmentData?.doctorId || sessionData?.doctorId;
             const clinicId = treatmentData?.clinicId || sessionData?.clinicId;
             if (!doctorId || !clinicId) return;
-            
+
             setComplaintsLoading(true);
             setComplaintsError(null);
-            
+
             try {
                 console.log('Loading complaints for doctor:', doctorId, 'clinic:', clinicId);
-                
+
                 const complaints = await complaintService.getAllComplaintsForDoctor(doctorId, clinicId);
                 if (!cancelled) {
                     setComplaintsOptions(complaints);
@@ -1594,7 +1594,7 @@ export default function Treatment() {
                 }
             }
         }
-        
+
         loadComplaints();
         return () => {
             cancelled = true;
@@ -1618,15 +1618,15 @@ export default function Treatment() {
         let cancelled = false;
         async function loadMedicines() {
             if (!treatmentData?.doctorId || !sessionData?.clinicId) return;
-            
+
             setMedicinesLoading(true);
             setMedicinesError(null);
-            
+
             try {
                 const doctorId = treatmentData.doctorId;
                 const clinicId = sessionData.clinicId;
                 console.log('Loading medicines for doctor:', doctorId, 'and clinic:', clinicId);
-                
+
                 const medicines = await medicineService.getActiveMedicinesByDoctorAndClinic(doctorId, clinicId);
                 if (!cancelled) {
                     setMedicinesOptions(medicines);
@@ -1643,7 +1643,7 @@ export default function Treatment() {
                 }
             }
         }
-        
+
         loadMedicines();
         return () => { cancelled = true; };
     }, [treatmentData?.doctorId, sessionData?.clinicId]);
@@ -1665,15 +1665,15 @@ export default function Treatment() {
         let cancelled = false;
         async function loadDiagnoses() {
             if (!treatmentData?.doctorId || !sessionData?.clinicId) return;
-            
+
             setDiagnosesLoading(true);
             setDiagnosesError(null);
-            
+
             try {
                 const doctorId = treatmentData.doctorId;
                 const clinicId = sessionData.clinicId;
                 console.log('Loading diagnoses for doctor:', doctorId, 'and clinic:', clinicId);
-                
+
                 const diagnoses = await diagnosisService.getAllDiagnosesForDoctorAndClinic(doctorId, clinicId);
                 if (!cancelled) {
                     setDiagnosesOptions(diagnoses);
@@ -1690,7 +1690,7 @@ export default function Treatment() {
                 }
             }
         }
-        
+
         loadDiagnoses();
         return () => { cancelled = true; };
     }, [treatmentData?.doctorId, sessionData?.clinicId]);
@@ -1701,7 +1701,7 @@ export default function Treatment() {
         async function loadFollowUpTypes() {
             setFollowUpTypesLoading(true);
             setFollowUpTypesError(null);
-            
+
             try {
                 const options = await getFollowUpTypes();
                 if (!cancelled) {
@@ -1718,7 +1718,7 @@ export default function Treatment() {
                 }
             }
         }
-        
+
         loadFollowUpTypes();
         return () => { cancelled = true; };
     }, []);
@@ -1728,7 +1728,7 @@ export default function Treatment() {
         if (storedFollowUpDescription && followUpTypesOptions.length > 0) {
             const matchedOption = followUpTypesOptions.find(
                 opt => opt.followUpDescription?.toLowerCase() === storedFollowUpDescription.toLowerCase() ||
-                       opt.followUpDescription === storedFollowUpDescription
+                    opt.followUpDescription === storedFollowUpDescription
             );
             if (matchedOption) {
                 setFollowUpData(prev => {
@@ -2008,7 +2008,7 @@ export default function Treatment() {
             setLoadingPreviousVisits(true);
             setPreviousVisitsError(null);
             const todaysVisitDate = new Date().toISOString().split('T')[0];
-            
+
             const response = await appointmentService.getPatientPreviousVisits({
                 patientId: treatmentData.patientId,
                 doctorId: sessionData.doctorId,
@@ -2034,7 +2034,7 @@ export default function Treatment() {
 
                 const sortedVisits = [...visits].sort((a, b) => parseVisitDate(a) - parseVisitDate(b));
                 setAllVisits(sortedVisits);
-                
+
                 // Extract visit dates for navigation (same as Appointment page)
                 const dates = sortedVisits
                     .map((visit: any) => visit.visit_date || visit.Visit_Date || visit.appointmentDate || visit.appointment_date || '')
@@ -2046,20 +2046,20 @@ export default function Treatment() {
                     // Extract doctor name from visit data
                     const getDoctorName = (visit: any): string => {
                         // Try different possible doctor name fields
-                        const doctorName = visit.DoctorName || visit.doctor_name || visit.Doctor_Name || 
-                                         visit.doctorName || visit.provider || '';
-                        
+                        const doctorName = visit.DoctorName || visit.doctor_name || visit.Doctor_Name ||
+                            visit.doctorName || visit.provider || '';
+
                         if (doctorName) {
                             return doctorName;
                         }
-                        
+
                         // If no direct doctor name, try to get from doctor ID
                         const doctorId = visit.doctor_id || visit.Doctor_ID || visit.doctorId;
                         if (doctorId) {
                             const doctor = allDoctors.find(d => d.id === doctorId);
                             return doctor ? `${doctor.firstName} ${doctor.lastName}`.trim() : '';
                         }
-                        
+
                         return 'Unknown Doctor';
                     };
 
@@ -2067,7 +2067,7 @@ export default function Treatment() {
                     const getVisitType = (visit: any): string => {
                         // Check PLR field (PLR = Prescription/Lab/Radiology indicators)
                         const plr = String(visit.PLR || visit.plr || visit.plr_indicators || '').toUpperCase();
-                        
+
                         if (plr) {
                             // If PLR contains 'L', it's a Lab visit
                             if (plr.includes('L')) {
@@ -2082,7 +2082,7 @@ export default function Treatment() {
                                 return 'L';
                             }
                         }
-                        
+
                         // Default to 'P' if PLR is empty or not found
                         return '';
                     };
@@ -2104,7 +2104,7 @@ export default function Treatment() {
                 if (sortedVisits.length > 0) {
                     const latestVisit = sortedVisits[sortedVisits.length - 1];
                     console.log('Latest visit for prescription extraction:', latestVisit);
-                    
+
                     // Extract prescriptions using the same logic as mapPreviousVisitToInitialData
                     const rxArray = ((): any[] => {
                         // First try the existing prescription fields
@@ -2206,7 +2206,7 @@ export default function Treatment() {
         let cancelled = false;
         // Reset the ref when patient changes
         folderAmountSetRef.current = false;
-        
+
         async function loadPatientFolderAmount() {
             if (!treatmentData?.patientId || !sessionData?.clinicId) {
                 return;
@@ -2228,7 +2228,7 @@ export default function Treatment() {
                 params.set('patientId', patientId);
 
                 const response = await fetch(`/api/fees/folder-amount?${params.toString()}`);
-                
+
                 if (cancelled) return;
 
                 if (!response.ok) {
@@ -2241,7 +2241,7 @@ export default function Treatment() {
                 console.log('API URL:', `/api/fees/folder-amount?${params.toString()}`);
                 console.log('Response Data:', data);
                 console.log('==========================================');
-                
+
                 if (!cancelled && data) {
                     setFolderAmountData(data);
                     // Update A/C Balance with totalAcBalance
@@ -2273,11 +2273,11 @@ export default function Treatment() {
 
             const selectedVisit = allVisits[visitIndex];
             const patientName = treatmentData?.patientName || '';
-            
-            setSelectedPatientForForm({ 
-                id: treatmentData?.patientId, 
-                name: patientName, 
-                appointmentRow: null 
+
+            setSelectedPatientForForm({
+                id: treatmentData?.patientId,
+                name: patientName,
+                appointmentRow: null
             });
 
             // Map the selected visit to form data (similar to Appointment page)
@@ -2354,7 +2354,7 @@ export default function Treatment() {
                     return `${dayStr}-${monthStr}-${yearStr}`;
                 }
             }
-            
+
             // Try to parse dd-MM-yyyy format
             const ddMmYyyyDashMatch = dateString.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
             if (ddMmYyyyDashMatch) {
@@ -2369,7 +2369,7 @@ export default function Treatment() {
                     return `${dayStr}-${monthStr}-${yearStr}`;
                 }
             }
-            
+
             // Try standard Date parsing for ISO format or other formats
             const date = new Date(dateString);
             if (!isNaN(date.getTime())) {
@@ -2379,7 +2379,7 @@ export default function Treatment() {
                 const year = String(date.getFullYear()).slice(-2);
                 return `${day}-${month}-${year}`;
             }
-            
+
             return dateString;
         } catch (error) {
             return dateString;
@@ -2575,26 +2575,26 @@ export default function Treatment() {
             // Patch medicines field: combine existing + visit_medicine (short_description) + medicine_names (from prescriptions)
             medicines: (() => {
                 const existingMedicines = toStr(get(visit, 'medicines', 'Current_Medicines', 'current_medicines', 'currentMedicines', 'medications'));
-                
+
                 // Get medicines from visit_medicine table (short_description) - comma-separated string from backend
                 const visitMedicinesStr = toStr(get(visit, 'visit_medicines_short_description', 'visitMedicinesShortDescription', 'Visit_Medicines_Short_Description'));
-                
+
                 // Get medicine_names from visit_prescription_overwrite table (medicine_name) - comma-separated string from backend
                 const medicineNamesStr = toStr(get(visit, 'medicine_names', 'medicineNames', 'Medicine_Names', 'Medicine_Name'));
-                
+
                 // Parse comma-separated strings into arrays
-                const existingList = existingMedicines 
+                const existingList = existingMedicines
                     ? existingMedicines.split(',').map((m: string) => m.trim()).filter((m: string) => m !== '')
                     : [];
-                
-                const visitMedicinesList = visitMedicinesStr 
+
+                const visitMedicinesList = visitMedicinesStr
                     ? visitMedicinesStr.split(',').map((m: string) => m.trim()).filter((m: string) => m !== '')
                     : [];
-                
-                const medicineNamesList = medicineNamesStr 
+
+                const medicineNamesList = medicineNamesStr
                     ? medicineNamesStr.split(',').map((m: string) => m.trim()).filter((m: string) => m !== '')
                     : [];
-                
+
                 // Fallback: If backend strings not available, try array format
                 let fallbackMedicinesList: string[] = [];
                 if (visitMedicinesList.length === 0 && medicineNamesList.length === 0) {
@@ -2608,13 +2608,13 @@ export default function Treatment() {
                             .filter((desc: string) => desc && desc.trim() !== '');
                     }
                 }
-                
+
                 // Combine all medicine sources: existing + visit_medicine (short_description) + medicine_names (prescriptions) + fallback
                 const allMedicines = [...existingList, ...visitMedicinesList, ...medicineNamesList, ...fallbackMedicinesList];
-                
+
                 // Remove duplicates and empty values
                 const uniqueMedicines = Array.from(new Set(allMedicines.filter((m: string) => m !== '')));
-                
+
                 return uniqueMedicines.length > 0 ? uniqueMedicines.join(', ') : existingMedicines;
             })(),
             detailedHistory: toStr(get(visit, 'detailed_history', 'Detailed_History', 'Additional_Comments', 'detailedHistory', 'additional_comments', 'history')),
@@ -2698,16 +2698,16 @@ export default function Treatment() {
     const calculateBMI = (height: string, weight: string): string => {
         const heightNum = parseFloat(height);
         const weightNum = parseFloat(weight);
-        
+
         if (isNaN(heightNum) || isNaN(weightNum) || heightNum <= 0 || weightNum <= 0) {
             return '';
         }
-        
+
         // BMI = weight (kg) / height (m)²
         // Height is in cm, so convert to meters
         const heightInMeters = heightNum / 100;
         const bmi = weightNum / (heightInMeters * heightInMeters);
-        
+
         return bmi.toFixed(1);
     };
 
@@ -2770,7 +2770,7 @@ export default function Treatment() {
             label: complaintDescription,
             comment: ''
         };
-        
+
         setComplaintsRows(prev => [...prev, newComplaint]);
         setShowComplaintPopup(false);
     };
@@ -2786,7 +2786,7 @@ export default function Treatment() {
             diagnosis: diagnosisDescription,
             comment: ''
         };
-        
+
         setDiagnosisRows(prev => [...prev, newDiagnosis]);
         setShowDiagnosisPopup(false);
     };
@@ -2809,7 +2809,7 @@ export default function Treatment() {
             days: medicineData.days || '',
             instruction: `${medicineData.instruction} - Priority: ${medicineData.priority}`
         };
-        
+
         setMedicineRows(prev => [...prev, newMedicine]);
         setShowMedicinePopup(false);
     };
@@ -2829,7 +2829,7 @@ export default function Treatment() {
             days: prescriptionData.days,
             instruction: `${prescriptionData.instruction} - Priority: ${prescriptionData.priority} - Category: ${prescriptionData.categoryName} - SubCategory: ${prescriptionData.subCategoryName} - Marketed By: ${prescriptionData.marketedBy}`
         };
-        
+
         setPrescriptionRows(prev => [...prev, newPrescription]);
         setShowPrescriptionPopup(false);
     };
@@ -2857,7 +2857,7 @@ export default function Treatment() {
             { field: 'medicines', value: formData.medicines },
             { field: 'visitComments', value: formData.visitComments },
             { field: 'pc', value: formData.pc },
-            
+
             // Vitals
             { field: 'height', value: formData.height },
             { field: 'weight', value: formData.weight },
@@ -2867,7 +2867,7 @@ export default function Treatment() {
             { field: 'sugar', value: formData.sugar },
             { field: 'tft', value: formData.tft },
             { field: 'pallorHb', value: formData.pallorHb },
-            
+
             // Medical history checkboxes
             { field: 'medicalHistory.hypertension', value: formData.medicalHistory.hypertension },
             { field: 'medicalHistory.diabetes', value: formData.medicalHistory.diabetes },
@@ -2878,49 +2878,49 @@ export default function Treatment() {
             { field: 'medicalHistory.smoking', value: formData.medicalHistory.smoking },
             { field: 'medicalHistory.tobacco', value: formData.medicalHistory.tobacco },
             { field: 'medicalHistory.alcohol', value: formData.medicalHistory.alcohol },
-            
+
             // Clinical data
             { field: 'detailedHistory', value: formData.detailedHistory },
             { field: 'examinationFindings', value: formData.examinationFindings },
             { field: 'additionalComments', value: formData.additionalComments },
             { field: 'procedurePerformed', value: formData.procedurePerformed },
             { field: 'dressingBodyParts', value: formData.dressingBodyParts },
-            
+
             // Selected complaints
             { field: 'selectedComplaints', value: selectedComplaints },
             { field: 'complaintsRows', value: complaintsRows },
-            
+
             // Selected diagnoses
             { field: 'selectedDiagnoses', value: selectedDiagnoses },
             { field: 'diagnosisRows', value: diagnosisRows },
-            
+
             // Selected medicines
             { field: 'selectedMedicines', value: selectedMedicines },
             { field: 'medicineRows', value: medicineRows },
-            
+
             // Prescriptions
             { field: 'prescriptionRows', value: prescriptionRows },
-            
+
             // Selected investigations
             { field: 'selectedInvestigations', value: selectedInvestigations },
             { field: 'investigationRows', value: investigationRows },
-            
+
             // Follow-up data
             { field: 'followUpData.followUpType', value: followUpData.followUpType },
             { field: 'followUpData.followUp', value: followUpData.followUp },
-            
+
             // Billing data
             { field: 'billingData.billed', value: billingData.billed },
             { field: 'billingData.discount', value: billingData.discount },
-            
+
             // Attachments
             { field: 'attachments', value: attachments },
-            
+
             // Session data
             { field: 'sessionData', value: sessionData },
             { field: 'treatmentData', value: treatmentData }
         ];
-        
+
         return allFields;
     };
 
@@ -2940,13 +2940,13 @@ export default function Treatment() {
             console.log('Treatment data:', treatmentData);
             console.log('Session data:', sessionData);
             console.log('Is Submit:', isSubmit);
-            
+
             setIsSubmitting(true);
             setSubmitError(null);
             setSubmitSuccess(null);
             setSnackbarOpen(false);
             setSnackbarMessage('');
-            
+
             // Fetch session data for dynamic values if not already available
             let currentSessionData = sessionData;
             if (!currentSessionData) {
@@ -2960,13 +2960,13 @@ export default function Treatment() {
                     console.warn('Could not load session data:', sessionError);
                 }
             }
-            
+
             // Validate required fields are present
             const doctorId = treatmentData?.doctorId || currentSessionData?.doctorId;
             const clinicId = treatmentData?.clinicId || currentSessionData?.clinicId;
             const shiftId = currentSessionData?.clinicId; // Using clinicId as shiftId fallback
             const userId = currentSessionData?.userId;
-            
+
             if (!doctorId) {
                 throw new Error('Doctor ID is required but not found in treatment data or session');
             }
@@ -2976,13 +2976,13 @@ export default function Treatment() {
             if (!userId) {
                 throw new Error('User ID is required but not found in session data');
             }
-            
+
             // Validate patient visit number
             const patientVisitNo = treatmentData?.visitNumber;
             if (!patientVisitNo) {
                 throw new Error('Patient Visit Number is required but not found in treatment data');
             }
-            
+
             console.log('=== VALIDATION PASSED ===');
             console.log('Doctor ID:', doctorId);
             console.log('Clinic ID:', clinicId);
@@ -3001,7 +3001,7 @@ export default function Treatment() {
                 shiftId: String(parseInt(String(shiftId || clinicId)) || 1), // Use shiftId or fallback to clinicId, default to 1
                 visitDate: toYyyyMmDd(new Date()) + 'T' + new Date().toTimeString().slice(0, 8),
                 patientVisitNo: String(parseInt(String(patientVisitNo)) || 0),
-                
+
                 // Referral information
                 referBy: (formData.referralBy === 'Self')
                     ? 'S'
@@ -3010,7 +3010,7 @@ export default function Treatment() {
                 referralContact: formData.referralBy === 'Self' ? '' : '',
                 referralEmail: formData.referralBy === 'Self' ? '' : '',
                 referralAddress: formData.referralBy === 'Self' ? '' : '',
-                
+
                 // Vital signs
                 pulse: parseInt(formData.pulse) || 0,
                 heightInCms: parseFloat(formData.height) || 0,
@@ -3018,14 +3018,14 @@ export default function Treatment() {
                 bloodPressure: formData.bp,
                 sugar: formData.sugar,
                 tft: formData.tft,
-                
+
                 // Medical history
                 pastSurgicalHistory: formData.surgicalHistory,
                 previousVisitPlan: formData.visitComments,
                 chiefComplaint: formData.pc,
                 visitComments: formData.visitComments,
                 currentMedicines: formData.medicines,
-                
+
                 // Medical conditions from form data
                 hypertension: formData.medicalHistory.hypertension,
                 diabetes: formData.medicalHistory.diabetes,
@@ -3036,7 +3036,7 @@ export default function Treatment() {
                 smoking: formData.medicalHistory.smoking,
                 tobaco: formData.medicalHistory.tobacco,
                 alchohol: formData.medicalHistory.alcohol,
-                
+
                 // Additional fields
                 habitDetails: formData.medicalHistoryText || '',
                 allergyDetails: formData.allergy,
@@ -3053,7 +3053,7 @@ export default function Treatment() {
                 followUpFlag: formData.visitType.followUp,
                 currentComplaint: selectedComplaints.join(','),
                 visitCommentsField: formData.visitComments,
-                
+
                 // Clinical fields
                 tpr: '',
                 importantFindings: formData.examinationFindings,
@@ -3062,7 +3062,7 @@ export default function Treatment() {
                 odeama: '',
                 pallor: formData.pallorHb,
                 gc: '',
-                
+
                 // Gynecological fields
                 fmp: '',
                 prmc: '',
@@ -3076,13 +3076,13 @@ export default function Treatment() {
                 pregnant: false,
                 edd: new Date().toISOString().slice(0, 19),
                 followUpType: followUpData.followUpType ? String(followUpData.followUpType).charAt(0) : '0', // Single character: first char of followUpType or '0'
-                
+
                 // Financial fields
                 feesToCollect: parseFloat(billingData.billed) || 0,
                 feesPaid: 0,
                 discount: parseFloat(billingData.discount) || 0,
                 originalDiscount: parseFloat(billingData.discount) || 0,
-                
+
                 // Status and user - Use 5 for submit (Complete), 9 for save (Draft)
                 statusId: statusForRequest,
                 userId: String(userId),
@@ -3098,7 +3098,7 @@ export default function Treatment() {
             console.log('Doctor ID:', visitData.doctorId);
             console.log('Shift ID:', visitData.shiftId);
             console.log('Patient Visit No:', visitData.patientVisitNo);
-            
+
             // Check for null/undefined values that might cause validation errors
             const nullFields = [];
             if (!visitData.patientId) nullFields.push('patientId');
@@ -3110,13 +3110,13 @@ export default function Treatment() {
             if (!visitData.statusId) nullFields.push('statusId');
             if (visitData.discount === null || visitData.discount === undefined) nullFields.push('discount');
             if (!visitData.userId) nullFields.push('userId');
-            
+
             if (nullFields.length > 0) {
                 console.error('=== NULL/UNDEFINED FIELDS DETECTED ===');
                 console.error('Fields with null/undefined values:', nullFields);
                 throw new Error(`Required fields are missing: ${nullFields.join(', ')}`);
             }
-            
+
             // Route to appropriate API based on action
             let result: any;
             if (isSubmit) {
@@ -3146,11 +3146,11 @@ export default function Treatment() {
             } else {
                 result = await visitService.saveComprehensiveVisitData(visitData);
             }
-            
+
             console.log('=== API RESPONSE ===');
             console.log('API Response:', result);
             console.log('Success status:', result.success);
-            
+
             if (result.success) {
                 const successMessage = `Treatment ${isSubmit ? 'submitted' : 'saved'} successfully!`;
 
@@ -3161,18 +3161,18 @@ export default function Treatment() {
                     setHasSubmittedSuccessfully(true);
                     setStatusId(5);
                 }
-                
+
                 // Clear form data after successful submission
                 setTimeout(() => {
                     setSnackbarOpen(false);
                     setSnackbarMessage('');
                     // Navigate back to appointments with refresh trigger
-                    navigate('/appointment', { 
-                        state: { 
+                    navigate('/appointment', {
+                        state: {
                             refreshAppointments: true,
                             treatmentSubmitted: true,
-                            patientId: treatmentData?.patientId 
-                        } 
+                            patientId: treatmentData?.patientId
+                        }
                     });
                 }, 2000);
             } else {
@@ -3274,7 +3274,7 @@ export default function Treatment() {
     };
 
     const handleDiagnosisCommentChangeById = (id: string, comment: string) => {
-        setDiagnosisRows(prev => prev.map(row => 
+        setDiagnosisRows(prev => prev.map(row =>
             row.id === id ? { ...row, comment } : row
         ));
     };
@@ -3308,13 +3308,13 @@ export default function Treatment() {
     };
 
     const handleMedicineFieldChange = (id: string, field: string, value: string) => {
-        setMedicineRows(prev => prev.map(row => 
+        setMedicineRows(prev => prev.map(row =>
             row.id === id ? { ...row, [field]: value } : row
         ));
     };
 
     const handleMedicineInstructionChange = (id: string, instruction: string) => {
-        setMedicineRows(prev => prev.map(row => 
+        setMedicineRows(prev => prev.map(row =>
             row.id === id ? { ...row, instruction } : row
         ));
     };
@@ -3340,13 +3340,13 @@ export default function Treatment() {
     };
 
     const handlePrescriptionInstructionChange = (id: string, instruction: string) => {
-        setPrescriptionRows(prev => prev.map(row => 
+        setPrescriptionRows(prev => prev.map(row =>
             row.id === id ? { ...row, instruction } : row
         ));
     };
 
     const handlePrescriptionFieldChange = (id: string, field: string, value: string) => {
-        setPrescriptionRows(prev => prev.map(row => 
+        setPrescriptionRows(prev => prev.map(row =>
             row.id === id ? { ...row, [field]: value } : row
         ));
     };
@@ -3393,7 +3393,7 @@ export default function Treatment() {
                 ...prev,
                 [field]: sanitizedValue
             };
-            
+
             // When discount changes, automatically subtract it from fees_collected
             // Formula: fees_collected = billed - discount
             if (field === 'discount') {
@@ -3404,7 +3404,7 @@ export default function Treatment() {
                 // Format to 2 decimal places for float/double values, or empty string if 0
                 updated.feesCollected = newFeesCollected > 0 ? newFeesCollected.toFixed(2) : '';
             }
-            
+
             return updated;
         });
     };
@@ -3434,16 +3434,16 @@ export default function Treatment() {
                 {/* Header */}
                 <div className="dashboard-header" style={{ background: 'transparent', display: 'flex', alignItems: 'center', padding: '5px 16px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <h1 className="dashboard-title" style={{ color: '#000',fontSize: 20, }}>Collections</h1>
+                        <h1 className="dashboard-title" style={{ color: '#000', fontSize: 20, }}>Collections</h1>
                     </div>
                 </div>
 
                 {/* Main Content - Two Column Layout */}
                 <div style={{ display: 'flex', minHeight: 'calc(100vh - 120px)', fontFamily: "'Roboto', sans-serif", overflowY: 'auto' }}>
                     {/* Left Sidebar - Previous Visits and Attachments */}
-                    <div style={{ 
-                        width: '240px', 
-                        backgroundColor: '#f8f9fa', 
+                    <div style={{
+                        width: '240px',
+                        backgroundColor: '#f8f9fa',
                         borderRight: '1px solid #dee2e6',
                         display: 'flex',
                         flexDirection: 'column',
@@ -3454,10 +3454,10 @@ export default function Treatment() {
                     }}>
                         {/* Previous Visits Section */}
                         <div>
-                            <div style={{ 
-                                backgroundColor: '#1976d2', 
-                                color: 'white', 
-                                padding: '12px 15px', 
+                            <div style={{
+                                backgroundColor: '#1976d2',
+                                color: 'white',
+                                padding: '12px 15px',
                                 fontWeight: 'bold',
                                 fontSize: '14px'
                             }}>
@@ -3465,9 +3465,9 @@ export default function Treatment() {
                             </div>
                             <div style={{ padding: '0' }}>
                                 {loadingPreviousVisits ? (
-                                    <div style={{ 
-                                        padding: '20px', 
-                                        textAlign: 'center', 
+                                    <div style={{
+                                        padding: '20px',
+                                        textAlign: 'center',
                                         color: '#666',
                                         fontSize: '12px'
                                     }}>
@@ -3475,7 +3475,7 @@ export default function Treatment() {
                                     </div>
                                 ) : previousVisits.length > 0 ? (
                                     previousVisits.slice(-10).reverse().map((visit, index) => (
-                                        <div 
+                                        <div
                                             key={visit.id}
                                             style={{
                                                 padding: '10px 15px',
@@ -3495,14 +3495,14 @@ export default function Treatment() {
                                         >
                                             <div style={{ fontWeight: '500', color: '#333' }}>
                                                 <div style={{ fontSize: '12px', fontWeight: 'bold' }}>
-                                                    <a 
+                                                    <a
                                                         href="#"
                                                         onClick={(e) => {
                                                             e.preventDefault();
                                                             handlePreviousVisitClick(visit);
                                                         }}
-                                                        style={{ 
-                                                            textDecoration: 'underline', 
+                                                        style={{
+                                                            textDecoration: 'underline',
                                                             color: '#1976d2',
                                                             cursor: 'pointer',
                                                             fontWeight: 'bold'
@@ -3524,9 +3524,9 @@ export default function Treatment() {
                                         </div>
                                     ))
                                 ) : previousVisitsError ? (
-                                    <div style={{ 
-                                        padding: '20px', 
-                                        textAlign: 'center', 
+                                    <div style={{
+                                        padding: '20px',
+                                        textAlign: 'center',
                                         color: '#d32f2f',
                                         fontSize: '12px',
                                         backgroundColor: '#ffebee',
@@ -3553,9 +3553,9 @@ export default function Treatment() {
                                         </button>
                                     </div>
                                 ) : (
-                                    <div style={{ 
-                                        padding: '20px', 
-                                        textAlign: 'center', 
+                                    <div style={{
+                                        padding: '20px',
+                                        textAlign: 'center',
                                         color: '#666',
                                         fontSize: '12px'
                                     }}>
@@ -3567,10 +3567,10 @@ export default function Treatment() {
 
                         {/* Attachments Section */}
                         <div style={{ marginTop: '2px' }}>
-                            <div style={{ 
-                                backgroundColor: '#1976d2', 
-                                color: 'white', 
-                                padding: '12px 15px', 
+                            <div style={{
+                                backgroundColor: '#1976d2',
+                                color: 'white',
+                                padding: '12px 15px',
                                 fontWeight: 'bold',
                                 fontSize: '14px'
                             }}>
@@ -3578,9 +3578,9 @@ export default function Treatment() {
                             </div>
                             <div style={{ padding: '10px', maxWidth: '100%', overflowX: 'hidden', boxSizing: 'border-box' }}>
                                 {isLoadingDocuments && (
-                                    <div style={{ 
-                                        display: 'flex', 
-                                        alignItems: 'center', 
+                                    <div style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
                                         gap: '8px',
                                         color: '#2e7d32',
                                         fontSize: '12px'
@@ -3611,7 +3611,7 @@ export default function Treatment() {
                                             const isOpening = openingDocumentId === docId;
                                             const isProcessing = isDownloading || isOpening;
                                             return (
-                                                <span key={`existing-${index}`} style={{ 
+                                                <span key={`existing-${index}`} style={{
                                                     display: 'inline-flex',
                                                     alignItems: 'center',
                                                     padding: '4px 8px',
@@ -3627,32 +3627,32 @@ export default function Treatment() {
                                                     opacity: isProcessing ? 0.7 : 1,
                                                     transition: 'opacity 0.2s'
                                                 }}
-                                                onClick={() => { 
-                                                    if (docId && !isProcessing) {
-                                                        handleOpenDocument(doc);
-                                                    }
-                                                }}
-                                                onMouseEnter={(e) => {
-                                                    if (docId && !isProcessing) {
-                                                        e.currentTarget.style.backgroundColor = '#d4edda';
-                                                    }
-                                                }}
-                                                onMouseLeave={(e) => {
-                                                    if (docId && !isProcessing) {
-                                                        e.currentTarget.style.backgroundColor = '#e8f5e8';
-                                                    }
-                                                }}
-                                                title={isProcessing ? (isOpening ? 'Opening...' : 'Downloading...') : docId ? 'Click to open document' : ''}
+                                                    onClick={() => {
+                                                        if (docId && !isProcessing) {
+                                                            handleOpenDocument(doc);
+                                                        }
+                                                    }}
+                                                    onMouseEnter={(e) => {
+                                                        if (docId && !isProcessing) {
+                                                            e.currentTarget.style.backgroundColor = '#d4edda';
+                                                        }
+                                                    }}
+                                                    onMouseLeave={(e) => {
+                                                        if (docId && !isProcessing) {
+                                                            e.currentTarget.style.backgroundColor = '#e8f5e8';
+                                                        }
+                                                    }}
+                                                    title={isProcessing ? (isOpening ? 'Opening...' : 'Downloading...') : docId ? 'Click to open document' : ''}
                                                 >
                                                     <span style={{ marginRight: '5px' }}>📄</span>
                                                     <span style={{ maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                                         {doc.documentName || `Document ${index + 1}`}
                                                     </span>
                                                     {doc.fileSize && (
-                                                        <span style={{ 
-                                                            marginLeft: '6px', 
-                                                            fontSize: '11px', 
-                                                            color: '#2e7d32', 
+                                                        <span style={{
+                                                            marginLeft: '6px',
+                                                            fontSize: '11px',
+                                                            color: '#2e7d32',
                                                             fontWeight: 400
                                                         }}>
                                                             ({(() => {
@@ -3671,9 +3671,9 @@ export default function Treatment() {
                                                     )}
                                                     {docId && (
                                                         <span
-                                                            onClick={(e) => { 
+                                                            onClick={(e) => {
                                                                 e.stopPropagation(); // Prevent triggering the parent onClick
-                                                                if (!isProcessing) handleDownloadDocument(doc); 
+                                                                if (!isProcessing) handleDownloadDocument(doc);
                                                             }}
                                                             style={{
                                                                 marginLeft: '8px',
@@ -3700,10 +3700,10 @@ export default function Treatment() {
 
                         {/* Past Services Section */}
                         <div style={{ marginTop: '2px' }}>
-                            <div style={{ 
-                                backgroundColor: '#1976d2', 
-                                color: 'white', 
-                                padding: '12px 15px', 
+                            <div style={{
+                                backgroundColor: '#1976d2',
+                                color: 'white',
+                                padding: '12px 15px',
                                 fontWeight: 'bold',
                                 fontSize: '14px'
                             }}>
@@ -3711,7 +3711,7 @@ export default function Treatment() {
                             </div>
                             <div style={{ padding: '0' }}>
                                 {loadingPastServices ? (
-                                    <div style={{ 
+                                    <div style={{
                                         padding: '10px 15px',
                                         textAlign: 'center',
                                         color: '#666',
@@ -3720,7 +3720,7 @@ export default function Treatment() {
                                         Loading...
                                     </div>
                                 ) : pastServicesError ? (
-                                    <div style={{ 
+                                    <div style={{
                                         padding: '10px 15px',
                                         textAlign: 'center',
                                         color: '#d32f2f',
@@ -3732,7 +3732,7 @@ export default function Treatment() {
                                         {pastServicesError}
                                     </div>
                                 ) : pastServiceDates.length === 0 ? (
-                                    <div style={{ 
+                                    <div style={{
                                         padding: '10px 15px',
                                         textAlign: 'center',
                                         color: '#666',
@@ -3742,7 +3742,7 @@ export default function Treatment() {
                                     </div>
                                 ) : (
                                     pastServiceDates.map((dateStr, idx) => (
-                                        <div 
+                                        <div
                                             key={`${dateStr}_${idx}`}
                                             style={{
                                                 padding: '10px 15px',
@@ -3753,8 +3753,8 @@ export default function Treatment() {
                                         >
                                             <a
                                                 href="#"
-                                                onClick={(e) => { 
-                                                    e.preventDefault(); 
+                                                onClick={(e) => {
+                                                    e.preventDefault();
                                                     handlePastServiceDateClick(dateStr);
                                                 }}
                                                 style={{ color: '#1976d2', textDecoration: 'underline', cursor: 'pointer' }}
@@ -3771,323 +3771,323 @@ export default function Treatment() {
                     {/* Right Content - Treatment Form */}
                     <div style={{ flex: 1, padding: '15px', display: 'flex', flexDirection: 'column' }}>
                         <div style={{ flex: 1, overflowY: 'auto', paddingBottom: '20px' }}>
-                        {/* Patient Header */}
-                        <div style={{ 
-                            marginBottom: '15px', 
-                            padding: '0', 
-                            backgroundColor: '#f8f9fa', 
-                            borderRadius: '4px'
-                        }}>
-                            <div style={{ 
-                                display: 'flex', 
-                                justifyContent: 'space-between', 
-                                alignItems: 'center'
+                            {/* Patient Header */}
+                            <div style={{
+                                marginBottom: '15px',
+                                padding: '0',
+                                backgroundColor: '#f8f9fa',
+                                borderRadius: '4px'
                             }}>
-                                <div 
-                                    onClick={() => {
-                                        if (treatmentData?.patientId) {
-                                            setShowQuickRegistration(true);
-                                        }
-                                    }}
-                                    style={{ 
-                                        fontSize: '16px', 
-                                        fontWeight: 'bold', 
-                                        color: '#2e7d32',
-                                        cursor: treatmentData?.patientId ? 'pointer' : 'default',
-                                        textDecoration: treatmentData?.patientId ? 'underline' : 'none'
-                                    }}
-                                    title={treatmentData?.patientId ? 'Click to view patient details' : ''}
-                                >
-                                    {treatmentData?.patientName || 'Amit Kalamkar'} / {treatmentData?.gender || 'Male'} / {treatmentData?.age || 48} Y / {treatmentData?.contact || 'N/A'}
-                                </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px', whiteSpace: 'nowrap' }}>Referred By:</label>
-                                        <span style={{
-                                            fontSize: '12px',
-                                            color: '#333',
-                                            fontWeight: 500
-                                        }}>Self</span>
+                                <div style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center'
+                                }}>
+                                    <div
+                                        onClick={() => {
+                                            if (treatmentData?.patientId) {
+                                                setShowQuickRegistration(true);
+                                            }
+                                        }}
+                                        style={{
+                                            fontSize: '16px',
+                                            fontWeight: 'bold',
+                                            color: '#2e7d32',
+                                            cursor: treatmentData?.patientId ? 'pointer' : 'default',
+                                            textDecoration: treatmentData?.patientId ? 'underline' : 'none'
+                                        }}
+                                        title={treatmentData?.patientId ? 'Click to view patient details' : ''}
+                                    >
+                                        {treatmentData?.patientName || 'Amit Kalamkar'} / {treatmentData?.gender || 'Male'} / {treatmentData?.age || 48} Y / {treatmentData?.contact || 'N/A'}
                                     </div>
-                                    <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'not-allowed', fontSize: '12px', whiteSpace: 'nowrap' }}>
-                                        <input
-                                            type="checkbox"
-                                            checked={formData.visitType.inPerson}
-                                            onChange={(e) => handleVisitTypeChange('inPerson', e.target.checked)}
-                                            disabled
-                                            style={{ backgroundColor: '#D5D5D8' }}
-                                        />
-                                        In-Person
-                                    </label>
-                                    <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'not-allowed', fontSize: '12px', whiteSpace: 'nowrap' }}>
-                                        <input
-                                            type="checkbox"
-                                            checked={false}
-                                            onChange={(e) => handleVisitTypeChange('followUp', e.target.checked)}
-                                            disabled
-                                            style={{ backgroundColor: '#D5D5D8' }}
-                                        />
-                                        Follow-up
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Medical History Checkboxes */}
-                        <div style={{ marginBottom: '15px' }}>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
-                                {Object.entries(formData.medicalHistory).map(([key, value]) => (
-                                    <label key={key} style={{ 
-                                        display: 'flex', 
-                                        alignItems: 'center', 
-                                        gap: '5px', 
-                                        cursor: 'default',
-                                        fontSize: '13px',
-                                        // backgroundColor: value ? '#e3f2fd' : 'transparent',
-                                        borderRadius: '4px',
-                                        // border: value ? '1px solid #1976d2' : '1px solid transparent'
-                                    }}>
-                                        <input
-                                            type="checkbox"
-                                            checked={value}
-                                            disabled
-                                            style={{ margin: 0 }}
-                                        />
-                                        <span style={{ textTransform: 'capitalize', fontWeight: '500' }}>
-                                            {key === 'ihd' ? 'IHD' : key === 'th' ? 'TH' : key.charAt(0).toUpperCase() + key.slice(1)}
-                                        </span>
-                                    </label>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Input Fields Row 1 */}
-                        <div style={{ marginBottom: '15px' }}>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 180px)' as const, gap: '12px' }}>
-                                {[
-                                    { key: 'allergy', label: 'Allergy' },
-                                    { key: 'medicalHistoryText', label: 'Medical History' },
-                                    { key: 'surgicalHistory', label: 'Surgical History' },
-                                    { key: 'medicines', label: 'Medicines' },
-                                    { key: 'visitComments', label: 'Visit Comments' },
-                                    { key: 'pc', label: 'PC' }
-                                ].map(({ key, label }) => (
-                                    <div key={key}>
-                                        <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                            {label}
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={display(formData[key as keyof typeof formData] as string)}
-                                            onChange={(e) => handleInputChange(key, e.target.value)}
-                                            disabled
-                                            style={{
-                                                width: '100%',
-                                                padding: '6px 10px',
-                                                border: '1px solid #ccc',
-                                                borderRadius: '4px',
-                                                fontSize: '13px',
-                                                backgroundColor: '#D5D5D8',
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px', whiteSpace: 'nowrap' }}>Referred By:</label>
+                                            <span style={{
+                                                fontSize: '12px',
                                                 color: '#333',
-                                                cursor: 'not-allowed'
-                                            }}
-                                        />
+                                                fontWeight: 500
+                                            }}>Self</span>
+                                        </div>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'not-allowed', fontSize: '12px', whiteSpace: 'nowrap' }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={formData.visitType.inPerson}
+                                                onChange={(e) => handleVisitTypeChange('inPerson', e.target.checked)}
+                                                disabled
+                                                style={{ backgroundColor: '#D5D5D8' }}
+                                            />
+                                            In-Person
+                                        </label>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'not-allowed', fontSize: '12px', whiteSpace: 'nowrap' }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={false}
+                                                onChange={(e) => handleVisitTypeChange('followUp', e.target.checked)}
+                                                disabled
+                                                style={{ backgroundColor: '#D5D5D8' }}
+                                            />
+                                            Follow-up
+                                        </label>
                                     </div>
-                                ))}
+                                </div>
                             </div>
-                        </div>
 
-                        {/* Static UI Sections */}
-                        <div style={{ marginBottom: isDetailsOpen ? '10px' : '0' }}>
-                            <div
-                                onClick={() => setIsDetailsOpen(prev => !prev)}
-                                style={{ fontWeight: 600, fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer', userSelect: 'none' }}
-                                aria-label={isDetailsOpen ? 'Hide details' : 'Show details'}
-                                title={isDetailsOpen ? 'Hide details' : 'Show details'}
-                            >
-                                Show {isDetailsOpen ? '▴' : '▾'}
+                            {/* Medical History Checkboxes */}
+                            <div style={{ marginBottom: '15px' }}>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+                                    {Object.entries(formData.medicalHistory).map(([key, value]) => (
+                                        <label key={key} style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '5px',
+                                            cursor: 'default',
+                                            fontSize: '13px',
+                                            // backgroundColor: value ? '#e3f2fd' : 'transparent',
+                                            borderRadius: '4px',
+                                            // border: value ? '1px solid #1976d2' : '1px solid transparent'
+                                        }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={value}
+                                                disabled
+                                                style={{ margin: 0 }}
+                                            />
+                                            <span style={{ textTransform: 'capitalize', fontWeight: '500' }}>
+                                                {key === 'ihd' ? 'IHD' : key === 'th' ? 'TH' : key.charAt(0).toUpperCase() + key.slice(1)}
+                                            </span>
+                                        </label>
+                                    ))}
+                                </div>
                             </div>
+
+                            {/* Input Fields Row 1 */}
+                            <div style={{ marginBottom: '15px' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 180px)' as const, gap: '12px' }}>
+                                    {[
+                                        { key: 'allergy', label: 'Allergy' },
+                                        { key: 'medicalHistoryText', label: 'Medical History' },
+                                        { key: 'surgicalHistory', label: 'Surgical History' },
+                                        { key: 'medicines', label: 'Medicines' },
+                                        { key: 'visitComments', label: 'Visit Comments' },
+                                        { key: 'pc', label: 'PC' }
+                                    ].map(({ key, label }) => (
+                                        <div key={key}>
+                                            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                                                {label}
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={display(formData[key as keyof typeof formData] as string)}
+                                                onChange={(e) => handleInputChange(key, e.target.value)}
+                                                disabled
+                                                style={{
+                                                    width: '100%',
+                                                    padding: '6px 10px',
+                                                    border: '1px solid #ccc',
+                                                    borderRadius: '4px',
+                                                    fontSize: '13px',
+                                                    backgroundColor: '#D5D5D8',
+                                                    color: '#333',
+                                                    cursor: 'not-allowed'
+                                                }}
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Static UI Sections */}
+                            <div style={{ marginBottom: isDetailsOpen ? '10px' : '0' }}>
+                                <div
+                                    onClick={() => setIsDetailsOpen(prev => !prev)}
+                                    style={{ fontWeight: 600, fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer', userSelect: 'none' }}
+                                    aria-label={isDetailsOpen ? 'Hide details' : 'Show details'}
+                                    title={isDetailsOpen ? 'Hide details' : 'Show details'}
+                                >
+                                    Show {isDetailsOpen ? '▴' : '▾'}
+                                </div>
+                                {isDetailsOpen && (
+                                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', marginTop: 8 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <label style={{ fontSize: '12px', color: '#555', whiteSpace: 'nowrap' }}>Height (Cm)</label>
+                                            <input type="text" disabled value={display(formData.height)} style={{ width: 90, padding: '4px 6px', border: '1px solid #ddd', borderRadius: 4, background: '#D5D5D8' }} />
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <label style={{ fontSize: '12px', color: '#555', whiteSpace: 'nowrap' }}>Weight (Kg)</label>
+                                            <input type="text" disabled value={display(formData.weight)} style={{ width: 90, padding: '4px 6px', border: '1px solid #ddd', borderRadius: 4, background: '#D5D5D8' }} />
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <label style={{ fontSize: '12px', color: '#555', whiteSpace: 'nowrap' }}>BMI</label>
+                                            <input type="text" disabled value={display(formData.bmi)} style={{ width: 90, padding: '4px 6px', border: '1px solid #ddd', borderRadius: 4, background: '#D5D5D8' }} />
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <label style={{ fontSize: '12px', color: '#555', whiteSpace: 'nowrap' }}>Pulse (min)</label>
+                                            <input type="text" disabled value={display(formData.pulse)} style={{ width: 90, padding: '4px 6px', border: '1px solid #ddd', borderRadius: 4, background: '#D5D5D8' }} />
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <label style={{ fontSize: '12px', color: '#555', whiteSpace: 'nowrap' }}>BP</label>
+                                            <input type="text" disabled value={display(formData.bp)} style={{ width: 90, padding: '4px 6px', border: '1px solid #ddd', borderRadius: 4, background: '#D5D5D8' }} />
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <label style={{ fontSize: '12px', color: '#555', whiteSpace: 'nowrap' }}>Sugar</label>
+                                            <input type="text" disabled value={display(formData.sugar)} style={{ width: 90, padding: '4px 6px', border: '1px solid #ddd', borderRadius: 4, background: '#D5D5D8' }} />
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <label style={{ fontSize: '12px', color: '#555', whiteSpace: 'nowrap' }}>TFT</label>
+                                            <input type="text" disabled value={display(formData.tft)} style={{ width: 90, padding: '4px 6px', border: '1px solid #ddd', borderRadius: 4, background: '#D5D5D8' }} />
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <label style={{ fontSize: '12px', color: '#555', whiteSpace: 'nowrap' }}>Pallor/HB</label>
+                                            <input type="text" disabled value={display(formData.pallorHb)} style={{ width: 90, padding: '4px 6px', border: '1px solid #ddd', borderRadius: 4, background: '#D5D5D8' }} />
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
                             {isDetailsOpen && (
-                                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', marginTop: 8 }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                        <label style={{ fontSize: '12px', color: '#555', whiteSpace: 'nowrap' }}>Height (Cm)</label>
-                                        <input type="text" disabled value={display(formData.height)} style={{ width: 90, padding: '4px 6px', border: '1px solid #ddd', borderRadius: 4, background: '#D5D5D8' }} />
+                                <div style={{ border: '1px solid #e0e0e0', borderRadius: 4, overflow: 'hidden', marginBottom: 12 }}>
+                                    {/* <div style={{ background: '#1976d2', color: '#fff', padding: '8px 10px', fontWeight: 600, fontSize: 13 }}>Complaints, Diagnosis, Medicines</div> */}
+                                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                        <thead>
+                                            <tr style={{ background: '#1976D2' }}>
+                                                {['Sr.', 'Complaint Description', 'Duration / Comment'].map(h => (
+                                                    <th key={h} style={{ padding: 8, borderBottom: '1px solid #e0e0e0', fontSize: 12, color: 'white', textAlign: 'left' }}>{h}</th>
+                                                ))}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {mlComplaints.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan={3} style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 1, color: '#777' }}>No complaints</td>
+                                                </tr>
+                                            ) : mlComplaints.map((c, idx) => (
+                                                <tr key={`c_${idx}`}>
+                                                    <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{idx + 1}</td>
+                                                    <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{c.label}</td>
+                                                    <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{c.comment}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, padding: 12 }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                            <label>Detailed History</label>
+                                            <textarea value={display(formData.detailedHistory)} placeholder="Detailed History" disabled style={{ height: 64, width: '100%', border: '1px solid #ddd', padding: 8, fontSize: 12, background: '#D5D5D8' }} />
+                                        </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                            <label>Examination Findings</label>
+                                            <textarea value={display(formData.examinationFindings)} placeholder="Examination Findings" disabled style={{ height: 64, width: '100%', border: '1px solid #ddd', padding: 8, fontSize: 12, background: '#D5D5D8' }} />
+                                        </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                            <label>Additional Comments</label>
+                                            <textarea value={display(formData.additionalComments)} placeholder="Additional Comments" disabled style={{ height: 64, width: '100%', border: '1px solid #ddd', padding: 8, fontSize: 12, background: '#D5D5D8' }} />
+                                        </div>
                                     </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                        <label style={{ fontSize: '12px', color: '#555', whiteSpace: 'nowrap' }}>Weight (Kg)</label>
-                                        <input type="text" disabled value={display(formData.weight)} style={{ width: 90, padding: '4px 6px', border: '1px solid #ddd', borderRadius: 4, background: '#D5D5D8' }} />
-                                    </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                        <label style={{ fontSize: '12px', color: '#555', whiteSpace: 'nowrap' }}>BMI</label>
-                                        <input type="text" disabled value={display(formData.bmi)} style={{ width: 90, padding: '4px 6px', border: '1px solid #ddd', borderRadius: 4, background: '#D5D5D8' }} />
-                                    </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                        <label style={{ fontSize: '12px', color: '#555', whiteSpace: 'nowrap' }}>Pulse (min)</label>
-                                        <input type="text" disabled value={display(formData.pulse)} style={{ width: 90, padding: '4px 6px', border: '1px solid #ddd', borderRadius: 4, background: '#D5D5D8' }} />
-                                    </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                        <label style={{ fontSize: '12px', color: '#555', whiteSpace: 'nowrap' }}>BP</label>
-                                        <input type="text" disabled value={display(formData.bp)} style={{ width: 90, padding: '4px 6px', border: '1px solid #ddd', borderRadius: 4, background: '#D5D5D8' }} />
-                                    </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                        <label style={{ fontSize: '12px', color: '#555', whiteSpace: 'nowrap' }}>Sugar</label>
-                                        <input type="text" disabled value={display(formData.sugar)} style={{ width: 90, padding: '4px 6px', border: '1px solid #ddd', borderRadius: 4, background: '#D5D5D8' }} />
-                                    </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                        <label style={{ fontSize: '12px', color: '#555', whiteSpace: 'nowrap' }}>TFT</label>
-                                        <input type="text" disabled value={display(formData.tft)} style={{ width: 90, padding: '4px 6px', border: '1px solid #ddd', borderRadius: 4, background: '#D5D5D8' }} />
-                                    </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                        <label style={{ fontSize: '12px', color: '#555', whiteSpace: 'nowrap' }}>Pallor/HB</label>
-                                        <input type="text" disabled value={display(formData.pallorHb)} style={{ width: 90, padding: '4px 6px', border: '1px solid #ddd', borderRadius: 4, background: '#D5D5D8' }} />
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 160px', gap: 12, padding: 12, alignItems: 'end' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                            <label>Procedure Performed</label>
+                                            <textarea value={display(formData.procedurePerformed)} placeholder="Procedure Performed" disabled style={{ height: 64, width: '100%', border: '1px solid #ddd', padding: 8, fontSize: 12, background: '#D5D5D8' }} />
+                                        </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                            <label>Dressing (body parts)</label>
+                                            <textarea value={display(formData.dressingBodyParts)} placeholder="Dressing (body parts)" disabled style={{ height: 64, width: '100%', border: '1px solid #ddd', padding: 8, fontSize: 12, background: '#D5D5D8' }} />
+                                        </div>
                                     </div>
                                 </div>
                             )}
-                        </div>
 
-                        {isDetailsOpen && (
-                        <div style={{ border: '1px solid #e0e0e0', borderRadius: 4, overflow: 'hidden', marginBottom: 12 }}>
-                            {/* <div style={{ background: '#1976d2', color: '#fff', padding: '8px 10px', fontWeight: 600, fontSize: 13 }}>Complaints, Diagnosis, Medicines</div> */}
-                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                                <thead>
-                                    <tr style={{ background: '#1976D2' }}>
-                                        {['Sr.','Complaint Description','Duration / Comment'].map(h => (
-                                            <th key={h} style={{ padding: 8, borderBottom: '1px solid #e0e0e0', fontSize: 12, color: 'white', textAlign: 'left' }}>{h}</th>
+                            {isDetailsOpen && (
+                                <div style={{ border: '1px solid #e0e0e0', borderRadius: 4, overflow: 'hidden', marginBottom: 12 }}>
+                                    {/* <div style={{ background: '#1976d2', color: '#fff', padding: '8px 10px', fontWeight: 600, fontSize: 13 }}>Provisional Diagnosis</div> */}
+                                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                        <thead>
+                                            <tr style={{ background: '#1976d2' }}>
+                                                {['Sr.', 'Provisional Diagnosis'].map(h => (
+                                                    <th key={h} style={{ padding: 8, borderBottom: '1px solid #e0e0e0', fontSize: 12, color: '#fff', textAlign: 'left' }}>{h}</th>
+                                                ))}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {mlDiagnosis.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan={3} style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12, color: '#777' }}>No diagnoses</td>
+                                                </tr>
+                                            ) : mlDiagnosis.map((d, idx) => (
+                                                <tr key={`d_${idx}`}>
+                                                    <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{idx + 1}</td>
+                                                    <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{d.label}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+
+                            <div style={{ border: '1px solid #e0e0e0', borderRadius: 4, overflow: 'hidden', marginBottom: 12 }}>
+                                {/* <div style={{ background: '#1976d2', color: '#fff', padding: '8px 10px', fontWeight: 600, fontSize: 13 }}>Medicines</div> */}
+                                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                    <thead>
+                                        <tr style={{ background: '#1976d2' }}>
+                                            {['Sr.', 'Medicines', 'B', 'L', 'D', 'Days', 'Instruction'].map(h => (
+                                                <th key={h} style={{ padding: 8, borderBottom: '1px solid #e0e0e0', fontSize: 12, color: '#fff', textAlign: 'left' }}>{h}</th>
+                                            ))}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {mlMedicinesTable.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={7} style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12, color: '#777' }}>No medicines</td>
+                                            </tr>
+                                        ) : mlMedicinesTable.map((row, idx) => (
+                                            <tr key={row.id} style={{ background: idx % 2 === 0 ? '#fff' : '#fafafa' }}>
+                                                <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{idx + 1}</td>
+                                                <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{row.prescription}</td>
+                                                <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{row.b}</td>
+                                                <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{row.l}</td>
+                                                <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{row.d}</td>
+                                                <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{row.days}</td>
+                                                <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{row.instruction}</td>
+                                            </tr>
                                         ))}
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {mlComplaints.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={3} style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 1, color: '#777' }}>No complaints</td>
-                                        </tr>
-                                    ) : mlComplaints.map((c, idx) => (
-                                        <tr key={`c_${idx}`}>
-                                            <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{idx+1}</td>
-                                            <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{c.label}</td>
-                                            <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{c.comment}</td>                                            
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, padding: 12 }}>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                                    <label>Detailed History</label>
-                                    <textarea value={display(formData.detailedHistory)} placeholder="Detailed History" disabled style={{ height: 64, width: '100%', border: '1px solid #ddd', padding: 8, fontSize: 12, background: '#D5D5D8' }} />
-                                </div>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                                    <label>Examination Findings</label>
-                                    <textarea value={display(formData.examinationFindings)} placeholder="Examination Findings" disabled style={{ height: 64, width: '100%', border: '1px solid #ddd', padding: 8, fontSize: 12, background: '#D5D5D8' }} />
-                                </div>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                                    <label>Additional Comments</label>
-                                    <textarea value={display(formData.additionalComments)} placeholder="Additional Comments" disabled style={{ height: 64, width: '100%', border: '1px solid #ddd', padding: 8, fontSize: 12, background: '#D5D5D8' }} />
-                                </div>
+                                    </tbody>
+                                </table>
                             </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 160px', gap: 12, padding: 12, alignItems: 'end' }}>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                                    <label>Procedure Performed</label>
-                                    <textarea value={display(formData.procedurePerformed)} placeholder="Procedure Performed" disabled style={{ height: 64, width: '100%', border: '1px solid #ddd', padding: 8, fontSize: 12, background: '#D5D5D8' }} />
-                                </div>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                                    <label>Dressing (body parts)</label>
-                                    <textarea value={display(formData.dressingBodyParts)} placeholder="Dressing (body parts)" disabled style={{ height: 64, width: '100%', border: '1px solid #ddd', padding: 8, fontSize: 12, background: '#D5D5D8' }} />                                
-                                </div>
+
+                            <div style={{ border: '1px solid #e0e0e0', borderRadius: 4, overflow: 'hidden', marginBottom: 12 }}>
+                                {/* <div style={{ background: '#1976d2', color: '#fff', padding: '8px 10px', fontWeight: 600, fontSize: 13 }}>Prescriptions</div> */}
+                                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                    <thead>
+                                        <tr style={{ background: '#1976d2' }}>
+                                            {['Sr.', 'Prescriptions', 'B', 'L', 'D', 'Days', 'Instruction'].map(h => (
+                                                <th key={h} style={{ padding: 8, borderBottom: '1px solid #e0e0e0', fontSize: 12, color: '#fff', textAlign: 'left' }}>{h}</th>
+                                            ))}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {mlPrescriptionsTable.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={7} style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12, color: '#777' }}>No prescriptions</td>
+                                            </tr>
+                                        ) : mlPrescriptionsTable.map((row, idx) => (
+                                            <tr key={row.id} style={{ background: idx % 2 === 0 ? '#fff' : '#fafafa' }}>
+                                                <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{idx + 1}</td>
+                                                <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{row.prescription}</td>
+                                                <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{row.b}</td>
+                                                <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{row.l}</td>
+                                                <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{row.d}</td>
+                                                <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{row.days}</td>
+                                                <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{row.instruction}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
                             </div>
-                        </div>
-                        )}
 
-                        {isDetailsOpen && (
-                        <div style={{ border: '1px solid #e0e0e0', borderRadius: 4, overflow: 'hidden', marginBottom: 12 }}>
-                            {/* <div style={{ background: '#1976d2', color: '#fff', padding: '8px 10px', fontWeight: 600, fontSize: 13 }}>Provisional Diagnosis</div> */}
-                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                                <thead>
-                                    <tr style={{ background: '#1976d2' }}>
-                                        {['Sr.','Provisional Diagnosis'].map(h => (
-                                            <th key={h} style={{ padding: 8, borderBottom: '1px solid #e0e0e0', fontSize: 12, color: '#fff', textAlign: 'left' }}>{h}</th>
-                                        ))}
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {mlDiagnosis.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={3} style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12, color: '#777' }}>No diagnoses</td>
-                                        </tr>
-                                    ) : mlDiagnosis.map((d, idx) => (
-                                        <tr key={`d_${idx}`}>
-                                            <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{idx+1}</td>
-                                            <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{d.label}</td>                                            
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                        )}
-
-                        <div style={{ border: '1px solid #e0e0e0', borderRadius: 4, overflow: 'hidden', marginBottom: 12 }}>
-                            {/* <div style={{ background: '#1976d2', color: '#fff', padding: '8px 10px', fontWeight: 600, fontSize: 13 }}>Medicines</div> */}
-                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                                <thead>
-                                    <tr style={{ background: '#1976d2' }}>
-                                        {['Sr.','Medicines','B','L','D','Days','Instruction'].map(h => (
-                                            <th key={h} style={{ padding: 8, borderBottom: '1px solid #e0e0e0', fontSize: 12, color: '#fff', textAlign: 'left' }}>{h}</th>
-                                        ))}
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {mlMedicinesTable.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={7} style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12, color: '#777' }}>No medicines</td>
-                                        </tr>
-                                    ) : mlMedicinesTable.map((row, idx) => (
-                                        <tr key={row.id} style={{ background: idx % 2 === 0 ? '#fff' : '#fafafa' }}>
-                                            <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{idx+1}</td>
-                                            <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{row.prescription}</td>
-                                            <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{row.b}</td>
-                                            <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{row.l}</td>
-                                            <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{row.d}</td>
-                                            <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{row.days}</td>
-                                            <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{row.instruction}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <div style={{ border: '1px solid #e0e0e0', borderRadius: 4, overflow: 'hidden', marginBottom: 12 }}>
-                            {/* <div style={{ background: '#1976d2', color: '#fff', padding: '8px 10px', fontWeight: 600, fontSize: 13 }}>Prescriptions</div> */}
-                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                                <thead>
-                                    <tr style={{ background: '#1976d2' }}>
-                                        {['Sr.','Prescriptions','B','L','D','Days','Instruction'].map(h => (
-                                            <th key={h} style={{ padding: 8, borderBottom: '1px solid #e0e0e0', fontSize: 12, color: '#fff', textAlign: 'left' }}>{h}</th>
-                                        ))}
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {mlPrescriptionsTable.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={7} style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12, color: '#777' }}>No prescriptions</td>
-                                        </tr>
-                                    ) : mlPrescriptionsTable.map((row, idx) => (
-                                        <tr key={row.id} style={{ background: idx % 2 === 0 ? '#fff' : '#fafafa' }}>
-                                            <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{idx+1}</td>
-                                            <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{row.prescription}</td>
-                                            <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{row.b}</td>
-                                            <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{row.l}</td>
-                                            <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{row.d}</td>
-                                            <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{row.days}</td>
-                                            <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{row.instruction}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-
-                        {/* Instructions Section */}
-                        {mlInstructionsTable.length > 0 && (
-                            <div style={{ marginBottom: 12 }}>
-                                {/* <div style={{
+                            {/* Instructions Section */}
+                            {mlInstructionsTable.length > 0 && (
+                                <div style={{ marginBottom: 12 }}>
+                                    {/* <div style={{
                                     backgroundColor: '#1976d2',
                                     color: 'white',
                                     padding: '12px 16px',
@@ -4098,8 +4098,8 @@ export default function Treatment() {
                                     Instructions
                                 </div> */}
 
-                                {/* First Table: Instructions Summary with B/L/D/Days */}
-                                {/* <div style={{
+                                    {/* First Table: Instructions Summary with B/L/D/Days */}
+                                    {/* <div style={{
                                     border: '1px solid #ddd',
                                     borderTop: 'none',
                                     borderRadius: '0',
@@ -4156,111 +4156,111 @@ export default function Treatment() {
                                     </table>
                                 </div> */}
 
-                                {/* Second Table: Detailed Instructions */}
-                                <div style={{
-                                    border: '1px solid #ddd',
-                                    borderTop: 'none',
-                                    borderRadius: '0 0 4px 4px',
-                                    overflow: 'hidden',
-                                    backgroundColor: '#1976d2',
-                                    color: 'white'
-                                }}>
-                                    <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
-                                        <thead>
-                                            <tr style={{ backgroundColor: '#1976d2' }}>
-                                                <th style={{
-                                                    padding: '12px',
-                                                    textAlign: 'left',
-                                                    borderBottom: '1px solid #ddd',
-                                                    fontWeight: '600',
-                                                    color: 'white',
-                                                    width: '60px'
-                                                }}>
-                                                    Sr.
-                                                </th>
-                                                <th style={{
-                                                    padding: '12px',
-                                                    textAlign: 'left',
-                                                    borderBottom: '1px solid #ddd',
-                                                    fontWeight: '600',
-                                                    color: 'white',
-                                                    width: '200px'
-                                                }}>
-                                                    Group
-                                                </th>
-                                                <th style={{
-                                                    padding: '12px',
-                                                    textAlign: 'left',
-                                                    borderBottom: '1px solid #ddd',
-                                                    fontWeight: '600',
-                                                    color: 'white'
-                                                }}>
-                                                    Instruction
-                                                </th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {mlInstructionsTable.map((row, idx) => (
-                                                <tr key={row.id}>
-                                                    <td style={{
+                                    {/* Second Table: Detailed Instructions */}
+                                    <div style={{
+                                        border: '1px solid #ddd',
+                                        borderTop: 'none',
+                                        borderRadius: '0 0 4px 4px',
+                                        overflow: 'hidden',
+                                        backgroundColor: '#1976d2',
+                                        color: 'white'
+                                    }}>
+                                        <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+                                            <thead>
+                                                <tr style={{ backgroundColor: '#1976d2' }}>
+                                                    <th style={{
                                                         padding: '12px',
-                                                        borderBottom: '1px solid #eee',
-                                                        color: '#666',
-                                                        height: '38px',
-                                                        fontSize: '14px'
+                                                        textAlign: 'left',
+                                                        borderBottom: '1px solid #ddd',
+                                                        fontWeight: '600',
+                                                        color: 'white',
+                                                        width: '60px'
                                                     }}>
-                                                        {idx + 1}
-                                                    </td>
-                                                    <td style={{
+                                                        Sr.
+                                                    </th>
+                                                    <th style={{
                                                         padding: '12px',
-                                                        borderBottom: '1px solid #eee',
-                                                        color: '#666',
-                                                        height: '38px',
-                                                        fontSize: '14px'
+                                                        textAlign: 'left',
+                                                        borderBottom: '1px solid #ddd',
+                                                        fontWeight: '600',
+                                                        color: 'white',
+                                                        width: '200px'
                                                     }}>
-                                                        {row.prescription}
-                                                    </td>
-                                                    <td style={{
+                                                        Group
+                                                    </th>
+                                                    <th style={{
                                                         padding: '12px',
-                                                        borderBottom: '1px solid #eee',
-                                                        color: '#666',
-                                                        height: '38px',
-                                                        fontSize: '14px'
+                                                        textAlign: 'left',
+                                                        borderBottom: '1px solid #ddd',
+                                                        fontWeight: '600',
+                                                        color: 'white'
                                                     }}>
-                                                        {row.instruction}
-                                                    </td>
+                                                        Instruction
+                                                    </th>
                                                 </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
+                                            </thead>
+                                            <tbody>
+                                                {mlInstructionsTable.map((row, idx) => (
+                                                    <tr key={row.id}>
+                                                        <td style={{
+                                                            padding: '12px',
+                                                            borderBottom: '1px solid #eee',
+                                                            color: '#666',
+                                                            height: '38px',
+                                                            fontSize: '14px'
+                                                        }}>
+                                                            {idx + 1}
+                                                        </td>
+                                                        <td style={{
+                                                            padding: '12px',
+                                                            borderBottom: '1px solid #eee',
+                                                            color: '#666',
+                                                            height: '38px',
+                                                            fontSize: '14px'
+                                                        }}>
+                                                            {row.prescription}
+                                                        </td>
+                                                        <td style={{
+                                                            padding: '12px',
+                                                            borderBottom: '1px solid #eee',
+                                                            color: '#666',
+                                                            height: '38px',
+                                                            fontSize: '14px'
+                                                        }}>
+                                                            {row.instruction}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
-                            </div>
-                        )}
+                            )}
 
-                        <div style={{ border: '1px solid #e0e0e0', borderRadius: 4, overflow: 'hidden', marginBottom: 12 }}>
-                            {/* <div style={{ background: '#1976d2', color: '#fff', padding: '8px 10px', fontWeight: 600, fontSize: 13 }}>Suggested Tests</div> */}
-                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                                <thead>
-                                    <tr style={{ background: '#1976d2' }}>
-                                        {['Sr.','Suggested Tests'].map(h => (
-                                            <th key={h} style={{ padding: 8, borderBottom: '1px solid #e0e0e0', fontSize: 12, color: '#fff', textAlign: 'left' }}>{h}</th>
+                            <div style={{ border: '1px solid #e0e0e0', borderRadius: 4, overflow: 'hidden', marginBottom: 12 }}>
+                                {/* <div style={{ background: '#1976d2', color: '#fff', padding: '8px 10px', fontWeight: 600, fontSize: 13 }}>Suggested Tests</div> */}
+                                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                    <thead>
+                                        <tr style={{ background: '#1976d2' }}>
+                                            {['Sr.', 'Suggested Tests'].map(h => (
+                                                <th key={h} style={{ padding: 8, borderBottom: '1px solid #e0e0e0', fontSize: 12, color: '#fff', textAlign: 'left' }}>{h}</th>
+                                            ))}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {mlTestsTable.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={3} style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12, color: '#777' }}>No tests suggested</td>
+                                            </tr>
+                                        ) : mlTestsTable.map((t, idx) => (
+                                            <tr key={`${t}_${idx}`} style={{ background: idx % 2 === 0 ? '#fff' : '#fafafa' }}>
+                                                <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{idx + 1}</td>
+                                                <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{t}</td>
+                                            </tr>
                                         ))}
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {mlTestsTable.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={3} style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12, color: '#777' }}>No tests suggested</td>
-                                        </tr>
-                                    ) : mlTestsTable.map((t, idx) => (
-                                        <tr key={`${t}_${idx}`} style={{ background: idx % 2 === 0 ? '#fff' : '#fafafa' }}>
-                                            <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{idx+1}</td>
-                                            <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{t}</td>                                           
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+                                    </tbody>
+                                </table>
+                            </div>
                             <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
                                 {/* Follow-up Type */}
                                 <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
@@ -4301,15 +4301,15 @@ export default function Treatment() {
                                     />
                                 </div>
                             </div>
-                        <div style={{ marginBottom: 12 }}>
-                            <label style={{ display: 'block', marginBottom: 6, fontWeight: 600, fontSize: 13 }}>Plan / Adv</label>
-                            <textarea value={display(followUpData.planAdv)} disabled style={{ width: '100%', height: 38, border: '1px solid #ddd', padding: 8, fontSize: 12, background: '#D5D5D8' }} />
-                            {/* Addendum button moved to Treatment page */}
-                        </div>
+                            <div style={{ marginBottom: 12 }}>
+                                <label style={{ display: 'block', marginBottom: 6, fontWeight: 600, fontSize: 13 }}>Plan / Adv</label>
+                                <textarea value={display(followUpData.planAdv)} disabled style={{ width: '100%', height: 38, border: '1px solid #ddd', padding: 8, fontSize: 12, background: '#D5D5D8' }} />
+                                {/* Addendum button moved to Treatment page */}
+                            </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, marginBottom: 12 }}>
-                            {/* Billed (disabled) */}
-                            <div>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, marginBottom: 12 }}>
+                                {/* Billed (disabled) */}
+                                <div>
                                     <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
                                         Billed (Rs)
                                     </label>
@@ -4339,7 +4339,7 @@ export default function Treatment() {
                                             style={{
                                                 position: 'absolute',
                                                 right: 6,
-                                                top: '20%',                                   
+                                                top: '20%',
                                                 display: 'inline-flex',
                                                 alignItems: 'center',
                                                 justifyContent: 'center',
@@ -4368,48 +4368,48 @@ export default function Treatment() {
                                         </button>
                                     </div>
                                     {billingError && (
-                                        <div style={{ color: 'red', fontSize: '12px', marginTop: '4px' }}>
+                                        <div style={{ color: 'red', fontSize: '12px', marginTop: '4px', marginLeft: 0, textAlign: 'left' }}>
                                             {billingError}
                                         </div>
                                     )}
                                 </div>
-                            {/* Discount (enabled/disabled based on status) */}
-                            <div>
-                                <label style={{ display: 'block', marginBottom: 4, fontWeight: 600, fontSize: 12 }}>Discount (Rs)</label>
-                                <input
-                                    type="text"
-                                    value={billingData.discount}
-                                    onChange={(e) => handleBillingChange('discount', e.target.value)}
-                                    disabled={isFormDisabled}
-                                    style={{ 
-                                        width: '100%', 
-                                        border: '1px solid #ddd', 
-                                        padding: '6px 8px', 
-                                        fontSize: 12, 
-                                        background: isFormDisabled ? '#D5D5D8' : 'white',
-                                        cursor: isFormDisabled ? 'not-allowed' : 'text',
-                                        color: isFormDisabled ? '#666' : '#333'
-                                    }}
-                                />
-                            </div>
-                            {/* Dues (disabled) */}
-                            <div>
-                                <label style={{ display: 'block', marginBottom: 4, fontWeight: 600, fontSize: 12 }}>Dues (Rs)</label>
-                                <input
-                                    type="text"
-                                    disabled
-                                    value={display(billingData.dues)}
-                                    onChange={(e) => handleBillingChange('dues', e.target.value)}
-                                    style={{ width: '100%', border: '1px solid #ddd', padding: '6px 8px', fontSize: 12, background: '#D5D5D8' }}
-                                />
-                            </div>
-                            {/* A/C Balance (disabled) */}
-                            <div>
+                                {/* Discount (enabled/disabled based on status) */}
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: 4, fontWeight: 600, fontSize: 12 }}>Discount (Rs)</label>
+                                    <input
+                                        type="text"
+                                        value={billingData.discount}
+                                        onChange={(e) => handleBillingChange('discount', e.target.value)}
+                                        disabled={isFormDisabled}
+                                        style={{
+                                            width: '100%',
+                                            border: '1px solid #ddd',
+                                            padding: '6px 8px',
+                                            fontSize: 12,
+                                            background: isFormDisabled ? '#D5D5D8' : 'white',
+                                            cursor: isFormDisabled ? 'not-allowed' : 'text',
+                                            color: isFormDisabled ? '#666' : '#333'
+                                        }}
+                                    />
+                                </div>
+                                {/* Dues (disabled) */}
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: 4, fontWeight: 600, fontSize: 12 }}>Dues (Rs)</label>
+                                    <input
+                                        type="text"
+                                        disabled
+                                        value={display(billingData.dues)}
+                                        onChange={(e) => handleBillingChange('dues', e.target.value)}
+                                        style={{ width: '100%', border: '1px solid #ddd', padding: '6px 8px', fontSize: 12, background: '#D5D5D8' }}
+                                    />
+                                </div>
+                                {/* A/C Balance (disabled) */}
+                                <div>
                                     <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
                                         <span>A/C Balance (Rs)</span>
-                                        <span 
-                                            style={{ 
-                                                color: '#1976d2', 
+                                        <span
+                                            style={{
+                                                color: '#1976d2',
                                                 fontWeight: 'normal',
                                                 fontSize: '11px',
                                                 cursor: 'pointer',
@@ -4428,152 +4428,152 @@ export default function Treatment() {
                                             style={{
                                                 width: '100%',
                                                 padding: '6px 10px',
-                                                paddingRight: folderAmountData?.totalAcBalance !== undefined && 
-                                                             folderAmountData?.totalAcBalance !== null && 
-                                                             folderAmountData?.rows && 
-                                                             folderAmountData.rows.length > 0 ? '120px' : '10px',
+                                                paddingRight: folderAmountData?.totalAcBalance !== undefined &&
+                                                    folderAmountData?.totalAcBalance !== null &&
+                                                    folderAmountData?.rows &&
+                                                    folderAmountData.rows.length > 0 ? '120px' : '10px',
                                                 border: '1px solid #ccc',
                                                 borderRadius: '4px',
                                                 fontSize: '13px',
                                                 backgroundColor: '#f5f5f5',
-                                                color: folderAmountData?.totalAcBalance !== undefined && 
-                                                       folderAmountData?.totalAcBalance !== null && 
-                                                       folderAmountData?.rows && 
-                                                       folderAmountData.rows.length > 0
-                                                       ? (folderAmountData.totalAcBalance < 0 ? '#d32f2f' : '#2e7d32')
-                                                       : '#666',
+                                                color: folderAmountData?.totalAcBalance !== undefined &&
+                                                    folderAmountData?.totalAcBalance !== null &&
+                                                    folderAmountData?.rows &&
+                                                    folderAmountData.rows.length > 0
+                                                    ? (folderAmountData.totalAcBalance < 0 ? '#d32f2f' : '#2e7d32')
+                                                    : '#666',
                                                 cursor: 'not-allowed'
                                             }}
                                         />
-                                        {folderAmountData?.totalAcBalance !== undefined && 
-                                         folderAmountData?.totalAcBalance !== null && 
-                                         folderAmountData?.rows && 
-                                         folderAmountData.rows.length > 0 && (
-                                            <span style={{
-                                                position: 'absolute',
-                                                right: '10px',
-                                                top: '50%',
-                                                transform: 'translateY(-50%)',
-                                                fontSize: '11px',
-                                                fontWeight: 'bold',
-                                                color: '#333', // Always black for status text
-                                                whiteSpace: 'nowrap',
-                                                pointerEvents: 'none'
-                                            }}>
-                                                {folderAmountData.totalAcBalance < 0 ? 'Outstanding' : 'Excess'}
-                                            </span>
-                                        )}
+                                        {folderAmountData?.totalAcBalance !== undefined &&
+                                            folderAmountData?.totalAcBalance !== null &&
+                                            folderAmountData?.rows &&
+                                            folderAmountData.rows.length > 0 && (
+                                                <span style={{
+                                                    position: 'absolute',
+                                                    right: '10px',
+                                                    top: '50%',
+                                                    transform: 'translateY(-50%)',
+                                                    fontSize: '11px',
+                                                    fontWeight: 'bold',
+                                                    color: '#333', // Always black for status text
+                                                    whiteSpace: 'nowrap',
+                                                    pointerEvents: 'none'
+                                                }}>
+                                                    {folderAmountData.totalAcBalance < 0 ? 'Outstanding' : 'Excess'}
+                                                </span>
+                                            )}
                                     </div>
                                 </div>
-                            {/* Receipt No (disabled) */}
-                            <div>
-                                <label style={{ display: 'block', marginBottom: 4, fontWeight: 600, fontSize: 12 }}>Receipt No</label>
-                                <input
-                                    type="text"
-                                    disabled
-                                    value={display(billingData.receiptNo)}
-                                    style={{ width: '100%', border: '1px solid #ddd', padding: '6px 8px', fontSize: 12, background: '#D5D5D8' }}
-                                />
+                                {/* Receipt No (disabled) */}
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: 4, fontWeight: 600, fontSize: 12 }}>Receipt No</label>
+                                    <input
+                                        type="text"
+                                        disabled
+                                        value={display(billingData.receiptNo)}
+                                        style={{ width: '100%', border: '1px solid #ddd', padding: '6px 8px', fontSize: 12, background: '#D5D5D8' }}
+                                    />
+                                </div>
                             </div>
-                        </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, marginBottom: 16 }}>
-                            {/* Collected (enabled/disabled based on status) */}
-                            <div>
-                                <label style={{ display: 'block', marginBottom: 4, fontWeight: 600, fontSize: 12 }}>Collected (Rs)</label>
-                                <input 
-                                    type="text" 
-                                    value={billingData.feesCollected}
-                                    onChange={(e) => handleBillingChange('feesCollected', e.target.value)}
-                                    disabled={isFormDisabled}
-                                    style={{ 
-                                        width: '100%', 
-                                        border: '1px solid #ddd', 
-                                        padding: '6px 8px', 
-                                        fontSize: 12, 
-                                        background: isFormDisabled ? '#D5D5D8' : 'white',
-                                        cursor: isFormDisabled ? 'not-allowed' : 'text',
-                                        color: isFormDisabled ? '#666' : '#333'
-                                    }} 
-                                />
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, marginBottom: 16 }}>
+                                {/* Collected (enabled/disabled based on status) */}
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: 4, fontWeight: 600, fontSize: 12 }}>Collected (Rs)</label>
+                                    <input
+                                        type="text"
+                                        value={billingData.feesCollected}
+                                        onChange={(e) => handleBillingChange('feesCollected', e.target.value)}
+                                        disabled={isFormDisabled}
+                                        style={{
+                                            width: '100%',
+                                            border: '1px solid #ddd',
+                                            padding: '6px 8px',
+                                            fontSize: 12,
+                                            background: isFormDisabled ? '#D5D5D8' : 'white',
+                                            cursor: isFormDisabled ? 'not-allowed' : 'text',
+                                            color: isFormDisabled ? '#666' : '#333'
+                                        }}
+                                    />
+                                </div>
+                                {/* Reason (enabled/disabled based on status) */}
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: 4, fontWeight: 600, fontSize: 12 }}>Reason</label>
+                                    <input
+                                        type="text"
+                                        value={billingData.reason}
+                                        onChange={(e) => handleBillingChange('reason', e.target.value)}
+                                        disabled={isFormDisabled}
+                                        style={{
+                                            width: '100%',
+                                            border: '1px solid #ddd',
+                                            padding: '6px 8px',
+                                            fontSize: 12,
+                                            background: isFormDisabled ? '#D5D5D8' : 'white',
+                                            cursor: isFormDisabled ? 'not-allowed' : 'text',
+                                            color: isFormDisabled ? '#666' : '#333'
+                                        }}
+                                    />
+                                </div>
+                                {/* Payment By (enabled/disabled based on status) */}
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: 4, fontWeight: 600, fontSize: 12 }}>Payment By</label>
+                                    <select
+                                        value={billingData.paymentBy}
+                                        onChange={(e) => handleBillingChange('paymentBy', e.target.value)}
+                                        disabled={isFormDisabled}
+                                        style={{
+                                            width: '100%',
+                                            border: '1px solid #ddd',
+                                            padding: '6px 8px',
+                                            fontSize: 12,
+                                            background: isFormDisabled ? '#D5D5D8' : 'white',
+                                            cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                            color: isFormDisabled ? '#666' : '#333'
+                                        }}
+                                    >
+                                        {paymentByOptions.length === 0 ? (
+                                            <option value="">—</option>
+                                        ) : (
+                                            paymentByOptions.map(opt => (
+                                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                            ))
+                                        )}
+                                    </select>
+                                </div>
+                                {/* Payment Remark (enabled/disabled based on status) */}
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: 4, fontWeight: 600, fontSize: 12 }}>Payment Remark</label>
+                                    <input
+                                        type="text"
+                                        value={billingData.paymentRemark}
+                                        onChange={(e) => handleBillingChange('paymentRemark', e.target.value)}
+                                        disabled={isFormDisabled}
+                                        style={{
+                                            width: '100%',
+                                            border: '1px solid #ddd',
+                                            padding: '6px 8px',
+                                            fontSize: 12,
+                                            background: isFormDisabled ? '#D5D5D8' : 'white',
+                                            cursor: isFormDisabled ? 'not-allowed' : 'text',
+                                            color: isFormDisabled ? '#666' : '#333'
+                                        }}
+                                    />
+                                </div>
+                                {/* Receipt Date (disabled) */}
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: 4, fontWeight: 600, fontSize: 12 }}>Receipt Date</label>
+                                    <input
+                                        type="text"
+                                        disabled
+                                        value={formatDateDdMmmYy(billingData.receiptDate)}
+                                        style={{ width: '100%', border: '1px solid #ddd', padding: '6px 8px', fontSize: 12, background: '#D5D5D8' }}
+                                    />
+                                </div>
                             </div>
-                            {/* Reason (enabled/disabled based on status) */}
-                            <div>
-                                <label style={{ display: 'block', marginBottom: 4, fontWeight: 600, fontSize: 12 }}>Reason</label>
-                                <input 
-                                    type="text" 
-                                    value={billingData.reason}
-                                    onChange={(e) => handleBillingChange('reason', e.target.value)}
-                                    disabled={isFormDisabled}
-                                    style={{ 
-                                        width: '100%', 
-                                        border: '1px solid #ddd', 
-                                        padding: '6px 8px', 
-                                        fontSize: 12, 
-                                        background: isFormDisabled ? '#D5D5D8' : 'white',
-                                        cursor: isFormDisabled ? 'not-allowed' : 'text',
-                                        color: isFormDisabled ? '#666' : '#333'
-                                    }} 
-                                />
-                            </div>
-                            {/* Payment By (enabled/disabled based on status) */}
-                            <div>
-                                <label style={{ display: 'block', marginBottom: 4, fontWeight: 600, fontSize: 12 }}>Payment By</label>
-                                <select
-                                    value={billingData.paymentBy}
-                                    onChange={(e) => handleBillingChange('paymentBy', e.target.value)}
-                                    disabled={isFormDisabled}
-                                    style={{ 
-                                        width: '100%', 
-                                        border: '1px solid #ddd', 
-                                        padding: '6px 8px', 
-                                        fontSize: 12, 
-                                        background: isFormDisabled ? '#D5D5D8' : 'white',
-                                        cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                        color: isFormDisabled ? '#666' : '#333'
-                                    }}
-                                >
-                                    {paymentByOptions.length === 0 ? (
-                                        <option value="">—</option>
-                                    ) : (
-                                        paymentByOptions.map(opt => (
-                                            <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                        ))
-                                    )}
-                                </select>
-                            </div>
-                            {/* Payment Remark (enabled/disabled based on status) */}
-                            <div>
-                                <label style={{ display: 'block', marginBottom: 4, fontWeight: 600, fontSize: 12 }}>Payment Remark</label>
-                                <input 
-                                    type="text" 
-                                    value={billingData.paymentRemark}
-                                    onChange={(e) => handleBillingChange('paymentRemark', e.target.value)}
-                                    disabled={isFormDisabled}
-                                    style={{ 
-                                        width: '100%', 
-                                        border: '1px solid #ddd', 
-                                        padding: '6px 8px', 
-                                        fontSize: 12, 
-                                        background: isFormDisabled ? '#D5D5D8' : 'white',
-                                        cursor: isFormDisabled ? 'not-allowed' : 'text',
-                                        color: isFormDisabled ? '#666' : '#333'
-                                    }} 
-                                />
-                            </div>
-                            {/* Receipt Date (disabled) */}
-                            <div>
-                                <label style={{ display: 'block', marginBottom: 4, fontWeight: 600, fontSize: 12 }}>Receipt Date</label>
-                                <input 
-                                    type="text" 
-                                    disabled 
-                                    value={formatDateDdMmmYy(billingData.receiptDate)} 
-                                    style={{ width: '100%', border: '1px solid #ddd', padding: '6px 8px', fontSize: 12, background: '#D5D5D8' }} 
-                                />
-                            </div>
-                        </div>
 
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '20px', marginBottom: '40px', flexWrap: 'wrap' }}>
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '20px', marginBottom: '40px', flexWrap: 'wrap' }}>
                                 <button
                                     type="button"
                                     disabled={!isFormDisabled}
@@ -4587,74 +4587,74 @@ export default function Treatment() {
                                         fontSize: '12px',
                                         opacity: !isFormDisabled ? 0.7 : 1
                                     }}
-                                onClick={handlePrintReceiptClick}>
+                                    onClick={handlePrintReceiptClick}>
                                     Print Receipt
                                 </button>
-                            <button 
-                                type="button" 
-                                onClick={handlePrint}
-                                title="Print prescription/report"
-                                style={{
-                                    backgroundColor: '#1976d2',
-                                    color: 'white',
-                                    border: 'none',
-                                    padding: '8px 12px',
-                                    borderRadius: '4px',
-                                    cursor: 'pointer',
-                                    fontSize: '12px',
-                                    opacity: 1,
-                                    zIndex: 11,
-                                    position: 'relative',
-                                    fontWeight: 'bold',
-                                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                                    transition: 'background-color 0.2s, box-shadow 0.2s'
-                                }}
-                                onMouseEnter={(e) => {
-                                    e.currentTarget.style.backgroundColor = '#1565c0';
-                                    e.currentTarget.style.boxShadow = '0 3px 6px rgba(0,0,0,0.3)';
-                                }}
-                                onMouseLeave={(e) => {
-                                    e.currentTarget.style.backgroundColor = '#1976d2';
-                                    e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
-                                }}
-                            >
-                                Print
-                            </button>
-                            <button 
-                                type="button" 
-                                onClick={handleBackToAppointments}
-                                disabled={isFormDisabled}
-                                style={{
-                                    backgroundColor: isFormDisabled ? '#D5D5D8' : '#1976d2',
-                                    color: isFormDisabled ? '#666' : 'white',
-                                    border: 'none',
-                                    padding: '8px 12px',
-                                    borderRadius: '4px',
-                                    cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                    fontSize: '12px',
-                                    opacity: isFormDisabled ? 0.7 : 1
-                                }}
-                            >
-                                Close
-                            </button>
-                            <button 
-                                type="button" 
-                                onClick={handleTreatmentSubmit}
-                                disabled={isSubmitting || hasSubmittedSuccessfully || isFormDisabled}
-                                style={{
-                                    backgroundColor: (isSubmitting || hasSubmittedSuccessfully || isFormDisabled) ? '#D5D5D8' : '#1976d2',
-                                    color: (isSubmitting || hasSubmittedSuccessfully || isFormDisabled) ? '#666' : 'white',
-                                    border: 'none',
-                                    padding: '8px 12px',
-                                    borderRadius: '4px',
-                                    cursor: (isSubmitting || hasSubmittedSuccessfully || isFormDisabled) ? 'not-allowed' : 'pointer',
-                                    fontSize: '12px',
-                                    opacity: (isSubmitting || hasSubmittedSuccessfully || isFormDisabled) ? 0.7 : 1
-                                }}
-                            >
-                                {isSubmitting ? 'Submitting...' : hasSubmittedSuccessfully ? 'Submitted' : 'Submit'}
-                            </button>
-                        </div>
+                                <button
+                                    type="button"
+                                    onClick={handlePrint}
+                                    title="Print prescription/report"
+                                    style={{
+                                        backgroundColor: '#1976d2',
+                                        color: 'white',
+                                        border: 'none',
+                                        padding: '8px 12px',
+                                        borderRadius: '4px',
+                                        cursor: 'pointer',
+                                        fontSize: '12px',
+                                        opacity: 1,
+                                        zIndex: 11,
+                                        position: 'relative',
+                                        fontWeight: 'bold',
+                                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                                        transition: 'background-color 0.2s, box-shadow 0.2s'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.backgroundColor = '#1565c0';
+                                        e.currentTarget.style.boxShadow = '0 3px 6px rgba(0,0,0,0.3)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.backgroundColor = '#1976d2';
+                                        e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
+                                    }}
+                                >
+                                    Print
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleBackToAppointments}
+                                    disabled={isFormDisabled}
+                                    style={{
+                                        backgroundColor: isFormDisabled ? '#D5D5D8' : '#1976d2',
+                                        color: isFormDisabled ? '#666' : 'white',
+                                        border: 'none',
+                                        padding: '8px 12px',
+                                        borderRadius: '4px',
+                                        cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                        fontSize: '12px',
+                                        opacity: isFormDisabled ? 0.7 : 1
+                                    }}
+                                >
+                                    Close
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleTreatmentSubmit}
+                                    disabled={isSubmitting || hasSubmittedSuccessfully || isFormDisabled}
+                                    style={{
+                                        backgroundColor: (isSubmitting || hasSubmittedSuccessfully || isFormDisabled) ? '#D5D5D8' : '#1976d2',
+                                        color: (isSubmitting || hasSubmittedSuccessfully || isFormDisabled) ? '#666' : 'white',
+                                        border: 'none',
+                                        padding: '8px 12px',
+                                        borderRadius: '4px',
+                                        cursor: (isSubmitting || hasSubmittedSuccessfully || isFormDisabled) ? 'not-allowed' : 'pointer',
+                                        fontSize: '12px',
+                                        opacity: (isSubmitting || hasSubmittedSuccessfully || isFormDisabled) ? 0.7 : 1
+                                    }}
+                                >
+                                    {isSubmitting ? 'Submitting...' : hasSubmittedSuccessfully ? 'Submitted' : 'Submit'}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -4766,7 +4766,7 @@ export default function Treatment() {
                 })()}
                 patientName={selectedPatientForForm?.name || treatmentData?.patientName}
             />
-          <AddBillingPopup
+            <AddBillingPopup
                 open={showBillingPopup}
                 onClose={() => setShowBillingPopup(false)}
                 isFormDisabled={isFormDisabled}

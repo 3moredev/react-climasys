@@ -162,7 +162,7 @@ export default function LoginPage() {
                       }}
                     />
                     {errors.loginId && (
-                      <div style={{ color: 'red', fontSize: '12px', marginTop: '4px' }}>
+                      <div style={{ color: 'red', fontSize: '12px', marginTop: '4px', marginLeft: 0, textAlign: 'left' }}>
                         {errors.loginId.message}
                       </div>
                     )}
@@ -237,7 +237,7 @@ export default function LoginPage() {
                       </svg>
                     </span>
                     {errors.password && (
-                      <div style={{ color: 'red', fontSize: '12px', marginTop: '4px' }}>
+                      <div style={{ color: 'red', fontSize: '12px', marginTop: '4px', marginLeft: 0, textAlign: 'left' }}>
                         {errors.password.message}
                       </div>
                     )}
