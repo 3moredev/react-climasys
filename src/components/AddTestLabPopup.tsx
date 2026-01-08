@@ -348,7 +348,7 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
                                     padding: '5px',
                                     borderRadius: '8px',
                                     color: '#fff',
-                                    backgroundColor: '#1976d2',
+                                    backgroundColor: '#1E88E5',
                                     width: '32px',
                                     height: '32px',
                                     display: 'flex',
@@ -357,10 +357,10 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
                                     transition: 'background-color 0.2s'
                                 }}
                                 onMouseEnter={(e) => {
-                                    e.currentTarget.style.backgroundColor = '#1565c0';
+                                    e.currentTarget.style.backgroundColor = '#1976D2';
                                 }}
                                 onMouseLeave={(e) => {
-                                    e.currentTarget.style.backgroundColor = '#1976d2';
+                                    e.currentTarget.style.backgroundColor = '#1E88E5';
                                 }}
                             >
                                 <Close fontSize="small" />
@@ -445,7 +445,7 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
                                     type="button"
                                     onClick={handleAddParameter}
                                     style={{
-                                        backgroundColor: '#1976d2',
+                                        backgroundColor: '#1E88E5',
                                         color: 'white',
                                         border: 'none',
                                         padding: '6px 12px',
@@ -457,10 +457,10 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
                                         transition: 'background-color 0.2s'
                                     }}
                                     onMouseEnter={(e) => {
-                                        e.currentTarget.style.backgroundColor = '#1565c0';
+                                        e.currentTarget.style.backgroundColor = '#1976D2';
                                     }}
                                     onMouseLeave={(e) => {
-                                        e.currentTarget.style.backgroundColor = '#1976d2';
+                                        e.currentTarget.style.backgroundColor = '#1E88E5';
                                     }}
                                 >
                                     Add Parameter
@@ -474,7 +474,7 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
                             <div style={{
                                 display: 'grid',
                                 gridTemplateColumns: '60px 1fr 80px' as const,
-                                backgroundColor: '#1976d2',
+                                backgroundColor: '#1E88E5',
                                 color: 'white',
                                 fontWeight: 'bold',
                                 fontSize: '12px'
@@ -553,7 +553,7 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
                             disabled={isSaving}
                             style={{
                                 padding: '8px 16px',
-                                backgroundColor: isSaving ? '#ccc' : '#1976d2',
+                                backgroundColor: isSaving ? '#ccc' : '#1E88E5',
                                 color: 'white',
                                 border: 'none',
                                 borderRadius: '4px',
@@ -565,12 +565,12 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
                             }}
                             onMouseEnter={(e) => {
                                 if (!isSaving) {
-                                    e.currentTarget.style.backgroundColor = '#1565c0';
+                                    e.currentTarget.style.backgroundColor = '#1976D2';
                                 }
                             }}
                             onMouseLeave={(e) => {
                                 if (!isSaving) {
-                                    e.currentTarget.style.backgroundColor = '#1976d2';
+                                    e.currentTarget.style.backgroundColor = '#1E88E5';
                                 }
                             }}
                         >
@@ -580,20 +580,20 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
                             onClick={handleClose}
                             style={{
                                 padding: '8px 16px',
-                                backgroundColor: 'rgb(0, 100, 200)',
-                                color: '#1976d2',
-                                border: '1px solid #1976d2',
+                                backgroundColor: '#1E88E5',
+                                color: 'white',
+                                border: 'none',
                                 borderRadius: '4px',
                                 cursor: 'pointer',
                                 fontSize: '14px',
                                 fontWeight: '500',
-                                transition: 'all 0.2s'
+                                transition: 'background-color 0.2s'
                             }}
                             onMouseEnter={(e) => {
-                                e.currentTarget.style.backgroundColor = 'rgb(0, 100, 200)';
+                                e.currentTarget.style.backgroundColor = '#1976D2';
                             }}
                             onMouseLeave={(e) => {
-                                e.currentTarget.style.backgroundColor = 'rgb(0, 123, 255)';
+                                e.currentTarget.style.backgroundColor = '#1E88E5';
                             }}
                         >
                             Cancel
@@ -602,20 +602,20 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
                             onClick={handleClose}
                             style={{
                                 padding: '8px 16px',
-                                backgroundColor: 'rgb(0, 100, 200)',
-                                color: '#1976d2',
-                                border: '1px solid #1976d2',
+                                backgroundColor: '#1E88E5',
+                                color: 'white',
+                                border: 'none',
                                 borderRadius: '4px',
                                 cursor: 'pointer',
                                 fontSize: '14px',
                                 fontWeight: '500',
-                                transition: 'all 0.2s'
+                                transition: 'background-color 0.2s'
                             }}
                             onMouseEnter={(e) => {
-                                e.currentTarget.style.backgroundColor = 'rgb(0, 100, 200)';
+                                e.currentTarget.style.backgroundColor = '#1976D2';
                             }}
                             onMouseLeave={(e) => {
-                                e.currentTarget.style.backgroundColor = 'rgb(0, 123, 255)';
+                                e.currentTarget.style.backgroundColor = '#1E88E5';
                             }}
                         >
                             Back
