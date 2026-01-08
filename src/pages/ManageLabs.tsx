@@ -491,7 +491,7 @@ export default function ManageLabs() {
       setSnackbarMessage(err.message || 'Failed to delete lab test');
       setShowSnackbar(true);
     } finally {
-      setLoading(false);
+      setIsDeleting(false);
     }
   };
 
