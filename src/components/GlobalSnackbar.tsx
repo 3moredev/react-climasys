@@ -13,23 +13,66 @@ const GlobalSnackbar: React.FC<GlobalSnackbarProps> = ({
     onClose,
     autoHideDuration = 5000
 }) => {
-    // Determine if message is an error based on error keywords
-    const isError = message.toLowerCase().includes("at least one lab test") ||
-        message.toLowerCase().includes("at least one lab") ||
-        message.toLowerCase().includes("required fields") ||
-        message.toLowerCase().includes("value for each result") ||
-        message.toLowerCase().includes("failed") ||
-        message.toLowerCase().includes("error") ||
-        message.toLowerCase().includes("unable") ||
-        message.toLowerCase().includes("invalid") ||
-        message.toLowerCase().includes("missing") ||
-        message.toLowerCase().includes("required") ||
-        message.toLowerCase().includes("already") ||
-        message.toLowerCase().includes("conflict") ||
-        message.toLowerCase().includes("doesn't have") ||
-        message.toLowerCase().includes("not found") ||
-        message.toLowerCase().includes("failed to") ||
-        message.toLowerCase().includes("please select");
+    // Determine if message is an error based on expanded error keywords
+    const errorKeywords = [
+        "at least one lab test",
+        "at least one lab",
+        "required fields",
+        "value for each result",
+        "failed",
+        "error",
+        "unable",
+        "invalid",
+        "missing",
+        "required",
+        "already",
+        "conflict",
+        "doesn't have",
+        "not found",
+        "failed to",
+        "please select",
+        "please enter",
+        "please provide",
+        "not available",
+        "not permitted",
+        "not allowed",
+        "not authorized",
+        "not found",
+        "not match",
+        "not exist",
+        "cannot",
+        "could not",
+        "wrong",
+        "incorrect",
+        "at least",
+        "no patient",
+        "no record",
+        "no data",
+        "duplicate",
+        "denied",
+        "forbidden",
+        "unauthorized",
+        "timeout",
+        "refused",
+        "exception",
+        "bad request",
+        "incomplete",
+        "check your",
+        "missing id",
+        "failure",
+        "something went wrong",
+        "problem",
+        "issue occurred",
+        "server error",
+        "network error",
+        "connection refused",
+        "not ",
+        "no ",
+        "denied",
+        "forbidden"
+    ];
+
+    const isError = errorKeywords.some(keyword => message.toLowerCase().includes(keyword));
 
     // Auto-hide functionality
     React.useEffect(() => {
