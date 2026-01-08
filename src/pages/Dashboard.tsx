@@ -99,15 +99,15 @@ export default function Dashboard() {
       // Fetch dashboard data using the service
       const dashboardData = await dashboardService.getDashboardStats({
         clinicId: user?.clinicId,
-        doctorId: user?.userId,
+        // doctorId: user?.userId,
         date: new Date().toISOString().split('T')[0],
       })
-      
+
       setStats(dashboardData)
       console.log('Dashboard data loaded successfully:', dashboardData)
     } catch (error: any) {
       console.error('Failed to load dashboard stats:', error)
-      
+
       // Provide more specific error messages
       if (error.message?.includes('Network Error') || error.code === 'ECONNREFUSED') {
         setError('Backend server is not running. Please start the Spring Boot server.')
@@ -118,7 +118,7 @@ export default function Dashboard() {
       } else {
         setError('Failed to load dashboard data. Using cached data.')
       }
-      
+
       // Keep existing stats (mock data) if API fails
       console.log('Using fallback data due to API error')
     } finally {
@@ -173,187 +173,8 @@ export default function Dashboard() {
 
 
   return (
-    <Box className="dashboard-container">
-      {/* Header */}
-      <Box className="dashboard-header">
-        <Box display="flex" justifyContent="space-between" alignItems="center">
-          <Box>
-            <Typography 
-              variant="h4" 
-              component="h1" 
-              className="dashboard-title"
-              sx={{ color: 'white !important' }}
-            >
-              Doctor's Dashboard
-            </Typography>
-        <Typography 
-          variant="subtitle1" 
-          className="dashboard-subtitle"
-          sx={{ color: 'white !important' }}
-        >
-          Welcome back, {stats?.doctorName || user?.doctorName || user?.firstName || 'Dr. User'} • {formatDate(new Date())}
-        </Typography>
-        {(stats?.clinicName || user?.clinicName) && (
-          <Typography 
-            variant="body2" 
-            className="dashboard-subtitle" 
-            sx={{ opacity: 0.8, mt: 0.5, color: 'white !important' }}
-          >
-            {stats?.clinicName || user?.clinicName} • {user?.roleName}
-          </Typography>
-        )}
-          </Box>
-          <IconButton 
-            onClick={handleRefresh} 
-            disabled={loadingStats}
-            sx={{ 
-              color: 'white',
-              backgroundColor: 'rgba(255,255,255,0.1)',
-              '&:hover': { backgroundColor: 'rgba(255,255,255,0.2)' }
-            }}
-          >
-            <Refresh />
-          </IconButton>
-        </Box>
-      </Box>
-
-      {loadingStats && (
-        <Box display="flex" justifyContent="center" mb={2}>
-          <CircularProgress />
-        </Box>
-      )}
-
-      {error && (
-        <Alert severity="warning" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
-      )}
-
-
-      {/* Legacy Dashboard Stats - Row 1 */}
-      <Grid container spacing={3} mb={3}>
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard
-            title="Total Patients"
-            value={stats.totalPatients}
-            icon={<People />}
-            color="#3a6f9f"
-            subtitle="Registered patients"
-            colorClass="blue"
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard
-            title="New Patients (30 days)"
-            value={stats.newPatientsLast30Days}
-            icon={<PersonAdd />}
-            color="#388e3c"
-            subtitle="Last 30 days"
-            colorClass="green"
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard
-            title="Male - Female"
-            value={`${stats.malePatients} - ${stats.femalePatients}`}
-            icon={<People />}
-            color="#9c27b0"
-            subtitle="Gender distribution"
-            colorClass="purple"
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard
-            title="Installation Date"
-            value={stats.installationDate}
-            icon={<Assessment />}
-            color="#5d4037"
-            subtitle="Since 2019"
-            colorClass="brown"
-          />
-        </Grid>
-      </Grid>
-
-      {/* Legacy Dashboard Stats - Row 2 */}
-      <Grid container spacing={3} mb={3}>
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard
-            title="Patient Visits"
-            value={stats.totalPatientVisits}
-            icon={<CalendarToday />}
-            color="#3a6f9f"
-            subtitle="Total visits"
-            colorClass="blue"
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard
-            title="Patients / Day"
-            value={stats.patientsPerDay}
-            icon={<Schedule />}
-            color="#388e3c"
-            subtitle="Daily average"
-            colorClass="green"
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard
-            title="Total Prescriptions"
-            value={stats.totalPrescriptions}
-            icon={<LocalPharmacy />}
-            color="#f57c00"
-            subtitle="All time"
-            colorClass="orange"
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard
-            title="License Expiry"
-            value={stats.licenseExpiryDate}
-            icon={<Assessment />}
-            color="#d32f2f"
-            subtitle="System license"
-            colorClass="red"
-          />
-        </Grid>
-      </Grid>
-
-
-      {/* Action Buttons Row */}
-      <Grid container spacing={3} mb={3}>
-        <Grid item xs={12} sm={4}>
-          <Box display="flex" justifyContent="center">
-            <Button
-              variant="contained"
-              color="primary"
-              size="large"
-              className="form-button"
-              sx={{ height: '38px', minWidth: '190px' }}
-              onClick={handleExit}
-            >
-              Exit / Logout
-            </Button>
-          </Box>
-        </Grid>
-        <Grid item xs={12} sm={4}>
-          <Box display="flex" justifyContent="center">
-            <Button
-              variant="contained"
-              color="primary"
-              size="large"
-              className="form-button"
-              sx={{ height: '38px', minWidth: '190px' }}
-              onClick={handleProceed}
-            >
-              Proceed
-            </Button>
-          </Box>
-        </Grid>
-        <Grid item xs={12} sm={4}>
-          {/* Empty space for layout balance */}
-        </Grid>
-      </Grid>
-      
-    </Box>
+    <div className="d-flex justify-content-between align-items-center mb-3">
+      <h2>Dashboard...(Coming Soon)</h2>
+    </div>
   )
 }
