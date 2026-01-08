@@ -159,6 +159,31 @@ button:not(.MuiTab-root),
   text-transform: none !important;
 }
 
+button:disabled,
+.btn:disabled,
+.MuiButton-root:disabled,
+.form-button:disabled,
+.action-button:disabled,
+.quick-action-btn:disabled,
+.card-btn:disabled,
+.page-btn:disabled,
+.nav-btn:disabled,
+.crm-btn:disabled,
+.btn-icon:disabled {
+  cursor: not-allowed !important;
+  opacity: 0.65 !important;
+}
+
+button:disabled:hover,
+.btn:disabled:hover,
+.MuiButton-root:disabled:hover,
+.form-button:disabled:hover,
+.action-button:disabled:hover,
+.quick-action-btn:disabled:hover {
+  transform: none !important;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+}
+
 button:not(.MuiTab-root):hover,
 .MuiButton-root:not(.MuiTab-root):hover,
 .form-button:hover,
@@ -183,6 +208,16 @@ select,
   transition: border-color 0.2s ease-in-out !important;
   background: white;
   font-family: Arial, Helvetica, sans-serif !important;
+}
+
+input:disabled,
+select:disabled,
+textarea:disabled,
+.MuiTextField-root input:disabled,
+.MuiFormControl-root input:disabled {
+  cursor: not-allowed !important;
+  background-color: #f5f5f5 !important;
+  opacity: 0.8 !important;
 }
 
 /* Lighter placeholder color across the app */
