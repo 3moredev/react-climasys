@@ -104,6 +104,24 @@ export default function ManageLabs() {
       return;
     }
 
+    // Check for duplicate lab test name (case-insensitive)
+    const isDuplicate = labTests.some(test => {
+      // If editing, we ignore the current record we are editing
+      if (editData) {
+        // If the name in the list matches the original name of the record being edited, it's the record itself
+        if (test.labTestName.trim().toLowerCase() === editData.labTestName.trim().toLowerCase()) {
+          return false;
+        }
+      }
+      return test.labTestName.trim().toLowerCase() === data.labTestName.trim().toLowerCase();
+    });
+
+    if (isDuplicate) {
+      setSnackbarMessage('Record already exists');
+      setShowSnackbar(true);
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -429,7 +447,6 @@ export default function ManageLabs() {
             paramsResponse.data?.labTestParameters ||
             (Array.isArray(paramsResponse.data) ? paramsResponse.data : []) ||
             paramsResponse.parameters ||
-            paramsResponse.data?.parameters ||
             paramsResponse.data?.parameters ||
             paramsResponse.data?.data ||
             [];

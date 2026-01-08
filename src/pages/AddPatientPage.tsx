@@ -18,7 +18,8 @@ import {
   InputAdornment,
   Checkbox,
   FormControlLabel,
-  Switch
+  Switch,
+  CircularProgress
 } from '@mui/material'
 import Autocomplete from '@mui/material/Autocomplete'
 import { DateField } from '@mui/x-date-pickers/DateField'
@@ -1473,8 +1474,34 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
           fontFamily: "'Roboto', sans-serif",
           margin: '3px 14px 0',
           minHeight: '1.25rem'
-        }
+        },
+        position: 'relative'
       }}>
+        {/* Loading Overlay - Shows when fetching patient data */}
+        {loading && patientId && (
+          <Box
+            sx={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(255, 255, 255, 0.8)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 10000,
+              borderRadius: '8px'
+            }}
+          >
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+              <CircularProgress size={50} />
+              <Typography variant="body2" sx={{ color: '#666', fontWeight: 500 }}>
+                Loading patient data...
+              </Typography>
+            </Box>
+          </Box>
+        )}
         <Grid container spacing={3}>
           {/* Row 1: Patient ID, First Name, Middle Name, Last Name */}
           <Grid item xs={12}>
@@ -1999,16 +2026,38 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         maxHeight: '300px'
                       }
                     }}
+                    disablePortal={false}
                     slotProps={{
                       popper: {
                         style: {
                           zIndex: 11001
-                        }
+                        },
+                        placement: 'bottom-start',
+                        modifiers: [
+                          {
+                            name: 'offset',
+                            options: {
+                              offset: [0, 4]
+                            }
+                          },
+                          {
+                            name: 'sameWidth',
+                            enabled: true,
+                            fn: ({ state }) => {
+                              state.styles.popper.width = `${state.rects.reference.width}px`
+                              return state
+                            },
+                            phase: 'beforeWrite',
+                            requires: ['computeStyles']
+                          }
+                        ]
                       },
                       paper: {
-                        style: {
+                        sx: {
                           zIndex: 11001,
-                          maxHeight: '300px'
+                          maxHeight: '300px',
+                          width: 'inherit',
+                          minWidth: '100%'
                         }
                       }
                     }}
@@ -2111,10 +2160,38 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         }
                       }}
                       filterOptions={(options) => options}
+                      disablePortal={false}
                       slotProps={{
                         popper: {
                           style: {
                             zIndex: 11001
+                          },
+                          placement: 'bottom-start',
+                          modifiers: [
+                            {
+                              name: 'offset',
+                              options: {
+                                offset: [0, 4]
+                              }
+                            },
+                            {
+                              name: 'sameWidth',
+                              enabled: true,
+                              fn: ({ state }) => {
+                                state.styles.popper.width = `${state.rects.reference.width}px`
+                                return state
+                              },
+                              phase: 'beforeWrite',
+                              requires: ['computeStyles']
+                            }
+                          ]
+                        },
+                        paper: {
+                          sx: {
+                            zIndex: 11001,
+                            maxHeight: '300px',
+                            width: 'inherit',
+                            minWidth: '100%'
                           }
                         }
                       }}

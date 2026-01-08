@@ -2623,7 +2623,7 @@ export default function Treatment() {
 
         if (!doctorId || !clinicId) {
             setDiagnosesError('Doctor and clinic information are required to add a diagnosis.');
-            return;
+            return false;
         }
 
         const trimmedShortDescription = shortDescription?.trim() || '';
@@ -2632,7 +2632,7 @@ export default function Treatment() {
 
         if (!trimmedShortDescription || !trimmedDiagnosisDescription) {
             setDiagnosesError('Short description and diagnosis description are required.');
-            return;
+            return false;
         }
 
         // Check for duplicate diagnosis before API call (check both value and diagnosis name)
@@ -2661,8 +2661,8 @@ export default function Treatment() {
             setSnackbarMessage(`Diagnosis "${duplicateName}" is already added.`);
             setSnackbarOpen(true);
             setDiagnosesError(null);
-            setShowDiagnosisPopup(false);
-            return;
+            // Do NOT close popup here; signal to popup to stay open
+            return false;
         }
 
         try {
@@ -2717,6 +2717,8 @@ export default function Treatment() {
                     setSnackbarMessage(`Diagnosis "${responseLabel}" is already added.`);
                     setSnackbarOpen(true);
                     setDiagnosesError(null); // Clear any existing error
+                    // Keep popup open by signalling failure to parent
+                    diagnosisAdded = false;
                     return prev; // Return previous state without adding
                 }
 
@@ -2738,15 +2740,15 @@ export default function Treatment() {
                     }
                 ];
             });
-            setShowDiagnosisPopup(false);
 
-            // Show success message after popup closes (only if diagnosis was actually added)
+            // Show success message when a new diagnosis was actually added
             if (diagnosisAdded) {
-                setTimeout(() => {
-                    setSnackbarMessage('Diagnosis added successfully!');
-                    setSnackbarOpen(true);
-                }, 100); // Small delay to ensure popup is closed
+                setSnackbarMessage('Diagnosis added successfully!');
+                setSnackbarOpen(true);
             }
+
+            // Let popup know whether this was a success (true) or duplicate/error (false)
+            return diagnosisAdded;
         } catch (error: any) {
             console.error('Failed to create diagnosis from Treatment screen:', error);
             setDiagnosesError(error?.message || 'Failed to create diagnosis. Please try again.');
@@ -2917,11 +2919,11 @@ export default function Treatment() {
         setShowTestLabPopup(true);
     };
 
-    const handleSaveTestLab = (testLabData: TestLabData) => {
+    const handleSaveTestLab = (testLabData: TestLabData): boolean => {
         const labTestName = testLabData.labTestName?.trim();
         if (!labTestName) {
             setInvestigationsError('Lab test name is required to add an investigation.');
-            return;
+            return false;
         }
 
         const normalizedName = labTestName;
@@ -2945,8 +2947,8 @@ export default function Treatment() {
             setSnackbarMessage(`Investigation "${duplicateName}" is already added.`);
             setSnackbarOpen(true);
             setInvestigationsError(null);
-            setShowTestLabPopup(false);
-            return;
+            // Do NOT close popup here; signal to popup to stay open
+            return false;
         }
 
         setInvestigationsError(null);
@@ -2964,6 +2966,8 @@ export default function Treatment() {
                 setSnackbarMessage(`Investigation "${normalizedName}" is already added.`);
                 setSnackbarOpen(true);
                 setInvestigationsError(null); // Clear any existing error
+                // Keep popup open by not adding anything
+                investigationAdded = false;
                 return prev; // Return previous state without adding
             }
 
@@ -2995,15 +2999,14 @@ export default function Treatment() {
             });
         }
 
-        setShowTestLabPopup(false);
-
-        // Show success message after popup closes (only if investigation was actually added)
+        // Show success message only if investigation was actually added
         if (investigationAdded) {
-            setTimeout(() => {
-                setSnackbarMessage('Investigation added successfully!');
-                setSnackbarOpen(true);
-            }, 100); // Small delay to ensure popup is closed
+            setSnackbarMessage('Investigation added successfully!');
+            setSnackbarOpen(true);
         }
+
+        // Let popup know whether this was a success (true) or duplicate/error (false)
+        return investigationAdded;
     };
 
     // Function to collect all form fields into an array

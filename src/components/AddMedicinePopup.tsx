@@ -206,20 +206,28 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                 const match = errorMessage.match(/short description ['"]([^'"]+)['"]/i);
                 const shortDesc = match ? match[1] : newShortDescription;
                 userFriendlyMessage = `Medicine "${shortDesc}" is already added.`;
+
+                // For duplicate errors, KEEP the popup open and just show the error
+                if (onError) {
+                    onError(userFriendlyMessage);
+                } else {
+                    setSnackbarMessage(userFriendlyMessage);
+                    setSnackbarOpen(true);
+                }
             } else {
                 userFriendlyMessage = errorMessage;
-            }
-            
-            // Close popup and show error in parent component snackbar (like diagnosis)
-            onClose();
-            if (onError) {
-                setTimeout(() => {
-                    onError(userFriendlyMessage);
-                }, 100); // Small delay to ensure popup is closed
-            } else {
-                // Fallback to popup snackbar if onError not provided
-                setSnackbarMessage(userFriendlyMessage);
-                setSnackbarOpen(true);
+
+                // For non-duplicate errors, close popup and show error in parent component snackbar (like before)
+                onClose();
+                if (onError) {
+                    setTimeout(() => {
+                        onError(userFriendlyMessage);
+                    }, 100); // Small delay to ensure popup is closed
+                } else {
+                    // Fallback to popup snackbar if onError not provided
+                    setSnackbarMessage(userFriendlyMessage);
+                    setSnackbarOpen(true);
+                }
             }
         } finally {
             setLoading(false);

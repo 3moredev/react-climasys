@@ -171,7 +171,15 @@ export default function AppointmentTable() {
             try {
                 // Backend will automatically use default_doctor from user_master table based on session
                 const doctors = await doctorService.getOpdDoctors();
-                setAllDoctors(doctors);
+
+                // Sort doctors alphabetically by name, ignoring "Dr." prefix
+                const sortedDoctors = [...doctors].sort((a, b) => {
+                    const nameA = (a.name || '').replace(/^Dr\.?\s*/i, '').trim().toLowerCase();
+                    const nameB = (b.name || '').replace(/^Dr\.?\s*/i, '').trim().toLowerCase();
+                    return nameA.localeCompare(nameB);
+                });
+
+                setAllDoctors(sortedDoctors);
 
                 // Always set the default doctor when doctors are loaded
                 // Backend sorts doctors with default_doctor from user_master first
@@ -2127,7 +2135,48 @@ export default function AppointmentTable() {
     };
 
     const handleOnlineChange = (index: number, value: string) => {
-        updateAppointmentField(index, 'online', value);
+        const prevValue = appointments[index].online || '';
+
+        // Handle backspace/deletion: if simply getting shorter, allow it
+        if (value.length < prevValue.length) {
+            updateAppointmentField(index, 'online', value);
+            return;
+        }
+
+        // Sanitize: allow only digits
+        const digits = value.replace(/\D/g, '');
+
+        // Absolute max length is 4 digits (HHmm), plus colon makes 5 chars max
+        if (digits.length > 4) return;
+
+        let formatted = digits;
+
+        // Formatting and Validation Logic
+        if (digits.length >= 2) {
+            const hh = parseInt(digits.substring(0, 2), 10);
+
+            // Validate Hour (00-23)
+            if (hh > 23) {
+                // Reject invalid hour immediately
+                return;
+            }
+
+            // Auto-insert colon after 2 digits
+            formatted = digits.substring(0, 2) + ':';
+
+            if (digits.length > 2) {
+                const mmStr = digits.substring(2);
+                formatted += mmStr;
+
+                // Validate Minute (00-59)
+                if (mmStr.length === 2) {
+                    const mm = parseInt(mmStr, 10);
+                    if (mm > 59) return; // Reject invalid minutes
+                }
+            }
+        }
+
+        updateAppointmentField(index, 'online', formatted);
     };
 
     const handleProviderChange = (index: number, value: string) => {
@@ -4835,12 +4884,12 @@ export default function AppointmentTable() {
                                                             title={(() => {
                                                                 const statusId = mapStatusLabelToId(a.status);
                                                                 const shouldDisable = isReceptionist && statusId >= 2;
-                                                                if (shouldDisable) return "Visit Details (Disabled - Status >= 2)";
+                                                                if (shouldDisable) return "Visit Details";
                                                                 const isWaiting = statusId === 1;
                                                                 const isComplete = statusId === 5;
                                                                 const shouldEnable = !isReceptionist || isWaiting || isComplete;
-                                                                if (!shouldEnable) return "Visit Details (Disabled for Reception)";
-                                                                return a.status === 'WITH DOCTOR' ? 'Visit Details (Disabled - Patient with doctor)' : 'Visit Details';
+                                                                if (!shouldEnable) return "Visit Details";
+                                                                return a.status === 'WITH DOCTOR' ? 'Visit Details' : 'Visit Details';
                                                             })()}
                                                             onClick={() => {
                                                                 const statusId = mapStatusLabelToId(a.status);
@@ -4931,10 +4980,10 @@ export default function AppointmentTable() {
                                                                 const isCollectible = statusId === 4 || statusId === 5 || statusId === 6;
                                                                 // Allow statusId 4, 5 (Complete), and 6 even for reception, otherwise disable for reception when statusId >= 2
                                                                 const shouldDisable = isReceptionist && statusId >= 2 && !isCollectible;
-                                                                if (shouldDisable) return "Collection (Disabled - Status >= 2)";
+                                                                if (shouldDisable) return "Collection";
                                                                 const shouldEnable = !isReceptionist || isCollectible;
-                                                                if (!shouldEnable) return "Collection (Disabled for Reception)";
-                                                                return !isCollectible ? "Collection (Disabled - Status not Complete/Submited)" : "Collection";
+                                                                if (!shouldEnable) return "Collection";
+                                                                return !isCollectible ? "Collection" : "Collection";
                                                             })()}
                                                             onClick={() => {
                                                                 const statusId = mapStatusLabelToId(a.status);
@@ -5048,7 +5097,7 @@ export default function AppointmentTable() {
                                                                 title={(() => {
                                                                     const normalizedStatus = normalizeStatusLabel(a.status);
                                                                     const isEnabled = normalizedStatus === 'COLLECTION';
-                                                                    return isEnabled ? "Treatment" : "Treatment (Disabled - Only enabled for Collection status)";
+                                                                    return isEnabled ? "Treatment" : "Treatment";
                                                                 })()}
                                                                 onClick={() => {
                                                                     const normalizedStatus = normalizeStatusLabel(a.status);
