@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { Add, Delete, Edit, Refresh, Search } from '@mui/icons-material'
 import { Snackbar } from '@mui/material'
 import AddPrescriptionPopup, { PrescriptionData } from '../components/AddPrescriptionPopup'
+import DeleteConfirmationDialog from '../components/DeleteConfirmationDialog'
 import { doctorService, Doctor } from '../services/doctorService'
 import { useSession } from '../store/hooks/useSession'
 import prescriptionDetailsService, {
@@ -52,10 +53,15 @@ export default function PrescriptionDetails() {
   const [loadingDoctors, setLoadingDoctors] = useState(false)
   const [loadingPrescriptions, setLoadingPrescriptions] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  
+
   // Snackbar state management
   const [snackbarOpen, setSnackbarOpen] = useState(false)
   const [snackbarMessage, setSnackbarMessage] = useState('')
+
+  // Delete confirmation state
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<boolean>(false);
+  const [prescriptionToDelete, setPrescriptionToDelete] = useState<PrescriptionRow | null>(null);
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
 
   const fetchDoctors = useCallback(async () => {
     try {
@@ -274,7 +280,15 @@ export default function PrescriptionDetails() {
     setShowPopup(true)
   }
 
-  const handleDelete = async (row: PrescriptionRow) => {
+  const handleDelete = (row: PrescriptionRow) => {
+    setPrescriptionToDelete(row);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!prescriptionToDelete) return;
+
+    const row = prescriptionToDelete;
     if (!selectedDoctorId) {
       setError('Doctor ID not available')
       setSnackbarMessage('Doctor ID not available')
@@ -282,12 +296,8 @@ export default function PrescriptionDetails() {
       return
     }
 
-    if (!window.confirm(`Delete prescription "${row.brandName}"?`)) {
-      return
-    }
-
     try {
-      setLoadingPrescriptions(true)
+      setIsDeleting(true)
       setError(null)
       await prescriptionDetailsService.deletePrescription(
         selectedDoctorId,
@@ -299,13 +309,15 @@ export default function PrescriptionDetails() {
       await loadPrescriptions(selectedDoctorId)
       setSnackbarMessage('Prescription deleted successfully!')
       setSnackbarOpen(true)
+      setShowDeleteConfirm(false)
+      setPrescriptionToDelete(null)
     } catch (err: any) {
       console.error('Error deleting prescription:', err)
       setError(err.message || 'Failed to delete prescription')
       setSnackbarMessage(err.message || 'Failed to delete prescription')
       setSnackbarOpen(true)
     } finally {
-      setLoadingPrescriptions(false)
+      setIsDeleting(false)
     }
   }
 
@@ -530,9 +542,9 @@ export default function PrescriptionDetails() {
       `}</style>
 
       {/* Page Title */}
-      <h1 style={{ 
-        fontWeight: 'bold', 
-        fontSize: '1.8rem', 
+      <h1 style={{
+        fontWeight: 'bold',
+        fontSize: '1.8rem',
         color: '#212121',
         marginBottom: '24px'
       }}>
@@ -579,7 +591,7 @@ export default function PrescriptionDetails() {
         <button className="btn-icon" onClick={handleRefresh} title="Refresh">
           <Refresh style={{ fontSize: '20px' }} />
         </button>
-        
+
         {userId !== 7 && (
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ fontSize: '0.9rem', color: '#666', whiteSpace: 'nowrap' }}>For Provider</span>
@@ -767,6 +779,20 @@ export default function PrescriptionDetails() {
             fontWeight: 'bold'
           }
         }}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        open={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleConfirmDelete}
+        title="Delete Prescription"
+        message={
+          <>
+            Are you sure you want to delete the prescription <strong>{prescriptionToDelete?.brandName}</strong>?
+          </>
+        }
+        loading={isDeleting}
       />
     </div>
   )

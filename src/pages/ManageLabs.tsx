@@ -8,6 +8,7 @@ import { doctorService, Doctor } from "../services/doctorService";
 import { useSession } from "../store/hooks/useSession";
 import AddTestLabPopup, { TestLabData } from "../components/AddTestLabPopup";
 import GlobalSnackbar from "../components/GlobalSnackbar";
+import DeleteConfirmationDialog from "../components/DeleteConfirmationDialog";
 
 // Lab Test type definition
 type LabTest = {
@@ -43,6 +44,11 @@ export default function ManageLabs() {
   // Snackbar state
   const [showSnackbar, setShowSnackbar] = useState<boolean>(false);
   const [snackbarMessage, setSnackbarMessage] = useState<string>('');
+
+  // Delete confirmation state
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<boolean>(false);
+  const [labTestToDelete, setLabTestToDelete] = useState<LabTest | null>(null);
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
 
   // Filter lab tests based on search term
   const filteredLabTests = labTests.filter(labTest => {
@@ -338,11 +344,15 @@ export default function ManageLabs() {
     }
   };
 
-  const handleDelete = async (labTest: LabTest) => {
-    // Confirm deletion
-    if (!window.confirm(`Are you sure you want to delete the lab test "${labTest.labTestName}"? This will also delete all associated parameters.`)) {
-      return;
-    }
+  const handleDelete = (labTest: LabTest) => {
+    setLabTestToDelete(labTest);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!labTestToDelete) return;
+
+    const labTest = labTestToDelete;
 
     if (!clinicId) {
       setSnackbarMessage('Clinic ID is required to delete lab test');
@@ -359,7 +369,7 @@ export default function ManageLabs() {
     }
 
     try {
-      setLoading(true);
+      setIsDeleting(true);
       setError(null);
 
       // Get the lab test ID - if not available, fetch it
@@ -412,6 +422,8 @@ export default function ManageLabs() {
           await labService.deleteLabTestByName(doctorIdToUse, clinicId, labTest.labTestName);
           console.log('Lab test deleted by name successfully');
           await fetchLabTests(doctorIdToUse);
+          setShowDeleteConfirm(false);
+          setLabTestToDelete(null);
           return;
         } catch (nameError: any) {
           throw new Error('Lab test ID not found and deletion by name also failed: ' + nameError.message);
@@ -472,6 +484,8 @@ export default function ManageLabs() {
 
       // Refresh the lab tests list after successful deletion
       await fetchLabTests(doctorIdToUse);
+      setShowDeleteConfirm(false);
+      setLabTestToDelete(null);
     } catch (err: any) {
       console.error('Error deleting lab test:', err);
       setSnackbarMessage(err.message || 'Failed to delete lab test');
@@ -1003,6 +1017,20 @@ export default function ManageLabs() {
         message={snackbarMessage}
         onClose={() => setShowSnackbar(false)}
         autoHideDuration={5000}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        open={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleConfirmDelete}
+        title="Delete Lab Test"
+        message={
+          <>
+            Are you sure you want to delete the lab test <strong>{labTestToDelete?.labTestName}</strong>? This will also delete all associated parameters.
+          </>
+        }
+        loading={isDeleting}
       />
     </div>
   );

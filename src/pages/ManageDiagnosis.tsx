@@ -7,6 +7,7 @@ import { doctorService, Doctor } from "../services/doctorService";
 import { useSession } from "../store/hooks/useSession";
 import AddDiagnosisPopup from "../components/AddDiagnosisPopup";
 import GlobalSnackbar from "../components/GlobalSnackbar";
+import DeleteConfirmationDialog from "../components/DeleteConfirmationDialog";
 
 // Diagnosis type definition
 type Diagnosis = {
@@ -23,7 +24,7 @@ export default function ManageDiagnosis() {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(10);
   const { clinicId, doctorId, userId } = useSession();
-  
+
   // Dynamic data from API
   const [diagnoses, setDiagnoses] = useState<Diagnosis[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
@@ -32,10 +33,15 @@ export default function ManageDiagnosis() {
   const [loadingDoctors, setLoadingDoctors] = useState<boolean>(false);
   const [showAddPopup, setShowAddPopup] = useState<boolean>(false);
   const [editData, setEditData] = useState<Diagnosis | null>(null);
-  
+
   // Snackbar state
   const [showSnackbar, setShowSnackbar] = useState<boolean>(false);
   const [snackbarMessage, setSnackbarMessage] = useState<string>('');
+
+  // Delete confirmation state
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<boolean>(false);
+  const [diagnosisToDelete, setDiagnosisToDelete] = useState<Diagnosis | null>(null);
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
 
   // Filter diagnoses based on search term
   const filteredDiagnoses = diagnoses.filter(diagnosis => {
@@ -99,7 +105,7 @@ export default function ManageDiagnosis() {
     try {
       setLoading(true);
       setError(null);
-      
+
       // Prepare diagnosis data for API
       const priorityValue = data.priority ? parseInt(data.priority, 10) : 0;
       const diagnosisData = {
@@ -115,7 +121,7 @@ export default function ManageDiagnosis() {
         clinicId: clinicId,
         clinic_id: clinicId
       };
-      
+
       if (editData) {
         // Update existing diagnosis
         console.log('Updating diagnosis:', diagnosisData);
@@ -131,11 +137,11 @@ export default function ManageDiagnosis() {
         setSnackbarMessage('Diagnosis created successfully');
         setShowSnackbar(true);
       }
-      
+
       // Close popup and clear edit data
       setShowAddPopup(false);
       setEditData(null);
-      
+
       // Refresh diagnoses list
       await fetchDiagnoses(doctorIdToUse);
     } catch (err: any) {
@@ -153,11 +159,15 @@ export default function ManageDiagnosis() {
     setShowAddPopup(true);
   };
 
-  const handleDelete = async (diagnosis: Diagnosis) => {
-    // Confirm deletion
-    if (!window.confirm(`Are you sure you want to delete the diagnosis "${diagnosis.shortDescription}"?`)) {
-      return;
-    }
+  const handleDelete = (diagnosis: Diagnosis) => {
+    setDiagnosisToDelete(diagnosis);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!diagnosisToDelete) return;
+
+    const diagnosis = diagnosisToDelete;
 
     if (!clinicId) {
       setSnackbarMessage('Clinic ID is required to delete diagnosis');
@@ -174,26 +184,26 @@ export default function ManageDiagnosis() {
     }
 
     try {
-      setLoading(true);
+      setIsDeleting(true);
       setError(null);
-      
+
       console.log('Deleting diagnosis:', diagnosis.shortDescription, 'for doctor:', doctorIdToUse, 'and clinic:', clinicId);
       await diagnosisService.deleteDiagnosis(doctorIdToUse, clinicId, diagnosis.shortDescription);
-      
+
       setSnackbarMessage('Diagnosis deleted successfully');
       setShowSnackbar(true);
-      
+
       // Refresh the diagnoses list after successful deletion
       await fetchDiagnoses(doctorIdToUse);
-      
-      // Show success message (optional - you can remove this if you prefer)
-      console.log('Diagnosis deleted successfully');
+
+      setShowDeleteConfirm(false);
+      setDiagnosisToDelete(null);
     } catch (err: any) {
       console.error('Error deleting diagnosis:', err);
       setSnackbarMessage(err.message || 'Failed to delete diagnosis');
       setShowSnackbar(true);
     } finally {
-      setLoading(false);
+      setIsDeleting(false);
     }
   };
 
@@ -216,10 +226,10 @@ export default function ManageDiagnosis() {
         setLoading(false);
         return;
       }
-      
+
       console.log('Fetching diagnoses for doctor:', doctorIdToUse);
       const response = await diagnosisService.getAllDiagnosesForDoctor(doctorIdToUse);
-      
+
       // Map API response to Diagnosis type
       const mappedDiagnoses: Diagnosis[] = response.map((item: DiagnosisApiResponse, index: number) => ({
         sr: index + 1,
@@ -250,7 +260,7 @@ export default function ManageDiagnosis() {
     try {
       console.log('Fetching OPD doctors for clinic:', clinicId);
       const allDoctors = await doctorService.getOpdDoctors();
-      
+
       // Filter doctors by clinic if clinicId is available in doctor data
       // If clinicId is not in the response, show all doctors
       const clinicDoctors = allDoctors.filter((doctor: any) => {
@@ -258,12 +268,12 @@ export default function ManageDiagnosis() {
         const doctorClinicId = doctor.clinicId || doctor.clinic_id || doctor.clinic;
         return !doctorClinicId || doctorClinicId === clinicId;
       });
-      
+
       // If no clinic-specific filtering found, use all doctors
       const doctorsToUse = clinicDoctors.length > 0 ? clinicDoctors : allDoctors;
-      
+
       setDoctors(doctorsToUse);
-      
+
       // Set default selected doctor
       if (doctorsToUse.length > 0 && !selectedDoctorId) {
         const defaultDoctor = doctorsToUse.find(d => d.id === doctorId) || doctorsToUse[0];
@@ -488,9 +498,9 @@ export default function ManageDiagnosis() {
       `}</style>
 
       {/* Page Title */}
-      <h1 style={{ 
-        fontWeight: 'bold', 
-        fontSize: '1.8rem', 
+      <h1 style={{
+        fontWeight: 'bold',
+        fontSize: '1.8rem',
         color: '#212121',
         marginBottom: '24px'
       }}>
@@ -521,7 +531,7 @@ export default function ManageDiagnosis() {
         <button className="btn-icon" onClick={handleRefresh} title="Refresh">
           <Refresh style={{ fontSize: '20px' }} />
         </button>
-        
+
         {userId !== 7 && (
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ fontSize: '0.9rem', color: '#666', whiteSpace: 'nowrap' }}>For Provider</span>
@@ -534,7 +544,7 @@ export default function ManageDiagnosis() {
                 const doctor = doctors.find(d => d.id === doctorIdValue);
                 setSelectedProvider(doctor?.name || '');
                 setCurrentPage(1); // Reset to first page when doctor changes
-                
+
                 // Immediately fetch diagnoses for the selected doctor
                 if (doctorIdValue) {
                   await fetchDiagnoses(doctorIdValue);
@@ -560,13 +570,13 @@ export default function ManageDiagnosis() {
 
       {/* Error Message */}
       {error && (
-        <div style={{ 
-          padding: '12px', 
-          marginBottom: '20px', 
-          backgroundColor: '#f8d7da', 
-          color: '#721c24', 
-          border: '1px solid #f5c6cb', 
-          borderRadius: '4px' 
+        <div style={{
+          padding: '12px',
+          marginBottom: '20px',
+          backgroundColor: '#f8d7da',
+          color: '#721c24',
+          border: '1px solid #f5c6cb',
+          borderRadius: '4px'
         }}>
           {error}
         </div>
@@ -703,13 +713,27 @@ export default function ManageDiagnosis() {
           priority: editData.priority
         } : null}
       />
-      
+
       {/* Global Snackbar */}
       <GlobalSnackbar
         show={showSnackbar}
         message={snackbarMessage}
         onClose={() => setShowSnackbar(false)}
         autoHideDuration={5000}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        open={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleConfirmDelete}
+        title="Delete Diagnosis"
+        message={
+          <>
+            Are you sure you want to delete the diagnosis <strong>{diagnosisToDelete?.shortDescription}</strong>?
+          </>
+        }
+        loading={isDeleting}
       />
     </div>
   );

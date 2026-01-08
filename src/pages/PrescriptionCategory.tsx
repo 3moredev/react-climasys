@@ -3,6 +3,7 @@ import { Add, Delete, Edit, Refresh, Search } from '@mui/icons-material'
 import { Snackbar } from '@mui/material'
 import { doctorService, Doctor } from '../services/doctorService'
 import { useSession } from '../store/hooks/useSession'
+import DeleteConfirmationDialog from '../components/DeleteConfirmationDialog'
 import prescriptionCategoryService, {
   PrescriptionCategory as PrescriptionCategoryApiModel,
 } from '../services/prescriptionCategoryService'
@@ -30,10 +31,15 @@ export default function PrescriptionCategory() {
   const [error, setError] = useState<string | null>(null)
 
   const [loadingCategories, setLoadingCategories] = useState(false)
-  
+
   // Snackbar state management
   const [snackbarOpen, setSnackbarOpen] = useState(false)
   const [snackbarMessage, setSnackbarMessage] = useState('')
+
+  // Delete confirmation state
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<boolean>(false);
+  const [categoryToDelete, setCategoryToDelete] = useState<CategoryRow | null>(null);
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
 
   const fetchDoctors = useCallback(async () => {
     try {
@@ -177,7 +183,15 @@ export default function PrescriptionCategory() {
     setFormData({ categoryName: row.categoryName, description: row.description })
   }
 
-  const handleDelete = async (row: CategoryRow) => {
+  const handleDelete = (row: CategoryRow) => {
+    setCategoryToDelete(row);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!categoryToDelete) return;
+
+    const row = categoryToDelete;
     if (!selectedDoctorId) {
       setError('Doctor ID not available')
       setSnackbarMessage('Doctor ID not available')
@@ -185,24 +199,22 @@ export default function PrescriptionCategory() {
       return
     }
 
-    if (!window.confirm(`Delete category "${row.categoryName}"?`)) {
-      return
-    }
-
     try {
-      setLoadingCategories(true)
+      setIsDeleting(true)
       setError(null)
       await prescriptionCategoryService.deleteCategory(selectedDoctorId, row.categoryName)
       await loadCategories(selectedDoctorId)
       setSnackbarMessage('Category deleted successfully!')
       setSnackbarOpen(true)
+      setShowDeleteConfirm(false)
+      setCategoryToDelete(null)
     } catch (err: any) {
       console.error('Error deleting category:', err)
       setError(err.message || 'Failed to delete category')
       setSnackbarMessage(err.message || 'Failed to delete category')
       setSnackbarOpen(true)
     } finally {
-      setLoadingCategories(false)
+      setIsDeleting(false)
     }
   }
 
@@ -484,9 +496,9 @@ export default function PrescriptionCategory() {
       `}</style>
 
       {/* Page Title */}
-      <h1 style={{ 
-        fontWeight: 'bold', 
-        fontSize: '1.8rem', 
+      <h1 style={{
+        fontWeight: 'bold',
+        fontSize: '1.8rem',
         color: '#212121',
         marginBottom: '24px'
       }}>
@@ -714,6 +726,20 @@ export default function PrescriptionCategory() {
             fontWeight: 'bold'
           }
         }}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        open={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleConfirmDelete}
+        title="Delete Category"
+        message={
+          <>
+            Are you sure you want to delete the category <strong>{categoryToDelete?.categoryName}</strong>?
+          </>
+        }
+        loading={isDeleting}
       />
     </div>
   )
