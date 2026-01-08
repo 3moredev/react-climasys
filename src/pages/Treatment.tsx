@@ -2638,7 +2638,7 @@ export default function Treatment() {
         // Check for duplicate diagnosis before API call (check both value and diagnosis name)
         const normalizedShortDesc = trimmedShortDescription.toLowerCase().trim();
         const normalizedDiagnosisDesc = trimmedDiagnosisDescription.toLowerCase().trim();
-        
+
         // Check if it already exists in the table
         const existingByValue = diagnosisRows.find(
             row => row.value?.toLowerCase().trim() === normalizedShortDesc
@@ -2646,18 +2646,18 @@ export default function Treatment() {
         const existingByDiagnosis = diagnosisRows.find(
             row => row.diagnosis?.toLowerCase().trim() === normalizedDiagnosisDesc
         );
-        
+
         // Check if it already exists in diagnosesOptions (dropdown list) - prevent adding if it exists in dropdown
         const existingInOptions = diagnosesOptions.find(
             opt => opt.value?.toLowerCase().trim() === normalizedShortDesc ||
-                   opt.label?.toLowerCase().trim() === normalizedDiagnosisDesc
+                opt.label?.toLowerCase().trim() === normalizedDiagnosisDesc
         );
 
         if (existingByValue || existingByDiagnosis || existingInOptions) {
-            const duplicateName = existingByDiagnosis?.diagnosis || 
-                                 existingByValue?.diagnosis || 
-                                 existingInOptions?.label ||
-                                 trimmedDiagnosisDescription;
+            const duplicateName = existingByDiagnosis?.diagnosis ||
+                existingByValue?.diagnosis ||
+                existingInOptions?.label ||
+                trimmedDiagnosisDescription;
             setSnackbarMessage(`Diagnosis "${duplicateName}" is already added.`);
             setSnackbarOpen(true);
             setDiagnosesError(null);
@@ -2933,17 +2933,17 @@ export default function Treatment() {
         const existingInTable = investigationRows.find(
             row => row.investigation?.toLowerCase().trim() === normalizedNameLower
         );
-        
+
         // Check if it already exists in investigationsOptions (dropdown list) - prevent adding if it exists in dropdown
         const existingInOptions = investigationsOptions.find(
             opt => opt.label?.toLowerCase().trim() === normalizedNameLower ||
-                   opt.value?.toLowerCase().trim() === normalizedNameLower
+                opt.value?.toLowerCase().trim() === normalizedNameLower
         );
 
         if (existingInTable || existingInOptions) {
-            const duplicateName = existingInTable?.investigation || 
-                                 existingInOptions?.label ||
-                                 normalizedName;
+            const duplicateName = existingInTable?.investigation ||
+                existingInOptions?.label ||
+                normalizedName;
             setSnackbarMessage(`Investigation "${duplicateName}" is already added.`);
             setSnackbarOpen(true);
             setInvestigationsError(null);
@@ -3261,18 +3261,18 @@ export default function Treatment() {
 
                     // Determine inPerson value
                     let computedInPerson = next.visitType?.inPerson ?? true; // Default to current value or true
-                    
+
                     // Get status from appointment data
                     const status = appointmentData.status || appointmentData.statusDescription || '';
                     const normalizedStatus = String(status).trim().toUpperCase();
                     const finalStatus = normalizedStatus === 'ON CALL' ? 'CONSULT ON CALL' : normalizedStatus;
-                    
+
                     // Only patch inPerson if status is "SAVED" or "WAITING FOR MEDICINE"
-                    const shouldPatchInPerson = finalStatus === 'SAVE' || 
-                                               finalStatus === 'WAITING FOR MEDICINE' || 
-                                               finalStatus === 'WAITINGFOR MEDICINE' || 
-                                               finalStatus === 'WAITINGFORMEDICINE';
-                    
+                    const shouldPatchInPerson = finalStatus === 'SAVE' ||
+                        finalStatus === 'WAITING FOR MEDICINE' ||
+                        finalStatus === 'WAITINGFOR MEDICINE' ||
+                        finalStatus === 'WAITINGFORMEDICINE';
+
                     if (shouldPatchInPerson && typeof normalized.inPerson === 'boolean') {
                         // Patch with the actual value from API (true or false)
                         computedInPerson = normalized.inPerson;
@@ -4251,7 +4251,7 @@ export default function Treatment() {
                 const normalizedDiagnosis = diagnosisLabel?.toLowerCase().trim() || '';
 
                 // Check for duplicates by both value and diagnosis name (case-insensitive)
-                if (existingValues.has(normalizedValue) || 
+                if (existingValues.has(normalizedValue) ||
                     existingDiagnoses.has(normalizedDiagnosis) ||
                     currentBatchValues.has(normalizedValue) ||
                     currentBatchDiagnoses.has(normalizedDiagnosis)) {
@@ -7226,7 +7226,7 @@ export default function Treatment() {
                                             </button>
                                         </div>
                                         {billingError && (
-                                            <div style={{ color: 'red', fontSize: '12px', marginTop: '4px' }}>
+                                            <div style={{ color: 'red', fontSize: '12px', marginTop: '4px', marginLeft: 0, textAlign: 'left' }}>
                                                 {billingError}
                                             </div>
                                         )}
@@ -7253,7 +7253,7 @@ export default function Treatment() {
                                             }}
                                         />
                                         {discountError && (
-                                            <div style={{ color: 'red', fontSize: '12px', marginTop: '4px' }}>
+                                            <div style={{ color: 'red', fontSize: '12px', marginTop: '4px', marginLeft: 0, textAlign: 'left' }}>
                                                 {discountError}
                                             </div>
                                         )}
