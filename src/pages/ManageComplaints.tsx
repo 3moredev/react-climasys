@@ -8,6 +8,7 @@ import { useSession } from "../store/hooks/useSession";
 import { useAppSelector } from "../store/hooks";
 import AddComplaintPopup from "../components/AddComplaintPopup";
 import GlobalSnackbar from "../components/GlobalSnackbar";
+import DeleteConfirmationDialog from "../components/DeleteConfirmationDialog";
 
 // Complaint type definition
 type Complaint = {
@@ -25,10 +26,10 @@ export default function ManageComplaints() {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(10);
   const { clinicId, doctorId, userId } = useSession();
-  
+
   // Get login API response data from Redux auth state
   const authState = useAppSelector((state) => state.auth);
-  
+
   // Dynamic data from API
   const [complaints, setComplaints] = useState<Complaint[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
@@ -37,10 +38,15 @@ export default function ManageComplaints() {
   const [loadingDoctors, setLoadingDoctors] = useState<boolean>(false);
   const [showAddPopup, setShowAddPopup] = useState<boolean>(false);
   const [editData, setEditData] = useState<Complaint | null>(null);
-  
+
   // Snackbar state
   const [showSnackbar, setShowSnackbar] = useState<boolean>(false);
   const [snackbarMessage, setSnackbarMessage] = useState<string>('');
+
+  // Delete confirmation state
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<boolean>(false);
+  const [complaintToDelete, setComplaintToDelete] = useState<Complaint | null>(null);
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
 
   // Filter complaints based on search term
   const filteredComplaints = complaints.filter(complaint => {
@@ -105,7 +111,7 @@ export default function ManageComplaints() {
     try {
       setLoading(true);
       setError(null);
-      
+
       // Prepare complaint data for API
       const complaintData = {
         shortDescription: data.shortDescription,
@@ -122,7 +128,7 @@ export default function ManageComplaints() {
         clinicId: clinicId,
         clinic_id: clinicId
       };
-      
+
       if (editData) {
         // Update existing complaint
         console.log('Updating complaint:', complaintData);
@@ -138,11 +144,11 @@ export default function ManageComplaints() {
         setSnackbarMessage('Complaint created successfully');
         setShowSnackbar(true);
       }
-      
+
       // Close popup and clear edit data
       setShowAddPopup(false);
       setEditData(null);
-      
+
       // Refresh complaints list
       await fetchComplaints(doctorIdToUse);
     } catch (err: any) {
@@ -160,11 +166,15 @@ export default function ManageComplaints() {
     setShowAddPopup(true);
   };
 
-  const handleDelete = async (complaint: Complaint) => {
-    // Confirm deletion
-    if (!window.confirm(`Are you sure you want to delete the complaint "${complaint.shortDescription}"?`)) {
-      return;
-    }
+  const handleDelete = (complaint: Complaint) => {
+    setComplaintToDelete(complaint);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!complaintToDelete) return;
+
+    const complaint = complaintToDelete;
 
     if (!clinicId) {
       setSnackbarMessage('Clinic ID is required to delete complaint');
@@ -181,26 +191,26 @@ export default function ManageComplaints() {
     }
 
     try {
-      setLoading(true);
+      setIsDeleting(true);
       setError(null);
-      
+
       console.log('Deleting complaint:', complaint.shortDescription, 'for doctor:', doctorIdToUse, 'and clinic:', clinicId);
       await patientService.deleteComplaint(doctorIdToUse, clinicId, complaint.shortDescription);
-      
+
       setSnackbarMessage('Complaint deleted successfully');
       setShowSnackbar(true);
-      
+
       // Refresh the complaints list after successful deletion
       await fetchComplaints(doctorIdToUse);
-      
-      // Show success message (optional - you can remove this if you prefer)
-      console.log('Complaint deleted successfully');
+
+      setShowDeleteConfirm(false);
+      setComplaintToDelete(null);
     } catch (err: any) {
       console.error('Error deleting complaint:', err);
       setSnackbarMessage(err.message || 'Failed to delete complaint');
       setShowSnackbar(true);
     } finally {
-      setLoading(false);
+      setIsDeleting(false);
     }
   };
 
@@ -226,7 +236,7 @@ export default function ManageComplaints() {
       const doctorIdToUse = doctorIdToFetch || selectedDoctorId || doctorId;
       console.log('Fetching complaints for clinic:', clinicId, 'doctor:', doctorIdToUse);
       const response = await patientService.getAllComplaintsForDoctor(clinicId, doctorIdToUse);
-      
+
       // Map API response to Complaint type
       const mappedComplaints: Complaint[] = response.map((item: any, index: number) => ({
         sr: index + 1,
@@ -258,7 +268,7 @@ export default function ManageComplaints() {
     try {
       console.log('Fetching OPD doctors for clinic:', clinicId);
       const allDoctors = await doctorService.getOpdDoctors();
-      
+
       // Filter doctors by clinic if clinicId is available in doctor data
       // If clinicId is not in the response, show all doctors
       const clinicDoctors = allDoctors.filter((doctor: any) => {
@@ -266,12 +276,12 @@ export default function ManageComplaints() {
         const doctorClinicId = doctor.clinicId || doctor.clinic_id || doctor.clinic;
         return !doctorClinicId || doctorClinicId === clinicId;
       });
-      
+
       // If no clinic-specific filtering found, use all doctors
       const doctorsToUse = clinicDoctors.length > 0 ? clinicDoctors : allDoctors;
-      
+
       setDoctors(doctorsToUse);
-      
+
       // Set default selected doctor
       if (doctorsToUse.length > 0 && !selectedDoctorId) {
         const defaultDoctor = doctorsToUse.find(d => d.id === doctorId) || doctorsToUse[0];
@@ -516,9 +526,9 @@ export default function ManageComplaints() {
       `}</style>
 
       {/* Page Title */}
-      <h1 style={{ 
-        fontWeight: 'bold', 
-        fontSize: '1.8rem', 
+      <h1 style={{
+        fontWeight: 'bold',
+        fontSize: '1.8rem',
         color: '#212121',
         marginBottom: '24px'
       }}>
@@ -549,7 +559,7 @@ export default function ManageComplaints() {
         <button className="btn-icon" onClick={handleRefresh} title="Refresh">
           <Refresh style={{ fontSize: '20px' }} />
         </button>
-        
+
         {userId !== 7 && (
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ fontSize: '0.9rem', color: '#666', whiteSpace: 'nowrap' }}>For Provider</span>
@@ -562,7 +572,7 @@ export default function ManageComplaints() {
                 const doctor = doctors.find(d => d.id === doctorIdValue);
                 setSelectedProvider(doctor?.name || '');
                 setCurrentPage(1); // Reset to first page when doctor changes
-                
+
                 // Immediately fetch complaints for the selected doctor
                 if (clinicId && doctorIdValue) {
                   await fetchComplaints(doctorIdValue);
@@ -588,13 +598,13 @@ export default function ManageComplaints() {
 
       {/* Error Message */}
       {error && (
-        <div style={{ 
-          padding: '12px', 
-          marginBottom: '20px', 
-          backgroundColor: '#f8d7da', 
-          color: '#721c24', 
-          border: '1px solid #f5c6cb', 
-          borderRadius: '4px' 
+        <div style={{
+          padding: '12px',
+          marginBottom: '20px',
+          backgroundColor: '#f8d7da',
+          color: '#721c24',
+          border: '1px solid #f5c6cb',
+          borderRadius: '4px'
         }}>
           {error}
         </div>
@@ -741,13 +751,27 @@ export default function ManageComplaints() {
           displayToOperator: editData.displayToOperator
         } : null}
       />
-      
+
       {/* Global Snackbar */}
       <GlobalSnackbar
         show={showSnackbar}
         message={snackbarMessage}
         onClose={() => setShowSnackbar(false)}
         autoHideDuration={5000}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        open={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleConfirmDelete}
+        title="Delete Complaint"
+        message={
+          <>
+            Are you sure you want to delete the complaint <strong>{complaintToDelete?.shortDescription}</strong>?
+          </>
+        }
+        loading={isDeleting}
       />
     </div>
   );

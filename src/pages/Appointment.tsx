@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { List, CreditCard, MoreVert, Add as AddIcon, Save, Delete, Info, FastForward, Close, ChatBubbleOutline, Phone, SwapHoriz, ShoppingCart } from "@mui/icons-material";
-import { Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button, CircularProgress } from "@mui/material";
+import { Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button, CircularProgress, IconButton } from "@mui/material";
 import { appointmentService, Appointment, AppointmentRequest, TodayAppointmentsResponse, getDoctorStatusReference, getStatusOptionsByClinic } from "../services/appointmentService";
 import { doctorService, DoctorDetail, Doctor } from "../services/doctorService";
 import { patientService, Patient, formatVisitDateTime, getVisitStatusText } from "../services/patientService";
@@ -14,6 +14,7 @@ import { sessionPersistence } from "../utils/sessionPersistence";
 import PatientFormTest from "../components/Test/PatientFormTest";
 import LabTestEntry from "../components/LabTestEntry";
 import GlobalSnackbar from "../components/GlobalSnackbar";
+import DeleteConfirmationDialog from "../components/DeleteConfirmationDialog";
 
 export type AppointmentRow = {
     reports_received: any;
@@ -6016,53 +6017,18 @@ export default function AppointmentTable() {
             )}
 
             {/* Delete Appointment Confirmation Dialog */}
-            <Dialog
+            <DeleteConfirmationDialog
                 open={showDeleteConfirm}
-                onClose={() => !isDeleting && setShowDeleteConfirm(false)}
-                aria-labelledby="delete-dialog-title"
-                aria-describedby="delete-dialog-description"
-            >
-                <DialogTitle id="delete-dialog-title">
-                    {"Delete Appointment"}
-                </DialogTitle>
-                <DialogContent>
-                    <DialogContentText id="delete-dialog-description">
+                onClose={() => setShowDeleteConfirm(false)}
+                onConfirm={handleConfirmDelete}
+                title="Delete Appointment"
+                message={
+                    <>
                         Are you sure you want to delete the appointment for <strong>{appointmentToDelete?.appointment.patient}</strong>?
-                    </DialogContentText>
-                </DialogContent>
-                <DialogActions>
-                    <Button
-                        onClick={() => setShowDeleteConfirm(false)}
-                        disabled={isDeleting}
-                        variant="contained"
-                        sx={{
-                            bgcolor: '#1E88E5',
-                            color: '#fff',
-                            '&:hover': {
-                                bgcolor: '#1976D2',
-                            }
-                        }}
-                    >
-                        Cancel
-                    </Button>
-                    <Button
-                        onClick={handleConfirmDelete}
-                        variant="contained"
-                        autoFocus
-                        disabled={isDeleting}
-                        startIcon={isDeleting ? <CircularProgress size={20} color="inherit" /> : <Delete />}
-                        sx={{
-                            bgcolor: '#1E88E5',
-                            color: '#fff',
-                            '&:hover': {
-                                bgcolor: '#1976D2',
-                            }
-                        }}
-                    >
-                        {isDeleting ? 'Deleting...' : 'OK'}
-                    </Button>
-                </DialogActions>
-            </Dialog>
+                    </>
+                }
+                loading={isDeleting}
+            />
 
             {/* Global snackbar (reception / non-doctor view) */}
             <GlobalSnackbar

@@ -12,6 +12,7 @@ import PatientVisitDetails from "./PatientVisitDetails";
 import { sessionService, SessionInfo } from "../services/sessionService";
 import PatientFormTest from "../components/Test/PatientFormTest";
 import LabTestEntry from "../components/LabTestEntry";
+import DeleteConfirmationDialog from "../components/DeleteConfirmationDialog";
 
 // Import new utilities
 import { sessionExpiryManager } from "../utils/sessionExpiryHandler";
@@ -99,6 +100,11 @@ export default function AppointmentTableEnhanced() {
     const searchInputRef = useRef<HTMLInputElement | null>(null);
     const [searchMenuPosition, setSearchMenuPosition] = useState<{ top: number; left: number; width: number } | null>(null);
 
+    // Delete confirmation state
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState<boolean>(false);
+    const [appointmentToDelete, setAppointmentToDelete] = useState<AppointmentRow | null>(null);
+    const [isDeleting, setIsDeleting] = useState<boolean>(false);
+
     // Performance optimization: Search index for large datasets
     const [searchIndex, setSearchIndex] = useState<Map<string, Patient[]>>(new Map());
 
@@ -106,7 +112,7 @@ export default function AppointmentTableEnhanced() {
     const handleSearchChange = debounce(async (query: string) => {
         // Sanitize input to prevent XSS and SQL injection
         const sanitizedQuery = sanitizeSearchQuery(query);
-        
+
         if (sanitizedQuery !== query) {
             console.warn('🚨 Search query was sanitized:', { original: query, sanitized: sanitizedQuery });
         }
@@ -142,7 +148,7 @@ export default function AppointmentTableEnhanced() {
 
                 const patients = response.patients || [];
                 const sanitizedPatients = patients.map(patient => sanitizePatientData(patient));
-                
+
                 setSearchResults(sanitizedPatients);
                 setShowDropdown(sanitizedPatients.length > 0);
             }
@@ -450,7 +456,7 @@ export default function AppointmentTableEnhanced() {
     // Enhanced status update with concurrency protection
     const handleStatusUpdate = async (appointment: AppointmentRow, newStatus: string) => {
         const operationId = `update-status-${appointment.patientId}-${Date.now()}`;
-        
+
         try {
             await executeWithLock(
                 operationId,
@@ -509,9 +515,17 @@ export default function AppointmentTableEnhanced() {
     };
 
     // Enhanced delete with concurrency protection
-    const handleDeleteAppointment = async (appointment: AppointmentRow) => {
+    const handleDeleteAppointment = (appointment: AppointmentRow) => {
+        setAppointmentToDelete(appointment);
+        setShowDeleteConfirm(true);
+    };
+
+    const handleConfirmDelete = async () => {
+        if (!appointmentToDelete) return;
+
+        const appointment = appointmentToDelete;
         const operationId = `delete-appointment-${appointment.patientId}-${Date.now()}`;
-        
+
         try {
             await executeWithLock(
                 operationId,
@@ -528,9 +542,7 @@ export default function AppointmentTableEnhanced() {
                         return;
                     }
 
-                    const confirmDelete = window.confirm('Delete this appointment?');
-                    if (!confirmDelete) return;
-
+                    setIsDeleting(true);
                     await apiCall(
                         () => appointmentService.deleteAppointment({
                             patientId: String(pid),
@@ -545,11 +557,15 @@ export default function AppointmentTableEnhanced() {
 
                     // Remove from UI
                     setAppointments(prev => prev.filter(a => a.patientId !== appointment.patientId));
+                    setShowDeleteConfirm(false);
+                    setAppointmentToDelete(null);
                 }
             );
         } catch (error) {
             console.error('Delete appointment failed:', error);
             alert('Failed to delete appointment');
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -638,7 +654,7 @@ export default function AppointmentTableEnhanced() {
                     ref={searchInputRef}
                     style={{ borderWidth: "2px", height: "38px" }}
                 />
-                
+
                 {/* Search error display */}
                 {searchError && (
                     <div className="alert alert-warning mt-2" role="alert">
@@ -715,6 +731,20 @@ export default function AppointmentTableEnhanced() {
         </div>
     );
 }
+
+{/* Delete Confirmation Dialog */ }
+<DeleteConfirmationDialog
+    open={showDeleteConfirm}
+    onClose={() => setShowDeleteConfirm(false)}
+    onConfirm={handleConfirmDelete}
+    title="Delete Appointment"
+    message={
+        <>
+            Are you sure you want to delete the appointment for <strong>{appointmentToDelete?.patient}</strong>?
+        </>
+    }
+    loading={isDeleting}
+/>
 
 // Helper function to get status ID from label
 function getStatusIdFromLabel(statusLabel: string): number {

@@ -9,6 +9,7 @@ import prescriptionSubCategoryService, {
 import prescriptionCategoryService, {
   PrescriptionCategory as PrescriptionCategoryApiModel,
 } from '../services/prescriptionCategoryService'
+import DeleteConfirmationDialog from '../components/DeleteConfirmationDialog'
 
 type SubCategoryRow = {
   id: string
@@ -56,10 +57,15 @@ export default function PrescriptionSubCategory() {
   const [loadingCategories, setLoadingCategories] = useState(false)
   const [categoryOptions, setCategoryOptions] = useState<string[]>(FALLBACK_CATEGORY_OPTIONS)
   const [error, setError] = useState<string | null>(null)
-  
+
   // Snackbar state management
   const [snackbarOpen, setSnackbarOpen] = useState(false)
   const [snackbarMessage, setSnackbarMessage] = useState('')
+
+  // Delete confirmation state
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<boolean>(false);
+  const [subCategoryToDelete, setSubCategoryToDelete] = useState<SubCategoryRow | null>(null);
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
 
   const fetchDoctors = useCallback(async () => {
     try {
@@ -261,7 +267,15 @@ export default function PrescriptionSubCategory() {
     setFormData({ categoryName: row.categoryName, subCategoryName: row.subCategoryName })
   }
 
-  const handleDelete = async (row: SubCategoryRow) => {
+  const handleDelete = (row: SubCategoryRow) => {
+    setSubCategoryToDelete(row);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!subCategoryToDelete) return;
+
+    const row = subCategoryToDelete;
     if (!selectedDoctorId) {
       setError('Doctor ID not available')
       setSnackbarMessage('Doctor ID not available')
@@ -269,24 +283,22 @@ export default function PrescriptionSubCategory() {
       return
     }
 
-    if (!window.confirm(`Delete sub category "${row.subCategoryName}"?`)) {
-      return
-    }
-
     try {
-      setLoadingSubCategories(true)
+      setIsDeleting(true)
       setError(null)
       await prescriptionSubCategoryService.deleteSubCategory(selectedDoctorId, row.categoryName, row.subCategoryName)
       await loadSubCategories(selectedDoctorId)
       setSnackbarMessage('SubCategory deleted successfully!')
       setSnackbarOpen(true)
+      setShowDeleteConfirm(false)
+      setSubCategoryToDelete(null)
     } catch (err: any) {
       console.error('Error deleting subcategory:', err)
       setError(err.message || 'Failed to delete subcategory')
       setSnackbarMessage(err.message || 'Failed to delete subcategory')
       setSnackbarOpen(true)
     } finally {
-      setLoadingSubCategories(false)
+      setIsDeleting(false)
     }
   }
 
@@ -572,9 +584,9 @@ export default function PrescriptionSubCategory() {
       `}</style>
 
       {/* Page Title */}
-      <h1 style={{ 
-        fontWeight: 'bold', 
-        fontSize: '1.8rem', 
+      <h1 style={{
+        fontWeight: 'bold',
+        fontSize: '1.8rem',
         color: '#212121',
         marginBottom: '24px'
       }}>
@@ -805,6 +817,20 @@ export default function PrescriptionSubCategory() {
             fontWeight: 'bold'
           }
         }}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        open={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleConfirmDelete}
+        title="Delete Sub-Category"
+        message={
+          <>
+            Are you sure you want to delete the sub category <strong>{subCategoryToDelete?.subCategoryName}</strong>?
+          </>
+        }
+        loading={isDeleting}
       />
     </div>
   )

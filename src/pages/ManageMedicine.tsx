@@ -6,6 +6,7 @@ import medicineService from "../services/medicineService";
 import { doctorService, Doctor } from "../services/doctorService";
 import { useSession } from "../store/hooks/useSession";
 import GlobalSnackbar from "../components/GlobalSnackbar";
+import DeleteConfirmationDialog from "../components/DeleteConfirmationDialog";
 
 // Medicine type definition
 type Medicine = {
@@ -33,7 +34,12 @@ export default function ManageMedicine() {
   const [selectedDoctorId, setSelectedDoctorId] = useState<string>("");
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [loadingDoctors, setLoadingDoctors] = useState<boolean>(false);
-  
+
+  // Delete confirmation state
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<boolean>(false);
+  const [medicineToDelete, setMedicineToDelete] = useState<Medicine | null>(null);
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
+
   // Snackbar state management
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
@@ -45,9 +51,9 @@ export default function ManageMedicine() {
     try {
       setLoading(true);
       setError(null);
-      
+
       const apiMedicines = await medicineService.getAllMedicinesForDoctor(docId);
-      
+
       // Transform API response to component format
       const transformedMedicines: Medicine[] = apiMedicines.map((med, index) => ({
         sr: index + 1,
@@ -61,7 +67,7 @@ export default function ManageMedicine() {
         instruction: med.instruction || "",
         addToActiveList: med.active !== undefined && med.active !== null ? med.active : true
       }));
-      
+
       setMedicines(transformedMedicines);
     } catch (err: any) {
       console.error('Error loading medicines:', err);
@@ -78,9 +84,9 @@ export default function ManageMedicine() {
       const allDoctors = await doctorService.getAllDoctors();
       const clinicDoctors = clinicId
         ? allDoctors.filter((doctor: any) => {
-            const doctorClinicId = doctor.clinicId || doctor.clinic_id || doctor.clinic;
-            return !doctorClinicId || doctorClinicId === clinicId;
-          })
+          const doctorClinicId = doctor.clinicId || doctor.clinic_id || doctor.clinic;
+          return !doctorClinicId || doctorClinicId === clinicId;
+        })
         : allDoctors;
       const doctorsToUse = clinicDoctors.length > 0 ? clinicDoctors : allDoctors;
       setDoctors(doctorsToUse);
@@ -138,11 +144,11 @@ export default function ManageMedicine() {
       setLoading(true);
       setError(null);
       setCurrentPage(1); // Reset to first page on search
-      
+
       if (searchTerm.trim()) {
         // Call search API
         const apiMedicines = await medicineService.searchMedicines(selectedDoctorId, searchTerm);
-        
+
         // Transform API response to component format
         const transformedMedicines: Medicine[] = apiMedicines.map((med, index) => ({
           sr: index + 1,
@@ -156,7 +162,7 @@ export default function ManageMedicine() {
           instruction: med.instruction || "",
           addToActiveList: med.active !== undefined && med.active !== null ? med.active : true
         }));
-        
+
         setMedicines(transformedMedicines);
       } else {
         // If search term is empty, reload all medicines
@@ -213,7 +219,7 @@ export default function ManageMedicine() {
         setSnackbarMessage('Doctor ID not available');
         setSnackbarOpen(true);
       }
-      
+
       setShowAddPopup(false);
       setEditingMedicine(null);
     } catch (err: any) {
@@ -228,34 +234,42 @@ export default function ManageMedicine() {
     setShowAddPopup(true);
   };
 
-  const handleDelete = async (medicine: Medicine) => {
+  const handleDelete = (medicine: Medicine) => {
+    setMedicineToDelete(medicine);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!medicineToDelete) return;
+
+    const medicine = medicineToDelete;
     if (!selectedDoctorId) {
       setError('Doctor ID not available');
       return;
     }
 
-    if (window.confirm(`Are you sure you want to delete "${medicine.medicineName}"?`)) {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        // Hardcoded clinicId fallback as requested
-        const clinic = clinicId || "CL-00001";
-        await medicineService.deleteMedicine(selectedDoctorId, clinic, medicine.shortDescription);
-        
-        // Reload medicines after delete
-        await loadMedicines(selectedDoctorId);
-        
-        setSnackbarMessage('Medicine deleted successfully!');
-        setSnackbarOpen(true);
-      } catch (err: any) {
-        console.error('Error deleting medicine:', err);
-        setError(err.message || 'Failed to delete medicine');
-        setSnackbarMessage(err.message || 'Failed to delete medicine');
-        setSnackbarOpen(true);
-      } finally {
-        setLoading(false);
-      }
+    try {
+      setIsDeleting(true);
+      setError(null);
+
+      // Hardcoded clinicId fallback as requested
+      const clinic = clinicId || "CL-00001";
+      await medicineService.deleteMedicine(selectedDoctorId, clinic, medicine.shortDescription);
+
+      // Reload medicines after delete
+      await loadMedicines(selectedDoctorId);
+
+      setSnackbarMessage('Medicine deleted successfully!');
+      setSnackbarOpen(true);
+      setShowDeleteConfirm(false);
+      setMedicineToDelete(null);
+    } catch (err: any) {
+      console.error('Error deleting medicine:', err);
+      setError(err.message || 'Failed to delete medicine');
+      setSnackbarMessage(err.message || 'Failed to delete medicine');
+      setSnackbarOpen(true);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -468,9 +482,9 @@ export default function ManageMedicine() {
       `}</style>
 
       {/* Page Title */}
-      <h1 style={{ 
-        fontWeight: 'bold', 
-        fontSize: '1.8rem', 
+      <h1 style={{
+        fontWeight: 'bold',
+        fontSize: '1.8rem',
         color: '#212121',
         marginBottom: '24px'
       }}>
@@ -532,7 +546,7 @@ export default function ManageMedicine() {
         <button className="btn-icon" onClick={handleRefresh} title="Refresh">
           <Refresh style={{ fontSize: '20px' }} />
         </button>
-        
+
         {userId !== 7 && (
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ fontSize: '0.9rem', color: '#666', whiteSpace: 'nowrap' }}>For Provider</span>
@@ -711,6 +725,20 @@ export default function ManageMedicine() {
         message={snackbarMessage}
         onClose={() => setSnackbarOpen(false)}
         autoHideDuration={5000}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        open={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleConfirmDelete}
+        title="Delete Medicine"
+        message={
+          <>
+            Are you sure you want to delete the medicine <strong>{medicineToDelete?.medicineName}</strong>?
+          </>
+        }
+        loading={isDeleting}
       />
     </div>
   );
