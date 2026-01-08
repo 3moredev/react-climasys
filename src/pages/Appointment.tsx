@@ -2385,7 +2385,8 @@ export default function AppointmentTable() {
         .kv .v { color: #111827; font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .crm-actions { display: grid; grid-template-columns: repeat(4, 32px); gap: 8px; }
         .crm-btn { width: 36px; height: 36px; border-radius: 6px; background: 'transparent'; display: inline-flex; align-items: center; justify-content: center; color:black; border: 1px solid #CFD8DC; cursor: pointer; }
-        .crm-btn:hover { background: 'transparent'; color:black; border-color:'transparent'; }
+        .crm-btn:hover:not(:disabled) { background: 'transparent'; color:black; border-color:'transparent'; }
+        .crm-btn:disabled { cursor: not-allowed !important; opacity: 0.5; }
         .status-indicator {
             width: 12px;
             height: 12px;
@@ -2459,6 +2460,7 @@ export default function AppointmentTable() {
             background: #000;
             color: #fff;
             opacity: 0.35;
+            cursor: not-allowed !important;
         }
         .page-size-select {
             padding: 4px 8px;
@@ -3804,7 +3806,8 @@ export default function AppointmentTable() {
         .kv .v { color: #111827; font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .crm-actions { display: grid; grid-template-columns: repeat(4, 32px); gap: 8px; }
         .crm-btn { width: 36px; height: 36px; border-radius: 6px; background: 'transparent'; display: inline-flex; align-items: center; justify-content: center; color: black; border: 1px solid #CFD8DC; cursor: pointer; }
-        .crm-btn:hover { background:'transparent'; color:black; border-color: 'transparent'; }
+        .crm-btn:hover:not(:disabled) { background:'transparent'; color:black; border-color: 'transparent'; }
+        .crm-btn:disabled { cursor: not-allowed !important; opacity: 0.5; }
         .status-indicator {
             width: 12px;
             height: 12px;
