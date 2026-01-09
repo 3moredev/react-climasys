@@ -7,6 +7,7 @@ import { doctorService, Doctor } from "../services/doctorService";
 import { useSession } from "../store/hooks/useSession";
 import AddBillingDetailsPopup, { BillingDetailData } from "../components/AddBillingDetailsPopup";
 import GlobalSnackbar from "../components/GlobalSnackbar";
+import DeleteConfirmationDialog from "../components/DeleteConfirmationDialog";
 
 type BillingDetailRow = BillingDetail & {
   sr: number;
@@ -19,7 +20,7 @@ export default function ManageBillingDetails() {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(10);
   const { clinicId, doctorId, userId } = useSession();
-  
+
   // Dynamic data from API
   const [billingDetails, setBillingDetails] = useState<BillingDetailRow[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
@@ -28,10 +29,15 @@ export default function ManageBillingDetails() {
   const [loadingDoctors, setLoadingDoctors] = useState<boolean>(false);
   const [showAddPopup, setShowAddPopup] = useState<boolean>(false);
   const [editData, setEditData] = useState<BillingDetailRow | null>(null);
-  
+
   // Snackbar state
   const [showSnackbar, setShowSnackbar] = useState<boolean>(false);
   const [snackbarMessage, setSnackbarMessage] = useState<string>('');
+
+  // Delete confirmation state
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<boolean>(false);
+  const [billingToDelete, setBillingToDelete] = useState<BillingDetailRow | null>(null);
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
 
   // Filter billing details based on search term
   const filteredBillingDetails = billingDetails.filter(billing => {
@@ -93,7 +99,7 @@ export default function ManageBillingDetails() {
     try {
       setLoading(true);
       setError(null);
-      
+
       // Prepare billing master data request
       const billingMasterDataRequest: any = {
         groupName: data.group,
@@ -106,14 +112,14 @@ export default function ManageBillingDetails() {
         isDefault: data.isDefault,
         visitType: data.visitType
       };
-      
+
       // Include clinicId if provided from popup
       if (data.clinicId) {
         billingMasterDataRequest.clinicId = data.clinicId;
         billingMasterDataRequest.clinic_id = data.clinicId;
         billingMasterDataRequest.Clinic_ID = data.clinicId;
       }
-      
+
       if (editData && editData.id) {
         // Update existing billing master data
         await billingService.updateBillingMasterData(billingMasterDataRequest);
@@ -121,14 +127,14 @@ export default function ManageBillingDetails() {
         // Insert new billing master data
         await billingService.insertBillingMasterData(billingMasterDataRequest);
       }
-      
+
       // Close popup and clear edit data
       setShowAddPopup(false);
       setEditData(null);
-      
+
       setSnackbarMessage(editData ? 'Billing detail updated successfully' : 'Billing detail created successfully');
       setShowSnackbar(true);
-      
+
       // Refresh billing details list
       await fetchBillingDetails(doctorIdToUse);
     } catch (err: any) {
@@ -146,11 +152,15 @@ export default function ManageBillingDetails() {
     setShowAddPopup(true);
   };
 
-  const handleDelete = async (billing: BillingDetailRow) => {
-    // Confirm deletion
-    if (!window.confirm(`Are you sure you want to delete this billing detail?`)) {
-      return;
-    }
+  const handleDelete = (billing: BillingDetailRow) => {
+    setBillingToDelete(billing);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!billingToDelete) return;
+
+    const billing = billingToDelete;
 
     if (!clinicId) {
       setSnackbarMessage('Clinic ID is required to delete billing detail');
@@ -173,22 +183,24 @@ export default function ManageBillingDetails() {
     }
 
     try {
-      setLoading(true);
+      setIsDeleting(true);
       setError(null);
-      
+
       await billingService.deleteBillingDetail(billing.id, doctorIdToUse, clinicId);
-      
+
       setSnackbarMessage('Billing detail deleted successfully');
       setShowSnackbar(true);
-      
+
       // Refresh the billing details list after successful deletion
       await fetchBillingDetails(doctorIdToUse);
+      setShowDeleteConfirm(false);
+      setBillingToDelete(null);
     } catch (err: any) {
       console.error('Error deleting billing detail:', err);
       setSnackbarMessage(err.message || 'Failed to delete billing detail');
       setShowSnackbar(true);
     } finally {
-      setLoading(false);
+      setIsDeleting(false);
     }
   };
 
@@ -217,13 +229,13 @@ export default function ManageBillingDetails() {
         setLoading(false);
         return;
       }
-      
+
       console.log('Fetching billing categories for doctor:', doctorIdToUse);
-      
+
       // Call getBillingCategories API
       const categoriesResponse = await billingService.getBillingCategories(doctorIdToUse);
       console.log('Billing categories response:', categoriesResponse);
-      
+
       // Map categories response to BillingDetailRow type
       // The API returns Record<string, any>[], so we need to map the fields
       const mappedBillingDetails: BillingDetailRow[] = categoriesResponse.map((category: Record<string, any>, index: number) => {
@@ -245,7 +257,7 @@ export default function ManageBillingDetails() {
           sr: index + 1
         };
       });
-      
+
       console.log('Mapped billing details from categories:', mappedBillingDetails);
 
       setBillingDetails(mappedBillingDetails);
@@ -270,7 +282,7 @@ export default function ManageBillingDetails() {
     try {
       console.log('Fetching OPD doctors for clinic:', clinicId);
       const allDoctors = await doctorService.getOpdDoctors();
-      
+
       // Filter doctors by clinic if clinicId is available in doctor data
       // If clinicId is not in the response, show all doctors
       const clinicDoctors = allDoctors.filter((doctor: any) => {
@@ -278,12 +290,12 @@ export default function ManageBillingDetails() {
         const doctorClinicId = doctor.clinicId || doctor.clinic_id || doctor.clinic;
         return !doctorClinicId || doctorClinicId === clinicId;
       });
-      
+
       // If no clinic-specific filtering found, use all doctors
       const doctorsToUse = clinicDoctors.length > 0 ? clinicDoctors : allDoctors;
-      
+
       setDoctors(doctorsToUse);
-      
+
       // Set default selected doctor
       if (doctorsToUse.length > 0 && !selectedDoctorId) {
         const defaultDoctor = doctorsToUse.find(d => d.id === doctorId) || doctorsToUse[0];
@@ -508,9 +520,9 @@ export default function ManageBillingDetails() {
       `}</style>
 
       {/* Page Title */}
-      <h1 style={{ 
-        fontWeight: 'bold', 
-        fontSize: '1.8rem', 
+      <h1 style={{
+        fontWeight: 'bold',
+        fontSize: '1.8rem',
         color: '#212121',
         marginBottom: '24px'
       }}>
@@ -542,7 +554,7 @@ export default function ManageBillingDetails() {
         <button className="btn-icon" onClick={handleRefresh} title="Refresh">
           <Refresh style={{ fontSize: '20px' }} />
         </button>
-        
+
         {userId !== 7 && (
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ fontSize: '0.9rem', color: '#666', whiteSpace: 'nowrap' }}>For Provider</span>
@@ -555,7 +567,7 @@ export default function ManageBillingDetails() {
                 const doctor = doctors.find(d => d.id === doctorIdValue);
                 setSelectedProvider(doctor?.name || '');
                 setCurrentPage(1); // Reset to first page when doctor changes
-                
+
                 // Immediately fetch billing details for the selected doctor
                 if (doctorIdValue) {
                   await fetchBillingDetails(doctorIdValue);
@@ -581,13 +593,13 @@ export default function ManageBillingDetails() {
 
       {/* Error Message */}
       {error && (
-        <div style={{ 
-          padding: '12px', 
-          marginBottom: '20px', 
-          backgroundColor: '#f8d7da', 
-          color: '#721c24', 
-          border: '1px solid #f5c6cb', 
-          borderRadius: '4px' 
+        <div style={{
+          padding: '12px',
+          marginBottom: '20px',
+          backgroundColor: '#f8d7da',
+          color: '#721c24',
+          border: '1px solid #f5c6cb',
+          borderRadius: '4px'
         }}>
           {error}
         </div>
@@ -745,13 +757,27 @@ export default function ManageBillingDetails() {
         } : null}
         doctorId={selectedDoctorId || doctorId}
       />
-      
+
       {/* Global Snackbar */}
       <GlobalSnackbar
         show={showSnackbar}
         message={snackbarMessage}
         onClose={() => setShowSnackbar(false)}
         autoHideDuration={5000}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        open={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleConfirmDelete}
+        title="Delete Billing Detail"
+        message={
+          <>
+            Are you sure you want to delete the billing detail for <strong>{billingToDelete?.details}</strong>?
+          </>
+        }
+        loading={isDeleting}
       />
     </div>
   );

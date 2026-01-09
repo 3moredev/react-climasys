@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { List, CreditCard, MoreVert, Add as AddIcon, Save, Delete, Info, FastForward, Close, ChatBubbleOutline, Phone, SwapHoriz, ShoppingCart } from "@mui/icons-material";
-import { Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button, CircularProgress, Tooltip } from "@mui/material";
+import { Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button, CircularProgress, IconButton } from "@mui/material";
 import { appointmentService, Appointment, AppointmentRequest, TodayAppointmentsResponse, getDoctorStatusReference, getStatusOptionsByClinic } from "../services/appointmentService";
 import { doctorService, DoctorDetail, Doctor } from "../services/doctorService";
 import { patientService, Patient, formatVisitDateTime, getVisitStatusText } from "../services/patientService";
@@ -14,6 +14,7 @@ import { sessionPersistence } from "../utils/sessionPersistence";
 import PatientFormTest from "../components/Test/PatientFormTest";
 import LabTestEntry from "../components/LabTestEntry";
 import GlobalSnackbar from "../components/GlobalSnackbar";
+import DeleteConfirmationDialog from "../components/DeleteConfirmationDialog";
 
 export type AppointmentRow = {
     reports_received: any;
@@ -170,7 +171,15 @@ export default function AppointmentTable() {
             try {
                 // Backend will automatically use default_doctor from user_master table based on session
                 const doctors = await doctorService.getOpdDoctors();
-                setAllDoctors(doctors);
+
+                // Sort doctors alphabetically by name, ignoring "Dr." prefix
+                const sortedDoctors = [...doctors].sort((a, b) => {
+                    const nameA = (a.name || '').replace(/^Dr\.?\s*/i, '').trim().toLowerCase();
+                    const nameB = (b.name || '').replace(/^Dr\.?\s*/i, '').trim().toLowerCase();
+                    return nameA.localeCompare(nameB);
+                });
+
+                setAllDoctors(sortedDoctors);
 
                 // Always set the default doctor when doctors are loaded
                 // Backend sorts doctors with default_doctor from user_master first
@@ -2378,7 +2387,8 @@ export default function AppointmentTable() {
         .kv .v { color: #111827; font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .crm-actions { display: grid; grid-template-columns: repeat(4, 32px); gap: 8px; }
         .crm-btn { width: 36px; height: 36px; border-radius: 6px; background: 'transparent'; display: inline-flex; align-items: center; justify-content: center; color:black; border: 1px solid #CFD8DC; cursor: pointer; }
-        .crm-btn:hover { background: 'transparent'; color:black; border-color:'transparent'; }
+        .crm-btn:hover:not(:disabled) { background: 'transparent'; color:black; border-color:'transparent'; }
+        .crm-btn:disabled { cursor: not-allowed !important; opacity: 0.5; }
         .status-indicator {
             width: 12px;
             height: 12px;
@@ -2452,6 +2462,7 @@ export default function AppointmentTable() {
             background: #000;
             color: #fff;
             opacity: 0.35;
+            cursor: not-allowed !important;
         }
         .page-size-select {
             padding: 4px 8px;
@@ -3797,7 +3808,8 @@ export default function AppointmentTable() {
         .kv .v { color: #111827; font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .crm-actions { display: grid; grid-template-columns: repeat(4, 32px); gap: 8px; }
         .crm-btn { width: 36px; height: 36px; border-radius: 6px; background: 'transparent'; display: inline-flex; align-items: center; justify-content: center; color: black; border: 1px solid #CFD8DC; cursor: pointer; }
-        .crm-btn:hover { background:'transparent'; color:black; border-color: 'transparent'; }
+        .crm-btn:hover:not(:disabled) { background:'transparent'; color:black; border-color: 'transparent'; }
+        .crm-btn:disabled { cursor: not-allowed !important; opacity: 0.5; }
         .status-indicator {
             width: 12px;
             height: 12px;
@@ -4877,12 +4889,12 @@ export default function AppointmentTable() {
                                                             title={(() => {
                                                                 const statusId = mapStatusLabelToId(a.status);
                                                                 const shouldDisable = isReceptionist && statusId >= 2;
-                                                                if (shouldDisable) return "Visit Details (Disabled - Status >= 2)";
+                                                                if (shouldDisable) return "Visit Details";
                                                                 const isWaiting = statusId === 1;
                                                                 const isComplete = statusId === 5;
                                                                 const shouldEnable = !isReceptionist || isWaiting || isComplete;
-                                                                if (!shouldEnable) return "Visit Details (Disabled for Reception)";
-                                                                return a.status === 'WITH DOCTOR' ? 'Visit Details (Disabled - Patient with doctor)' : 'Visit Details';
+                                                                if (!shouldEnable) return "Visit Details";
+                                                                return a.status === 'WITH DOCTOR' ? 'Visit Details' : 'Visit Details';
                                                             })()}
                                                             onClick={() => {
                                                                 const statusId = mapStatusLabelToId(a.status);
@@ -4973,10 +4985,10 @@ export default function AppointmentTable() {
                                                                 const isCollectible = statusId === 4 || statusId === 5 || statusId === 6;
                                                                 // Allow statusId 4, 5 (Complete), and 6 even for reception, otherwise disable for reception when statusId >= 2
                                                                 const shouldDisable = isReceptionist && statusId >= 2 && !isCollectible;
-                                                                if (shouldDisable) return "Collection (Disabled - Status >= 2)";
+                                                                if (shouldDisable) return "Collection";
                                                                 const shouldEnable = !isReceptionist || isCollectible;
-                                                                if (!shouldEnable) return "Collection (Disabled for Reception)";
-                                                                return !isCollectible ? "Collection (Disabled - Status not Complete/Submited)" : "Collection";
+                                                                if (!shouldEnable) return "Collection";
+                                                                return !isCollectible ? "Collection" : "Collection";
                                                             })()}
                                                             onClick={() => {
                                                                 const statusId = mapStatusLabelToId(a.status);
@@ -5090,7 +5102,7 @@ export default function AppointmentTable() {
                                                                 title={(() => {
                                                                     const normalizedStatus = normalizeStatusLabel(a.status);
                                                                     const isEnabled = normalizedStatus === 'COLLECTION';
-                                                                    return isEnabled ? "Treatment" : "Treatment (Disabled - Only enabled for Collection status)";
+                                                                    return isEnabled ? "Treatment" : "Treatment";
                                                                 })()}
                                                                 onClick={() => {
                                                                     const normalizedStatus = normalizeStatusLabel(a.status);
@@ -6059,53 +6071,18 @@ export default function AppointmentTable() {
             )}
 
             {/* Delete Appointment Confirmation Dialog */}
-            <Dialog
+            <DeleteConfirmationDialog
                 open={showDeleteConfirm}
-                onClose={() => !isDeleting && setShowDeleteConfirm(false)}
-                aria-labelledby="delete-dialog-title"
-                aria-describedby="delete-dialog-description"
-            >
-                <DialogTitle id="delete-dialog-title">
-                    {"Delete Appointment"}
-                </DialogTitle>
-                <DialogContent>
-                    <DialogContentText id="delete-dialog-description">
+                onClose={() => setShowDeleteConfirm(false)}
+                onConfirm={handleConfirmDelete}
+                title="Delete Appointment"
+                message={
+                    <>
                         Are you sure you want to delete the appointment for <strong>{appointmentToDelete?.appointment.patient}</strong>?
-                    </DialogContentText>
-                </DialogContent>
-                <DialogActions>
-                    <Button
-                        onClick={() => setShowDeleteConfirm(false)}
-                        disabled={isDeleting}
-                        variant="contained"
-                        sx={{
-                            bgcolor: '#1E88E5',
-                            color: '#fff',
-                            '&:hover': {
-                                bgcolor: '#1976D2',
-                            }
-                        }}
-                    >
-                        Cancel
-                    </Button>
-                    <Button
-                        onClick={handleConfirmDelete}
-                        variant="contained"
-                        autoFocus
-                        disabled={isDeleting}
-                        startIcon={isDeleting ? <CircularProgress size={20} color="inherit" /> : <Delete />}
-                        sx={{
-                            bgcolor: '#1E88E5',
-                            color: '#fff',
-                            '&:hover': {
-                                bgcolor: '#1976D2',
-                            }
-                        }}
-                    >
-                        {isDeleting ? 'Deleting...' : 'OK'}
-                    </Button>
-                </DialogActions>
-            </Dialog>
+                    </>
+                }
+                loading={isDeleting}
+            />
 
             {/* Global snackbar (reception / non-doctor view) */}
             <GlobalSnackbar

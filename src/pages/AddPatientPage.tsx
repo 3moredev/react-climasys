@@ -1472,8 +1472,10 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
           fontSize: '0.75rem',
           lineHeight: 1.66,
           fontFamily: "'Roboto', sans-serif",
-          margin: '3px 14px 0',
-          minHeight: '1.25rem'
+          margin: '3px 0 0 0 !important',
+          padding: '0 !important',
+          minHeight: '1.25rem',
+          textAlign: 'left !important'
         },
         position: 'relative'
       }}>
@@ -1752,12 +1754,12 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         color="error"
                         sx={{
                           mt: 0.5,
-                          ml: 1.75,
+                          ml: 0,
                           fontSize: '0.75rem !important',
                           lineHeight: 1.66,
                           fontFamily: "'Roboto', sans-serif",
                           minHeight: '1.25rem',
-                          margin: '3px 0 0 14px',
+                          margin: '3px 0 0 0 !important',
                           fontWeight: 400
                         }}
                       >

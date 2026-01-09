@@ -161,6 +161,11 @@
   height: 32px;
 }
 
+.form-control:disabled {
+  cursor: not-allowed !important;
+  background-color: #f5f5f5 !important;
+}
+
 .form-control:focus {
   outline: none;
   border-color: #1E88E5;
@@ -283,7 +288,7 @@
 
 .page-btn:disabled {
   opacity: 0.5;
-  cursor: not-allowed;
+  cursor: not-allowed !important;
 }
 
 .nav-btn {
@@ -302,6 +307,7 @@
   background: #000;
   color: #fff;
   opacity: 0.35;
+  cursor: not-allowed !important;
 }
 
 /* Card View Styles */

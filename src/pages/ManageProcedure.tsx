@@ -6,6 +6,7 @@ import procedureService, { ProcedureMaster } from "../services/procedureService"
 import { doctorService, Doctor } from "../services/doctorService";
 import { useSession } from "../store/hooks/useSession";
 import GlobalSnackbar from "../components/GlobalSnackbar";
+import DeleteConfirmationDialog from "../components/DeleteConfirmationDialog";
 
 // Procedure type definition
 type Procedure = {
@@ -27,10 +28,15 @@ export default function ManageProcedure() {
   const [selectedDoctorId, setSelectedDoctorId] = useState<string>("");
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [loadingDoctors, setLoadingDoctors] = useState<boolean>(false);
-  
+
   // Snackbar state management
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
+
+  // Delete confirmation state
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<boolean>(false);
+  const [procedureToDelete, setProcedureToDelete] = useState<Procedure | null>(null);
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
 
   const { clinicId, doctorId: sessionDoctorId, userId } = useSession();
 
@@ -39,9 +45,9 @@ export default function ManageProcedure() {
     try {
       setLoading(true);
       setError(null);
-      
+
       const apiProcedures = await procedureService.getAllProceduresForDoctor(docId);
-      
+
       // Transform API response to component format
       const transformedProcedures: Procedure[] = apiProcedures.map((proc, index) => ({
         sr: index + 1,
@@ -49,7 +55,7 @@ export default function ManageProcedure() {
         priority: proc.priorityValue?.toString() || "",
         findings: [] // Will be loaded separately if needed
       }));
-      
+
       setProcedures(transformedProcedures);
     } catch (err: any) {
       console.error('Error loading procedures:', err);
@@ -66,9 +72,9 @@ export default function ManageProcedure() {
       const allDoctors = await doctorService.getAllDoctors();
       const clinicDoctors = clinicId
         ? allDoctors.filter((doctor: any) => {
-            const doctorClinicId = doctor.clinicId || doctor.clinic_id || doctor.clinic;
-            return !doctorClinicId || doctorClinicId === clinicId;
-          })
+          const doctorClinicId = doctor.clinicId || doctor.clinic_id || doctor.clinic;
+          return !doctorClinicId || doctorClinicId === clinicId;
+        })
         : allDoctors;
       const doctorsToUse = clinicDoctors.length > 0 ? clinicDoctors : allDoctors;
       setDoctors(doctorsToUse);
@@ -123,11 +129,11 @@ export default function ManageProcedure() {
       setLoading(true);
       setError(null);
       setCurrentPage(1); // Reset to first page on search
-      
+
       if (searchTerm.trim()) {
         // Call search API
         const apiProcedures = await procedureService.searchProcedures(selectedDoctorId, searchTerm);
-        
+
         // Transform API response to component format
         const transformedProcedures: Procedure[] = apiProcedures.map((proc, index) => ({
           sr: index + 1,
@@ -135,7 +141,7 @@ export default function ManageProcedure() {
           priority: proc.priorityValue?.toString() || "",
           findings: []
         }));
-        
+
         setProcedures(transformedProcedures);
       } else {
         // If search term is empty, reload all procedures
@@ -183,7 +189,7 @@ export default function ManageProcedure() {
       setLoading(true);
       setError(null);
       const clinic = clinicId || "CL-00001";
-      
+
       const procedureData: ProcedureMaster = {
         procedureDescription: data.procedureDescription,
         doctorId: selectedDoctorId,
@@ -200,10 +206,10 @@ export default function ManageProcedure() {
         await procedureService.createProcedure(procedureData);
         setSnackbarMessage('Procedure created successfully!');
       }
-      
+
       // Reload procedures after save
       await loadProcedures(selectedDoctorId);
-      
+
       setShowAddPopup(false);
       setEditingProcedure(null);
       setSnackbarOpen(true);
@@ -222,34 +228,42 @@ export default function ManageProcedure() {
     setShowAddPopup(true);
   };
 
-  const handleDelete = async (procedure: Procedure) => {
+  const handleDelete = (procedure: Procedure) => {
+    setProcedureToDelete(procedure);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!procedureToDelete) return;
+
+    const procedure = procedureToDelete;
     if (!selectedDoctorId) {
       setError('Doctor ID not available');
       return;
     }
 
-    if (window.confirm(`Are you sure you want to delete "${procedure.procedureDescription}"?`)) {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        // Hardcoded clinicId fallback as requested
-        const clinic = clinicId || "CL-00001";
-        await procedureService.deleteProcedure(selectedDoctorId, clinic, procedure.procedureDescription);
-        
-        // Reload procedures after delete
-        await loadProcedures(selectedDoctorId);
-        
-        setSnackbarMessage('Procedure deleted successfully!');
-        setSnackbarOpen(true);
-      } catch (err: any) {
-        console.error('Error deleting procedure:', err);
-        setError(err.message || 'Failed to delete procedure');
-        setSnackbarMessage(err.message || 'Failed to delete procedure');
-        setSnackbarOpen(true);
-      } finally {
-        setLoading(false);
-      }
+    try {
+      setIsDeleting(true);
+      setError(null);
+
+      // Hardcoded clinicId fallback as requested
+      const clinic = clinicId || "CL-00001";
+      await procedureService.deleteProcedure(selectedDoctorId, clinic, procedure.procedureDescription);
+
+      // Reload procedures after delete
+      await loadProcedures(selectedDoctorId);
+
+      setSnackbarMessage('Procedure deleted successfully!');
+      setSnackbarOpen(true);
+      setShowDeleteConfirm(false);
+      setProcedureToDelete(null);
+    } catch (err: any) {
+      console.error('Error deleting procedure:', err);
+      setError(err.message || 'Failed to delete procedure');
+      setSnackbarMessage(err.message || 'Failed to delete procedure');
+      setSnackbarOpen(true);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -462,9 +476,9 @@ export default function ManageProcedure() {
       `}</style>
 
       {/* Page Title */}
-      <h1 style={{ 
-        fontWeight: 'bold', 
-        fontSize: '1.8rem', 
+      <h1 style={{
+        fontWeight: 'bold',
+        fontSize: '1.8rem',
         color: '#212121',
         marginBottom: '24px'
       }}>
@@ -522,7 +536,7 @@ export default function ManageProcedure() {
         <button className="btn-icon" onClick={handleRefresh} title="Refresh">
           <Refresh style={{ fontSize: '20px' }} />
         </button>
-        
+
         {userId !== 7 && (
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ fontSize: '0.9rem', color: '#666', whiteSpace: 'nowrap' }}>For Provider</span>
@@ -683,6 +697,20 @@ export default function ManageProcedure() {
         message={snackbarMessage}
         onClose={() => setSnackbarOpen(false)}
         autoHideDuration={5000}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        open={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleConfirmDelete}
+        title="Delete Procedure"
+        message={
+          <>
+            Are you sure you want to delete the procedure <strong>{procedureToDelete?.procedureDescription}</strong>?
+          </>
+        }
+        loading={isDeleting}
       />
     </div>
   );

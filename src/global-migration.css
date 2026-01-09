@@ -161,6 +161,31 @@ button:not(.MuiTab-root),
   text-transform: none !important;
 }
 
+button:disabled,
+.btn:disabled,
+.MuiButton-root:disabled,
+.form-button:disabled,
+.action-button:disabled,
+.quick-action-btn:disabled,
+.card-btn:disabled,
+.page-btn:disabled,
+.nav-btn:disabled,
+.crm-btn:disabled,
+.btn-icon:disabled {
+  cursor: not-allowed !important;
+  opacity: 0.65 !important;
+}
+
+button:disabled:hover,
+.btn:disabled:hover,
+.MuiButton-root:disabled:hover,
+.form-button:disabled:hover,
+.action-button:disabled:hover,
+.quick-action-btn:disabled:hover {
+  transform: none !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+}
+
 button:not(.MuiTab-root):hover,
 .MuiButton-root:not(.MuiTab-root):hover,
 .form-button:hover,
@@ -185,6 +210,26 @@ select,
   transition: border-color 0.2s ease-in-out !important;
   background: white;
   font-family: Arial, Helvetica, sans-serif !important;
+}
+
+
+input:disabled,
+select:disabled,
+textarea:disabled,
+.MuiTextField-root input:disabled,
+.MuiFormControl-root input:disabled {
+  cursor: not-allowed !important;
+  background-color: #f5f5f5 !important;
+  opacity: 0.8 !important;
+}
+
+.MuiFormHelperText-root {
+  text-align: left !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  margin-top: 3px !important;
 }
 
 /* Lighter placeholder color across the app */
@@ -670,6 +715,7 @@ form {
     box-shadow: none;
     border: 1px solid #ddd;
   }
+<<<<<<< HEAD
 }
 
 /* Fix for patient name overflow in appointments table */
@@ -716,3 +762,6 @@ form {
 #textarea-autosize:focus{
   border-color: #1E88E5 !important;
 }
+=======
+}
+>>>>>>> 45c79156f084f3713c5e990866b6174860d443a5
