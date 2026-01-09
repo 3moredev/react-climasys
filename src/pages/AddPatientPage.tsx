@@ -1023,8 +1023,8 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
 
     // Validate mobile number format - must be exactly 10 digits
     if (formData.mobileNumber && formData.mobileNumber.length !== 10) {
-      newErrors.mobileNumber = formData.mobileNumber.length > 0 
-        ? 'Mobile number must be exactly 10 digits' 
+      newErrors.mobileNumber = formData.mobileNumber.length > 0
+        ? 'Mobile number must be exactly 10 digits'
         : ''
     }
 
@@ -1608,9 +1608,9 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         <DateField
                           fullWidth
                           value={formData.dobDate}
-                          slotProps={{ 
-                            textField: { 
-                              sx: { 
+                          slotProps={{
+                            textField: {
+                              sx: {
                                 mb: 0,
                                 '& .MuiFormHelperText-root': {
                                   whiteSpace: 'nowrap'
@@ -1618,7 +1618,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                               },
                               error: !!errors.dateOfBirth,
                               helperText: errors.dateOfBirth
-                            } 
+                            }
                           }}
                           onChange={(newValue: any) => {
                             // Clear error when date is selected
@@ -1747,11 +1747,11 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                       ))}
                     </Select>
                     {errors.gender && (
-                      <Typography 
+                      <Typography
                         component="p"
-                        color="error" 
-                        sx={{ 
-                          mt: 0.5, 
+                        color="error"
+                        sx={{
+                          mt: 0.5,
                           ml: 1.75,
                           fontSize: '0.75rem !important',
                           lineHeight: 1.66,

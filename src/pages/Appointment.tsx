@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { List, CreditCard, MoreVert, Add as AddIcon, Save, Delete, Info, FastForward, Close, ChatBubbleOutline, Phone, SwapHoriz, ShoppingCart } from "@mui/icons-material";
-import { Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button, CircularProgress } from "@mui/material";
+import { Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button, CircularProgress, Tooltip } from "@mui/material";
 import { appointmentService, Appointment, AppointmentRequest, TodayAppointmentsResponse, getDoctorStatusReference, getStatusOptionsByClinic } from "../services/appointmentService";
 import { doctorService, DoctorDetail, Doctor } from "../services/doctorService";
 import { patientService, Patient, formatVisitDateTime, getVisitStatusText } from "../services/patientService";
@@ -2167,6 +2167,8 @@ export default function AppointmentTable() {
             }
         }
 
+        if (formatted === '00:00') return;
+
         updateAppointmentField(index, 'online', formatted);
     };
 
@@ -2941,22 +2943,22 @@ export default function AppointmentTable() {
                                     </thead>
                                     <tbody>
                                         {currentAppointments.map((a, i) => {
-                                            const originalIndex = startIndex + i;
                                             return (
                                                 <tr key={i} style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 500 }}>
                                                     <td className="sr-col">{a.sr}</td>
                                                     <td className="name-col">
-                                                        <a
-                                                            href="#"
-                                                            onClick={(e) => {
-                                                                e.preventDefault();
-                                                                setSelectedPatientForQuickReg(a);
-                                                                setShowQuickRegistration(true);
-                                                            }}
-                                                            style={{ textDecoration: "underline", color: "#1E88E5", cursor: "pointer" }}
-                                                        >
-                                                            {a.patient}
-                                                        </a>
+                                                        <Tooltip title={a.patient || ""} arrow placement="top">
+                                                            <a
+                                                                onClick={(e) => {
+                                                                    e.preventDefault();
+                                                                    setSelectedPatientForQuickReg(a);
+                                                                    setShowQuickRegistration(true);
+                                                                }}
+                                                                style={{ textDecoration: "underline", color: "#1E88E5", cursor: "pointer" }}
+                                                            >
+                                                                {a.patient}
+                                                            </a>
+                                                        </Tooltip>
                                                     </td>
                                                     <td className="gender-col">{a.gender}</td>
                                                     <td className="age-col">{a.age}</td>

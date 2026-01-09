@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Close, Add, Delete } from '@mui/icons-material';
-import { Calendar } from 'lucide-react';
+import { TextField, InputAdornment, Grid, Box, Typography, DialogContent } from '@mui/material';
+import dayjs from 'dayjs';
 import { patientService } from '../services/patientService';
 import { SessionInfo } from '../services/sessionService';
 import { doctorService, Doctor } from '../services/doctorService';
@@ -62,12 +63,14 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
     const [labTestResults, setLabTestResults] = useState<LabTestResult[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [errors, setErrors] = useState<{ [key: string]: string }>({});
     const [success, setSuccess] = useState<string | null>(null);
     const [snackbarOpen, setSnackbarOpen] = useState(false);
     const [snackbarMessage, setSnackbarMessage] = useState('');
+    const [resultErrors, setResultErrors] = useState<Set<string>>(new Set());
 
     // Dynamic Lab Test selector states (options now include parameters for each test)
-    type LabTestParameter = { id: strisetPatientNameng; name: string };
+    type LabTestParameter = { id: string; name: string };
     type LabTestOption = { value: string; label: string; parameters: LabTestParameter[] };
     const [isLabTestsOpen, setIsLabTestsOpen] = useState(false);
     const [labTestSearch, setLabTestSearch] = useState('');
@@ -116,7 +119,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
     const doctorDisplayName = useMemo(() => {
         // If no provider name, try to get doctor name from allDoctors using doctorId
         const id = (patientData as any)?.doctorId || (appointment as any)?.doctorId || (sessionData as any)?.doctorId;
-        console.log('checking id:', id);        
+        console.log('checking id:', id);
         if (id && allDoctors.length > 0) {
             // First try to find by ID
             let doctor = allDoctors.find(d => d.id === id);
@@ -216,7 +219,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
         if (!open) return;
         const doctorId = patientData?.doctorId || (patientData?.provider ?? '').toString();
         const clinicId = patientData?.clinicId || sessionData?.clinicId || 'DEFAULT_CLINIC';
-        const patientString = patientData?.patient +' / '+ patientData?.gender +' / '+ patientData?.age+' Y ' +' / '+ patientData?.contact;
+        const patientString = patientData?.patient + ' / ' + patientData?.gender + ' / ' + patientData?.age + ' Y ' + ' / ' + patientData?.contact;
         setPatientName(patientString);
         if (!doctorId) return;
         setLabTestsLoading(true);
@@ -421,6 +424,27 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
         return labTestsOptions.filter((o: LabTestOption) => selectedLabTests.includes(o.value));
     }, [labTestsOptions, selectedLabTests]);
 
+    // Sync selectedLabTests with loaded labTestResults
+    useEffect(() => {
+        if (labTestResults.length === 0 || labTestsOptions.length === 0) return;
+
+        const existingValues = new Set(selectedLabTests);
+        let changed = false;
+
+        labTestResults.forEach(result => {
+            // Find matching option by label since results don't have ID
+            const option = labTestsOptions.find(o => o.label === result.labTestName);
+            if (option && !existingValues.has(option.value)) {
+                existingValues.add(option.value);
+                changed = true;
+            }
+        });
+
+        if (changed) {
+            setSelectedLabTests(Array.from(existingValues));
+        }
+    }, [labTestResults, labTestsOptions]);
+
     // Close dropdown on outside click
     useEffect(() => {
         const onClick = (e: MouseEvent) => {
@@ -438,28 +462,6 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
             ...prev,
             [field]: value
         }));
-    };
-
-    const handleDateChange = (dateValue: string) => {
-        if (dateValue) {
-            const date = new Date(dateValue);
-            if (!isNaN(date.getTime())) {
-                const formattedDate = date.toLocaleDateString("en-GB", {
-                    day: "2-digit",
-                    month: "short",
-                    year: "2-digit",
-                }).replace(/ /g, "-");
-                setFormData(prev => ({
-                    ...prev,
-                    reportDate: formattedDate
-                }));
-            }
-        } else {
-            setFormData(prev => ({
-                ...prev,
-                reportDate: ''
-            }));
-        }
     };
 
     // Normalize a variety of input date formats to ISO yyyy-MM-dd for backend
@@ -620,10 +622,43 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                 result.id === id ? { ...result, [field]: value } : result
             )
         );
+
+        // Clear error for this field if it has a value
+        if (field === 'value' && value.trim()) {
+            setResultErrors(prev => {
+                if (!prev.has(id)) return prev; // No change needed
+                const next = new Set(prev);
+                next.delete(id);
+                return next;
+            });
+        }
     };
 
     const handleRemoveResult = (id: string) => {
-        setLabTestResults(prev => prev.filter(result => result.id !== id));
+        const resultToRemove = labTestResults.find(r => r.id === id);
+        const nextResults = labTestResults.filter(result => result.id !== id);
+
+        setLabTestResults(nextResults);
+
+        // Also remove any error for this ID since it's being removed
+        setResultErrors(prev => {
+            if (!prev.has(id)) return prev;
+            const next = new Set(prev);
+            next.delete(id);
+            return next;
+        });
+
+        // If no parameters remain for this test name, unselect it from the dropdown
+        if (resultToRemove) {
+            const remainingForThisTest = nextResults.some(r => r.labTestName === resultToRemove.labTestName);
+            if (!remainingForThisTest) {
+                const option = labTestsOptions.find(o => o.label === resultToRemove.labTestName);
+                if (option) {
+                    setSelectedLabTests(prev => prev.filter(val => val !== option.value));
+                    setLabTestsRows(prev => prev.filter(r => r.value !== option.value));
+                }
+            }
+        }
     };
 
     const handleSubmit = async () => {
@@ -632,8 +667,19 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
 
         try {
             // Validate required fields
-            if (!formData.labName || !formData.labDoctorName || !formData.reportDate) {
-                throw new Error('Please fill in all required fields');
+            const newErrors: { [key: string]: string } = {};
+            if (!formData.labName) newErrors.labName = 'Lab Name is required';
+            if (!formData.labDoctorName) newErrors.labDoctorName = 'Doctor Name is required';
+            if (!formData.reportDate) {
+                newErrors.reportDate = 'Report Date is required';
+            } else if (dayjs(formData.reportDate).isAfter(dayjs(), 'day')) {
+                newErrors.reportDate = 'Future dates are not allowed';
+            }
+
+            if (Object.keys(newErrors).length > 0) {
+                setErrors(newErrors);
+                setIsLoading(false); // Ensure loading state is reset
+                return;
             }
 
             if (labTestResults.length === 0) {
@@ -641,8 +687,15 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
             }
 
             // Validate lab test result values only
-            const missingValues = labTestResults.some(result => !result.value);
-            if (missingValues) {
+            const missingIds = new Set<string>();
+            labTestResults.forEach(r => {
+                if (!r.value || !r.value.trim()) {
+                    missingIds.add(r.id);
+                }
+            });
+
+            if (missingIds.size > 0) {
+                setResultErrors(missingIds);
                 throw new Error('Please provide a value for each result');
             }
 
@@ -857,6 +910,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
 
     return (
         <>
+
             {open && (
                 <div
                     style={{
@@ -900,7 +954,10 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                             top: 0,
                             zIndex: 1000
                         }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}>
+                                <h3 style={{ margin: 0, color: '#000000', fontSize: '20px', fontWeight: 'bold' }}>
+                                    Lab Details
+                                </h3>
                                 <div
                                     onClick={() => {
                                         if (patientData?.patientId) {
@@ -957,12 +1014,125 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                 </button>
                             </div>
                         </div>
-
-                        {/* Form Content */}
-                        <div style={{ padding: '20px', flex: 1, overflow: 'auto' }}>
-                            {/* Lab Report Information Section */}
-                            <div style={{ marginBottom: '30px' }}>
-                                {/* <h3 style={{ 
+                        <DialogContent sx={{
+                            p: '4px 20px 8px',
+                            '& .MuiTextField-root, & .MuiFormControl-root': { width: '100%' },
+                            // Remove right padding on last column so fields align with actions
+                            '& .MuiGrid-container > .MuiGrid-item:last-child': { paddingRight: 0 },
+                            // Match Appointment page input/select height (38px)
+                            '& .MuiTextField-root .MuiOutlinedInput-root, & .MuiFormControl-root .MuiOutlinedInput-root': { height: 38 },
+                            // Typography and padding to match Appointment inputs
+                            '& .MuiInputBase-input, & .MuiSelect-select': {
+                                fontFamily: "'Roboto', sans-serif",
+                                fontWeight: 500,
+                                padding: '6px 12px',
+                                lineHeight: 1.5
+                            },
+                            // Outline thickness and colors (normal and focused)
+                            '& .MuiOutlinedInput-root .MuiOutlinedInput-notchedOutline': {
+                                borderWidth: '2px',
+                                borderColor: '#B7B7B7',
+                                borderRadius: '8px'
+                            },
+                            '& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline': {
+                                borderColor: '#999',
+                                borderRadius: '8px'
+                            },
+                            '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                borderWidth: '2px',
+                                borderColor: '#1E88E5',
+                                borderRadius: '8px'
+                            },
+                            // Add border radius to all input elements
+                            '& .MuiOutlinedInput-root': {
+                                borderRadius: '8px',
+                                boxShadow: 'none'
+                            },
+                            '& .MuiOutlinedInput-root.Mui-focused': { boxShadow: 'none !important' },
+                            // Disabled look similar to Appointment header select
+                            '& .MuiOutlinedInput-root.Mui-disabled .MuiOutlinedInput-input, & .MuiOutlinedInput-root.Mui-disabled .MuiSelect-select': {
+                                backgroundColor: '#ECEFF1',
+                                WebkitTextFillColor: 'inherit'
+                            },
+                            // Autocomplete styling to match other inputs and remove inner borders
+                            '& .MuiAutocomplete-root .MuiAutocomplete-input': {
+                                opacity: 1,
+                                border: 'none !important',
+                                outline: 'none !important'
+                            },
+                            '& .MuiAutocomplete-root .MuiOutlinedInput-root': {
+                                height: 38,
+                                borderRadius: '8px',
+                                boxShadow: 'none',
+                                padding: '0 !important'
+                            },
+                            '& .MuiAutocomplete-root .MuiOutlinedInput-root .MuiOutlinedInput-input': {
+                                border: 'none !important',
+                                outline: 'none !important',
+                                padding: '6px 12px !important'
+                            },
+                            '& .MuiAutocomplete-root .MuiOutlinedInput-root .MuiOutlinedInput-notchedOutline': {
+                                borderWidth: '2px',
+                                borderColor: '#B7B7B7',
+                                borderRadius: '8px'
+                            },
+                            '& .MuiAutocomplete-root .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline': {
+                                borderColor: '#999',
+                                borderRadius: '8px'
+                            },
+                            '& .MuiAutocomplete-root .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                borderWidth: '2px',
+                                borderColor: '#1E88E5',
+                                borderRadius: '8px'
+                            },
+                            '& .MuiAutocomplete-root .MuiOutlinedInput-root.Mui-focused': {
+                                boxShadow: 'none !important'
+                            },
+                            '& .MuiAutocomplete-root .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-input': {
+                                border: 'none !important',
+                                outline: 'none !important'
+                            },
+                            // Ensure no double borders on Autocomplete input elements
+                            '& .MuiAutocomplete-root input': {
+                                border: 'none !important',
+                                outline: 'none !important',
+                                boxShadow: 'none !important'
+                            },
+                            '& .MuiAutocomplete-root .MuiTextField-root': {
+                                '& .MuiOutlinedInput-root .MuiOutlinedInput-input': {
+                                    border: 'none !important',
+                                    outline: 'none !important'
+                                }
+                            },
+                            // Hide loading indicator (rotating spinner) in Autocomplete
+                            '& .MuiAutocomplete-root .MuiCircularProgress-root': {
+                                display: 'none !important'
+                            },
+                            // Remove global input borders on this page only
+                            '& input, & textarea, & select, & .MuiTextField-root input, & .MuiFormControl-root input': {
+                                border: 'none !important'
+                            },
+                            '& .MuiBox-root': { mb: 0 },
+                            '& .MuiTypography-root': { mb: 0.25 },
+                            // Local override for headings inside this dialog only
+                            '& h1, & h2, & h3, & h4, & h5, & h6, & .MuiTypography-h1, & .MuiTypography-h2, & .MuiTypography-h3, & .MuiTypography-h4, & .MuiTypography-h5, & .MuiTypography-h6': {
+                                margin: '0 0 2px 0 !important'
+                            },
+                            // Consistent error message styling
+                            '& .MuiFormHelperText-root': {
+                                fontSize: '0.75rem',
+                                lineHeight: 1.66,
+                                fontFamily: "'Roboto', sans-serif",
+                                margin: '3px 14px 0',
+                                minHeight: '1.25rem'
+                            },
+                            position: 'relative'
+                        }}>
+                            {/* Form Content */}
+                            <div style={{ padding: '0px', flex: 1, overflow: 'auto' }}>
+                                {/* Lab Report Information Section */}
+                                <div style={{ marginBottom: '30px' }}>
+                                    {/* <h3 style={{ 
                                     color: '#1976d2', 
                                     marginBottom: '20px', 
                                     fontSize: '18px',
@@ -973,610 +1143,459 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                     Lab Report Information
                                 </h3> */}
 
-                                <div style={{
-                                    display: 'grid',
-                                    gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-                                    gap: '10px',
-                                    marginBottom: '20px'
-                                }}>
-                                    <div>
-                                        <label style={{
-                                            display: 'block',
-                                            marginBottom: '8px',
-                                            fontWeight: 'bold',
-                                            color: '#333'
-                                        }}>
-                                            Lab Name *
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={formData.labName}
-                                            onChange={(e) => handleInputChange('labName', e.target.value)}
-                                            placeholder="Lab Name"
-                                            style={{
-                                                width: '100%',
-                                                height: '32px',
-                                                padding: '4px 8px',
-                                                border: '2px solid #B7B7B7',
-                                                borderRadius: '6px',
-                                                fontSize: '0.9rem',
-                                                fontFamily: "'Roboto', sans-serif",
-                                                fontWeight: '500',
-                                                backgroundColor: 'white',
-                                                outline: 'none',
-                                                transition: 'border-color 0.2s',
-                                                boxSizing: 'border-box'
-                                            }}
-                                            onFocus={(e) => {
-                                                e.target.style.borderColor = '#1E88E5';
-                                                e.target.style.boxShadow = 'none';
-                                            }}
-                                            onBlur={(e) => {
-                                                e.target.style.borderColor = '#B7B7B7';
-                                            }}
-                                        />
+                                    <div style={{ marginBottom: '20px' }}>
+                                        <Grid container spacing={2}>
+                                            <Grid item xs={12} md={4}>
+                                                <Box sx={{ mb: 2 }}>
+                                                    <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
+                                                        Lab Name <span style={{ color: 'red' }}>*</span>
+                                                    </Typography>
+                                                    <TextField
+                                                        fullWidth
+                                                        placeholder="Lab Name"
+                                                        value={formData.labName}
+                                                        onChange={(e) => {
+                                                            handleInputChange('labName', e.target.value);
+                                                            if (e.target.value) {
+                                                                setErrors(prev => ({ ...prev, labName: '' }));
+                                                            }
+                                                        }}
+                                                        error={!!errors.labName}
+                                                        helperText={errors.labName}
+                                                        required
+                                                        variant="outlined"
+                                                        size="small"
+                                                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
+                                                    />
+                                                </Box>
+                                            </Grid>
+
+                                            <Grid item xs={12} md={4}>
+                                                <Box sx={{ mb: 2 }}>
+                                                    <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
+                                                        Lab Doctor Name <span style={{ color: 'red' }}>*</span>
+                                                    </Typography>
+                                                    <TextField
+                                                        fullWidth
+                                                        placeholder="Doctor Name"
+                                                        value={formData.labDoctorName}
+                                                        onChange={(e) => {
+                                                            const val = e.target.value;
+                                                            // Allow only alphabets and spaces
+                                                            if (/^[a-zA-Z\s]*$/.test(val)) {
+                                                                handleInputChange('labDoctorName', val);
+                                                                if (val) {
+                                                                    setErrors(prev => ({ ...prev, labDoctorName: '' }));
+                                                                }
+                                                            }
+                                                        }}
+                                                        error={!!errors.labDoctorName}
+                                                        helperText={errors.labDoctorName}
+                                                        required
+                                                        variant="outlined"
+                                                        size="small"
+                                                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
+                                                    />
+                                                </Box>
+                                            </Grid>
+
+                                            <Grid item xs={12} md={4}>
+                                                <Box sx={{ mb: 2 }}>
+                                                    <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
+                                                        Report Date <span style={{ color: 'red' }}>*</span>
+                                                    </Typography>
+                                                    <TextField
+                                                        fullWidth
+                                                        type="date"
+                                                        required
+                                                        value={formData.reportDate}
+                                                        onChange={(e) => {
+                                                            const newValue = e.target.value;
+                                                            handleInputChange('reportDate', newValue);
+                                                            if (newValue && dayjs(newValue).isAfter(dayjs(), 'day')) {
+                                                                setErrors(prev => ({ ...prev, reportDate: 'Future dates are not allowed' }));
+                                                            } else if (newValue) {
+                                                                setErrors(prev => ({ ...prev, reportDate: '' }));
+                                                            }
+                                                        }}
+                                                        variant="outlined"
+                                                        size="small"
+                                                        sx={{
+                                                            '& .MuiOutlinedInput-root': { borderRadius: '8px' },
+                                                            '& input[type="date"]': {
+                                                                color: formData.reportDate ? 'inherit' : 'rgba(0, 0, 0, 0.42)'
+                                                            }
+                                                        }}
+                                                        error={!!errors.reportDate}
+                                                        helperText={errors.reportDate}
+                                                        inputProps={{
+                                                            max: dayjs().format('YYYY-MM-DD')
+                                                        }}
+                                                    />
+                                                </Box>
+                                            </Grid>
+                                        </Grid>
                                     </div>
 
                                     <div>
-                                        <label style={{
-                                            display: 'block',
-                                            marginBottom: '8px',
-                                            fontWeight: 'bold',
-                                            color: '#333'
-                                        }}>
-                                            Lab Doctor Name *
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={formData.labDoctorName}
-                                            onChange={(e) => handleInputChange('labDoctorName', e.target.value)}
-                                            placeholder="Doctor Name"
-                                            style={{
-                                                width: '100%',
-                                                height: '32px',
-                                                padding: '4px 8px',
-                                                border: '2px solid #B7B7B7',
-                                                borderRadius: '6px',
-                                                fontSize: '0.9rem',
-                                                fontFamily: "'Roboto', sans-serif",
-                                                fontWeight: '500',
-                                                backgroundColor: 'white',
-                                                outline: 'none',
-                                                transition: 'border-color 0.2s',
-                                                boxSizing: 'border-box'
-                                            }}
-                                            onFocus={(e) => {
-                                                e.target.style.borderColor = '#1E88E5';
-                                                e.target.style.boxShadow = 'none';
-                                            }}
-                                            onBlur={(e) => {
-                                                e.target.style.borderColor = '#B7B7B7';
-                                            }}
-                                        />
-                                    </div>
-
-                                    <div style={{ width: '95%', position: 'relative' }}>
-                                        <label style={{
-                                            display: 'block',
-                                            marginBottom: '8px',
-                                            fontWeight: 'bold',
-                                            color: '#333'
-                                        }}>
-                                            Report Date *
-                                        </label>
-                                        {/* Calendar Icon */}
-                                        <Calendar
-                                            size={20}
-                                            color="#666"
-                                            style={{
-                                                position: 'absolute',
-                                                right: '10px',
-                                                top: '38px',
-                                                cursor: 'pointer'
-                                            }}
-                                            onClick={() => {
-                                                const hiddenInput = document.getElementById('hiddenDateInput') as HTMLInputElement;
-                                                hiddenInput?.showPicker?.();
-                                            }}
-                                        />
-
-                                        {/* Hidden native date picker */}
-                                        <input
-                                            id="hiddenDateInput"
-                                            type="date"
-                                            onChange={(e) => handleDateChange(e.target.value)}
-                                            style={{
-                                                position: 'absolute',
-                                                opacity: 0,
-                                                pointerEvents: 'none',
-                                                width: 0,
-                                                height: 0
-                                            }}
-                                        />
-                                        {/* Text Input (formatted date) */}
-                                        <input
-                                            type="text"
-                                            value={formData.reportDate}
-                                            readOnly
-                                            onClick={() => {
-                                                const hiddenInput = document.getElementById('hiddenDateInput') as HTMLInputElement;
-                                                hiddenInput?.showPicker?.();
-                                            }}
-                                            onChange={(e) => handleInputChange('reportDate', e.target.value)}
-                                            placeholder="dd-mmm-yy"
-                                            style={{
-                                                width: '100%',
-                                                height: '32px',
-                                                padding: '4px 40px 4px 8px',
-                                                border: '2px solid #B7B7B7',
-                                                borderRadius: '6px',
-                                                fontSize: '0.9rem',
-                                                fontFamily: "'Roboto', sans-serif",
-                                                fontWeight: '500',
-                                                backgroundColor: 'white',
-                                                outline: 'none',
-                                                transition: 'border-color 0.2s',
-                                                boxSizing: 'border-box',
-                                                cursor: 'pointer'
-                                            }}
-                                            onFocus={(e) => {
-                                                e.target.style.borderColor = '#1E88E5';
-                                                e.target.style.boxShadow = 'none';
-                                            }}
-                                            onBlur={(e) => {
-                                                e.target.style.borderColor = '#B7B7B7';
-                                            }}
-                                        />
+                                        <Box sx={{ mb: 2 }}>
+                                            <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
+                                                Comment
+                                            </Typography>
+                                            <textarea
+                                                value={formData.comment}
+                                                onChange={(e) => handleInputChange('comment', e.target.value)}
+                                                placeholder="Comment"
+                                                rows={3}
+                                                id='textarea-autosize'
+                                                style={{
+                                                    border: '1px solid #b7b7b7',
+                                                    borderRadius: '8px',
+                                                    padding: '8px',
+                                                    resize: 'vertical'
+                                                }}
+                                            />
+                                        </Box>
                                     </div>
                                 </div>
-
                                 <div>
                                     <label style={{
                                         display: 'block',
-                                        marginBottom: '8px',
-                                        fontWeight: 'bold',
+                                        marginBottom: '5px',
+                                        fontSize: '0.9rem',
+                                        fontWeight: 700,
                                         color: '#333'
                                     }}>
-                                        Comment
+                                        Lab Tests *
                                     </label>
-                                    <textarea
-                                        value={formData.comment}
-                                        onChange={(e) => handleInputChange('comment', e.target.value)}
-                                        placeholder="Comment"
-                                        rows={3}
-                                        style={{
-                                            width: '100%',
-                                            padding: '4px 8px',
-                                            border: '2px solid #B7B7B7',
-                                            borderRadius: '6px',
-                                            fontSize: '0.9rem',
-                                            fontFamily: "'Roboto', sans-serif",
-                                            fontWeight: '500',
-                                            backgroundColor: 'white',
-                                            outline: 'none',
-                                            transition: 'border-color 0.2s',
-                                            boxSizing: 'border-box',
-                                            resize: 'vertical'
-                                        }}
-                                        onFocus={(e) => {
-                                            e.target.style.borderColor = '#1E88E5';
-                                            e.target.style.boxShadow = 'none';
-                                        }}
-                                        onBlur={(e) => {
-                                            e.target.style.borderColor = '#B7B7B7';
-                                        }}
-                                    />
-                                </div>
-                            </div>
-                            <div>
-                                <label style={{
-                                    display: 'block',
-                                    marginBottom: '8px',
-                                    fontWeight: 'bold',
-                                    color: '#333'
-                                }}>
-                                    Lab Tests *
-                                </label>
-                                <div ref={labTestsRef} style={{ display: 'flex', gap: '10px', alignItems: 'end' }}>
-                                    <div style={{ position: 'relative', flex: 1 }}>
-                                        <div
-                                            onClick={() => setIsLabTestsOpen(prev => !prev)}
+                                    <div ref={labTestsRef} style={{ display: 'flex', gap: '10px', alignItems: 'end' }}>
+                                        <div style={{ position: 'relative', flex: 1 }}>
+                                            <div
+                                                onClick={() => setIsLabTestsOpen(prev => !prev)}
+                                                style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'space-between',
+                                                    height: '32px',
+                                                    padding: '4px 8px',
+                                                    border: '2px solid #B7B7B7',
+                                                    borderRadius: '6px',
+                                                    fontSize: '12px',
+                                                    fontFamily: "'Roboto', sans-serif",
+                                                    fontWeight: 500,
+                                                    backgroundColor: 'white',
+                                                    cursor: 'pointer',
+                                                    userSelect: 'none',
+                                                    outline: 'none',
+                                                    transition: 'border-color 0.2s',
+                                                    position: 'relative'
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                    e.currentTarget.style.borderColor = '#1E88E5';
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    e.currentTarget.style.borderColor = '#B7B7B7';
+                                                }}
+                                            >
+                                                <span style={{ color: selectedLabTests.length ? '#000' : '#9e9e9e' }}>
+                                                    {selectedLabTests.length === 0 && 'Select Lab Tests'}
+                                                    {selectedLabTests.length === 1 && '1 selected'}
+                                                    {selectedLabTests.length > 1 && `${selectedLabTests.length} selected`}
+                                                </span>
+                                                <span style={{ marginLeft: '8px', color: '#666' }}>▾</span>
+                                            </div>
+
+                                            {isLabTestsOpen && (
+                                                <div style={{
+                                                    position: 'absolute',
+                                                    top: '100%',
+                                                    left: 0,
+                                                    right: 0,
+                                                    backgroundColor: 'white',
+                                                    border: '1px solid #B7B7B7',
+                                                    borderRadius: '6px',
+                                                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                                                    zIndex: 1000,
+                                                    marginTop: '4px'
+                                                }}>
+                                                    <div style={{ padding: '6px' }}>
+                                                        <input
+                                                            type="text"
+                                                            value={labTestSearch}
+                                                            onChange={(e) => setLabTestSearch(e.target.value)}
+                                                            placeholder="Search lab tests"
+                                                            style={{
+                                                                width: '100%',
+                                                                height: '28px',
+                                                                padding: '4px 8px',
+                                                                border: '1px solid #B7B7B7',
+                                                                borderRadius: '4px',
+                                                                fontSize: '12px',
+                                                                outline: 'none'
+                                                            }}
+                                                            onFocus={(e) => {
+                                                                e.target.style.borderColor = '#1E88E5';
+                                                            }}
+                                                            onBlur={(e) => {
+                                                                e.target.style.borderColor = '#B7B7B7';
+                                                            }}
+                                                        />
+                                                    </div>
+                                                    <div style={{ maxHeight: '240px', overflowY: 'auto', padding: '4px 6px', display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', columnGap: '8px', rowGap: '6px' }}>
+                                                        {labTestsLoading && (
+                                                            <div style={{ padding: '6px', fontSize: '12px', color: '#777', gridColumn: '1 / -1', textAlign: 'center' }}>Loading lab tests...</div>
+                                                        )}
+                                                        {labTestsError && (
+                                                            <div style={{ padding: '6px', fontSize: '12px', color: '#d32f2f', gridColumn: '1 / -1', textAlign: 'center' }}>
+                                                                {labTestsError}
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setLabTestsError(null);
+                                                                        const doctorId = patientData?.doctorId || (patientData?.provider ?? '').toString();
+                                                                        if (!doctorId) return;
+                                                                        setLabTestsLoading(true);
+                                                                        const clinicId = patientData?.clinicId || sessionData?.clinicId || 'DEFAULT_CLINIC';
+                                                                        patientService.getAllLabTestsWithParameters(doctorId, clinicId)
+                                                                            .then((res: any) => {
+                                                                                const mapped = extractLabTests(res);
+                                                                                console.log('Parsed lab tests count (retry):', mapped.length);
+                                                                                if (mapped.length === 0) {
+                                                                                    console.warn('Lab tests response could not be parsed. Raw response:', res);
+                                                                                }
+                                                                                setLabTestsOptions(mapped);
+                                                                            })
+                                                                            .catch((e: any) => setLabTestsError(e?.message || 'Failed to load lab tests'))
+                                                                            .finally(() => setLabTestsLoading(false));
+                                                                    }}
+                                                                    style={{ marginLeft: '8px', padding: '2px 6px', fontSize: '10px', backgroundColor: '#1976d2', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer' }}
+                                                                >
+                                                                    Retry
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                        {!labTestsLoading && !labTestsError && filteredLabTests.length === 0 && (
+                                                            <div style={{ padding: '6px', fontSize: '12px', color: '#777', gridColumn: '1 / -1' }}>No lab tests found</div>
+                                                        )}
+                                                        {!labTestsLoading && !labTestsError && filteredLabTests.map((opt) => {
+                                                            const isAdded = labTestResults.some(r => r.labTestName === opt.label);
+                                                            const isChecked = selectedLabTests.includes(opt.value) || isAdded;
+                                                            return (
+                                                                <label
+                                                                    key={opt.value}
+                                                                    style={{
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        gap: '4px',
+                                                                        padding: '4px 2px',
+                                                                        cursor: isAdded ? 'default' : 'pointer',
+                                                                        fontSize: '12px',
+                                                                        border: 'none',
+                                                                        backgroundColor: isChecked && !isAdded ? '#e3f2fd' : 'transparent',
+                                                                        borderRadius: '3px',
+                                                                        fontWeight: isChecked ? '600' : '400',
+                                                                        opacity: isAdded ? 0.6 : 1
+                                                                    }}
+                                                                >
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={isChecked}
+                                                                        disabled={isAdded}
+                                                                        onChange={(e) => {
+                                                                            if (isAdded) return;
+                                                                            setSelectedLabTests(prev => {
+                                                                                if (e.target.checked) {
+                                                                                    if (prev.includes(opt.value)) return prev;
+                                                                                    const next = [...prev, opt.value];
+                                                                                    const picked = labTestsOptions.filter((o: LabTestOption) => next.includes(o.value));
+                                                                                    setLabTestsRows(picked);
+                                                                                    return next;
+                                                                                } else {
+                                                                                    const next = prev.filter(v => v !== opt.value);
+                                                                                    const picked = labTestsOptions.filter((o: LabTestOption) => next.includes(o.value));
+                                                                                    setLabTestsRows(picked);
+                                                                                    return next;
+                                                                                }
+                                                                            });
+                                                                        }}
+                                                                        style={{ margin: 0, maxWidth: 16 }}
+                                                                    />
+                                                                    <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{opt.label}</span>
+                                                                </label>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleAddResult();
+                                            }}
                                             style={{
+                                                padding: '0 10px',
+                                                height: '32px',
+                                                backgroundColor: '#1976d2',
+                                                color: 'white',
+                                                border: 'none',
+                                                borderRadius: '6px',
+                                                cursor: 'pointer',
+                                                fontSize: '12px',
+                                                fontWeight: '500',
                                                 display: 'flex',
                                                 alignItems: 'center',
-                                                justifyContent: 'space-between',
-                                                height: '32px',
-                                                padding: '4px 8px',
-                                                border: '2px solid #B7B7B7',
-                                                borderRadius: '6px',
-                                                fontSize: '0.9rem',
-                                                fontFamily: "'Roboto', sans-serif",
-                                                fontWeight: '500',
-                                                backgroundColor: 'white',
-                                                cursor: 'pointer',
-                                                userSelect: 'none',
-                                                outline: 'none',
-                                                transition: 'border-color 0.2s'
+                                                gap: '8px',
+                                                transition: 'background-color 0.2s'
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                e.currentTarget.style.backgroundColor = '#1565c0';
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.currentTarget.style.backgroundColor = '#1976d2';
                                             }}
                                         >
-                                            <span style={{ color: selectedLabTests.length ? '#000' : '#9e9e9e' }}>
-                                                {selectedLabTests.length === 0 && 'Select Lab Tests'}
-                                                {selectedLabTests.length === 1 && '1 selected'}
-                                                {selectedLabTests.length > 1 && `${selectedLabTests.length} selected`}
-                                            </span>
-                                            <span style={{ marginLeft: '8px', color: '#666' }}>▾</span>
-                                        </div>
-
-                                        {isLabTestsOpen && (
-                                            <div style={{
-                                                position: 'absolute',
-                                                top: '100%',
-                                                left: 0,
-                                                right: 0,
-                                                backgroundColor: 'white',
-                                                border: '1px solid #B7B7B7',
-                                                borderRadius: '6px',
-                                                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                                                zIndex: 1000,
-                                                marginTop: '4px'
-                                            }}>
-                                                <div style={{ padding: '6px' }}>
-                                                    <input
-                                                        type="text"
-                                                        value={labTestSearch}
-                                                        onChange={(e) => setLabTestSearch(e.target.value)}
-                                                        placeholder="Search lab tests"
-                                                        style={{
-                                                            width: '100%',
-                                                            height: '32px',
-                                                            padding: '6px 8px',
-                                                            border: '1px solid #B7B7B7',
-                                                            borderRadius: '4px',
-                                                            fontSize: '12px',
-                                                            outline: 'none'
-                                                        }}
-                                                    />
-                                                </div>
-                                                {/* Selected tests chips (preview) */}
-                                                {selectedOptions.length > 0 && (
-                                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', padding: '6px', paddingTop: 0 }}>
-                                                        {selectedOptions.map((opt: LabTestOption) => (
-                                                            <label key={`chip-${opt.value}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 10px', backgroundColor: '#e3f2fd', borderRadius: '6px', fontSize: '12px', border: '1px solid #bbdefb' }}>
-                                                                <input
-                                                                    type="checkbox"
-                                                                    checked
-                                                                    onChange={() => {
-                                                                        setSelectedLabTests(prev => {
-                                                                            const next = prev.filter(v => v !== opt.value);
-                                                                            const picked = labTestsOptions.filter((o: LabTestOption) => next.includes(o.value));
-                                                                            setLabTestsRows(picked);
-                                                                            return next;
-                                                                        });
-                                                                    }}
-                                                                    style={{ margin: 0, maxWidth: 16 }}
-                                                                />
-                                                                <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 160 }}>{opt.label}</span>
-                                                            </label>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                                <div style={{ maxHeight: '240px', overflowY: 'auto', padding: '4px 6px', display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', columnGap: '8px', rowGap: '6px' }}>
-                                                    {labTestsLoading && (
-                                                        <div style={{ padding: '6px', fontSize: '12px', color: '#777', gridColumn: '1 / -1', textAlign: 'center' }}>Loading lab tests...</div>
-                                                    )}
-                                                    {labTestsError && (
-                                                        <div style={{ padding: '6px', fontSize: '12px', color: '#d32f2f', gridColumn: '1 / -1', textAlign: 'center' }}>
-                                                            {labTestsError}
-                                                            <button
-                                                                onClick={() => {
-                                                                    setLabTestsError(null);
-                                                                    const doctorId = patientData?.doctorId || (patientData?.provider ?? '').toString();
-                                                                    if (!doctorId) return;
-                                                                    setLabTestsLoading(true);
-                                                                    const clinicId = patientData?.clinicId || sessionData?.clinicId || 'DEFAULT_CLINIC';
-                                                                    patientService.getAllLabTestsWithParameters(doctorId, clinicId)
-                                                                        .then((res: any) => {
-                                                                            const mapped = extractLabTests(res);
-                                                                            console.log('Parsed lab tests count (retry):', mapped.length);
-                                                                            if (mapped.length === 0) {
-                                                                                console.warn('Lab tests response could not be parsed. Raw response:', res);
-                                                                            }
-                                                                            setLabTestsOptions(mapped);
-                                                                        })
-                                                                        .catch((e: any) => setLabTestsError(e?.message || 'Failed to load lab tests'))
-                                                                        .finally(() => setLabTestsLoading(false));
-                                                                }}
-                                                                style={{ marginLeft: '8px', padding: '2px 6px', fontSize: '10px', backgroundColor: '#1976d2', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer' }}
-                                                            >
-                                                                Retry
-                                                            </button>
-                                                        </div>
-                                                    )}
-                                                    {!labTestsLoading && !labTestsError && filteredLabTests.length === 0 && (
-                                                        <div style={{ padding: '6px', fontSize: '12px', color: '#777', gridColumn: '1 / -1' }}>No lab tests found</div>
-                                                    )}
-                                                    {!labTestsLoading && !labTestsError && filteredLabTests.map((opt) => (
-                                                        <label key={opt.value} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 2px', cursor: 'pointer', fontSize: '12px', border: 'none' }}>
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={selectedLabTests.includes(opt.value)}
-                                                                onChange={(e) => {
-                                                                    setSelectedLabTests(prev => {
-                                                                        if (e.target.checked) {
-                                                                            if (prev.includes(opt.value)) return prev;
-                                                                            const next = [...prev, opt.value];
-                                                                            const picked = labTestsOptions.filter((o: LabTestOption) => next.includes(o.value));
-                                                                            setLabTestsRows(picked);
-                                                                            return next;
-                                                                        } else {
-                                                                            const next = prev.filter(v => v !== opt.value);
-                                                                            const picked = labTestsOptions.filter((o: LabTestOption) => next.includes(o.value));
-                                                                            setLabTestsRows(picked);
-                                                                            return next;
-                                                                        }
-                                                                    });
-                                                                }}
-                                                                style={{ margin: 0, maxWidth: 16 }}
-                                                            />
-                                                            <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{opt.label}</span>
-                                                        </label>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
+                                            <Add style={{ fontSize: '16px' }} />
+                                            Add
+                                        </button>
                                     </div>
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleAddResult();
-                                        }}
-                                        style={{
+                                </div>
+                                {/* Enter Results Section */}
+                                {labTestResults.length > 0 && (
+                                    <div style={{ marginTop: '10px' }}>
+                                        <div style={{
                                             backgroundColor: '#1976d2',
                                             color: 'white',
-                                            border: 'none',
-                                            padding: '12px 20px',
-                                            borderRadius: '4px',
-                                            cursor: 'pointer',
-                                            fontSize: '14px',
-                                            fontWeight: '500',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '8px'
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            e.currentTarget.style.backgroundColor = '#1565c0';
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            e.currentTarget.style.backgroundColor = '#1976d2';
-                                        }}
-                                    >
-                                        <Add style={{ fontSize: '16px' }} />
-                                        Add
-                                    </button>
-                                </div>
+                                            padding: '12px 16px',
+                                            borderRadius: '4px 4px 0 0',
+                                            fontWeight: '600',
+                                            fontSize: '16px'
+                                        }}>
+                                            Enter Results
+                                        </div>
 
-                                {/* Selected lab tests table overlay (hidden by default) */}
-                                {showSelectedTable && labTestsRows.length > 0 && (
-                                    <div
-                                        style={{
-                                            position: 'relative',
-                                            marginTop: '10px',
-                                            border: '1px solid #B7B7B7',
-                                            borderRadius: '6px',
-                                            boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
-                                        }}
-                                    >
-                                        <div style={{ width: '100%', overflow: 'hidden' }}>
-                                            <div style={{ display: 'grid', gridTemplateColumns: '60px 1.5fr 80px', background: '#1565c0', color: 'white', fontWeight: 600, fontSize: '12px' }}>
-                                                <div style={{ padding: '8px 10px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Sr.</div>
-                                                <div style={{ padding: '8px 10px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Lab Test</div>
-                                                <div style={{ padding: '8px 10px' }}>Action</div>
-                                            </div>
-                                            {labTestsRows.map((row, idx) => (
-                                                <div key={row.value} style={{ display: 'grid', gridTemplateColumns: '60px 1.5fr 80px', background: idx % 2 === 0 ? '#f7fbff' : 'white', fontSize: '12px', alignItems: 'center' }}>
-                                                    <div style={{ padding: '8px 10px', borderTop: '1px solid #e0e0e0', borderRight: '1px solid #e0e0e0' }}>{idx + 1}</div>
-                                                    <div style={{ padding: '8px 10px', borderTop: '1px solid #e0e0e0', borderRight: '1px solid #e0e0e0' }}>{row.label}</div>
-                                                    <div style={{ padding: '8px 10px', borderTop: '1px solid #e0e0e0' }}>
-                                                        <div
-                                                            onClick={() => {
-                                                                setSelectedLabTests(prev => prev.filter(v => v !== row.value));
-                                                                setLabTestsRows(prev => prev.filter(r => r.value !== row.value));
-                                                            }}
-                                                            title="Remove"
-                                                            style={{
-                                                                display: 'inline-flex',
-                                                                alignItems: 'center',
-                                                                justifyContent: 'center',
-                                                                width: '24px',
-                                                                height: '24px',
-                                                                cursor: 'pointer',
-                                                                color: '#000000',
-                                                                backgroundColor: 'transparent'
-                                                            }}
-                                                            onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.color = '#EF5350'; }}
-                                                            onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.color = '#000000'; }}
-                                                        >
-                                                            <Delete fontSize="small" />
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            ))}
+                                        <div style={{
+                                            border: '1px solid #ddd',
+                                            borderTop: 'none',
+                                            borderRadius: '0 0 4px 4px',
+                                            overflow: 'hidden'
+                                        }}>
+                                            <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+                                                <thead>
+                                                    <tr style={{ backgroundColor: '#f5f5f5' }}>
+                                                        <th style={{
+                                                            padding: '12px',
+                                                            textAlign: 'left',
+                                                            borderBottom: '1px solid #ddd',
+                                                            fontWeight: '400',
+                                                            color: 'black',
+                                                            width: '35%'
+                                                        }}>
+                                                            Lab Test Name
+                                                        </th>
+                                                        <th style={{
+                                                            padding: '12px',
+                                                            textAlign: 'left',
+                                                            borderBottom: '1px solid #ddd',
+                                                            fontWeight: '400',
+                                                            color: 'black',
+                                                            width: '190px'
+                                                        }}>
+                                                            Parameter Name
+                                                        </th>
+                                                        <th style={{
+                                                            padding: '12px',
+                                                            textAlign: 'left',
+                                                            borderBottom: '1px solid #ddd',
+                                                            fontWeight: '400',
+                                                            color: 'black',
+                                                            width: '120px'
+                                                        }}>
+                                                            Value / Results *
+                                                        </th>
+                                                        <th style={{
+                                                            padding: '12px',
+                                                            textAlign: 'center',
+                                                            borderBottom: '1px solid #ddd',
+                                                            fontWeight: '400',
+                                                            color: 'black',
+                                                            width: '80px'
+                                                        }}>
+                                                            Action
+                                                        </th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {labTestResults.map((result) => (
+                                                        <tr key={result.id}>
+                                                            <td style={{
+                                                                padding: '12px',
+                                                                borderBottom: '1px solid #eee',
+                                                                color: 'black',
+                                                                height: '38px',
+                                                                fontSize: '14px'
+                                                            }}>
+                                                                {result.labTestName}
+                                                            </td>
+                                                            <td style={{
+                                                                padding: '12px',
+                                                                borderBottom: '1px solid #eee',
+                                                                color: 'black',
+                                                                height: '38px',
+                                                                fontSize: '14px'
+                                                            }}>
+                                                                {result.parameterName}
+                                                            </td>
+                                                            <td style={{ padding: '12px', borderBottom: '1px solid #eee', height: '38px' }}>
+                                                                <TextField
+                                                                    fullWidth
+                                                                    placeholder="Value / Results"
+                                                                    value={result.value}
+                                                                    onChange={(e) => handleResultChange(result.id, 'value', e.target.value)}
+                                                                    required
+                                                                    error={resultErrors.has(result.id)}
+                                                                    variant="outlined"
+                                                                    size="small"
+                                                                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
+                                                                />
+                                                            </td>
+                                                            <td style={{
+                                                                padding: '12px',
+                                                                borderBottom: '1px solid #eee',
+                                                                textAlign: 'center',
+                                                                height: '38px'
+                                                            }}>
+                                                                <button
+                                                                    onClick={() => handleRemoveResult(result.id)}
+                                                                    style={{
+                                                                        background: 'none',
+                                                                        border: 'none',
+                                                                        cursor: 'pointer',
+                                                                        color: '#f44336',
+                                                                        padding: '6px',
+                                                                        borderRadius: '4px',
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        justifyContent: 'center'
+                                                                    }}
+                                                                    onMouseEnter={(e) => {
+                                                                        e.currentTarget.style.backgroundColor = '#ffebee';
+                                                                    }}
+                                                                    onMouseLeave={(e) => {
+                                                                        e.currentTarget.style.backgroundColor = 'transparent';
+                                                                    }}
+                                                                >
+                                                                    <Delete fontSize="small" style={{ color: 'black' }} />
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
                                         </div>
                                     </div>
                                 )}
                             </div>
-                            {/* Enter Results Section */}
-                            {labTestResults.length > 0 && (
-                                <div style={{ marginTop: '10px' }}>
-                                    <div style={{
-                                        backgroundColor: '#1976d2',
-                                        color: 'white',
-                                        padding: '12px 16px',
-                                        borderRadius: '4px 4px 0 0',
-                                        fontWeight: '600',
-                                        fontSize: '16px'
-                                    }}>
-                                        Enter Results
-                                    </div>
-
-                                    <div style={{
-                                        border: '1px solid #ddd',
-                                        borderTop: 'none',
-                                        borderRadius: '0 0 4px 4px',
-                                        overflow: 'hidden'
-                                    }}>
-                                        <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
-                                            <thead>
-                                                <tr style={{ backgroundColor: '#f5f5f5' }}>
-                                                    <th style={{
-                                                        padding: '12px',
-                                                        textAlign: 'left',
-                                                        borderBottom: '1px solid #ddd',
-                                                        fontWeight: '600',
-                                                        color: '#333',
-                                                        width: '35%'
-                                                    }}>
-                                                        Lab Test Name
-                                                    </th>
-                                                    <th style={{
-                                                        padding: '12px',
-                                                        textAlign: 'left',
-                                                        borderBottom: '1px solid #ddd',
-                                                        fontWeight: '600',
-                                                        color: '#333',
-                                                        width: '190px'
-                                                    }}>
-                                                        Parameter Name
-                                                    </th>
-                                                    <th style={{
-                                                        padding: '12px',
-                                                        textAlign: 'left',
-                                                        borderBottom: '1px solid #ddd',
-                                                        fontWeight: '600',
-                                                        color: '#333',
-                                                        width: '120px'
-                                                    }}>
-                                                        Value / Results *
-                                                    </th>
-                                                    <th style={{
-                                                        padding: '12px',
-                                                        textAlign: 'center',
-                                                        borderBottom: '1px solid #ddd',
-                                                        fontWeight: '600',
-                                                        color: '#333',
-                                                        width: '80px'
-                                                    }}>
-                                                        Action
-                                                    </th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {labTestResults.map((result) => (
-                                                    <tr key={result.id}>
-                                                        <td style={{
-                                                            padding: '12px',
-                                                            borderBottom: '1px solid #eee',
-                                                            color: '#666',
-                                                            height: '38px',
-                                                            fontSize: '14px'
-                                                        }}>
-                                                            {result.labTestName}
-                                                        </td>
-                                                        <td style={{
-                                                            padding: '12px',
-                                                            borderBottom: '1px solid #eee',
-                                                            color: '#666',
-                                                            height: '38px',
-                                                            fontSize: '14px'
-                                                        }}>
-                                                            {result.parameterName}
-                                                        </td>
-                                                        {/* <td style={{ padding: '12px', borderBottom: '1px solid #eee', height: '38px' }}>
-                                                            <input
-                                                                type="text"
-                                                                value={result.parameterName}
-                                                                placeholder="Parameter Name"
-                                                                readOnly
-                                                                disabled
-                                                                style={{
-                                                                    width: '100%',
-                                                                    height: '38px',
-                                                                    padding: '4px 8px',
-                                                                    border: '1px solid #ddd',
-                                                                    borderRadius: '4px',
-                                                                    fontSize: '14px',
-                                                                    boxSizing: 'border-box',
-                                                                    backgroundColor: '#f9f9f9',
-                                                                    color: '#666'
-                                                                }}
-                                                            />
-                                                        </td> */}
-                                                        <td style={{ padding: '12px', borderBottom: '1px solid #eee', height: '38px' }}>
-                                                            <input
-                                                                type="text"
-                                                                value={result.value}
-                                                                onChange={(e) => handleResultChange(result.id, 'value', e.target.value)}
-                                                                placeholder="Value / Results"
-                                                                style={{
-                                                                    width: '100%',
-                                                                    height: '32px',
-                                                                    padding: '4px 8px',
-                                                                    border: '2px solid #B7B7B7',
-                                                                    borderRadius: '6px',
-                                                                    fontSize: '0.9rem',
-                                                                    fontFamily: "'Roboto', sans-serif",
-                                                                    fontWeight: '500',
-                                                                    backgroundColor: 'white',
-                                                                    outline: 'none',
-                                                                    transition: 'border-color 0.2s',
-                                                                    boxSizing: 'border-box'
-                                                                }}
-                                                                onFocus={(e) => {
-                                                                    e.target.style.borderColor = '#1E88E5';
-                                                                    e.target.style.boxShadow = 'none';
-                                                                }}
-                                                                onBlur={(e) => {
-                                                                    e.target.style.borderColor = '#B7B7B7';
-                                                                }}
-                                                            />
-                                                        </td>
-                                                        <td style={{
-                                                            padding: '12px',
-                                                            borderBottom: '1px solid #eee',
-                                                            textAlign: 'center',
-                                                            height: '38px'
-                                                        }}>
-                                                            <button
-                                                                onClick={() => handleRemoveResult(result.id)}
-                                                                style={{
-                                                                    background: 'none',
-                                                                    border: 'none',
-                                                                    cursor: 'pointer',
-                                                                    color: '#f44336',
-                                                                    padding: '6px',
-                                                                    borderRadius: '4px',
-                                                                    display: 'flex',
-                                                                    alignItems: 'center',
-                                                                    justifyContent: 'center'
-                                                                }}
-                                                                onMouseEnter={(e) => {
-                                                                    e.currentTarget.style.backgroundColor = '#ffebee';
-                                                                }}
-                                                                onMouseLeave={(e) => {
-                                                                    e.currentTarget.style.backgroundColor = 'transparent';
-                                                                }}
-                                                            >
-                                                                <Delete fontSize="small" style={{ color: 'black' }} />
-                                                            </button>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
+                        </DialogContent>
 
                         {/* Footer with Action Buttons */}
                         <div style={{
