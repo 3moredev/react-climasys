@@ -2176,6 +2176,8 @@ export default function AppointmentTable() {
             }
         }
 
+        if (formatted === '00:00') return;
+
         updateAppointmentField(index, 'online', formatted);
     };
 
@@ -2952,22 +2954,22 @@ export default function AppointmentTable() {
                                     </thead>
                                     <tbody>
                                         {currentAppointments.map((a, i) => {
-                                            const originalIndex = startIndex + i;
                                             return (
                                                 <tr key={i} style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 500 }}>
                                                     <td className="sr-col">{a.sr}</td>
                                                     <td className="name-col">
-                                                        <a
-                                                            href="#"
-                                                            onClick={(e) => {
-                                                                e.preventDefault();
-                                                                setSelectedPatientForQuickReg(a);
-                                                                setShowQuickRegistration(true);
-                                                            }}
-                                                            style={{ textDecoration: "underline", color: "#1E88E5", cursor: "pointer" }}
-                                                        >
-                                                            {a.patient}
-                                                        </a>
+                                                        <Tooltip title={a.patient || ""} arrow placement="top">
+                                                            <a
+                                                                onClick={(e) => {
+                                                                    e.preventDefault();
+                                                                    setSelectedPatientForQuickReg(a);
+                                                                    setShowQuickRegistration(true);
+                                                                }}
+                                                                style={{ textDecoration: "underline", color: "#1E88E5", cursor: "pointer" }}
+                                                            >
+                                                                {a.patient}
+                                                            </a>
+                                                        </Tooltip>
                                                     </td>
                                                     <td className="gender-col">{a.gender}</td>
                                                     <td className="age-col">{a.age}</td>

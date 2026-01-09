@@ -715,4 +715,53 @@ form {
     box-shadow: none;
     border: 1px solid #ddd;
   }
+<<<<<<< HEAD
 }
+
+/* Fix for patient name overflow in appointments table */
+.appointments-table {
+  table-layout: fixed;
+  width: 100%;
+}
+
+.appointments-table .name-col {
+  width: 15%;
+  /* Adjust as needed, matching existing logic */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.appointments-table .name-col a {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+  max-width: 100%;
+}
+
+.MuiBox-root textarea{
+  border: 2px solid #B7B7B7 !important;
+}
+
+#textarea-autosize{
+  width: 100%;  
+  border: 2px solid #B7B7B7 !important;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-family: 'Roboto', sans-serif;
+  font-weight: 500;
+  background-color: white;
+  outline: none;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+  resize: vertical
+}
+
+#textarea-autosize:focus{
+  border-color: #1E88E5 !important;
+}
+=======
+}
+>>>>>>> 45c79156f084f3713c5e990866b6174860d443a5
