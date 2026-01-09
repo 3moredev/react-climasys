@@ -3778,7 +3778,9 @@ export default function AppointmentTable() {
             margin-bottom: 6px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.10);
             position: relative;
-            min-height: 150px;
+            height: 180px;
+            display: flex;
+            flex-direction: column;
         }
         .appointment-card:before {
             content: '';
@@ -3799,10 +3801,21 @@ export default function AppointmentTable() {
             font-weight: 600;
             color: #000000;
             font-family: 'Roboto', sans-serif;
+            max-width: 180px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
         .price-text { font-weight: 700; color: #2E7D32; font-family: 'Roboto', sans-serif; }
         .subtitle { color: #6b7280; margin-bottom: 8px; font-size: 0.85rem; font-family: 'Roboto', sans-serif; }
-        .card-details { display: grid; grid-template-columns: 3fr 1fr; gap: 6px 12px; margin-bottom: 10px; }
+        .card-details { 
+            display: grid; 
+            grid-template-columns: 3fr 1fr; 
+            gap: 6px 12px; 
+            margin-bottom: 10px;
+            flex: 1;
+            overflow: hidden;
+        }
         .kv { display: flex; gap: 6px; align-items: center; min-width: 0; }
         .kv .k { color: #607D8B; font-size: 0.76rem; }
         .kv .v { color: #111827; font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
