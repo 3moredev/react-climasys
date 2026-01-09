@@ -50,10 +50,9 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
     firstName: '',
     middleName: '',
     age: '',
+    ageUnit: 'Years',
     dateOfBirth: '',
-    dobDate: null as any, // dayjs object for DateField
-    field1: '',
-    field2: 'Years',
+    dobDate: '', // YYYY-MM-DD string for DateField
     gender: '',
     area: '',
     city: '',
@@ -391,8 +390,8 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
               age: patient.age_given?.toString() || '',
               dateOfBirth: patient.date_of_birth || '',
               dobDate: dobDate,
-              field1: patient.age_given?.toString() || '',
-              field2: 'Years', // Default to Years
+
+              ageUnit: 'Years', // Default to Years
               gender: patient.gender_id ? String(patient.gender_id) : '',
               area: areaName || prev.area,
               city: cityName || prev.city,
@@ -896,40 +895,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
       }
 
       const next = { ...prev, [field]: processedValue }
-      // Reverse sync: when Age (field1) changes, compute DoB using today's month/day
-      if (field === 'field1') {
-        const trimmed = String(value || '').trim()
-        if (trimmed === '') {
-          next.dobDate = null
-          next.dateOfBirth = ''
-        } else {
-          const num = parseInt(trimmed, 10)
-          if (Number.isFinite(num) && num >= 0) {
-            const unit = next.field2 || 'Years'
-            const base = dayjs()
-            const dob = unit === 'Months' ? base.subtract(num, 'month') : base.subtract(num, 'year')
-            next.dobDate = dob as unknown as Date // keep compatibility with DateField usage
-            next.dateOfBirth = dob.format('YYYY-MM-DD')
-            if (unit === 'Years') {
-              next.age = String(num)
-            }
-          }
-        }
-      }
-      // If unit (Years/Months) changes and we have a numeric age, recompute DoB from today
-      if (field === 'field2') {
-        const trimmed = String(next.field1 || '').trim()
-        const num = parseInt(trimmed, 10)
-        if (Number.isFinite(num) && num >= 0) {
-          const base = dayjs()
-          const dob = value === 'Months' ? base.subtract(num, 'month') : base.subtract(num, 'year')
-          next.dobDate = dob as unknown as Date
-          next.dateOfBirth = dob.format('YYYY-MM-DD')
-          if (value === 'Years') {
-            next.age = String(num)
-          }
-        }
-      }
+
 
       // Reset referral name search when referral type changes
       if (field === 'referredBy') {
@@ -1246,9 +1212,8 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
       middleName: '',
       age: '',
       dateOfBirth: '',
-      dobDate: null,
-      field1: '',
-      field2: 'Years',
+      dobDate: '',
+      ageUnit: 'Years',
       gender: '',
       area: '',
       city: '',
@@ -1288,9 +1253,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
       onClose()
     }
   }
-
-  console.log('AddPatientPage render - Dialog should be:', open ? 'OPEN' : 'CLOSED');
-  console.log('Snackbar state - open:', snackbarOpen, 'message:', snackbarMessage);
 
   return (<>
     {/* Success Snackbar (outside Dialog so it persists after close) */}
@@ -1606,63 +1568,76 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                       <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
                         DoB(DD-MM-YYYY) <span style={{ color: 'red' }}>*</span>
                       </Typography>
-                      <LocalizationProvider dateAdapter={AdapterDayjs}>
-                        <DateField
-                          fullWidth
-                          value={formData.dobDate}
-                          slotProps={{
-                            textField: {
-                              sx: {
-                                mb: 0,
-                                '& .MuiFormHelperText-root': {
-                                  whiteSpace: 'nowrap'
-                                }
-                              },
-                              error: !!errors.dateOfBirth,
-                              helperText: errors.dateOfBirth
-                            }
-                          }}
-                          onChange={(newValue: any) => {
-                            // Clear error when date is selected
-                            if (newValue && errors.dateOfBirth) {
-                              setErrors(prev => {
-                                const newErrors = { ...prev }
-                                delete newErrors.dateOfBirth
-                                return newErrors
-                              })
-                            }
-                            if (newValue) {
-                              const formattedDate = dayjs(newValue).format('YYYY-MM-DD')
+                      <TextField
+                        fullWidth
+                        type="date"
+                        required
+                        value={formData.dobDate}
+                        onChange={(e) => {
+                          const newValue = e.target.value
+                          // Clear error when date is selected
+                          if (newValue && errors.dateOfBirth) {
+                            setErrors(prev => {
+                              const newErrors = { ...prev }
+                              delete newErrors.dateOfBirth
+                              return newErrors
+                            })
+                          }
+
+                          // Always update raw state to allow typing
+                          let nextState: any = { dobDate: newValue, dateOfBirth: newValue }
+
+                          if (newValue) {
+                            const val = dayjs(newValue)
+                            if (val.isValid() && newValue.length === 10) {
+                              const formattedDate = val.format('YYYY-MM-DD')
                               const today = dayjs()
-                              const dobDate = dayjs(newValue)
-                              let years = today.year() - dobDate.year()
-                              const m = today.month() - dobDate.month()
-                              if (m < 0 || (m === 0 && today.date() < dobDate.date())) {
-                                years--
+
+                              // Calculate diff in months to decide unit
+                              const diffMonths = today.diff(val, 'month')
+                              const diffYears = today.diff(val, 'year')
+
+                              let newAge = ''
+                              let newUnit = 'Years'
+
+                              if (diffMonths < 12) {
+                                newAge = Math.max(0, diffMonths).toString()
+                                newUnit = 'Months'
+                              } else {
+                                newAge = Math.max(0, diffYears).toString()
+                                newUnit = 'Years'
                               }
-                              const calculatedAge = Math.max(0, years)
-                              setFormData(prev => ({
-                                ...prev,
-                                dobDate: newValue,
-                                dateOfBirth: formattedDate,
-                                age: String(calculatedAge),
-                                field1: String(calculatedAge) // Update NN field with calculated age
-                              }))
-                            } else {
-                              // When date is cleared, also clear the NN field
-                              setFormData(prev => ({
-                                ...prev,
-                                dobDate: null,
-                                dateOfBirth: '',
-                                age: '',
-                                field1: '' // Clear NN field when date is cleared
-                              }))
+
+                              nextState.age = newAge
+                              nextState.ageUnit = newUnit
+                              nextState.dateOfBirth = formattedDate
                             }
-                          }}
-                          disabled={loading || readOnly}
-                          format="DD/MM/YYYY"
-                        />
-                      </LocalizationProvider>
+                          } else {
+                            // When date is cleared
+                            nextState.age = ''
+                            nextState.ageUnit = 'Years'
+                            nextState.dateOfBirth = ''
+                          }
+
+                          setFormData(prev => ({
+                            ...prev,
+                            ...nextState
+                          }))
+                        }}
+                        variant="outlined"
+                        size="small"
+                        sx={{
+                          '& .MuiOutlinedInput-root': { borderRadius: '8px' },
+                          '& input[type="date"]': {
+                            color: formData.dobDate ? 'inherit' : 'rgba(0, 0, 0, 0.42)'
+                          }
+                        }}
+                        error={!!errors.dobDate}
+                        helperText={errors.dobDate}
+                        inputProps={{
+                          max: dayjs().format('YYYY-MM-DD')
+                        }}
+                      />
                     </Box>
                     <Box sx={{ width: '50% !important' }}>
                       <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
@@ -1672,14 +1647,59 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         <TextField
                           sx={{ width: '55% !important', mb: 0 }}
                           placeholder="NN"
-                          value={formData.field1 || ''}
-                          onChange={(e) => handleInputChange('field1', e.target.value)}
+                          value={formData.age}
+                          onChange={(e) => {
+                            const val = e.target.value
+                            // Allow only numbers
+                            if (!/^\d*$/.test(val)) return
+
+                            const numVal = parseInt(val)
+                            const currentUnit = formData.ageUnit || 'Years'
+
+                            let newDobDate = null
+                            let formattedDob = ''
+
+                            if (val && !isNaN(numVal)) {
+                              // Calculate DOB backwards from today
+                              // If Years => subtract years, if Months => subtract months
+                              newDobDate = dayjs().subtract(numVal, currentUnit.toLowerCase() as any)
+                              formattedDob = newDobDate.format('YYYY-MM-DD')
+                            }
+
+                            setFormData(prev => ({
+                              ...prev,
+                              age: val,
+                              dobDate: formattedDob,
+                              dateOfBirth: formattedDob
+                            }))
+                          }}
                           disabled={loading || readOnly}
                         />
                         <FormControl sx={{ width: '50%' }}>
                           <Select
-                            value={formData.field2 || 'Years'}
-                            onChange={(e) => handleInputChange('field2', e.target.value)}
+                            value={formData.ageUnit || 'Years'}
+                            onChange={(e) => {
+                              const newUnit = e.target.value
+                              const currentAge = formData.age
+                              const numVal = parseInt(currentAge)
+
+                              let dobStr = formData.dobDate
+                              let dobFmt = formData.dateOfBirth
+
+                              // Recalculate DOB if we have an age value
+                              if (currentAge && !isNaN(numVal)) {
+                                const d = dayjs().subtract(numVal, newUnit.toLowerCase() as any)
+                                dobStr = d.format('YYYY-MM-DD')
+                                dobFmt = dobStr
+                              }
+
+                              setFormData(prev => ({
+                                ...prev,
+                                ageUnit: newUnit,
+                                dobDate: dobStr,
+                                dateOfBirth: dobFmt
+                              }))
+                            }}
                             displayEmpty
                             disabled={loading || readOnly}
                             renderValue={(selected) => {
