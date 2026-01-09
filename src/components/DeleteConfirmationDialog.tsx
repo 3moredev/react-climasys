@@ -55,11 +55,23 @@ const DeleteConfirmationDialog: React.FC<DeleteConfirmationDialogProps> = ({
             >
                 <Close />
             </IconButton>
-            <DialogTitle id="delete-dialog-title" sx={{ pt: 2, px: 3, pr: 7 }}>
+            <DialogTitle id="delete-dialog-title" sx={{
+                pt: 2,
+                px: 3,
+                pr: 7,
+                color: '#000000',
+                fontSize: '20px',
+                fontWeight: 'bold'
+            }}>
                 {title}
             </DialogTitle>
             <DialogContent>
-                <DialogContentText id="delete-dialog-description">
+                <DialogContentText id="delete-dialog-description" sx={{
+                    fontFamily: "'Roboto', sans-serif",
+                    fontWeight: 500,
+                    fontSize: '1rem',
+                    color: '#000000'
+                }}>
                     {message}
                 </DialogContentText>
             </DialogContent>
