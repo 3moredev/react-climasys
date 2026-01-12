@@ -388,7 +388,13 @@ const AddProcedurePopup: React.FC<AddProcedurePopupProps> = ({ open, onClose, on
                             type="text"
                             placeholder="Priority"
                             value={priority}
-                            onChange={(e) => setPriority(e.target.value)}
+                            onChange={(e) => {
+                                // Only allow numeric input
+                                const numericValue = e.target.value.replace(/\D/g, '');
+                                setPriority(numericValue);
+                            }}
+                            inputMode="numeric"
+                            pattern="[0-9]*"
                             style={{
                                 width: '100%',
                                 padding: '8px 12px',

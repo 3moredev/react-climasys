@@ -12,7 +12,7 @@ interface AddComplaintPopupProps {
         priority: string;
         displayToOperator: boolean;
         clinicId?: string;
-    }) => void;
+    }) => boolean | void | Promise<boolean | void>;
     editData?: {
         shortDescription: string;
         complaintDescription: string;
@@ -48,7 +48,7 @@ const AddComplaintPopup: React.FC<AddComplaintPopupProps> = ({ open, onClose, on
         }
     }, [editData, open]);
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         if (!shortDescription.trim()) {
             setSnackbarMessage('Short Description is required');
             setSnackbarOpen(true);
@@ -76,17 +76,18 @@ const AddComplaintPopup: React.FC<AddComplaintPopupProps> = ({ open, onClose, on
         const priorityValue = priority.trim() || '9';
 
         // Call the parent onSave callback with all form data
-        onSave({
+        const result = await onSave({
             shortDescription: shortDescUpper,
             complaintDescription: complaintDescUpper,
             priority: priorityValue,
             displayToOperator,
             clinicId: session.clinicId
         });
-        
-        // Show success snackbar
-        setSnackbarMessage(editData ? 'Complaint updated successfully!' : 'Complaint added successfully!');
-        setSnackbarOpen(true);
+
+        // If parent returns false, it means validation/duplicate error: keep popup open
+        if (result === false) {
+            return;
+        }
         
         // Reset form
         setShortDescription('');
@@ -94,10 +95,8 @@ const AddComplaintPopup: React.FC<AddComplaintPopupProps> = ({ open, onClose, on
         setPriority('');
         setDisplayToOperator(false);
         
-        // Close popup after showing success message
-        setTimeout(() => {
-            onClose();
-        }, 1500);
+        // Close popup - success message will be shown in parent component
+        onClose();
     };
 
     const handleClose = () => {
