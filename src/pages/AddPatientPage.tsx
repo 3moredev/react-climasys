@@ -391,7 +391,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
               age: patient.age_given?.toString() || '',
               dateOfBirth: patient.date_of_birth || '',
               dobDate: dobDate,
-
               ageUnit: 'Years', // Default to Years
               gender: patient.gender_id ? String(patient.gender_id) : '',
               area: areaName || prev.area,

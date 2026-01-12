@@ -2779,7 +2779,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                                 disabled={readOnly}
                                                                 style={{ margin: 0 }}
                                                             />
-                                                            <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{opt.label}</span>
+                                                            <span title={opt.label} style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{opt.label}</span>
                                                         </label>
                                                         </React.Fragment>
                                                     );
