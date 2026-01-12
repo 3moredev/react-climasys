@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import PatientNameDisplay from './PatientNameDisplay';
 import { Close, Add, Delete } from '@mui/icons-material';
 import { TextField, InputAdornment, Grid, Box, Typography, DialogContent } from '@mui/material';
 import dayjs from 'dayjs';
@@ -29,6 +30,7 @@ interface AppointmentRow {
     visitNumber?: number;
     shiftId?: number;
     clinicId?: string;
+    dob?: string;
     actions: boolean;
     gender_description?: string;
 }
@@ -59,7 +61,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
         comment: '',
         selectedLabTest: ''
     });
-    const [patientName, setPatientName] = useState('');
+    // const [patientName, setPatientName] = useState('');
     const [labTestResults, setLabTestResults] = useState<LabTestResult[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -78,9 +80,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
     const [labTestsLoading, setLabTestsLoading] = useState(false);
     const [labTestsError, setLabTestsError] = useState<string | null>(null);
     const [selectedLabTests, setSelectedLabTests] = useState<string[]>([]);
-    const [labTestsRows, setLabTestsRows] = useState<Array<{ value: string; label: string }>>([]);
     const labTestsRef = useRef<HTMLDivElement | null>(null);
-    const [showSelectedTable, setShowSelectedTable] = useState(false);
     const [showQuickRegistration, setShowQuickRegistration] = useState(false);
     const lastFetchParamsRef = useRef<string | null>(null);
     const [allDoctors, setAllDoctors] = useState<Doctor[]>([]);
@@ -217,10 +217,10 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
     // Fetch lab tests with parameters when modal opens or doctor changes
     useEffect(() => {
         if (!open) return;
+        console.log(patientData, '------------------------')
         const doctorId = patientData?.doctorId || (patientData?.provider ?? '').toString();
         const clinicId = patientData?.clinicId || sessionData?.clinicId || 'DEFAULT_CLINIC';
-        const patientString = patientData?.patient + ' / ' + patientData?.gender + ' / ' + patientData?.age + ' Y ' + ' / ' + patientData?.contact;
-        setPatientName(patientString);
+
         if (!doctorId) return;
         setLabTestsLoading(true);
         setLabTestsError(null);
@@ -612,7 +612,6 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
 
         setLabTestResults(prev => [...prev, ...resultsToAdd]);
         setSelectedLabTests([]);
-        setLabTestsRows([]);
         setIsLabTestsOpen(false);
     };
 
@@ -655,7 +654,6 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                 const option = labTestsOptions.find(o => o.label === resultToRemove.labTestName);
                 if (option) {
                     setSelectedLabTests(prev => prev.filter(val => val !== option.value));
-                    setLabTestsRows(prev => prev.filter(r => r.value !== option.value));
                 }
             }
         }
@@ -784,96 +782,6 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
         }
     };
 
-    // const handleSubmit = async () => {
-    //     setIsLoading(true);
-    //     setError(null);
-
-    //     try {
-    //         // Validate required fields
-    //         if (!formData.labName || !formData.labDoctorName || !formData.reportDate) {
-    //             throw new Error('Please fill in all required fields');
-    //         }
-
-    //         if (labTestResults.length === 0) {
-    //             throw new Error('Please add at least one lab test result');
-    //         }
-
-    //         // Validate lab test result values only (parameter name is read-only and may be blank for some tests)
-    //         const missingValues = labTestResults.some(result => !result.value);
-    //         if (missingValues) {
-    //             throw new Error('Please provide a value for each result');
-    //         }
-
-    //         // Build request payload for submitLabTestResults (new required shape)
-    //         const doctorId = (sessionData as any)?.doctorId || (patientData as any)?.doctorId || '';
-    //         const clinicId = (patientData as any)?.clinicId || '';
-    //         const shiftId = (patientData as any)?.shiftId || 0;
-    //         const patientVisitNo = (patientData as any)?.patient_visit_no || (patientData as any)?.visitNumber || 0;
-    //         const userId = (sessionData as any)?.userId || '';
-    //         const doctorName = (sessionData as any)?.doctorName || '';
-    //         const patientId = String((patientData as any)?.patientId || '');
-
-    //         const visitDateString = (patientData as any)?.visitDate || new Date().toISOString().slice(0, 10);
-    //         const visitDateYMD = toYyyyMmDd(String(visitDateString));
-    //         // Use yyyy-MM-dd 00:00:00 to match patient_visits FK composite key
-    //         const visitDateYMDMidnight = `${visitDateYMD} 00:00:00`;
-    //         const reportDateYMD = toYyyyMmDd(String(formData.reportDate));
-
-    //         const requestPayload: import('../services/patientService').LabTestResultRequest = {
-    //             patientId,
-    //             patientVisitNo: Number(patientVisitNo || 0),
-    //             doctorId: String(doctorId || ''),
-    //             clinicId: String(clinicId || ''),
-    //             shiftId: Number(shiftId || 0),
-    //             userId: String(userId || ''),
-    //             doctorName: String(doctorName || ''),
-    //             labName: formData.labName,
-    //             reportDate: reportDateYMD,
-    //             comment: formData.comment,
-    //             testReportData: labTestResults.map(r => ({
-    //                 // Align with patient_visits FK: yyyy-MM-dd 00:00:00
-    //                 visitDate: String(visitDateYMDMidnight || ''),
-    //                 patientVisitNo: Number(patientVisitNo || 0),
-    //                 shiftId: Number(shiftId || 0),
-    //                 clinicId: String(clinicId || ''),
-    //                 doctorId: String(doctorId || ''),
-    //                 patientId: patientId,
-    //                 labTestDescription: r.labTestName,
-    //                 parameterName: r.parameterName || 'Result', // Ensure parameter name is never empty
-    //                 testParameterValue: r.value
-    //             }))
-    //         };
-
-    //         // Submit to backend
-    //         const submitResponse = await patientService.submitLabTestResults(requestPayload as any);
-
-    //         if (!submitResponse?.success) {
-    //             const msg = submitResponse?.message || 'Submission failed';
-    //             throw new Error(msg);
-    //         }
-
-    //         setSuccess(submitResponse?.message || 'Lab test entry submitted successfully!');
-    //         setSnackbarMessage('Lab added successfully');
-    //         setSnackbarOpen(true);
-
-    //         // Reset form after successful submission
-    //         handleReset();
-
-    //         // Close the dialogue box after successful submission
-    //         setTimeout(() => {
-    //             onClose();
-    //         }, 2000);
-
-    //     } catch (err) {
-    //         const errorMessage = err instanceof Error ? err.message : 'An error occurred';
-    //         setError(errorMessage);
-    //         setSnackbarMessage(errorMessage);
-    //         setSnackbarOpen(true);
-    //     } finally {
-    //         setIsLoading(false);
-    //     }
-    // };
-
     const handleReset = () => {
         setFormData({
             labName: '',
@@ -886,24 +794,9 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
         setError(null);
         setSuccess(null);
         setSelectedLabTests([]);
-        setLabTestsRows([]);
         setLabTestSearch('');
         setIsLabTestsOpen(false);
         lastFetchParamsRef.current = null;
-    };
-
-    const handleClose = () => {
-        handleReset();
-        onClose();
-    };
-
-    const formatDate = (dateString: string) => {
-        if (!dateString) return '';
-        const date = new Date(dateString);
-        const day = String(date.getDate()).padStart(2, '0');
-        const month = date.toLocaleString('default', { month: 'short' });
-        const year = String(date.getFullYear()).slice(-2);
-        return `${day}-${month}-${year}`;
     };
 
     if (!open || !patientData) return null;
@@ -958,7 +851,8 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                 <h3 style={{ margin: 0, color: '#000000', fontSize: '20px', fontWeight: 'bold' }}>
                                     Lab Details
                                 </h3>
-                                <div
+                                <PatientNameDisplay
+                                    patientData={patientData}
                                     onClick={() => {
                                         if (patientData?.patientId) {
                                             setShowQuickRegistration(true);
@@ -975,9 +869,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                         textDecoration: patientData?.patientId ? 'underline' : 'none'
                                     }}
                                     title={patientData?.patientId ? 'Click to view patient details' : ''}
-                                >
-                                    {patientName}
-                                </div>
+                                />
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                                 <div style={{
@@ -1406,13 +1298,9 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                                                 if (e.target.checked) {
                                                                                     if (prev.includes(opt.value)) return prev;
                                                                                     const next = [...prev, opt.value];
-                                                                                    const picked = labTestsOptions.filter((o: LabTestOption) => next.includes(o.value));
-                                                                                    setLabTestsRows(picked);
                                                                                     return next;
                                                                                 } else {
                                                                                     const next = prev.filter(v => v !== opt.value);
-                                                                                    const picked = labTestsOptions.filter((o: LabTestOption) => next.includes(o.value));
-                                                                                    setLabTestsRows(picked);
                                                                                     return next;
                                                                                 }
                                                                             });

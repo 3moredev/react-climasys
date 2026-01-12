@@ -15,6 +15,7 @@ import PatientFormTest from "../components/Test/PatientFormTest";
 import LabTestEntry from "../components/LabTestEntry";
 import GlobalSnackbar from "../components/GlobalSnackbar";
 import DeleteConfirmationDialog from "../components/DeleteConfirmationDialog";
+import dayjs from 'dayjs';
 
 export type AppointmentRow = {
     reports_received: any;
@@ -41,6 +42,7 @@ export type AppointmentRow = {
     gender_description?: string;
     visitDetailsSubmitted?: boolean;
     created_on?: string;
+    dob: string;
 };
 
 
@@ -259,6 +261,7 @@ export default function AppointmentTable() {
                 patientId: String(patient.id),
                 patient: `${patient.first_name} ${patient.last_name}`,
                 age: resolvedAge,
+                dob: patient.date_of_birth,
                 // gender: getGenderName(patient.gender_id),
                 gender: 'Male',
                 contact: patient.mobile_1 || "",
@@ -325,6 +328,7 @@ export default function AppointmentTable() {
             const composedName = `${firstNameRaw} ${middleNameRaw} ${lastNameRaw}`.replace(/\s+/g, ' ').trim();
             const patientName = composedName || patientNameRaw;
             const age = toNumberSafe(getField(row, ['AgeYearsIntRound', 'age_given', 'age', 'patientAge', 'patient_age'], 0));
+            const dateOfBirth = toStringSafe(getField(row, ['date_of_birth'], ''));
             const gender = toStringSafe(getField(row, ['gender_description', 'gender', 'genderName', 'gender_name', 'patientGender', 'patient_gender'], ''));
             const mobile = toStringSafe(getField(row, ['Mobile', 'mobileNumber', 'mobile_number', 'contact', 'phone', 'mobile'], ''));
             const apptDate = toStringSafe(getField(row, ['Visit_Date', 'appointmentDate', 'appointment_date', 'visitDate', 'visit_date'], new Date().toISOString().split('T')[0]));
@@ -442,7 +446,8 @@ export default function AppointmentTable() {
                 actions: true,
                 gender_description: genderDescription,
                 visitDetailsSubmitted: visitDetailsSubmitted,
-                created_on: createdOn
+                created_on: createdOn,
+                dob: dateOfBirth,
             };
         });
     };
@@ -2290,6 +2295,17 @@ export default function AppointmentTable() {
         return counts;
     }, [appointments, isDoctor]);
 
+    const getAgeString = (dob:string) => {
+        if (dob) {
+            const birthDate = dayjs(dob);
+            if (birthDate.isValid()) {
+                const years = dayjs().diff(birthDate, 'year');
+                return years > 0 ? `${years} Y` : `${dayjs().diff(birthDate, 'month')} M`;
+            }
+        }
+        return 'NA'
+    };
+
     // Doctor Screen Component - Same UI but different functionality
     const DoctorScreen = () => {
         // Show loader until all essential API calls complete for doctor view
@@ -2972,7 +2988,7 @@ export default function AppointmentTable() {
                                                         </Tooltip>
                                                     </td>
                                                     <td className="gender-col">{a.gender}</td>
-                                                    <td className="age-col">{a.age}</td>
+                                                    <td className="age-col">{getAgeString(a.dob)}</td>
                                                     <td className="contact-col">{(a.contact || '').toString().slice(0, 12)}</td>
                                                     <td className="time-col">{extractTime(a.time)}</td>
                                                     <td className="provider-col">{formatProviderLabel(a.provider)}</td>
@@ -3303,7 +3319,7 @@ export default function AppointmentTable() {
                                                 {/* Status menu disabled on this screen */}
                                                 <div className="card-details">
                                                     <div className="kv"><span className="k">Contact:</span><span className="v">{appointment.contact}</span></div>
-                                                    <div className="kv"><span className="k">Age:</span><span className="v">{appointment.age}</span></div>
+                                                    <div className="kv"><span className="k">Age:</span><span className="v">{getAgeString(appointment.dob)}</span></div>
                                                     <div className="kv"><span className="k">Provider:</span><span className="v">{formatProviderLabel(appointment.provider)}</span></div>
                                                     <div className="kv">
                                                         <span className="k">Last Visit:</span>
@@ -4392,7 +4408,7 @@ export default function AppointmentTable() {
                                                     </a>
                                                 </td>
                                                 <td className="gender-col">{a.gender}</td>
-                                                <td className="age-col">{a.age}</td>
+                                                <td className="age-col">{getAgeString(a.dob)}</td>  
                                                 <td className="contact-col">{(a.contact || '').toString().slice(0, 12)}</td>
                                                 <td className="time-col">{extractTime(a.time)}</td>
                                                 <td className="provider-col">
@@ -5350,7 +5366,7 @@ export default function AppointmentTable() {
                                             )}
                                             <div className="card-details">
                                                 <div className="kv"><span className="k">Contact:</span><span className="v">{appointment.contact}</span></div>
-                                                <div className="kv"><span className="k">Age:</span><span className="v">{appointment.age}</span></div>
+                                                <div className="kv"><span className="k">Age:</span><span className="v">{getAgeString(appointment.dob)}</span></div>
                                                 <div className="kv">
                                                     <span className="k">Last Visit:</span>
                                                     <span className="v">
