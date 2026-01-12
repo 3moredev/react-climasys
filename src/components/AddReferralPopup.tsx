@@ -39,6 +39,12 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
     // Snackbar state management
     const [snackbarOpen, setSnackbarOpen] = useState(false);
     const [snackbarMessage, setSnackbarMessage] = useState('');
+    
+    // Error state for contact number validation
+    const [contactError, setContactError] = useState('');
+    
+    // Error state for email validation
+    const [emailError, setEmailError] = useState('');
 
     const handleInputChange = (field: keyof ReferralData, value: string | number | boolean) => {
         setFormData(prev => ({
@@ -47,9 +53,85 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
         }));
     };
 
+    const handleDoctorNameChange = (value: string) => {
+        // Only allow alphabets and spaces
+        const alphabeticValue = value.replace(/[^a-zA-Z\s]/g, '');
+        
+        handleInputChange('doctorName', alphabeticValue);
+    };
+
+    const handleContactNumberChange = (value: string) => {
+        // Only allow numbers
+        const numericValue = value.replace(/\D/g, '');
+        
+        // Limit to 10 digits
+        const limitedValue = numericValue.slice(0, 10);
+        
+        handleInputChange('doctorMob', limitedValue);
+        
+        // Clear error when user starts typing
+        if (contactError) {
+            setContactError('');
+        }
+    };
+
+    const validateContactNumber = (): boolean => {
+        if (formData.doctorMob.trim() === '') {
+            return true; // Contact number is optional, so empty is valid
+        }
+        
+        if (!/^\d{10}$/.test(formData.doctorMob)) {
+            setContactError('Contact number must be exactly 10 digits');
+            return false;
+        }
+        
+        setContactError('');
+        return true;
+    };
+
+    const handleEmailChange = (value: string) => {
+        handleInputChange('doctorMail', value);
+        
+        // Clear error when user starts typing
+        if (emailError) {
+            setEmailError('');
+        }
+    };
+
+    const validateEmail = (): boolean => {
+        if (formData.doctorMail.trim() === '') {
+            return true; // Email is optional, so empty is valid
+        }
+        
+        // Email validation regex
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        
+        if (!emailRegex.test(formData.doctorMail)) {
+            setEmailError('Please enter a valid email address');
+            return false;
+        }
+        
+        setEmailError('');
+        return true;
+    };
+
     const handleSave = async () => {
         if (!formData.doctorName.trim()) {
             setSnackbarMessage('Doctor Name is required');
+            setSnackbarOpen(true);
+            return;
+        }
+        
+        // Validate contact number
+        if (!validateContactNumber()) {
+            setSnackbarMessage('Please enter a valid 10-digit contact number');
+            setSnackbarOpen(true);
+            return;
+        }
+        
+        // Validate email
+        if (!validateEmail()) {
+            setSnackbarMessage('Please enter a valid email address');
             setSnackbarOpen(true);
             return;
         }
@@ -90,6 +172,8 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
                 remarks: '',
                 deleteFlag: false
             });
+            setContactError('');
+            setEmailError('');
             
             // Close popup after showing success message
             setTimeout(() => {
@@ -118,6 +202,8 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
             remarks: '',
             deleteFlag: false
         });
+        setContactError('');
+        setEmailError('');
         onClose();
     };
 
@@ -174,7 +260,7 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
                         alignItems: 'center'
                     }}>
                         <h3 style={{ margin: 0, color: '#000000', fontSize: '18px', fontWeight: 'bold' }}>
-                            Add New Referral
+                            Add New Referral Doctor
                         </h3>
                         <button
                             onClick={handleClose}
@@ -210,13 +296,13 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
                         <div>
                             <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', fontWeight: 700, color: '#333' }}>
-                                Doctor Name *
+                                Doctor Name <span style={{ color: '#f44336' }}>*</span>
                             </label>
                             <input
                                 type="text"
-                                placeholder="Enter doctor name"
+                                placeholder="Enter Doctor Name"
                                 value={formData.doctorName}
-                                onChange={(e) => handleInputChange('doctorName', e.target.value)}
+                                onChange={(e) => handleDoctorNameChange(e.target.value)}
                                 style={{
                                     width: '100%',
                                     height: '32px',
@@ -248,14 +334,14 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
                             </label>
                             <input
                                 type="text"
-                                placeholder="Enter contact number"
+                                placeholder="Enter Doctor Number"
                                 value={formData.doctorMob}
-                                onChange={(e) => handleInputChange('doctorMob', e.target.value)}
+                                onChange={(e) => handleContactNumberChange(e.target.value)}
                                 style={{
                                     width: '100%',
                                     height: '32px',
                                     padding: '4px 8px',
-                                    border: '2px solid #B7B7B7',
+                                    border: contactError ? '2px solid #f44336' : '2px solid #B7B7B7',
                                     borderRadius: '6px',
                                     fontSize: '0.9rem',
                                     fontFamily: "'Roboto', sans-serif",
@@ -272,9 +358,24 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
                                     e.target.style.boxShadow = 'none';
                                 }}
                                 onBlur={(e) => {
-                                    e.target.style.borderColor = '#B7B7B7';
+                                    validateContactNumber();
+                                    if (!contactError) {
+                                        e.target.style.borderColor = '#B7B7B7';
+                                    } else {
+                                        e.target.style.borderColor = '#f44336';
+                                    }
                                 }}
                             />
+                            {contactError && (
+                                <div style={{ 
+                                    color: '#f44336', 
+                                    fontSize: '0.75rem', 
+                                    marginTop: '4px',
+                                    fontFamily: "'Roboto', sans-serif"
+                                }}>
+                                    {contactError}
+                                </div>
+                            )}
                         </div>
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
@@ -284,14 +385,14 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
                             </label>
                             <input
                                 type="email"
-                                placeholder="Enter doctor email"
+                                placeholder="Enter Doctor Email"
                                 value={formData.doctorMail}
-                                onChange={(e) => handleInputChange('doctorMail', e.target.value)}
+                                onChange={(e) => handleEmailChange(e.target.value)}
                                 style={{
                                     width: '100%',
                                     height: '32px',
                                     padding: '4px 8px',
-                                    border: '2px solid #B7B7B7',
+                                    border: emailError ? '2px solid #f44336' : '2px solid #B7B7B7',
                                     borderRadius: '6px',
                                     fontSize: '0.9rem',
                                     fontFamily: "'Roboto', sans-serif",
@@ -308,9 +409,24 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
                                     e.target.style.boxShadow = 'none';
                                 }}
                                 onBlur={(e) => {
-                                    e.target.style.borderColor = '#B7B7B7';
+                                    validateEmail();
+                                    if (!emailError) {
+                                        e.target.style.borderColor = '#B7B7B7';
+                                    } else {
+                                        e.target.style.borderColor = '#f44336';
+                                    }
                                 }}
                             />
+                            {emailError && (
+                                <div style={{ 
+                                    color: '#f44336', 
+                                    fontSize: '0.75rem', 
+                                    marginTop: '4px',
+                                    fontFamily: "'Roboto', sans-serif"
+                                }}>
+                                    {emailError}
+                                </div>
+                            )}
                         </div>
                         <div>
                             <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', fontWeight: 700, color: '#333' }}>
@@ -318,7 +434,7 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
                             </label>
                             <input
                                 type="text"
-                                placeholder="Enter remark"
+                                placeholder="Enter Remark"
                                 value={formData.remarks}
                                 onChange={(e) => handleInputChange('remarks', e.target.value)}
                                 style={{
@@ -352,7 +468,7 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
                             Doctor Address
                         </label>
                         <textarea
-                            placeholder="Enter doctor address"
+                            placeholder="Enter Doctor Address"
                             rows={2}
                             value={formData.doctorAddress}
                             onChange={(e) => handleInputChange('doctorAddress', e.target.value)}
@@ -435,7 +551,7 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
                             e.currentTarget.style.backgroundColor = '#1976d2';
                         }}
                     >
-                        Save
+                        Submit
                     </button>
                 </div>
             </div>

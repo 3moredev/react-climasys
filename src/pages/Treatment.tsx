@@ -2534,18 +2534,54 @@ export default function Treatment() {
         complaintDescription,
         priority,
         displayToOperator
-    }: AddComplaintFormData) => {
+    }: AddComplaintFormData): Promise<boolean | void> => {
         const doctorId = treatmentData?.doctorId || sessionData?.doctorId;
         const clinicId = treatmentData?.clinicId || sessionData?.clinicId;
 
         if (!doctorId || !clinicId) {
             setComplaintsError('Doctor and clinic information are required to add a complaint.');
-            return;
+            return false;
         }
 
         const trimmedShortDescription = shortDescription?.trim() || '';
         const trimmedComplaintDescription = complaintDescription?.trim() || '';
         const priorityValue = priority ? parseInt(priority, 10) : 0;
+
+        if (!trimmedShortDescription || !trimmedComplaintDescription) {
+            setComplaintsError('Short description and complaint description are required.');
+            return false;
+        }
+
+        // Check for duplicate complaint before API call (check both label and short description)
+        const normalizedShortDesc = trimmedShortDescription.toLowerCase().trim();
+        const normalizedComplaintDesc = trimmedComplaintDescription.toLowerCase().trim();
+        
+        // Check if it already exists in the table
+        const existingByLabel = complaintsRows.find(
+            row => row.label?.toLowerCase().trim() === normalizedShortDesc ||
+                   row.label?.toLowerCase().trim() === normalizedComplaintDesc
+        );
+        
+        // Check if it already exists in complaintsOptions (dropdown list) - prevent adding if it exists in dropdown
+        const existingInOptions = complaintsOptions.find(
+            opt => opt.short_description?.toLowerCase().trim() === normalizedShortDesc ||
+                   opt.complaint_description?.toLowerCase().trim() === normalizedComplaintDesc ||
+                   opt.label?.toLowerCase().trim() === normalizedShortDesc ||
+                   opt.label?.toLowerCase().trim() === normalizedComplaintDesc
+        );
+
+        if (existingByLabel || existingInOptions) {
+            const duplicateName = existingByLabel?.label || 
+                                 existingInOptions?.label ||
+                                 existingInOptions?.short_description ||
+                                 existingInOptions?.complaint_description ||
+                                 trimmedComplaintDescription;
+            setSnackbarMessage(`Complaint "${duplicateName}" is already added.`);
+            setSnackbarOpen(true);
+            setComplaintsError(null);
+            // Do NOT close popup here; signal to popup to stay open
+            return false;
+        }
 
         try {
             setComplaintsError(null);
@@ -2598,10 +2634,16 @@ export default function Treatment() {
                     complaint_description: responseDescription
                 }
             ]);
+            
+            // Show success message
+            setSnackbarMessage('Complaint added successfully!');
+            setSnackbarOpen(true);
+            
             setShowComplaintPopup(false);
         } catch (error: any) {
             console.error('Failed to create complaint from Treatment screen:', error);
             setComplaintsError(error?.message || 'Failed to create complaint. Please try again.');
+            return false;
         }
     };
 

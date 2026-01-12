@@ -19,7 +19,8 @@ import {
   Checkbox,
   FormControlLabel,
   Switch,
-  CircularProgress
+  CircularProgress,
+  Tooltip
 } from '@mui/material'
 import Autocomplete from '@mui/material/Autocomplete'
 import { DateField } from '@mui/x-date-pickers/DateField'
@@ -2429,20 +2430,27 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                           InputProps={{
                             endAdornment: (
                               <InputAdornment position="end">
-                                <IconButton
-                                  size="small"
-                                  onClick={() => setShowReferralPopup(true)}
-                                  sx={{
-                                    backgroundColor: '#1976d2',
-                                    color: 'white',
-                                    '&:hover': { backgroundColor: '#1565c0' },
-                                    width: 24,
-                                    height: 24,
-                                    borderRadius: '3px'
+                                <Tooltip 
+                                  title="Add New Referral Doctor"
+                                  PopperProps={{
+                                    style: { zIndex: 14000 }
                                   }}
                                 >
-                                  <Add fontSize="small" />
-                                </IconButton>
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => setShowReferralPopup(true)}
+                                    sx={{
+                                      backgroundColor: '#1976d2',
+                                      color: 'white',
+                                      '&:hover': { backgroundColor: '#1565c0' },
+                                      width: 24,
+                                      height: 24,
+                                      borderRadius: '3px'
+                                    }}
+                                  >
+                                    <Add fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
                               </InputAdornment>
                             )
                           }}

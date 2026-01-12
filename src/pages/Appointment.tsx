@@ -5997,6 +5997,15 @@ export default function AppointmentTable() {
                         await refreshAppointmentsForSelectedDoctor();
 
                         console.log('✅ Appointments refreshed successfully after patient addition');
+                        
+                        // Show success snackbar
+                        const patientName = patientData.fullName || `${patientData.firstName || ''} ${patientData.lastName || ''}`.trim() || 'Patient';
+                        const successMessage = patientData.addToTodaysAppointment 
+                            ? `Patient ${patientName} added and appointment booked successfully!`
+                            : `Patient ${patientName} added successfully!`;
+                        setSnackbarMessage(successMessage);
+                        setShowSnackbar(true);
+                        setTimeout(() => setShowSnackbar(false), 3000);
                     } catch (error) {
                         console.error('❌ Failed to refresh appointments after adding patient:', error);
                         // Show user-friendly error message

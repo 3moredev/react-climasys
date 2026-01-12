@@ -118,7 +118,8 @@ export default function PrescriptionCategory() {
   const totalPages = Math.max(1, Math.ceil(filteredCategories.length / pageSize))
   const startIndex = (currentPage - 1) * pageSize
   const paginatedCategories = filteredCategories.slice(startIndex, startIndex + pageSize)
-  const shouldEnableTableScroll = filteredCategories.length > pageSize
+  // Don't show scrollbar if exactly 10 records are showing on current page
+  const shouldEnableTableScroll = filteredCategories.length > pageSize && paginatedCategories.length !== 10
 
   useEffect(() => {
     setCurrentPage(1)
