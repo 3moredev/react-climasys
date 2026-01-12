@@ -4386,7 +4386,17 @@ export default function AppointmentTable() {
                                                             setSelectedPatientForQuickReg(a);
                                                             setShowQuickRegistration(true);
                                                         }}
-                                                        style={{ textDecoration: "underline", color: "#1E88E5", cursor: "pointer" }}
+                                                        title={a.patient}
+                                                        style={{
+                                                            textDecoration: "underline",
+                                                            color: "#1E88E5",
+                                                            cursor: "pointer",
+                                                            display: "block",
+                                                            whiteSpace: "nowrap",
+                                                            overflow: "hidden",
+                                                            textOverflow: "ellipsis",
+                                                            maxWidth: "100%"
+                                                        }}
                                                     >
                                                         {a.patient}
                                                     </a>
@@ -4413,7 +4423,16 @@ export default function AppointmentTable() {
                                                         value={a.online}
                                                         onChange={(e) => handleOnlineChange(originalIndex, e.target.value)}
                                                         placeholder="HH:mm"
-                                                        style={{ fontFamily: "'Roboto', sans-serif", fontWeight: 500, height: "28px", padding: "2px 6px" }}
+                                                        disabled={normalizeStatusLabel(a.status) !== 'WAITING'}
+                                                        title={normalizeStatusLabel(a.status) !== 'WAITING' ? "Only editable when status is WAITING" : ""}
+                                                        style={{
+                                                            fontFamily: "'Roboto', sans-serif",
+                                                            fontWeight: 500,
+                                                            height: "28px",
+                                                            padding: "2px 6px",
+                                                            backgroundColor: normalizeStatusLabel(a.status) !== 'WAITING' ? '#f5f5f5' : '#ffffff',
+                                                            cursor: normalizeStatusLabel(a.status) !== 'WAITING' ? 'not-allowed' : 'text'
+                                                        }}
                                                     />
                                                 </td>
                                                 <td style={{ position: "relative" }} title={(a as any).statusPending || a.status}>
@@ -4465,7 +4484,7 @@ export default function AppointmentTable() {
                                                             title={(() => {
                                                                 const statusId = mapStatusLabelToId(a.status);
                                                                 const shouldDisable = isReceptionist && statusId >= 2;
-                                                                return shouldDisable ? "Change Status (Disabled - Status >= 2)" : "Change Status";
+                                                                return shouldDisable ? "Change Status" : "Change Status";
                                                             })()}
                                                             style={{
                                                                 display: "inline-flex",
@@ -4592,7 +4611,7 @@ export default function AppointmentTable() {
                                                             title={(() => {
                                                                 const statusId = mapStatusLabelToId(a.status);
                                                                 const shouldDisable = isReceptionist && statusId >= 2;
-                                                                if (shouldDisable) return "Lab Details (Disabled - Status >= 2)";
+                                                                if (shouldDisable) return "Lab Details";
                                                                 const isWaiting = statusId === 1;
                                                                 const isComplete = statusId === 5;
                                                                 const shouldEnable = !isReceptionist || isWaiting || isComplete;
@@ -4677,7 +4696,7 @@ export default function AppointmentTable() {
                                                             title={(() => {
                                                                 const statusId = mapStatusLabelToId(a.status);
                                                                 const shouldDisable = isReceptionist && statusId >= 2;
-                                                                return shouldDisable ? "Save (Disabled - Status >= 2)" : "Save";
+                                                                return shouldDisable ? "Save" : "Save";
                                                             })()}
                                                             onClick={async () => {
                                                                 const statusId = mapStatusLabelToId(a.status);
@@ -4818,7 +4837,7 @@ export default function AppointmentTable() {
                                                             title={(() => {
                                                                 const statusId = mapStatusLabelToId(a.status);
                                                                 const shouldDisable = isReceptionist && statusId >= 2;
-                                                                if (shouldDisable) return "Delete (Disabled - Status >= 2)";
+                                                                if (shouldDisable) return "Delete";
                                                                 const isWaiting = statusId === 1;
                                                                 const isComplete = statusId === 5;
                                                                 const shouldEnable = !isReceptionist || isWaiting || isComplete;
@@ -5261,7 +5280,7 @@ export default function AppointmentTable() {
                                                     title={(() => {
                                                         const statusId = mapStatusLabelToId(appointment.status);
                                                         const shouldDisable = isReceptionist && statusId >= 2;
-                                                        return shouldDisable ? "Change Status (Disabled - Status >= 2)" : "Change Status";
+                                                        return shouldDisable ? "Change Status" : "Change Status";
                                                     })()}
                                                     style={{
                                                         display: 'inline-flex',
@@ -5415,7 +5434,7 @@ export default function AppointmentTable() {
                                                         title={(() => {
                                                             const statusId = mapStatusLabelToId(appointment.status);
                                                             const shouldDisable = isReceptionist && statusId >= 2;
-                                                            if (shouldDisable) return "Lab Details (Disabled - Status >= 2)";
+                                                            if (shouldDisable) return "Lab Details";
                                                             const isWaiting = statusId === 1;
                                                             const isComplete = statusId === 5;
                                                             const shouldEnable = !isReceptionist || isWaiting || isComplete;
@@ -5469,7 +5488,7 @@ export default function AppointmentTable() {
                                                         title={(() => {
                                                             const statusId = mapStatusLabelToId(appointment.status);
                                                             const shouldDisable = isReceptionist && statusId >= 2;
-                                                            return shouldDisable ? "Save (Disabled - Status >= 2)" : "Save";
+                                                            return shouldDisable ? "Save" : "Save";
                                                         })()}
                                                         onClick={async () => {
                                                             const statusId = mapStatusLabelToId(appointment.status);
@@ -5586,7 +5605,7 @@ export default function AppointmentTable() {
                                                         title={(() => {
                                                             const statusId = mapStatusLabelToId(appointment.status);
                                                             const shouldDisable = isReceptionist && statusId >= 2;
-                                                            if (shouldDisable) return "Delete (Disabled - Status >= 2)";
+                                                            if (shouldDisable) return "Delete";
                                                             const isWaiting = statusId === 1;
                                                             const isComplete = statusId === 5;
                                                             const shouldEnable = !isReceptionist || isWaiting || isComplete;
@@ -5639,7 +5658,7 @@ export default function AppointmentTable() {
                                                         title={(() => {
                                                             const statusId = mapStatusLabelToId(appointment.status);
                                                             const shouldDisable = isReceptionist && statusId >= 2;
-                                                            if (shouldDisable) return "Visit Details (Disabled - Status >= 2)";
+                                                            if (shouldDisable) return "Visit Details";
                                                             const isWaiting = statusId === 1;
                                                             const isComplete = statusId === 5;
                                                             const shouldEnable = !isReceptionist || isWaiting || isComplete;
@@ -5722,7 +5741,7 @@ export default function AppointmentTable() {
                                                         const isCollectible = statusId === 4 || statusId === 5 || statusId === 6;
                                                         // Allow statusId 4, 5 (Complete), and 6 even for reception, otherwise disable for reception when statusId >= 2
                                                         const shouldDisable = isReceptionist && statusId >= 2 && !isCollectible;
-                                                        if (shouldDisable) return "Collection (Disabled - Status >= 2)";
+                                                        if (shouldDisable) return "Collection";
                                                         const shouldEnable = !isReceptionist || isCollectible;
                                                         if (!shouldEnable) return "Collection (Disabled for Reception)";
                                                         return !isCollectible ? "Collection (Disabled - Status not Complete/Submited)" : "Collection";
