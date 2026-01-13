@@ -20,12 +20,10 @@ import {
   FormControlLabel,
   Switch,
   CircularProgress,
-  Tooltip
+  Tooltip,
+  FormHelperText
 } from '@mui/material'
 import Autocomplete from '@mui/material/Autocomplete'
-import { DateField } from '@mui/x-date-pickers/DateField'
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
-import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import dayjs from 'dayjs'
 import { Close, Save, Person, Search, CalendarToday, Add } from '@mui/icons-material'
 import { patientService, QuickRegistrationRequest } from '../services/patientService'
@@ -73,7 +71,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
-  const [genderOptions, setGenderOptions] = useState<{ id: string; name: string }[]>([])
+  const [genderOptions, setGenderOptions] = useState<{ id: string; name: string }[]>([{ id: 'F', name: 'Female' }, { id: 'M', name: 'Male' }])
   const [occupationOptions, setOccupationOptions] = useState<{ id: string; name: string }[]>([])
   const [maritalStatusOptions, setMaritalStatusOptions] = useState<{ id: string; name: string }[]>([])
   const [areaOptions, setAreaOptions] = useState<{ id: string; name: string; cityId?: string; stateId?: string }[]>([])
@@ -137,7 +135,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
               const parsedDate = dayjs(patient.date_of_birth)
               if (parsedDate.isValid()) {
                 // DateField component expects dayjs object, not Date object
-                dobDate = parsedDate as any // Keep as dayjs object
+                dobDate = patient.date_of_birth as any // Keep as dayjs object
                 console.log('📅 Parsed DOB:', parsedDate.format('DD/MM/YYYY'), 'from:', patient.date_of_birth)
               } else {
                 console.warn('⚠️ Invalid date format:', patient.date_of_birth)
@@ -380,6 +378,27 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
             if (patient.address_2) addressParts.push(patient.address_2)
             const fullAddress = addressParts.join(', ') || ''
 
+            // Calculate age and unit from DOB if available
+            let calculatedAge = patient.age_given?.toString() || ''
+            let calculatedAgeUnit = 'Years'
+
+            if (patient.date_of_birth) {
+              const dob = dayjs(patient.date_of_birth)
+              if (dob.isValid()) {
+                const today = dayjs()
+                const diffMonths = today.diff(dob, 'month')
+                const diffYears = today.diff(dob, 'year')
+
+                if (diffMonths < 12) {
+                  calculatedAge = Math.max(0, diffMonths).toString()
+                  calculatedAgeUnit = 'Months'
+                } else {
+                  calculatedAge = Math.max(0, diffYears).toString()
+                  calculatedAgeUnit = 'Years'
+                }
+              }
+            }
+
             // Set formData with area and city names (they should be in options by now)
             setFormData(prev => ({
               ...prev,
@@ -388,10 +407,10 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
               middleName: patient.middle_name || '',
               lastName: patient.last_name || '',
               mobileNumber: patient.mobile_1 || '',
-              age: patient.age_given?.toString() || '',
+              age: calculatedAge,
               dateOfBirth: patient.date_of_birth || '',
               dobDate: dobDate,
-              ageUnit: 'Years', // Default to Years
+              ageUnit: calculatedAgeUnit,
               gender: patient.gender_id ? String(patient.gender_id) : '',
               area: areaName || prev.area,
               city: cityName || prev.city,
@@ -503,15 +522,15 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
 
   useEffect(() => {
     let cancelled = false
-    async function loadGenders() {
-      try {
-        const { getGenders } = await import('../services/referenceService')
-        const genders = await getGenders()
-        if (!cancelled) setGenderOptions(genders)
-      } catch (e) {
-        console.error('Failed to load genders', e)
-      }
-    }
+    // async function loadGenders() {
+    //   try {
+    //     const { getGenders } = await import('../services/referenceService')
+    //     const genders = await getGenders()
+    //     if (!cancelled) setGenderOptions(genders)
+    //   } catch (e) {
+    //     console.error('Failed to load genders', e)
+    //   }
+    // }
     async function loadOccupations() {
       try {
         const { getOccupations } = await import('../services/referenceService')
@@ -540,7 +559,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
       }
     }
 
-    loadGenders()
+    // loadGenders()
     loadOccupations()
     loadMaritalStatuses()
     loadReferBy()
@@ -980,12 +999,9 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
     if (!formData.area.trim()) newErrors.area = 'Area is required'
 
     // Validate date of birth
-    if (!formData.dateOfBirth || !formData.dobDate) {
-      newErrors.dateOfBirth = 'Date of birth is required'
+    if (!formData.dobDate) {
+      newErrors.dobDate = 'DoB is required'
     }
-
-    // Validate age
-    if (!formData.age.trim()) newErrors.age = 'Age is required'
 
     // Validate mobile number format - must be exactly 10 digits
     if (formData.mobileNumber && formData.mobileNumber.length !== 10) {
@@ -1575,48 +1591,63 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         value={formData.dobDate}
                         onChange={(e) => {
                           const newValue = e.target.value
-                          // Clear error when date is selected
-                          if (newValue && errors.dateOfBirth) {
-                            setErrors(prev => {
-                              const newErrors = { ...prev }
-                              delete newErrors.dateOfBirth
-                              return newErrors
-                            })
-                          }
 
                           // Always update raw state to allow typing
-                          let nextState: any = { dobDate: newValue, dateOfBirth: newValue }
+                          let nextState: any = { dobDate: newValue }
 
                           if (newValue) {
                             const val = dayjs(newValue)
-                            if (val.isValid() && newValue.length === 10) {
-                              const formattedDate = val.format('YYYY-MM-DD')
-                              const today = dayjs()
+                            const today = dayjs()
 
-                              // Calculate diff in months to decide unit
-                              const diffMonths = today.diff(val, 'month')
-                              const diffYears = today.diff(val, 'year')
-
-                              let newAge = ''
-                              let newUnit = 'Years'
-
-                              if (diffMonths < 12) {
-                                newAge = Math.max(0, diffMonths).toString()
-                                newUnit = 'Months'
-                              } else {
-                                newAge = Math.max(0, diffYears).toString()
-                                newUnit = 'Years'
+                            // Check for future date
+                            if (val.isAfter(today, 'day')) {
+                              setErrors(prev => ({
+                                ...prev,
+                                dobDate: 'DoB cannot be in the future'
+                              }))
+                              nextState.age = '' // Clear age for invalid date
+                            } else {
+                              // Clear error if date is valid
+                              if (errors.dobDate) {
+                                setErrors(prev => {
+                                  const newErrors = { ...prev }
+                                  delete newErrors.dobDate
+                                  return newErrors
+                                })
                               }
 
-                              nextState.age = newAge
-                              nextState.ageUnit = newUnit
-                              nextState.dateOfBirth = formattedDate
+                              if (val.isValid()) {
+                                const formattedDate = val.format('YYYY-MM-DD')
+                                const diffMonths = today.diff(val, 'month')
+                                const diffYears = today.diff(val, 'year')
+
+                                let newAge = ''
+                                // Respect current unit
+                                const currentUnit = formData.ageUnit || 'Years'
+
+                                if (currentUnit === 'Months') {
+                                  newAge = diffMonths.toString()
+                                } else {
+                                  newAge = diffYears.toString()
+                                }
+
+                                nextState.age = newAge
+                                // IMPORTANT: Do NOT set dobDate to formattedDate here while user is typing
+                                nextState.dateOfBirth = formattedDate
+                              }
                             }
                           } else {
                             // When date is cleared
                             nextState.age = ''
-                            nextState.ageUnit = 'Years'
-                            nextState.dateOfBirth = ''
+                            nextState.dobDate = ''
+                            // Clear error when cleared
+                            if (errors.dobDate) {
+                              setErrors(prev => {
+                                const newErrors = { ...prev }
+                                delete newErrors.dobDate
+                                return newErrors
+                              })
+                            }
                           }
 
                           setFormData(prev => ({
@@ -1629,7 +1660,10 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         sx={{
                           '& .MuiOutlinedInput-root': { borderRadius: '8px' },
                           '& input[type="date"]': {
-                            color: formData.dobDate ? 'inherit' : 'rgba(0, 0, 0, 0.42)'
+                            color: formData.dobDate ? 'inherit' : 'rgba(0, 0, 0, 0.42)',
+                            '&:focus': {
+                              color: 'inherit'
+                            }
                           }
                         }}
                         error={!!errors.dobDate}
@@ -1637,6 +1671,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         inputProps={{
                           max: dayjs().format('YYYY-MM-DD')
                         }}
+                        disabled={loading || readOnly}
                       />
                     </Box>
                     <Box sx={{ width: '50% !important' }}>
@@ -1656,13 +1691,13 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                             const numVal = parseInt(val)
                             const currentUnit = formData.ageUnit || 'Years'
 
-                            let newDobDate = null
                             let formattedDob = ''
 
                             if (val && !isNaN(numVal)) {
                               // Calculate DOB backwards from today
                               // If Years => subtract years, if Months => subtract months
-                              newDobDate = dayjs().subtract(numVal, currentUnit.toLowerCase() as any)
+                              const unitToSubtract = currentUnit === 'Months' ? 'month' : 'year'
+                              const newDobDate = dayjs().subtract(numVal, unitToSubtract)
                               formattedDob = newDobDate.format('YYYY-MM-DD')
                             }
 
@@ -1688,7 +1723,8 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
 
                               // Recalculate DOB if we have an age value
                               if (currentAge && !isNaN(numVal)) {
-                                const d = dayjs().subtract(numVal, newUnit.toLowerCase() as any)
+                                const unitToSubtract = newUnit === 'Months' ? 'month' : 'year'
+                                const d = dayjs().subtract(numVal, unitToSubtract)
                                 dobStr = d.format('YYYY-MM-DD')
                                 dobFmt = dobStr
                               }
@@ -1740,51 +1776,32 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                   <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
                     Gender <span style={{ color: 'red' }}>*</span>
                   </Typography>
-                  <FormControl fullWidth error={!!errors.gender}>
+                  <FormControl fullWidth error={!!errors.gender} variant="outlined">
                     <Select
                       value={formData.gender}
                       onChange={(e) => handleInputChange('gender', e.target.value)}
                       disabled={loading || readOnly}
                       displayEmpty
                       renderValue={(selected) => {
-                        if (selected === '' || selected === null || selected === undefined) {
+                        if (!selected && !(loading || readOnly)) {
                           return <span style={{ color: 'rgba(0,0,0,0.6)' }}>Select Gender</span>
                         }
                         const option = genderOptions.find(opt => opt.id === selected)
-                        return option ? option.name : String(selected ?? '')
+                        return option ? option.name : ''
                       }}
                       MenuProps={{
-                        PaperProps: {
-                          style: {
-                            zIndex: 11001
-                          }
-                        },
-                        style: {
-                          zIndex: 11001
-                        }
+                        PaperProps: { style: { zIndex: 11001 } },
+                        style: { zIndex: 11001 }
                       }}
                     >
-                      {genderOptions.map(opt => (
-                        <MenuItem key={opt.id} value={opt.id}>{opt.name}</MenuItem>
+                      {genderOptions.map((opt) => (
+                        <MenuItem key={opt.id} value={opt.id}>
+                          {opt.name}
+                        </MenuItem>
                       ))}
                     </Select>
                     {errors.gender && (
-                      <Typography
-                        component="p"
-                        color="error"
-                        sx={{
-                          mt: 0.5,
-                          ml: 0,
-                          fontSize: '0.75rem !important',
-                          lineHeight: 1.66,
-                          fontFamily: "'Roboto', sans-serif",
-                          minHeight: '1.25rem',
-                          margin: '3px 0 0 0 !important',
-                          fontWeight: 400
-                        }}
-                      >
-                        {errors.gender}
-                      </Typography>
+                      <FormHelperText error>{errors.gender}</FormHelperText>
                     )}
                   </FormControl>
                 </Box>
@@ -2256,12 +2273,13 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                   <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
                     Marital Status
                   </Typography>
-                  <FormControl fullWidth>
+                  <FormControl fullWidth variant="outlined">
                     <Select
                       value={formData.maritalStatus}
                       onChange={(e) => handleInputChange('maritalStatus', e.target.value)}
                       disabled={loading || readOnly}
                       displayEmpty
+                      inputProps={{ placeholder: '' }}
                       renderValue={(selected) => {
                         if (selected === '' || selected === null || selected === undefined) {
                           return <span style={{ color: 'rgba(0,0,0,0.6)' }}>Select Marital Status</span>
@@ -2292,12 +2310,13 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                   <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
                     Occupation
                   </Typography>
-                  <FormControl fullWidth>
+                  <FormControl fullWidth variant="outlined">
                     <Select
                       value={formData.occupation}
                       onChange={(e) => handleInputChange('occupation', e.target.value)}
                       disabled={loading || readOnly}
                       displayEmpty
+                      inputProps={{ placeholder: '' }}
                       renderValue={(selected) => {
                         if (selected === '' || selected === null || selected === undefined) {
                           return <span style={{ color: 'rgba(0,0,0,0.6)' }}>Select Occupation</span>
@@ -2429,7 +2448,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                           InputProps={{
                             endAdornment: (
                               <InputAdornment position="end">
-                                <Tooltip 
+                                <Tooltip
                                   title="Add New Referral Doctor"
                                   PopperProps={{
                                     style: { zIndex: 14000 }

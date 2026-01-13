@@ -27,11 +27,14 @@ const PatientNameDisplay: React.FC<PatientNameDisplayProps> = ({
         return patientData?.age !== undefined ? `${patientData.age} ${patientData.age > 1 ? 'Y' : 'M'}` : '';
     };
 
+    const originalName = patientData?.patient || '';
+    const name = originalName.length > 25 ? `${originalName.substring(0, 25)}...` : originalName;
+
     const parts = [
-        patientData?.patient,
+        name,
         patientData?.gender,
         getAgeString(),
-        patientData?.contact
+        patientData?.contact ? patientData?.contact : 'NA'
     ].filter(Boolean);
 
     const patientName = parts.join(' / ');
@@ -41,7 +44,7 @@ const PatientNameDisplay: React.FC<PatientNameDisplayProps> = ({
             onClick={onClick}
             style={style}
             className={className}
-            title={title}
+            title={title || originalName}
         >
             {patientName}
         </div>
