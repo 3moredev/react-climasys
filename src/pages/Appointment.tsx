@@ -2703,19 +2703,19 @@ export default function AppointmentTable() {
                 <div className="d-flex justify-content-between align-items-center mb-3">
                     <h2>Appointments</h2>
                     <div className="d-flex align-items-center" style={{ fontSize: '0.85rem', color: '#455A64', gap: '8px', whiteSpace: 'nowrap' }}>
-                        <span className="me-1"><span className="rounded-circle d-inline-block bg-primary" style={{ width: 10, height: 10 }}></span> {statusCounts['WAITING'] || 0} </span>
+                        <span className="me-1"><span className="rounded-circle d-inline-block bg-primary" title="WAITING" style={{ width: 10, height: 10 }}></span> {statusCounts['WAITING'] || 0} </span>
                         |
-                        <span className="mx-1"><span className="rounded-circle d-inline-block bg-success" style={{ width: 10, height: 10 }}></span> {statusCounts['WITH DOCTOR'] || 0} </span>
+                        <span className="mx-1"><span className="rounded-circle d-inline-block bg-success" title="WITH DOCTOR" style={{ width: 10, height: 10 }}></span> {statusCounts['WITH DOCTOR'] || 0} </span>
                         |
-                        <span className="mx-1"><span className="rounded-circle d-inline-block bg-info" style={{ width: 10, height: 10 }}></span> {statusCounts['CONSULT ON CALL'] || 0} </span>
+                        <span className="mx-1"><span className="rounded-circle d-inline-block bg-info" title="CONSULT ON CALL" style={{ width: 10, height: 10 }}></span> {statusCounts['CONSULT ON CALL'] || 0} </span>
                         |
-                        <span className="mx-1"><span className="rounded-circle d-inline-block bg-dark" style={{ width: 10, height: 10 }}></span> {statusCounts['COMPLETE'] || 0} </span>
+                        <span className="mx-1"><span className="rounded-circle d-inline-block bg-dark" title="COMPLETE" style={{ width: 10, height: 10 }}></span> {statusCounts['COMPLETE'] || 0} </span>
                         |
-                        <span className="mx-1"><span className="rounded-circle d-inline-block bg-danger" style={{ width: 10, height: 10 }}></span> {statusCounts['SAVE'] || 0} </span>
+                        <span className="mx-1"><span className="rounded-circle d-inline-block bg-danger" title="SAVE" style={{ width: 10, height: 10 }}></span> {statusCounts['SAVE'] || 0} </span>
                         |
-                        <span className="ms-1"><span className="rounded-circle d-inline-block bg-warning" style={{ width: 10, height: 10 }}></span> {statusCounts['COLLECTION'] || 0} </span>
+                        <span className="ms-1"><span className="rounded-circle d-inline-block bg-warning" title="COLLECTION" style={{ width: 10, height: 10 }}></span> {statusCounts['COLLECTION'] || 0} </span>
                         |
-                        <span className="ms-1"><span className="rounded-circle d-inline-block" style={{ width: 10, height: 10, backgroundColor: '#FF9800' }}></span> {statusCounts['WAITING FOR MEDICINE'] || 0} </span>
+                        <span className="ms-1"><span className="rounded-circle d-inline-block" title="WAITING FOR MEDICINE" style={{ width: 10, height: 10, backgroundColor: '#FF9800' }}></span> {statusCounts['WAITING FOR MEDICINE'] || 0} </span>
                     </div>
                 </div>
 
@@ -3009,7 +3009,7 @@ export default function AppointmentTable() {
                                                             <span className={`d-inline-block rounded-circle ${((a as any).statusColorPending || a.statusColor) === 'bg-orange-custom' ? '' : ((a as any).statusColorPending || a.statusColor)}`} style={{ width: "14px", height: "14px", backgroundColor: ((a as any).statusColorPending || a.statusColor) === 'bg-orange-custom' ? '#FF9800' : undefined }}></span>
                                                             <span style={{ fontSize: '0.9rem', color: '#263238' }}>{(a as any).statusPending || a.status}</span>
                                                             <div
-                                                                aria-label="Change Status (Disabled)"
+                                                                aria-label="Change Status"
                                                                 title="Status changes are disabled on this screen"
                                                                 style={{
                                                                     display: "inline-flex",
@@ -3067,7 +3067,7 @@ export default function AppointmentTable() {
                                                         }}>
                                                             {/* Lab Details Button - Disabled for Doctor */}
                                                             <div
-                                                                title="Lab Details (Disabled)"
+                                                                title="Lab Details"
                                                                 style={{
                                                                     display: 'inline-flex',
                                                                     alignItems: 'center',
@@ -3087,7 +3087,7 @@ export default function AppointmentTable() {
 
                                                             {/* Save Button - Disabled for Doctor */}
                                                             <div
-                                                                title="Save (Disabled)"
+                                                                title="Save"
                                                                 style={{
                                                                     display: 'inline-flex',
                                                                     alignItems: 'center',
@@ -3107,7 +3107,7 @@ export default function AppointmentTable() {
 
                                                             {/* Delete Button - Disabled for Doctor */}
                                                             <div
-                                                                title="Delete (Disabled)"
+                                                                title="Delete"
                                                                 style={{
                                                                     display: 'inline-flex',
                                                                     alignItems: 'center',
@@ -3127,7 +3127,7 @@ export default function AppointmentTable() {
 
                                                             {/* Checkout Button - Disabled for Doctor */}
                                                             <div
-                                                                title="Checkout (Disabled)"
+                                                                title="Checkout"
                                                                 style={{
                                                                     display: 'inline-flex',
                                                                     alignItems: 'center',
@@ -3151,7 +3151,7 @@ export default function AppointmentTable() {
                                                                     const statusId = mapStatusLabelToId(a.status);
                                                                     const normalizedStatus = normalizeStatusLabel(a.status);
                                                                     const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'WAITING FOR MEDICINE' || statusId === 5;
-                                                                    return isEnabled ? "Treatment" : "Treatment (Disabled - Patient not with doctor)";
+                                                                    return isEnabled ? "Treatment" : "Treatment";
                                                                 })()}
                                                                 onClick={() => {
                                                                     const statusId = mapStatusLabelToId(a.status);
@@ -3364,7 +3364,7 @@ export default function AppointmentTable() {
                                                     <div className="crm-actions" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, max-content)', alignItems: 'center', gap: '8px' }}>
                                                         <div
                                                             className="crm-btn"
-                                                            title="Lab Details (Disabled)"
+                                                            title="Lab Details"
                                                             style={{
                                                                 opacity: 0.7,
                                                                 cursor: 'not-allowed',
@@ -3376,7 +3376,7 @@ export default function AppointmentTable() {
                                                         </div>
                                                         <div
                                                             className="crm-btn"
-                                                            title="Save (Disabled)"
+                                                            title="Save"
                                                             style={{
                                                                 opacity: 0.5,
                                                                 cursor: 'not-allowed',
@@ -3388,7 +3388,7 @@ export default function AppointmentTable() {
                                                         </div>
                                                         <div
                                                             className="crm-btn"
-                                                            title="Delete (Disabled)"
+                                                            title="Delete"
                                                             style={{
                                                                 opacity: 0.5,
                                                                 cursor: 'not-allowed',
@@ -3400,7 +3400,7 @@ export default function AppointmentTable() {
                                                         </div>
                                                         <div
                                                             className="crm-btn"
-                                                            title="Checkout (Disabled)"
+                                                            title="Checkout"
                                                             style={{
                                                                 cursor: 'not-allowed',
                                                                 backgroundColor: '#f5f5f5',
@@ -3433,7 +3433,7 @@ export default function AppointmentTable() {
                                                             const statusId = mapStatusLabelToId(appointment.status);
                                                             const normalizedStatus = normalizeStatusLabel(appointment.status);
                                                             const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'WAITING FOR MEDICINE' || statusId === 5;
-                                                            return isEnabled ? "Treatment" : "Treatment (Disabled - Patient not with doctor)";
+                                                            return isEnabled ? "Treatment" : "Treatment";
                                                         })()}
                                                         onClick={() => {
                                                             const statusId = mapStatusLabelToId(appointment.status);
@@ -4061,19 +4061,19 @@ export default function AppointmentTable() {
             <div className="d-flex justify-content-between align-items-center mb-3">
                 <h2>Appointments</h2>
                 <div className="d-flex align-items-center" style={{ fontSize: '0.85rem', color: '#455A64', gap: '8px', whiteSpace: 'nowrap' }}>
-                    <span className="me-1"><span className="rounded-circle d-inline-block bg-primary" style={{ width: 10, height: 10 }}></span> {statusCounts['WAITING'] || 0} </span>
+                    <span className="me-1"><span className="rounded-circle d-inline-block bg-primary" title="WAITING" style={{ width: 10, height: 10 }}></span> {statusCounts['WAITING'] || 0} </span>
                     |
-                    <span className="mx-1"><span className="rounded-circle d-inline-block bg-success" style={{ width: 10, height: 10 }}></span> {statusCounts['WITH DOCTOR'] || 0} </span>
+                    <span className="mx-1"><span className="rounded-circle d-inline-block bg-success" title="WITH DOCTOR" style={{ width: 10, height: 10 }}></span> {statusCounts['WITH DOCTOR'] || 0} </span>
                     |
-                    <span className="mx-1"><span className="rounded-circle d-inline-block bg-info" style={{ width: 10, height: 10 }}></span> {statusCounts['CONSULT ON CALL'] || 0} </span>
+                    <span className="mx-1"><span className="rounded-circle d-inline-block bg-info" title="CONSULT ON CALL" style={{ width: 10, height: 10 }}></span> {statusCounts['CONSULT ON CALL'] || 0} </span>
                     |
-                    <span className="mx-1"><span className="rounded-circle d-inline-block bg-dark" style={{ width: 10, height: 10 }}></span> {statusCounts['COMPLETE'] || 0} </span>
+                    <span className="mx-1"><span className="rounded-circle d-inline-block bg-dark" title="COMPLETE" style={{ width: 10, height: 10 }}></span> {statusCounts['COMPLETE'] || 0} </span>
                     |
-                    <span className="mx-1"><span className="rounded-circle d-inline-block bg-danger" style={{ width: 10, height: 10 }}></span> {statusCounts['SAVE'] || 0} </span>
+                    <span className="mx-1"><span className="rounded-circle d-inline-block bg-danger" title="SAVE" style={{ width: 10, height: 10 }}></span> {statusCounts['SAVE'] || 0} </span>
                     |
-                    <span className="ms-1"><span className="rounded-circle d-inline-block bg-warning" style={{ width: 10, height: 10 }}></span> {statusCounts['COLLECTION'] || 0} </span>
+                    <span className="ms-1"><span className="rounded-circle d-inline-block bg-warning" title="COLLECTION" style={{ width: 10, height: 10 }}></span> {statusCounts['COLLECTION'] || 0} </span>
                     |
-                    <span className="ms-1"><span className="rounded-circle d-inline-block" style={{ width: 10, height: 10, backgroundColor: '#FF9800' }}></span> {statusCounts['WAITING FOR MEDICINE'] || 0} </span>
+                    <span className="ms-1"><span className="rounded-circle d-inline-block" title="WAITING FOR MEDICINE" style={{ width: 10, height: 10, backgroundColor: '#FF9800' }}></span> {statusCounts['WAITING FOR MEDICINE'] || 0} </span>
                 </div>
             </div>
 
@@ -4251,7 +4251,7 @@ export default function AppointmentTable() {
                     }}
                     style={{ height: '38px', width: '200px', color: filterStatus ? '#212121' : '#6c757d', padding: '6px 12px', lineHeight: '1.5', fontSize: '1rem' }}
                 >
-                    <option value="">Select Status</option>
+                    <option value="">ALL</option>
                     {(() => {
                         const filteredStatuses = (availableStatuses.length ? availableStatuses : [
                             'WAITING', 'WITH DOCTOR', 'CONSULT ON CALL', 'CHECK OUT', 'SAVE', 'COMPLETE'
@@ -4631,7 +4631,7 @@ export default function AppointmentTable() {
                                                                 const isWaiting = statusId === 1;
                                                                 const isComplete = statusId === 5;
                                                                 const shouldEnable = !isReceptionist || isWaiting || isComplete;
-                                                                return shouldEnable ? "Lab Details" : "Lab Details (Disabled for Reception)";
+                                                                return shouldEnable ? "Lab Details" : "Lab Details";
                                                             })()}
                                                             onClick={() => {
                                                                 const statusId = mapStatusLabelToId(a.status);
@@ -4641,6 +4641,9 @@ export default function AppointmentTable() {
                                                                 const isComplete = statusId === 5;
                                                                 const shouldEnable = !isReceptionist || isWaiting || isComplete;
                                                                 if (!shouldEnable) return; // Disable for reception login unless WAITING or COMPLETE
+                                                                setSearchTerm("");
+                                                                setSearchResults([]);
+                                                                setShowDropdown(false);
                                                                 setSelectedPatientForLab(a);
                                                                 setShowLabTestEntry(true);
                                                             }}
@@ -4718,6 +4721,9 @@ export default function AppointmentTable() {
                                                                 const statusId = mapStatusLabelToId(a.status);
                                                                 const shouldDisable = isReceptionist && statusId >= 2;
                                                                 if (shouldDisable) return;
+                                                                setSearchTerm("");
+                                                                setSearchResults([]);
+                                                                setShowDropdown(false);
                                                                 try {
                                                                     const pid = a.patientId;
                                                                     // Use the visit number from the selected appointment row
@@ -4857,7 +4863,7 @@ export default function AppointmentTable() {
                                                                 const isWaiting = statusId === 1;
                                                                 const isComplete = statusId === 5;
                                                                 const shouldEnable = !isReceptionist || isWaiting || isComplete;
-                                                                return shouldEnable ? "Delete" : "Delete (Disabled for Reception)";
+                                                                return shouldEnable ? "Delete" : "Delete";
                                                             })()}
                                                             onClick={() => {
                                                                 const statusId = mapStatusLabelToId(a.status);
@@ -4867,6 +4873,9 @@ export default function AppointmentTable() {
                                                                 const isComplete = statusId === 5;
                                                                 const shouldEnable = !isReceptionist || isWaiting || isComplete;
                                                                 if (!shouldEnable) return; // Disable for reception login unless WAITING or COMPLETE
+                                                                setSearchTerm("");
+                                                                setSearchResults([]);
+                                                                setShowDropdown(false);
                                                                 handleInitiateDelete(a, originalIndex);
                                                             }}
                                                             style={{
@@ -4953,6 +4962,9 @@ export default function AppointmentTable() {
                                                                 const shouldEnable = !isReceptionist || isWaiting || isComplete;
                                                                 if (!shouldEnable) return; // Disable for reception login unless WAITING or COMPLETE
                                                                 if (a.status === 'WITH DOCTOR') return; // Disable click when status is WITH DOCTOR
+                                                                setSearchTerm("");
+                                                                setSearchResults([]);
+                                                                setShowDropdown(false);
                                                                 setSelectedPatientForVisit(a as any);
                                                                 setShowVisitDetails(true);
                                                             }}
@@ -5047,6 +5059,9 @@ export default function AppointmentTable() {
                                                                 const shouldEnable = !isReceptionist || isCollectible;
                                                                 if (!shouldEnable) return; // Disable for reception login unless COMPLETE or SUBMITTED
                                                                 if (!isCollectible) return;
+                                                                setSearchTerm("");
+                                                                setSearchResults([]);
+                                                                setShowDropdown(false);
                                                                 console.log('Collection clicked for patient:', a.patientId);
                                                                 navigate('/collection', {
                                                                     state: {
@@ -5156,6 +5171,9 @@ export default function AppointmentTable() {
                                                                     const normalizedStatus = normalizeStatusLabel(a.status);
                                                                     const isEnabled = normalizedStatus === 'COLLECTION';
                                                                     if (isEnabled) {
+                                                                        setSearchTerm("");
+                                                                        setSearchResults([]);
+                                                                        setShowDropdown(false);
                                                                         console.log('Treatment clicked for patient:', a.patientId);
                                                                         navigate('/treatment', {
                                                                             state: {
@@ -5454,7 +5472,7 @@ export default function AppointmentTable() {
                                                             const isWaiting = statusId === 1;
                                                             const isComplete = statusId === 5;
                                                             const shouldEnable = !isReceptionist || isWaiting || isComplete;
-                                                            return shouldEnable ? "Lab Details" : "Lab Details (Disabled for Reception)";
+                                                            return shouldEnable ? "Lab Details" : "Lab Details";
                                                         })()}
                                                         onClick={() => {
                                                             const statusId = mapStatusLabelToId(appointment.status);
@@ -5464,6 +5482,9 @@ export default function AppointmentTable() {
                                                             const isComplete = statusId === 5;
                                                             const shouldEnable = !isReceptionist || isWaiting || isComplete;
                                                             if (!shouldEnable) return; // Disable for reception login unless WAITING or COMPLETE
+                                                            setSearchTerm("");
+                                                            setSearchResults([]);
+                                                            setShowDropdown(false);
                                                             // Navigate to lab details or open modal
                                                             console.log('Lab Details clicked for patient:', appointment.patientId);
                                                         }}
@@ -5510,6 +5531,9 @@ export default function AppointmentTable() {
                                                             const statusId = mapStatusLabelToId(appointment.status);
                                                             const shouldDisable = isReceptionist && statusId >= 2;
                                                             if (shouldDisable) return;
+                                                            setSearchTerm("");
+                                                            setSearchResults([]);
+                                                            setShowDropdown(false);
                                                             try {
                                                                 const pid = appointment.patientId;
                                                                 // Use the visit number from the selected appointment card
@@ -5625,7 +5649,7 @@ export default function AppointmentTable() {
                                                             const isWaiting = statusId === 1;
                                                             const isComplete = statusId === 5;
                                                             const shouldEnable = !isReceptionist || isWaiting || isComplete;
-                                                            return shouldEnable ? "Delete" : "Delete (Disabled for Reception)";
+                                                            return shouldEnable ? "Delete" : "Delete";
                                                         })()}
                                                         onClick={() => {
                                                             const statusId = mapStatusLabelToId(appointment.status);
@@ -5635,6 +5659,9 @@ export default function AppointmentTable() {
                                                             const isComplete = statusId === 5;
                                                             const shouldEnable = !isReceptionist || isWaiting || isComplete;
                                                             if (!shouldEnable) return; // Disable for reception login unless WAITING or COMPLETE
+                                                            setSearchTerm("");
+                                                            setSearchResults([]);
+                                                            setShowDropdown(false);
                                                             handleInitiateDelete(appointment, originalIndex);
                                                         }}
                                                         style={{
@@ -5678,8 +5705,8 @@ export default function AppointmentTable() {
                                                             const isWaiting = statusId === 1;
                                                             const isComplete = statusId === 5;
                                                             const shouldEnable = !isReceptionist || isWaiting || isComplete;
-                                                            if (!shouldEnable) return "Visit Details (Disabled for Reception)";
-                                                            return appointment.status === 'WITH DOCTOR' ? 'Visit Details (Disabled - Patient with doctor)' : 'Visit Details';
+                                                            if (!shouldEnable) return "Visit Details";
+                                                            return appointment.status === 'WITH DOCTOR' ? 'Visit Details' : 'Visit Details';
                                                         })()}
                                                         onClick={() => {
                                                             const statusId = mapStatusLabelToId(appointment.status);
@@ -5690,6 +5717,9 @@ export default function AppointmentTable() {
                                                             const shouldEnable = !isReceptionist || isWaiting || isComplete;
                                                             if (!shouldEnable) return; // Disable for reception login unless WAITING or COMPLETE
                                                             if (appointment.status === 'WITH DOCTOR') return; // Disable click when status is WITH DOCTOR
+                                                            setSearchTerm("");
+                                                            setSearchResults([]);
+                                                            setShowDropdown(false);
                                                             setSelectedPatientForVisit(appointment as any);
                                                             setShowVisitDetails(true);
                                                         }}
@@ -5759,8 +5789,8 @@ export default function AppointmentTable() {
                                                         const shouldDisable = isReceptionist && statusId >= 2 && !isCollectible;
                                                         if (shouldDisable) return "Collection";
                                                         const shouldEnable = !isReceptionist || isCollectible;
-                                                        if (!shouldEnable) return "Collection (Disabled for Reception)";
-                                                        return !isCollectible ? "Collection (Disabled - Status not Complete/Submited)" : "Collection";
+                                                        if (!shouldEnable) return "Collection";
+                                                        return !isCollectible ? "Collection" : "Collection";
                                                     })()}
                                                     onClick={() => {
                                                         const statusId = mapStatusLabelToId(appointment.status);
@@ -5771,6 +5801,9 @@ export default function AppointmentTable() {
                                                         const shouldEnable = !isReceptionist || isCollectible;
                                                         if (!shouldEnable) return; // Disable for reception login unless COMPLETE or SUBMITTED
                                                         if (!isCollectible) return;
+                                                        setSearchTerm("");
+                                                        setSearchResults([]);
+                                                        setShowDropdown(false);
                                                         console.log('Collection clicked for patient:', appointment.patientId);
                                                         navigate('/collection', {
                                                             state: {
@@ -5846,13 +5879,16 @@ export default function AppointmentTable() {
                                                             const statusId = mapStatusLabelToId(appointment.status);
                                                             const normalizedStatus = normalizeStatusLabel(appointment.status);
                                                             const isEnabled = normalizedStatus === 'COLLECTION' || statusId === 5;
-                                                            return isEnabled ? "Treatment" : "Treatment (Disabled - Only enabled for Collection or Complete status)";
+                                                            return isEnabled ? "Treatment" : "Treatment";
                                                         })()}
                                                         onClick={() => {
                                                             const statusId = mapStatusLabelToId(appointment.status);
                                                             const normalizedStatus = normalizeStatusLabel(appointment.status);
                                                             const isEnabled = normalizedStatus === 'COLLECTION' || statusId === 5;
                                                             if (isEnabled) {
+                                                                setSearchTerm("");
+                                                                setSearchResults([]);
+                                                                setShowDropdown(false);
                                                                 console.log('Treatment clicked for patient:', appointment.patientId);
                                                                 navigate('/treatment', {
                                                                     state: {

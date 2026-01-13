@@ -33,6 +33,7 @@ import {
   Step,
   StepLabel,
   StepContent,
+  InputAdornment,
 } from '@mui/material'
 import {
   Add,
@@ -46,6 +47,7 @@ import {
   Receipt,
   CheckCircle,
   Pending,
+  Close,
 } from '@mui/icons-material'
 import { useSelector, useDispatch } from 'react-redux'
 import { RootState } from '../store'
@@ -103,7 +105,7 @@ export default function Visits() {
   const { user } = useSelector((state: RootState) => state.auth)
   const { todaysVisits, currentVisit, loading } = useSelector((state: RootState) => state.visits)
   const { searchResults } = useSelector((state: RootState) => state.patients)
-  
+
   const [tabValue, setTabValue] = useState(0)
   const [openDialog, setOpenDialog] = useState(false)
   const [openVisitDialog, setOpenVisitDialog] = useState(false)
@@ -303,6 +305,15 @@ export default function Visits() {
                       fullWidth
                       label="Patient ID"
                       placeholder="Search patient..."
+                      InputProps={{
+                        endAdornment: field.value ? (
+                          <InputAdornment position="end">
+                            <IconButton onClick={() => field.onChange('')} edge="end" size="small">
+                              <Close fontSize="small" />
+                            </IconButton>
+                          </InputAdornment>
+                        ) : null
+                      }}
                     />
                   )}
                 />
