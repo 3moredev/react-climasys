@@ -470,6 +470,7 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
                             <textarea
                                 placeholder="Enter Doctor Address"
                                 rows={2}
+                                maxLength={150}
                                 value={formData.doctorAddress}
                                 onChange={(e) => handleInputChange('doctorAddress', e.target.value)}
                                 style={{

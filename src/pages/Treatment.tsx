@@ -2555,27 +2555,27 @@ export default function Treatment() {
         // Check for duplicate complaint before API call (check both label and short description)
         const normalizedShortDesc = trimmedShortDescription.toLowerCase().trim();
         const normalizedComplaintDesc = trimmedComplaintDescription.toLowerCase().trim();
-        
+
         // Check if it already exists in the table
         const existingByLabel = complaintsRows.find(
             row => row.label?.toLowerCase().trim() === normalizedShortDesc ||
-                   row.label?.toLowerCase().trim() === normalizedComplaintDesc
+                row.label?.toLowerCase().trim() === normalizedComplaintDesc
         );
-        
+
         // Check if it already exists in complaintsOptions (dropdown list) - prevent adding if it exists in dropdown
         const existingInOptions = complaintsOptions.find(
             opt => opt.short_description?.toLowerCase().trim() === normalizedShortDesc ||
-                   opt.complaint_description?.toLowerCase().trim() === normalizedComplaintDesc ||
-                   opt.label?.toLowerCase().trim() === normalizedShortDesc ||
-                   opt.label?.toLowerCase().trim() === normalizedComplaintDesc
+                opt.complaint_description?.toLowerCase().trim() === normalizedComplaintDesc ||
+                opt.label?.toLowerCase().trim() === normalizedShortDesc ||
+                opt.label?.toLowerCase().trim() === normalizedComplaintDesc
         );
 
         if (existingByLabel || existingInOptions) {
-            const duplicateName = existingByLabel?.label || 
-                                 existingInOptions?.label ||
-                                 existingInOptions?.short_description ||
-                                 existingInOptions?.complaint_description ||
-                                 trimmedComplaintDescription;
+            const duplicateName = existingByLabel?.label ||
+                existingInOptions?.label ||
+                existingInOptions?.short_description ||
+                existingInOptions?.complaint_description ||
+                trimmedComplaintDescription;
             setSnackbarMessage(`Complaint "${duplicateName}" is already added.`);
             setSnackbarOpen(true);
             setComplaintsError(null);
@@ -2634,11 +2634,11 @@ export default function Treatment() {
                     complaint_description: responseDescription
                 }
             ]);
-            
+
             // Show success message
             setSnackbarMessage('Complaint added successfully!');
             setSnackbarOpen(true);
-            
+
             setShowComplaintPopup(false);
         } catch (error: any) {
             console.error('Failed to create complaint from Treatment screen:', error);
@@ -4982,7 +4982,7 @@ export default function Treatment() {
                                                 type="checkbox"
                                                 checked={inPersonChecked}
                                                 onChange={(e) => handleVisitTypeChange('inPerson', e.target.checked)}
-                                                disabled={isFormDisabled || inPersonDisabled}
+                                                disabled={true}
                                                 readOnly={inPersonDisabled}
                                             />
                                             In-Person
@@ -5308,6 +5308,7 @@ export default function Treatment() {
                                                                             }} />
                                                                         )}
                                                                         <label
+                                                                            title={opt.label}
                                                                             style={{
                                                                                 display: 'flex',
                                                                                 alignItems: 'center',
@@ -5318,7 +5319,8 @@ export default function Treatment() {
                                                                                 border: 'none',
                                                                                 backgroundColor: 'transparent',
                                                                                 borderRadius: '3px',
-                                                                                fontWeight: 400
+                                                                                fontWeight: 400,
+                                                                                minWidth: 0
                                                                             }}
                                                                         >
                                                                             <input
@@ -5336,7 +5338,11 @@ export default function Treatment() {
                                                                                 }}
                                                                                 style={{ margin: 0 }}
                                                                             />
-                                                                            <span style={{ whiteSpace: 'nowrap' }}>{opt.label}</span>
+                                                                            <span style={{
+                                                                                whiteSpace: 'nowrap',
+                                                                                overflow: 'hidden',
+                                                                                textOverflow: 'ellipsis'
+                                                                            }}>{opt.label}</span>
                                                                         </label>
                                                                     </React.Fragment>
                                                                 );
@@ -5793,6 +5799,7 @@ export default function Treatment() {
                                                                     }} />
                                                                 )}
                                                                 <label
+                                                                    title={opt.label}
                                                                     style={{
                                                                         display: 'flex',
                                                                         alignItems: 'center',
@@ -5803,7 +5810,8 @@ export default function Treatment() {
                                                                         border: 'none',
                                                                         backgroundColor: 'transparent',
                                                                         borderRadius: '3px',
-                                                                        fontWeight: 400
+                                                                        fontWeight: 400,
+                                                                        minWidth: 0
                                                                     }}
                                                                 >
                                                                     <input
@@ -5821,7 +5829,11 @@ export default function Treatment() {
                                                                         }}
                                                                         style={{ margin: 0 }}
                                                                     />
-                                                                    <span style={{ whiteSpace: 'nowrap' }}>{opt.label}</span>
+                                                                    <span style={{
+                                                                        whiteSpace: 'nowrap',
+                                                                        overflow: 'hidden',
+                                                                        textOverflow: 'ellipsis'
+                                                                    }}>{opt.label}</span>
                                                                 </label>
                                                             </React.Fragment>
                                                         );
@@ -6081,6 +6093,7 @@ export default function Treatment() {
                                                                     }} />
                                                                 )}
                                                                 <label
+                                                                    title={opt.label}
                                                                     style={{
                                                                         display: 'flex',
                                                                         alignItems: 'center',
@@ -6091,7 +6104,8 @@ export default function Treatment() {
                                                                         border: 'none',
                                                                         backgroundColor: 'transparent',
                                                                         borderRadius: '3px',
-                                                                        fontWeight: 400
+                                                                        fontWeight: 400,
+                                                                        minWidth: 0
                                                                     }}
                                                                 >
                                                                     <input
@@ -6109,7 +6123,11 @@ export default function Treatment() {
                                                                         }}
                                                                         style={{ margin: 0 }}
                                                                     />
-                                                                    <span style={{ whiteSpace: 'nowrap' }}>{opt.label}</span>
+                                                                    <span style={{
+                                                                        whiteSpace: 'nowrap',
+                                                                        overflow: 'hidden',
+                                                                        textOverflow: 'ellipsis'
+                                                                    }}>{opt.label}</span>
                                                                 </label>
                                                             </React.Fragment>
                                                         );
@@ -6901,6 +6919,7 @@ export default function Treatment() {
                                                                     }} />
                                                                 )}
                                                                 <label
+                                                                    title={opt.label}
                                                                     style={{
                                                                         display: 'flex',
                                                                         alignItems: 'center',
@@ -6912,7 +6931,8 @@ export default function Treatment() {
                                                                         backgroundColor: 'transparent',
                                                                         borderRadius: '3px',
                                                                         fontWeight: 400,
-                                                                        color: '#333'
+                                                                        color: '#333',
+                                                                        minWidth: 0
                                                                     }}
                                                                 >
                                                                     <input
@@ -6930,7 +6950,11 @@ export default function Treatment() {
                                                                         }}
                                                                         style={{ margin: 0 }}
                                                                     />
-                                                                    <span style={{ whiteSpace: 'nowrap' }}>{opt.label}</span>
+                                                                    <span style={{
+                                                                        whiteSpace: 'nowrap',
+                                                                        overflow: 'hidden',
+                                                                        textOverflow: 'ellipsis'
+                                                                    }}>{opt.label}</span>
                                                                 </label>
                                                             </React.Fragment>
                                                         );

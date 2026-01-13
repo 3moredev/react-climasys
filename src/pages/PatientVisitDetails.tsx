@@ -1922,6 +1922,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                         className="referral-add-icon"
                                                         onClick={() => !readOnly && setShowReferralPopup(true)}
                                                         disabled={readOnly}
+                                                         title="Add New Referral Doctor"
                                                         style={{
                                                             position: 'absolute',
                                                             right: '4px',
