@@ -4,7 +4,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { visitService, ComprehensiveVisitDataRequest } from '../services/visitService';
 import { sessionService, SessionInfo } from "../services/sessionService";
 import { DocumentService } from "../services/documentService";
-import { Delete, Edit, Add, Info, TrendingUp, Download as DownloadIcon } from '@mui/icons-material';
+import { Delete, Edit, Add, Info, TrendingUp, Download as DownloadIcon, Close } from '@mui/icons-material';
 import { Snackbar } from '@mui/material';
 import { complaintService, ComplaintOption } from "../services/complaintService";
 import { medicineService, MedicineOption } from "../services/medicineService";
@@ -7469,19 +7469,18 @@ export default function Treatment() {
                                 <button
                                     type="button"
                                     onClick={handleBackToAppointments}
-                                    disabled={isFormDisabled}
                                     title="Cancel and go back to appointments"
                                     style={{
-                                        backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
+                                        backgroundColor: '#1976d2',
                                         color: 'white',
                                         border: 'none',
                                         padding: '8px 12px',
                                         borderRadius: '4px',
-                                        cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                        cursor: 'pointer',
                                         fontSize: '12px'
                                     }}
                                 >
-                                    Cancel
+                                    Close
                                 </button>
                                 <button
                                     type="button"

@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import { IconButton } from '@mui/material';
+import { Close } from '@mui/icons-material';
 
 type PatientFormTestProps = {
     onClose?: () => void;
@@ -99,7 +101,7 @@ const defaultFormData: PatientFormData = {
     contact: '',
     email: '',
     provider: '',
-    
+
     // Medical History
     height: '',
     weight: '',
@@ -110,7 +112,7 @@ const defaultFormData: PatientFormData = {
     tft: '',
     pallorHb: '',
     referredBy: '',
-    
+
     // Checkboxes
     hypertension: false,
     diabetes: false,
@@ -121,8 +123,8 @@ const defaultFormData: PatientFormData = {
     smoking: false,
     tobacco: false,
     alcohol: false,
-    inPerson:true,
-    
+    inPerson: true,
+
     // Medical Details
     allergy: '',
     medicalHistory: '',
@@ -134,7 +136,7 @@ const defaultFormData: PatientFormData = {
     examinationFindings: '',
     examinationComments: '',
     procedurePerformed: '',
-    
+
     // Current Visit
     complaints: '',
     provisionalDiagnosis: '',
@@ -145,10 +147,10 @@ const defaultFormData: PatientFormData = {
     labSuggested: '',
     dressing: '',
     procedure: '',
-    
+
     // Prescriptions
     prescriptions: [],
-    
+
     // Billing
     billed: '',
     discount: '',
@@ -166,12 +168,12 @@ const defaultFormData: PatientFormData = {
     rawVisit: undefined
 };
 
-const PatientFormTest: React.FC<PatientFormTestProps> = ({ 
-    onClose, 
-    initialData, 
-    visitDates = [], 
-    currentVisitIndex = 0, 
-    onVisitDateChange 
+const PatientFormTest: React.FC<PatientFormTestProps> = ({
+    onClose,
+    initialData,
+    visitDates = [],
+    currentVisitIndex = 0,
+    onVisitDateChange
 }) => {
     const [formData, setFormData] = useState<PatientFormData>({
         ...defaultFormData,
@@ -187,15 +189,15 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
         console.log('Provider field:', formData.provider);
         console.log('Visit dates:', visitDates);
         console.log('Current visit index:', currentVisitIndex);
-        
+
         // Log raw visit data if available
         if (formData.rawVisit) {
             console.log('=== RAW VISIT DATA ===');
             console.log('Raw visit object:', formData.rawVisit);
-            console.log('Raw visit object 123:',JSON.stringify(formData.rawVisit.FollowUp_Description, null, 2));
+            console.log('Raw visit object 123:', JSON.stringify(formData.rawVisit.FollowUp_Description, null, 2));
             console.log('Raw visit keys:', Object.keys(formData.rawVisit));
             console.log('Raw visit JSON:', JSON.stringify(formData.rawVisit, null, 2));
-            
+
             // Specifically log prescription-related data
             if (formData.rawVisit.Prescriptions) {
                 console.log('=== RAW PRESCRIPTIONS DATA ===');
@@ -210,12 +212,12 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                 }
                 console.log('=== END RAW PRESCRIPTIONS DATA ===');
             }
-            
+
             console.log('=== END RAW VISIT DATA ===');
         } else {
             console.log('No raw visit data available');
         }
-        
+
         // Log current prescriptions in form data
         console.log('=== CURRENT PRESCRIPTIONS IN FORM ===');
         console.log('Form prescriptions:', formData.prescriptions);
@@ -224,7 +226,7 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
             console.log(`Form prescription[${index}]:`, prescription);
         });
         console.log('=== END CURRENT PRESCRIPTIONS ===');
-        
+
         // Log provider information
         console.log('=== PROVIDER INFORMATION ===');
         console.log('Form provider field:', formData);
@@ -246,12 +248,12 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
             setFormData(prev => {
                 // Start with defaults, then always overwrite with values from initialData
                 const patched: any = { ...defaultFormData };
-                
+
                 // Helper function to always set value if it's present in initialData (including empty strings)
                 const alwaysSet = (key: keyof PatientFormData, value: any) => {
                     // Only skip if value is explicitly undefined or null (empty strings should overwrite)
                     if (value === undefined || value === null) return;
-                    
+
                     // Preserve type: convert to string for string fields, boolean for boolean fields, etc.
                     const defaultValue = defaultFormData[key];
                     if (typeof defaultValue === 'boolean') {
@@ -269,19 +271,19 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                         patched[key] = value;
                     }
                 };
-                
+
                 // Always overwrite with values from initialData when they are present
                 // This ensures that when navigating between visits, all fields update correctly
                 (Object.keys(initialData) as Array<keyof PatientFormData>).forEach((key) => {
                     const value = (initialData as any)[key];
                     alwaysSet(key, value);
                 });
-                
+
                 // Ensure rawVisit is set first so we can use it for prescription mapping
                 if ('rawVisit' in initialData && initialData.rawVisit !== undefined) {
                     patched.rawVisit = initialData.rawVisit;
                 }
-                
+
                 // Map prescriptions from API format to component format
                 // Handle prescriptions from initialData or rawVisit.Prescriptions
                 // Priority: Use visit_prescription_overwrite table fields (brand_name, morning-afternoon-night, no_of_days, instruction)
@@ -294,7 +296,7 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                         return '';
                     };
                     const toStr = (v: any) => (v === undefined || v === null ? '' : String(v));
-                    
+
                     // Medicine column: Use brand_name from visit_prescription_overwrite (vp.brand_name)
                     // Priority: brand_name > brandName > medicineName > other fallbacks
                     let med = '';
@@ -310,14 +312,14 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                             console.log(`Prescription[${index ?? '?'}]: Using fallback medicine name: "${med}"`);
                         }
                     }
-                    
+
                     // Dosage column: Format as morning-afternoon-night (no_of_days) from visit_prescription_overwrite
                     // Priority: Use morning, afternoon, night, no_of_days from visit_prescription table
                     const m = toStr(get(p, 'morning', 'Morning', 'morningDose', 'M', 'morn', 'AM')) || '0';
                     const a = toStr(get(p, 'afternoon', 'Afternoon', 'afternoonDose', 'A', 'aft', 'PM')) || '0';
                     const n = toStr(get(p, 'night', 'Night', 'nightDose', 'N', 'eve', 'Evening')) || '0';
                     const noOfdays = toStr(get(p, 'no_of_days', 'noOfDays', 'NoOfDays', 'noOfdays'));
-                    
+
                     // Format dosage as: morning-afternoon-night (no_of_days)
                     let doseCombined = '';
                     if (m !== '0' || a !== '0' || n !== '0') {
@@ -334,7 +336,7 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                             doseCombined += ` (${noOfdays})`;
                         }
                     }
-                    
+
                     // Instructions column: Use instruction from visit_prescription_overwrite (vp.instruction)
                     // Priority: instruction > Instruction > Instructions > other fallbacks
                     let instr = toStr(get(p, 'instruction', 'Instruction', 'Instructions', 'instructions', 'Instruction_Text', 'directions', 'how_to_take', 'Directions'));
@@ -342,17 +344,17 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                     if (instr === '0' || instr === '') {
                         instr = ''; // Clear placeholder values
                     }
-                    
+
                     const mapped = {
                         medicine: med,
                         dosage: doseCombined,
                         instructions: instr
                     };
-                    
+
                     console.log(`Prescription[${index ?? '?'}]: Mapped from visit_prescription_overwrite:`, mapped);
                     return mapped;
                 };
-                
+
                 // Explicitly handle prescriptions if present in initialData (even if empty array)
                 // This ensures prescriptions are always updated when initialData changes
                 // This is critical for visit navigation to show correct prescriptions for each visit
@@ -361,9 +363,9 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                     if (Array.isArray(prescriptionsValue)) {
                         // Check if prescriptions are in API format (have brandName, morningDose, etc.) or already mapped
                         // Always prefer brandName if available, even if medicine field exists
-                        const isApiFormat = prescriptionsValue.length > 0 && prescriptionsValue[0] && 
+                        const isApiFormat = prescriptionsValue.length > 0 && prescriptionsValue[0] &&
                             ('brandName' in prescriptionsValue[0] || 'morningDose' in prescriptionsValue[0] || 'afternoonDose' in prescriptionsValue[0]);
-                        
+
                         if (!isApiFormat && prescriptionsValue.length > 0 && prescriptionsValue[0] && 'medicine' in prescriptionsValue[0]) {
                             // Already in correct format, but check if medicine is empty and brandName exists in rawVisit
                             patched.prescriptions = prescriptionsValue
@@ -440,54 +442,54 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                     console.log('PatientFormTest: Mapped prescriptions from rawVisit:', patched.prescriptions.length, 'items', patched.prescriptions);
                 }
                 // Note: If prescriptions is not in initialData or rawVisit, it will remain as defaultFormData.prescriptions (empty array)
-                
+
                 // Patch Allergy from rawVisit if not already set
                 if ((!patched.allergy || patched.allergy === '') && patched.rawVisit && patched.rawVisit.Allergy !== undefined && patched.rawVisit.Allergy !== null) {
                     patched.allergy = String(patched.rawVisit.Allergy);
                     console.log('PatientFormTest: Patched allergy from rawVisit.Allergy:', patched.allergy);
                 }
-                
+
                 // Examination Comments/Detailed History: patch from detailedHistory field value (not from Additional_Comments directly)
                 // Always patch detailedHistory into examinationComments if detailedHistory exists
                 if (patched.rawVisit.Detailed_History && patched.rawVisit.Detailed_History.trim() !== '') {
                     patched.detailedHistory = patched.rawVisit.Detailed_History;
                     console.log('PatientFormTest: Patched examinationComments from detailedHistory:', patched.examinationComments);
                 }
-                if(patched.rawVisit.Additional_Comments && patched.rawVisit.Additional_Comments.trim() !== '') {
+                if (patched.rawVisit.Additional_Comments && patched.rawVisit.Additional_Comments.trim() !== '') {
                     patched.examinationComments = patched.rawVisit.Additional_Comments;
                     console.log('PatientFormTest: Patched examinationComments from additionalComments:', patched.examinationComments);
                 }
                 // Patch medicines field: combine existing + visit_medicine (short_description) + medicine_names (from prescriptions)
                 if (patched.rawVisit) {
                     // const existingMedicines = patched.medicines || '';
-                    
+
                     // Get medicines from visit_medicine table (short_description) - comma-separated string from backend
-                    const visitMedicinesStr = patched.rawVisit?.visit_medicines_short_description 
-                        || patched.rawVisit?.visitMedicinesShortDescription 
-                        || patched.rawVisit?.Visit_Medicines_Short_Description 
+                    const visitMedicinesStr = patched.rawVisit?.visit_medicines_short_description
+                        || patched.rawVisit?.visitMedicinesShortDescription
+                        || patched.rawVisit?.Visit_Medicines_Short_Description
                         || '';
-                        patched.medicines = visitMedicinesStr;
-                    
+                    patched.medicines = visitMedicinesStr;
+
                     // Get medicine_names from visit_prescription_overwrite table (medicine_name) - comma-separated string from backend
-                    const medicineNamesStr = patched.rawVisit?.medicine_names 
-                        || patched.rawVisit?.medicineNames 
-                        || patched.rawVisit?.Medicine_Names 
-                        || patched.rawVisit?.Medicine_Name 
+                    const medicineNamesStr = patched.rawVisit?.medicine_names
+                        || patched.rawVisit?.medicineNames
+                        || patched.rawVisit?.Medicine_Names
+                        || patched.rawVisit?.Medicine_Name
                         || '';
-                    
+
                     // Parse comma-separated strings into arrays
                     // const existingList = existingMedicines 
                     //     ? existingMedicines.split(',').map((m: string) => m.trim()).filter((m: string) => m !== '')
                     //     : [];
-                    
-                    const visitMedicinesList = visitMedicinesStr 
+
+                    const visitMedicinesList = visitMedicinesStr
                         ? String(visitMedicinesStr).split(',').map((m: string) => m.trim()).filter((m: string) => m !== '')
                         : [];
-                    
-                    const medicineNamesList = medicineNamesStr 
+
+                    const medicineNamesList = medicineNamesStr
                         ? String(medicineNamesStr).split(',').map((m: string) => m.trim()).filter((m: string) => m !== '')
                         : [];
-                    
+
                     // Fallback: If backend strings not available, try array format
                     let fallbackMedicinesList: string[] = [];
                     if (visitMedicinesList.length === 0 && medicineNamesList.length === 0) {
@@ -501,30 +503,30 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                 .filter((desc: string) => desc && desc.trim() !== '');
                         }
                     }
-                    
+
                     // Combine all medicine sources: existing + visit_medicine (short_description) + medicine_names (prescriptions) + fallback
                     // const allMedicines = [...existingList, ...visitMedicinesList, ...medicineNamesList, ...fallbackMedicinesList];
                     const allMedicines = [...visitMedicinesList, ...medicineNamesList, ...fallbackMedicinesList];
-                    
+
                     // Remove duplicates and empty values
                     const uniqueMedicines = Array.from(new Set(allMedicines.filter((m: string) => m !== '')));
-                    
+
                     if (uniqueMedicines.length > 0) {
                         patched.medicines = uniqueMedicines.join(', ');
                         console.log('PatientFormTest: Patched medicines field with visit_medicine (short_description) + medicine_names:', patched.medicines);
                     }
-                    
+
                     // Patch patient_visit.follow_up into followUp field
                     const followUpFromVisit = patched.rawVisit?.follow_up || patched.rawVisit?.followUp || patched.rawVisit?.Follow_Up || '';
                     if (followUpFromVisit && String(followUpFromVisit).trim() !== '') {
                         patched.followUp = String(followUpFromVisit).trim();
                         console.log('PatientFormTest: Patched followUp from patient_visit.follow_up:', patched.followUp);
                     }
-                    
+
                     // Patch rawVisit.Current_Medicines into currentMedicines field
-                    const currentMedicinesFromVisit = patched.rawVisit?.Current_Medicines 
-                        || patched.rawVisit?.current_medicines 
-                        || patched.rawVisit?.currentMedicines 
+                    const currentMedicinesFromVisit = patched.rawVisit?.Current_Medicines
+                        || patched.rawVisit?.current_medicines
+                        || patched.rawVisit?.currentMedicines
                         || '';
                     if (currentMedicinesFromVisit && String(currentMedicinesFromVisit).trim() !== '') {
                         patched.currentMedicines = String(currentMedicinesFromVisit).trim();
@@ -537,7 +539,7 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                     patched.procedurePerformed = String(patched.rawVisit.Observation);
                     console.log('PatientFormTest: Patched procedurePerformed from Observation:', patched.procedurePerformed);
                 }
-                
+
                 // Dressing: patch from raw visit Dressing if present
                 if ((!patched.dressing || patched.dressing === '') && patched.rawVisit && patched.rawVisit.Dressing !== undefined && patched.rawVisit.Dressing !== null) {
                     patched.dressing = String(patched.rawVisit.Dressing);
@@ -557,9 +559,9 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                 if (patched.rawVisit) {
                     // First check for additional_instructions (highest priority) - matches backend field name exactly
                     // Check snake_case first (as returned from native SQL query), then camelCase (if JPA entity serialized)
-                    const additionalInstructions = patched.rawVisit?.additional_instructions 
-                        || patched.rawVisit?.additionalInstructions 
-                        || patched.rawVisit?.Additional_Instructions 
+                    const additionalInstructions = patched.rawVisit?.additional_instructions
+                        || patched.rawVisit?.additionalInstructions
+                        || patched.rawVisit?.Additional_Instructions
                         || '';
                     if (additionalInstructions && String(additionalInstructions).trim() !== '') {
                         patched.remark = String(additionalInstructions).trim();
@@ -580,7 +582,7 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                             const s = String(val).trim().toLowerCase();
                             return s === 'plan / adv' || s === 'plan/adv';
                         };
-                        
+
                         // Check if Remark or comment exists and is not the same as Instructions or Plan
                         if (remarkValue !== undefined && remarkValue !== null && String(remarkValue).trim() !== '') {
                             const remarkStr = String(remarkValue).trim();
@@ -608,7 +610,7 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                         }
                     }
                 }
-                
+
                 console.log('PatientFormTest: Final patched prescriptions:', patched.prescriptions.length, 'items');
                 console.log('PatientFormTest: Final patched prescriptions details:', patched.prescriptions);
                 return patched as PatientFormData;
@@ -617,10 +619,14 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
     }, [initialData]);
 
     const isReadOnly = true;
+    const loading = false;
+    const handleClose = () => {
+        if (onClose) onClose();
+    };
 
     const formatDate = (d: Date): string => {
         const dd = String(d.getDate()).padStart(2, '0');
-        const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         const mmm = monthNames[d.getMonth()];
         const yy = String(d.getFullYear()).slice(-2);
         return `${dd} - ${mmm} - ${yy}`;
@@ -639,7 +645,7 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
             let date: Date;
             if (dateString.includes('-')) {
                 // Handle formats like "28-Jun-2025" or "2025-06-28"
-                if (dateString.includes('Jun') || dateString.includes('Jan') || dateString.includes('Feb') || 
+                if (dateString.includes('Jun') || dateString.includes('Jan') || dateString.includes('Feb') ||
                     dateString.includes('Mar') || dateString.includes('Apr') || dateString.includes('May') ||
                     dateString.includes('Jul') || dateString.includes('Aug') || dateString.includes('Sep') ||
                     dateString.includes('Oct') || dateString.includes('Nov') || dateString.includes('Dec')) {
@@ -652,11 +658,11 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
             } else {
                 date = new Date(dateString);
             }
-            
+
             if (isNaN(date.getTime())) {
                 return dateString; // Return original if parsing fails
             }
-            
+
             return formatDate(date);
         } catch (error) {
             console.error('Error formatting visit date:', error, dateString);
@@ -666,14 +672,14 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
 
     const navigateVisitDate = (direction: 'prev' | 'next') => {
         if (!onVisitDateChange || visitDates.length === 0) return;
-        
+
         let newIndex = currentVisitIndex;
         if (direction === 'prev' && currentVisitIndex > 0) {
             newIndex = currentVisitIndex - 1;
         } else if (direction === 'next' && currentVisitIndex < visitDates.length - 1) {
             newIndex = currentVisitIndex + 1;
         }
-        
+
         if (newIndex !== currentVisitIndex) {
             onVisitDateChange(newIndex);
         }
@@ -705,7 +711,7 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
     const formatToDdMmmYy = (dateInput: any): string => {
         if (!dateInput) return '';
         try {
-            const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
             const d = new Date(dateInput);
             if (isNaN(d.getTime())) {
                 // Try when input is already like dd-MMM-yy or dd-MMM-yyyy
@@ -763,23 +769,23 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
         const p = rv.P ?? rv.p;
         const l = rv.L ?? rv.l;
         const r = rv.R ?? rv.r;
-    
+
         const parts: string[] = [];
-    
+
         if (p !== undefined && p !== null && String(p).trim() !== '') parts.push(String(p).trim());
         if (l !== undefined && l !== null && String(l).trim() !== '') parts.push(String(l).trim());
         if (r !== undefined && r !== null && String(r).trim() !== '') parts.push(String(r).trim());
-    
+
         if (parts.length > 0) {
             // join with spaces if P/L/R exist
             return parts.join(' ');
         }
-    
+
         // if PLR is a string, insert spaces between each character/word
         if (typeof raw === 'string') {
             return raw.trim().split('').join(' ');
         }
-    
+
         return String(raw || '');
     };
 
@@ -823,49 +829,66 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
     const updatePrescription = (index: number, field: keyof Prescription, value: string) => {
         setFormData(prev => ({
             ...prev,
-            prescriptions: prev.prescriptions.map((prescription, i) => 
+            prescriptions: prev.prescriptions.map((prescription, i) =>
                 i === index ? { ...prescription, [field]: value } : prescription
             )
         }));
     };
 
     return (
-        <div style={{ 
-            fontFamily: "'Roboto', sans-serif", 
-            backgroundColor: '#f5f5f5', 
-            minHeight: '100%', 
+        <div style={{
+            fontFamily: "'Roboto', sans-serif",
+            backgroundColor: '#f5f5f5',
+            minHeight: '100%',
             // padding: '12px' 
         }}>
-            <div style={{ 
-                maxWidth: '100%', 
+            <div style={{
+                maxWidth: '100%',
                 width: '100%',
-                margin: '0 auto', 
-                backgroundColor: 'white', 
-                borderRadius: '8px', 
+                margin: '0 auto',
+                backgroundColor: 'white',
+                borderRadius: '8px',
                 boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
                 padding: '15px'
             }}>
                 {/* Header */}
-                <div style={{ 
-                    borderBottom: '2px solid #e0e0e0', 
-                    paddingBottom: '10px', 
+                <div style={{
+                    borderBottom: '2px solid #e0e0e0',
+                    paddingBottom: '10px',
                     marginBottom: '10px',
                     marginLeft: 0,
                     marginRight: 0
                 }}>
-                    <h2 style={{ 
-                        color: '#000000', 
-                        fontSize: '1.4rem', 
-                        fontWeight: 'bold', 
-                        margin: '0 0 10px 0',   
-                        fontFamily: "'Roboto', sans-serif"
-                    }}>
-                        Previous Visits
-                    </h2>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <h2 style={{
+                            color: '#000000',
+                            fontSize: '1.4rem',
+                            fontWeight: 'bold',
+                            margin: '0 0 10px 0',
+                            fontFamily: "'Roboto', sans-serif"
+                        }}>
+                            Previous Visits
+                        </h2>
+                        <IconButton
+                            onClick={handleClose}
+                            disabled={loading}
+                            disableRipple
+                            sx={{
+                                color: '#fff',
+                                backgroundColor: '#1976d2',
+                                '&:hover': { backgroundColor: '#1565c0' },
+                                width: 36,
+                                height: 36,
+                                borderRadius: '8px'
+                            }}
+                        >
+                            <Close />
+                        </IconButton>
+                    </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
-                        <div style={{ 
-                            color: '#2E7D32', 
-                            fontSize: '1rem', 
+                        <div style={{
+                            color: '#2E7D32',
+                            fontSize: '1rem',
                             fontWeight: '100',
                             fontFamily: "'Roboto', sans-serif"
                         }}>
@@ -905,10 +928,10 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                             }}>
                                 {getCurrentVisitDate()}
                                 {visitDates.length > 0 && (
-                                    <div style={{ 
-                                        fontSize: '1rem', 
-                                        color: '#666', 
-                                        marginTop: '2px' 
+                                    <div style={{
+                                        fontSize: '1rem',
+                                        color: '#666',
+                                        marginTop: '2px'
                                     }}>
                                     </div>
                                 )}
@@ -933,8 +956,8 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                 ▶
                             </button>
                         </div>
-                        <div style={{ 
-                            color: 'rgb(21, 101, 192)', 
+                        <div style={{
+                            color: 'rgb(21, 101, 192)',
                             fontSize: '0.9rem',
                             padding: '10px 20px',
                             // fontWeight: '100',
@@ -943,9 +966,9 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                             // whiteSpace: 'nowrap'
                         }}>{getPLRText()}
                         </div>
-                        <div style={{ 
-                            color: 'rgb(21, 101, 192)', 
-                            fontSize: '0.95rem', 
+                        <div style={{
+                            color: 'rgb(21, 101, 192)',
+                            fontSize: '0.95rem',
                             fontWeight: '100',
                             // marginTop: '0px',
                             fontFamily: "'Roboto', sans-serif",
@@ -954,6 +977,7 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                             {formData.provider || 'Dr. Tongaonkar'}
                         </div>
                     </div>
+
                 </div>
 
                 {/* Patient Vitals & History Section (single column) */}
@@ -969,9 +993,9 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                     }}>
                         Patient Vitals & History
                     </h3> */}
-                    
-                    <div style={{ 
-                        display: 'flex', 
+
+                    <div style={{
+                        display: 'flex',
                         flexWrap: 'wrap',
                         alignItems: 'center',
                         gap: '8px',
@@ -1053,9 +1077,9 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                     </div>
 
                     {/* Conditions (5 per row) */}
-                    <div style={{ 
-                        display: 'grid', 
-                        gridTemplateColumns: 'repeat(10, 1fr)', 
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(10, 1fr)',
                         gap: '10px',
                         marginBottom: '20px'
                     }}>
@@ -1065,15 +1089,15 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                             { key: 'cholesterol', label: 'Cholesterol' },
                             { key: 'ihd', label: 'IHD' },
                             { key: 'asthma', label: 'Asthma' },
-                            { key: 'th', label: 'TH' }, 
+                            { key: 'th', label: 'TH' },
                             { key: 'smoking', label: 'Smoking' },
                             { key: 'tobacco', label: 'Tobacco' },
                             { key: 'alcohol', label: 'Alcohol' }
                         ].map(({ key, label }) => (
-                            <div key={key} style={{ 
-                                display: 'flex', 
-                                alignItems: 'center', 
-                                gap: '8px' 
+                            <div key={key} style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px'
                             }}>
                                 <input
                                     type="checkbox"
@@ -1086,9 +1110,9 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                         accentColor: '#1E88E5'
                                     }}
                                 />
-                                <label style={{ 
-                                    color: '#212121', 
-                                    fontSize: '0.9rem', 
+                                <label style={{
+                                    color: '#212121',
+                                    fontSize: '0.9rem',
                                     fontWeight: 'bold',
                                     fontFamily: "'Roboto', sans-serif",
                                     margin: 0
@@ -1099,8 +1123,8 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                         ))}
                     </div>
 
-                      {/* Inline groups: will wrap to 2 lines if needed */}
-                      <div style={{
+                    {/* Inline groups: will wrap to 2 lines if needed */}
+                    <div style={{
                         display: 'flex',
                         flexWrap: 'wrap',
                         alignItems: 'center',
@@ -1257,10 +1281,10 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                     </div>
 
                     {/* Narrative fields (5 per row, auto-height) */}
-                    <div style={{ 
-                        display: 'grid', 
-                        gridTemplateColumns: 'repeat(4, 1fr)', 
-                        gap: '15px', 
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(4, 1fr)',
+                        gap: '15px',
                         marginBottom: '20px'
                     }}>
                         {[
@@ -1277,10 +1301,10 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                             // { key: 'procedurePerformed', label: 'Procedure Performed/Notes:' }
                         ].map(({ key, label }) => (
                             <div key={key}>
-                                <label style={{ 
-                                    display: 'block', 
-                                    color: '#212121', 
-                                    fontSize: '0.9rem', 
+                                <label style={{
+                                    display: 'block',
+                                    color: '#212121',
+                                    fontSize: '0.9rem',
                                     fontWeight: 'bold',
                                     marginBottom: '5px',
                                     fontFamily: "'Roboto', sans-serif"
@@ -1297,14 +1321,14 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                                         : key === 'complaints'
                                                             ? getComplaintsValue()
                                                             : (formData[key as keyof typeof formData] as string)
-                                                  )
+                                                )
                                                 : (
                                                     key === 'labSuggested'
                                                         ? getLabSuggestedValue()
                                                         : key === 'complaints'
                                                             ? getComplaintsValue()
                                                             : (formData[key as keyof typeof formData] as string)
-                                                  )
+                                                )
                                         }
                                         onChange={(e) => { handleInputChange(key, e.target.value); }}
                                         placeholder={formData[key as keyof typeof formData] ? '' : '-'}
@@ -1337,10 +1361,10 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                             </div>
                         ))}
                     </div>
-                    <div style={{ 
-                        display: 'grid', 
-                        gridTemplateColumns: 'repeat(4, 1fr)', 
-                        gap: '15px', 
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(4, 1fr)',
+                        gap: '15px',
                         marginBottom: '20px'
                     }}>
                         {[
@@ -1358,10 +1382,10 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                             { key: 'labSuggested', label: 'Lab Suggested:' }
                         ].map(({ key, label }) => (
                             <div key={key}>
-                                <label style={{ 
-                                    display: 'block', 
-                                    color: '#212121', 
-                                    fontSize: '0.9rem', 
+                                <label style={{
+                                    display: 'block',
+                                    color: '#212121',
+                                    fontSize: '0.9rem',
                                     fontWeight: '700',
                                     marginBottom: '5px',
                                     fontFamily: "'Roboto', sans-serif"
@@ -1399,9 +1423,9 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
 
                     {/* Prescriptions - moved here after Procedure Performed/Notes */}
                     <div style={{ marginBottom: '20px' }}>
-                        <h3 style={{ 
-                            color: '#212121', 
-                            fontSize: '1rem', 
+                        <h3 style={{
+                            color: '#212121',
+                            fontSize: '1rem',
                             fontWeight: '600',
                             fontFamily: "'Roboto', sans-serif",
                             // borderBottom: '1px solid #e0e0e0',
@@ -1432,13 +1456,13 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                             let medicineDisplay = prescription.medicine || '';
                                             if (!medicineDisplay && formData.rawVisit?.Prescriptions?.[index]) {
                                                 const rawPrescription = formData.rawVisit.Prescriptions[index];
-                                                medicineDisplay = rawPrescription?.brand_name 
-                                                    || rawPrescription?.brandName 
-                                                    || rawPrescription?.medicineName 
-                                                    || rawPrescription?.Medicine_Name 
+                                                medicineDisplay = rawPrescription?.brand_name
+                                                    || rawPrescription?.brandName
+                                                    || rawPrescription?.medicineName
+                                                    || rawPrescription?.Medicine_Name
                                                     || '';
                                             }
-                                            
+
                                             // Dosage: Format as morning-afternoon-night (no_of_days) from visit_prescription_overwrite
                                             // If dosage is empty, try to construct from rawVisit prescription data
                                             let dosageDisplay = prescription.dosage || '';
@@ -1448,7 +1472,7 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                                 const a = rawPrescription?.afternoon || rawPrescription?.Afternoon || '0';
                                                 const n = rawPrescription?.night || rawPrescription?.Night || '0';
                                                 const noOfdays = rawPrescription?.no_of_days || rawPrescription?.noOfDays || '';
-                                                
+
                                                 if (m !== '0' || a !== '0' || n !== '0') {
                                                     dosageDisplay = `${m}-${a}-${n}`;
                                                     if (noOfdays && noOfdays !== '0' && noOfdays !== '') {
@@ -1456,38 +1480,38 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                                     }
                                                 }
                                             }
-                                            
+
                                             // Instructions: Use instruction from visit_prescription_overwrite (vp.instruction)
                                             // Fallback: if instructions is empty, try to get instruction from rawVisit
                                             let instructionsDisplay = prescription.instructions || '';
                                             if (!instructionsDisplay && formData.rawVisit?.Prescriptions?.[index]) {
                                                 const rawPrescription = formData.rawVisit.Prescriptions[index];
-                                                instructionsDisplay = rawPrescription?.instruction 
-                                                    || rawPrescription?.Instruction 
-                                                    || rawPrescription?.Instructions 
+                                                instructionsDisplay = rawPrescription?.instruction
+                                                    || rawPrescription?.Instruction
+                                                    || rawPrescription?.Instructions
                                                     || '';
                                             }
-                                            
+
                                             return (
-                                            <tr key={index}>
-                                                <td style={{ height: '40px', padding: '10px', lineHeight: '20px', borderBottom: '1px solid #eaeaea', borderRight: '1px solid #e0e0e0', verticalAlign: 'middle', whiteSpace: 'normal', wordBreak: 'break-word', overflow: 'hidden' }}>
+                                                <tr key={index}>
+                                                    <td style={{ height: '40px', padding: '10px', lineHeight: '20px', borderBottom: '1px solid #eaeaea', borderRight: '1px solid #e0e0e0', verticalAlign: 'middle', whiteSpace: 'normal', wordBreak: 'break-word', overflow: 'hidden' }}>
                                                         {medicineDisplay || '-'}
-                                                </td>
-                                                <td style={{ height: '40px', padding: '10px', lineHeight: '20px', borderBottom: '1px solid #eaeaea', borderRight: '1px solid #e0e0e0', verticalAlign: 'middle', whiteSpace: 'normal', wordBreak: 'break-word', overflow: 'hidden' }}>
-                                                    {dosageDisplay || '-'}
-                                                </td>
-                                                <td style={{ height: '40px', padding: '10px', lineHeight: '20px', borderBottom: '1px solid #eaeaea', verticalAlign: 'middle', whiteSpace: 'normal', wordBreak: 'break-word', overflow: 'hidden' }}>
-                                                    {instructionsDisplay || '-'}
-                                                </td>
-                                            </tr>
+                                                    </td>
+                                                    <td style={{ height: '40px', padding: '10px', lineHeight: '20px', borderBottom: '1px solid #eaeaea', borderRight: '1px solid #e0e0e0', verticalAlign: 'middle', whiteSpace: 'normal', wordBreak: 'break-word', overflow: 'hidden' }}>
+                                                        {dosageDisplay || '-'}
+                                                    </td>
+                                                    <td style={{ height: '40px', padding: '10px', lineHeight: '20px', borderBottom: '1px solid #eaeaea', verticalAlign: 'middle', whiteSpace: 'normal', wordBreak: 'break-word', overflow: 'hidden' }}>
+                                                        {instructionsDisplay || '-'}
+                                                    </td>
+                                                </tr>
                                             );
                                         })
                                     ) : (
                                         <tr>
-                                            <td colSpan={3} style={{ 
-                                                padding: '20px', 
-                                                textAlign: 'center', 
-                                                color: '#666', 
+                                            <td colSpan={3} style={{
+                                                padding: '20px',
+                                                textAlign: 'center',
+                                                color: '#666',
                                                 fontStyle: 'italic',
                                                 borderBottom: '1px solid #eaeaea'
                                             }}>
@@ -1501,10 +1525,10 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                     </div>
 
                     {/* Follow-up fields in requested order */}
-                    <div style={{ 
-                        display: 'grid', 
-                        gridTemplateColumns: 'repeat(4, 1fr)', 
-                        gap: '15px' 
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(4, 1fr)',
+                        gap: '15px'
                     }}>
                         {[
                             // { key: 'labSuggested', label: 'Lab Suggested:' },
@@ -1514,10 +1538,10 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                             { key: 'plan', label: 'Plan' }
                         ].map(({ key, label }) => (
                             <div key={key}>
-                                <label style={{ 
-                                    display: 'block', 
-                                    color: '#212121', 
-                                    fontSize: '0.9rem', 
+                                <label style={{
+                                    display: 'block',
+                                    color: '#212121',
+                                    fontSize: '0.9rem',
                                     fontWeight: 'bold',
                                     marginBottom: '5px',
                                     fontFamily: "'Roboto', sans-serif"
@@ -1570,7 +1594,7 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                     }}>
                         Current Visit Details
                     </h3> */}
-                    
+
                     <div style={{ display: 'none' }} />
                 </div>
 
@@ -1635,24 +1659,24 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                 </div> */}
 
                 {/* Billing Details (at the end of the 3-column grid) */}
-                <div style={{ marginBottom: '30px' }}> 
-                    <div style={{ 
+                <div style={{ marginBottom: '30px' }}>
+                    <div style={{
                         display: 'grid',
                         gridTemplateColumns: 'repeat(4, 1fr)',
                         gap: '15px'
                     }}>
                         <div style={{ minWidth: 0 }}>
-                            <label style={{ 
-                                display: 'flex', 
+                            <label style={{
+                                display: 'flex',
                                 alignItems: 'center',
-                                color: '#212121', 
-                                fontSize: '0.9rem', 
+                                color: '#212121',
+                                fontSize: '0.9rem',
                                 fontWeight: 'bold',
                                 marginBottom: '5px',
                                 fontFamily: "'Roboto', sans-serif"
                             }}>
                                 Billed (Rs):
-                                <div 
+                                <div
                                     style={{
                                         position: 'relative',
                                         display: 'inline-block',
@@ -1677,7 +1701,7 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                     {showBillingTooltip && (() => {
                                         const billingData = formData.rawVisit?.Billing || [];
                                         const hasBillingData = Array.isArray(billingData) && billingData.length > 0;
-                                        
+
                                         return (
                                             <div style={{
                                                 position: 'absolute',
@@ -1744,12 +1768,12 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                 }}
                             />
                         </div>
-                        
+
                         <div style={{ minWidth: 0 }}>
-                            <label style={{ 
-                                display: 'block', 
-                                color: '#212121', 
-                                fontSize: '0.9rem', 
+                            <label style={{
+                                display: 'block',
+                                color: '#212121',
+                                fontSize: '0.9rem',
                                 fontWeight: 'bold',
                                 marginBottom: '5px',
                                 fontFamily: "'Roboto', sans-serif"
@@ -1775,12 +1799,12 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                 }}
                             />
                         </div>
-                        
+
                         <div style={{ minWidth: 0 }}>
-                            <label style={{ 
-                                display: 'block', 
-                                color: '#212121', 
-                                fontSize: '0.9rem', 
+                            <label style={{
+                                display: 'block',
+                                color: '#212121',
+                                fontSize: '0.9rem',
                                 fontWeight: 'bold',
                                 marginBottom: '5px',
                                 fontFamily: "'Roboto', sans-serif"
@@ -1806,12 +1830,12 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                 }}
                             />
                         </div>
-                        
+
                         <div style={{ minWidth: 0 }}>
-                            <label style={{ 
-                                display: 'block', 
-                                color: '#212121', 
-                                fontSize: '0.9rem', 
+                            <label style={{
+                                display: 'block',
+                                color: '#212121',
+                                fontSize: '0.9rem',
                                 fontWeight: 'bold',
                                 marginBottom: '5px',
                                 fontFamily: "'Roboto', sans-serif"
@@ -1837,12 +1861,12 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                 }}
                             />
                         </div>
-                        
+
                         <div style={{ minWidth: 0 }}>
-                            <label style={{ 
-                                display: 'block', 
-                                color: '#212121', 
-                                fontSize: '0.9rem', 
+                            <label style={{
+                                display: 'block',
+                                color: '#212121',
+                                fontSize: '0.9rem',
                                 fontWeight: 'bold',
                                 marginBottom: '5px',
                                 fontFamily: "'Roboto', sans-serif"
@@ -1868,12 +1892,12 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                 }}
                             />
                         </div>
-                        
+
                         <div style={{ minWidth: 0 }}>
-                            <label style={{ 
-                                display: 'block', 
-                                color: '#212121', 
-                                fontSize: '0.9rem', 
+                            <label style={{
+                                display: 'block',
+                                color: '#212121',
+                                fontSize: '0.9rem',
                                 fontWeight: 'bold',
                                 marginBottom: '5px',
                                 fontFamily: "'Roboto', sans-serif"
@@ -1899,12 +1923,12 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                 }}
                             />
                         </div>
-                        
+
                         <div style={{ minWidth: 220 }}>
-                            <label style={{ 
-                                display: 'block', 
-                                color: '#212121', 
-                                fontSize: '0.9rem', 
+                            <label style={{
+                                display: 'block',
+                                color: '#212121',
+                                fontSize: '0.9rem',
                                 fontWeight: 'bold',
                                 marginBottom: '5px',
                                 fontFamily: "'Roboto', sans-serif"
@@ -1930,12 +1954,12 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                 }}
                             />
                         </div>
-                        
+
                         <div style={{ minWidth: 220 }}>
-                            <label style={{ 
-                                display: 'block', 
-                                color: '#212121', 
-                                fontSize: '0.9rem', 
+                            <label style={{
+                                display: 'block',
+                                color: '#212121',
+                                fontSize: '0.9rem',
                                 fontWeight: 'bold',
                                 marginBottom: '5px',
                                 fontFamily: "'Roboto', sans-serif"
@@ -1975,10 +1999,10 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                             />
                         </div>
                         <div style={{ minWidth: 220 }}>
-                            <label style={{ 
-                                display: 'block', 
-                                color: '#212121', 
-                                fontSize: '0.9rem', 
+                            <label style={{
+                                display: 'block',
+                                color: '#212121',
+                                fontSize: '0.9rem',
                                 fontWeight: 'bold',
                                 marginBottom: '5px',
                                 fontFamily: "'Roboto', sans-serif"
@@ -2004,12 +2028,12 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                 }}
                             />
                         </div>
-                        
+
                         <div style={{ minWidth: 0 }}>
-                            <label style={{ 
-                                display: 'block', 
-                                color: '#212121', 
-                                fontSize: '0.9rem', 
+                            <label style={{
+                                display: 'block',
+                                color: '#212121',
+                                fontSize: '0.9rem',
                                 fontWeight: 'bold',
                                 marginBottom: '5px',
                                 fontFamily: "'Roboto', sans-serif"
@@ -2035,12 +2059,12 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                 }}
                             />
                         </div>
-                        
+
                         <div style={{ minWidth: 0 }}>
-                            <label style={{ 
-                                display: 'block', 
-                                color: '#212121', 
-                                fontSize: '0.9rem', 
+                            <label style={{
+                                display: 'block',
+                                color: '#212121',
+                                fontSize: '0.9rem',
                                 fontWeight: 'bold',
                                 marginBottom: '5px',
                                 fontFamily: "'Roboto', sans-serif"
@@ -2067,12 +2091,12 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                 }}
                             />
                         </div>
-                        
+
                         <div>
-                            <label style={{ 
-                                display: 'block', 
-                                color: '#212121', 
-                                fontSize: '0.9rem', 
+                            <label style={{
+                                display: 'block',
+                                color: '#212121',
+                                fontSize: '0.9rem',
                                 fontWeight: 'bold',
                                 marginBottom: '5px',
                                 fontFamily: "'Roboto', sans-serif"
@@ -2100,10 +2124,10 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                             />
                         </div>
                         <div>
-                            <label style={{ 
-                                display: 'block', 
-                                color: '#212121', 
-                                fontSize: '0.9rem', 
+                            <label style={{
+                                display: 'block',
+                                color: '#212121',
+                                fontSize: '0.9rem',
                                 fontWeight: 'bold',
                                 marginBottom: '5px',
                                 fontFamily: "'Roboto', sans-serif"
@@ -2134,9 +2158,9 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                 </div>
 
                 {/* Action Buttons */}
-                <div style={{ 
-                    display: 'flex', 
-                    justifyContent: 'flex-end', 
+                <div style={{
+                    display: 'flex',
+                    justifyContent: 'flex-end',
                     gap: '20px',
                     paddingTop: '20px',
                     borderTop: '1px solid #e0e0e0'

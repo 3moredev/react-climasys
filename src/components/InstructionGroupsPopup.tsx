@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Delete } from '@mui/icons-material';
+import { Delete, Close } from '@mui/icons-material';
 import { patientService } from '../services/patientService';
 import { sessionService } from '../services/sessionService';
 
@@ -84,18 +84,18 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
         const raw = (data as any)?.InstructionGroups || (data as any)?.instructionGroups || [];
         const mapped: InstructionGroup[] = Array.isArray(raw)
           ? raw.map((g: any, idx: number) => {
-              const groupDesc = g?.group_description ?? g?.groupDescription ?? g?.groupName ?? g?.name;
-              const instrList = g?.instructions_description;
-              const instrText = Array.isArray(instrList)
-                ? instrList.map((s: any) => String(s)).join(' ')
-                : (g?.instructions ?? g?.instructionText ?? g?.text ?? g?.instructions_description ?? '');
-              return {
-                id: String(g?.id ?? g?.groupId ?? idx + 1),
-                name: String(groupDesc ?? 'Group').toUpperCase(),
-                nameHindi: String(g?.nameHindi ?? g?.hindiName ?? g?.name_hi ?? ''),
-                instructions: String(instrText)
-              };
-            })
+            const groupDesc = g?.group_description ?? g?.groupDescription ?? g?.groupName ?? g?.name;
+            const instrList = g?.instructions_description;
+            const instrText = Array.isArray(instrList)
+              ? instrList.map((s: any) => String(s)).join(' ')
+              : (g?.instructions ?? g?.instructionText ?? g?.text ?? g?.instructions_description ?? '');
+            return {
+              id: String(g?.id ?? g?.groupId ?? idx + 1),
+              name: String(groupDesc ?? 'Group').toUpperCase(),
+              nameHindi: String(g?.nameHindi ?? g?.hindiName ?? g?.name_hi ?? ''),
+              instructions: String(instrText)
+            };
+          })
           : [];
         if (!cancelled) {
           const normalize = (value: string) => value.trim().toUpperCase();
@@ -143,7 +143,7 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
     console.log('initialSelectedGroups length:', initialSelectedGroups?.length || 0);
     console.log('instructionGroups length:', instructionGroups.length);
     console.log('Current selectedGroups state:', selectedGroups);
-    
+
     if (isOpen) {
       if (initialSelectedGroups && initialSelectedGroups.length > 0) {
         // Display saved instructions from master-lists API in the tables
@@ -151,7 +151,7 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
         console.log('initialSelectedGroups to set:', JSON.stringify(initialSelectedGroups, null, 2));
         setSelectedGroups(initialSelectedGroups);
         console.log('✅ POPUP: selectedGroups state has been SET');
-        
+
         // Sync dropdown selection with loaded instruction groups if possible
         const normalize = (value: string) => value.trim().toUpperCase();
         const matchedIds = instructionGroups
@@ -198,7 +198,7 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
         setIsGroupsOpen(false);
       }
     };
-    
+
     const onWheel = (e: WheelEvent) => {
       // Prevent closing dropdown when scrolling inside it
       if (!isGroupsOpen) return;
@@ -207,7 +207,7 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
         e.stopPropagation();
       }
     };
-    
+
     document.addEventListener('mousedown', onClick);
     document.addEventListener('wheel', onWheel, true);
     return () => {
@@ -230,23 +230,23 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
 
   const handleAddGroups = () => {
     if (selectedGroupIds.length === 0) return;
-    
-    const newGroups = instructionGroups.filter(group => 
-      selectedGroupIds.includes(group.id) && 
+
+    const newGroups = instructionGroups.filter(group =>
+      selectedGroupIds.includes(group.id) &&
       !selectedGroups.some(selected => selected.id === group.id)
     );
-    
+
     if (newGroups.length === 0) {
       console.log('No new groups to add from dropdown selection.');
       return;
     }
-    
+
     const updatedGroups = [...selectedGroups, ...newGroups];
     console.log('Adding groups from dropdown to tables:', newGroups);
     setSelectedGroups(updatedGroups);
     setSelectedGroupIds([]);
     setIsGroupsOpen(false);
-    
+
     // Notify parent component of the change
     if (onChange) {
       onChange(updatedGroups);
@@ -256,7 +256,7 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
   const handleRemoveGroup = (groupId: string) => {
     const updatedGroups = selectedGroups.filter(g => g.id !== groupId);
     setSelectedGroups(updatedGroups);
-    
+
     // Notify parent component of the change
     if (onChange) {
       onChange(updatedGroups);
@@ -356,7 +356,7 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
             }}>
               Instruction Groups
             </h3>
-            
+
             <div style={{ display: 'flex', gap: '10px', alignItems: 'end', marginBottom: '50px' }}>
               <div ref={groupsRef} style={{ position: 'relative', flex: 1 }}>
                 <div
@@ -384,7 +384,7 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
                 </div>
 
                 {isGroupsOpen && (
-                  <div 
+                  <div
                     ref={dropdownRef}
                     onMouseDown={(e) => e.stopPropagation()}
                     style={{
@@ -404,7 +404,7 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
                       flexDirection: 'column'
                     }}
                   >
-                    <div style={{ padding: '6px' }}>
+                    <div style={{ padding: '6px', position: 'relative' }}>
                       <input
                         type="text"
                         value={searchTerm}
@@ -413,13 +413,30 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
                         style={{
                           width: '100%',
                           height: '32px',
-                          padding: '6px 8px',
+                          padding: '6px 30px 6px 8px',
                           border: '1px solid #B7B7B7',
                           borderRadius: '4px',
                           fontSize: '12px',
                           outline: 'none'
                         }}
                       />
+                      {searchTerm && (
+                        <div
+                          onClick={() => setSearchTerm('')}
+                          style={{
+                            position: 'absolute',
+                            right: '12px',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            cursor: 'pointer',
+                            color: '#000',
+                            display: 'flex',
+                            alignItems: 'center'
+                          }}
+                        >
+                          <Close sx={{ fontSize: 16 }} />
+                        </div>
+                      )}
                     </div>
                     {/* Selected groups chips (preview) */}
                     {selectedOptions.length > 0 && (
@@ -439,17 +456,17 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
                         ))}
                       </div>
                     )}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '4px 6px', display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', columnGap: '8px', rowGap: '6px' }}>
-              {loading && (
-                <div style={{ padding: '6px', fontSize: '12px', color: '#777', gridColumn: '1 / -1', textAlign: 'center' }}>
-                  Loading instruction groups...
-                </div>
-              )}
-              {error && !loading && (
-                <div style={{ padding: '6px', fontSize: '12px', color: '#d32f2f', gridColumn: '1 / -1', textAlign: 'center' }}>
-                  {error}
-                </div>
-              )}
+                    <div style={{ flex: 1, overflowY: 'auto', padding: '4px 6px', display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', columnGap: '8px', rowGap: '6px' }}>
+                      {loading && (
+                        <div style={{ padding: '6px', fontSize: '12px', color: '#777', gridColumn: '1 / -1', textAlign: 'center' }}>
+                          Loading instruction groups...
+                        </div>
+                      )}
+                      {error && !loading && (
+                        <div style={{ padding: '6px', fontSize: '12px', color: '#d32f2f', gridColumn: '1 / -1', textAlign: 'center' }}>
+                          {error}
+                        </div>
+                      )}
                       {filteredGroups.length === 0 && (
                         <div style={{ padding: '6px', fontSize: '12px', color: '#777', gridColumn: '1 / -1' }}>No instruction groups found</div>
                       )}
@@ -468,7 +485,7 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
                                 }
                               });
                             }}
-                            style={{ margin: 0, maxWidth: 16}}
+                            style={{ margin: 0, maxWidth: 16 }}
                           />
                           <div>
                             <div style={{ fontSize: '12px', fontWeight: '500', color: '#333333' }}>

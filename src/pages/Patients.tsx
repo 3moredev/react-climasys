@@ -39,6 +39,7 @@ import {
   Phone,
   Email,
   LocationOn,
+  Close,
 } from '@mui/icons-material'
 import { useSelector, useDispatch } from 'react-redux'
 import { RootState } from '../store'
@@ -63,7 +64,7 @@ interface PatientFormData {
 export default function Patients() {
   const dispatch = useDispatch()
   const { searchResults, loading, error, totalCount } = useSelector((state: RootState) => state.patients)
-  
+
   const [searchQuery, setSearchQuery] = useState('')
   const [searchStatus, setSearchStatus] = useState('all')
   const [page, setPage] = useState(1)
@@ -106,12 +107,12 @@ export default function Patients() {
 
   const handleCreatePatient = async (data: PatientFormData) => {
     const { user } = useSelector((state: RootState) => state.auth)
-    
+
     if (!user?.doctorId || !user?.clinicId) {
       alert('Please login to create patients')
       return
     }
-    
+
     const patientData = {
       doctorId: user.doctorId,
       ...data,
@@ -129,7 +130,7 @@ export default function Patients() {
       doctorEmail: '',
       clinicId: user.clinicId
     }
-    
+
     dispatch(createPatient(patientData))
     setOpenDialog(false)
     reset()
@@ -228,6 +229,13 @@ export default function Patients() {
                 <Search />
               </InputAdornment>
             ),
+            endAdornment: searchQuery ? (
+              <InputAdornment position="end">
+                <IconButton onClick={() => setSearchQuery('')} edge="end" size="small">
+                  <Close fontSize="small" />
+                </IconButton>
+              </InputAdornment>
+            ) : null,
           }}
           onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
         />
@@ -285,100 +293,100 @@ export default function Patients() {
               </Typography>
             </Box>
 
-          {viewMode === 'grid' ? (
-            <Grid container spacing={3}>
-              {searchResults.map((patient) => (
-                <Grid item xs={12} sm={6} md={4} key={patient.patientId}>
-                  <PatientCard patient={patient} />
-                </Grid>
-              ))}
-            </Grid>
-          ) : (
-            <TableContainer className="data-table">
-              <Table>
-                <TableHead className="data-table-header">
-                  <TableRow>
-                    <TableCell>Patient</TableCell>
-                    <TableCell>Contact</TableCell>
-                    <TableCell>Gender</TableCell>
-                    <TableCell>Age</TableCell>
-                    <TableCell>Registration Date</TableCell>
-                    <TableCell>Actions</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {searchResults.map((patient) => (
-                    <TableRow key={patient.patientId} className="data-table-row">
-                      <TableCell className="data-table-cell">
-                        <Box display="flex" alignItems="center">
-                          <Avatar sx={{ mr: 2, bgcolor: 'primary.main' }}>
-                            {getInitials(patient.firstName, patient.lastName)}
-                          </Avatar>
-                          <Box>
-                            <Typography variant="subtitle2">
-                              {patient.firstName} {patient.lastName}
-                            </Typography>
-                            <Typography variant="caption" color="textSecondary">
-                              ID: {patient.patientId}
-                            </Typography>
-                          </Box>
-                        </Box>
-                      </TableCell>
-                      <TableCell className="data-table-cell">
-                        <Box>
-                          <Typography variant="body2">{patient.mobile}</Typography>
-                          {patient.email && (
-                            <Typography variant="caption" color="textSecondary">
-                              {patient.email}
-                            </Typography>
-                          )}
-                        </Box>
-                      </TableCell>
-                      <TableCell className="data-table-cell">
-                        <Chip
-                          label={patient.gender === 'M' ? 'Male' : 'Female'}
-                          size="small"
-                          color={patient.gender === 'M' ? 'primary' : 'secondary'}
-                          className="status-chip"
-                        />
-                      </TableCell>
-                      <TableCell className="data-table-cell">{patient.age || 'N/A'}</TableCell>
-                      <TableCell className="data-table-cell">{new Date(patient.registrationDate).toLocaleDateString()}</TableCell>
-                      <TableCell className="data-table-cell">
-                        <Button
-                          size="small"
-                          startIcon={<Visibility />}
-                          onClick={() => handleViewPatient(patient.patientId)}
-                          className="action-button"
-                        >
-                          View
-                        </Button>
-                        <Button
-                          size="small"
-                          startIcon={<Edit />}
-                          className="action-button secondary"
-                        >
-                          Edit
-                        </Button>
-                      </TableCell>
+            {viewMode === 'grid' ? (
+              <Grid container spacing={3}>
+                {searchResults.map((patient) => (
+                  <Grid item xs={12} sm={6} md={4} key={patient.patientId}>
+                    <PatientCard patient={patient} />
+                  </Grid>
+                ))}
+              </Grid>
+            ) : (
+              <TableContainer className="data-table">
+                <Table>
+                  <TableHead className="data-table-header">
+                    <TableRow>
+                      <TableCell>Patient</TableCell>
+                      <TableCell>Contact</TableCell>
+                      <TableCell>Gender</TableCell>
+                      <TableCell>Age</TableCell>
+                      <TableCell>Registration Date</TableCell>
+                      <TableCell>Actions</TableCell>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          )}
+                  </TableHead>
+                  <TableBody>
+                    {searchResults.map((patient) => (
+                      <TableRow key={patient.patientId} className="data-table-row">
+                        <TableCell className="data-table-cell">
+                          <Box display="flex" alignItems="center">
+                            <Avatar sx={{ mr: 2, bgcolor: 'primary.main' }}>
+                              {getInitials(patient.firstName, patient.lastName)}
+                            </Avatar>
+                            <Box>
+                              <Typography variant="subtitle2">
+                                {patient.firstName} {patient.lastName}
+                              </Typography>
+                              <Typography variant="caption" color="textSecondary">
+                                ID: {patient.patientId}
+                              </Typography>
+                            </Box>
+                          </Box>
+                        </TableCell>
+                        <TableCell className="data-table-cell">
+                          <Box>
+                            <Typography variant="body2">{patient.mobile}</Typography>
+                            {patient.email && (
+                              <Typography variant="caption" color="textSecondary">
+                                {patient.email}
+                              </Typography>
+                            )}
+                          </Box>
+                        </TableCell>
+                        <TableCell className="data-table-cell">
+                          <Chip
+                            label={patient.gender === 'M' ? 'Male' : 'Female'}
+                            size="small"
+                            color={patient.gender === 'M' ? 'primary' : 'secondary'}
+                            className="status-chip"
+                          />
+                        </TableCell>
+                        <TableCell className="data-table-cell">{patient.age || 'N/A'}</TableCell>
+                        <TableCell className="data-table-cell">{new Date(patient.registrationDate).toLocaleDateString()}</TableCell>
+                        <TableCell className="data-table-cell">
+                          <Button
+                            size="small"
+                            startIcon={<Visibility />}
+                            onClick={() => handleViewPatient(patient.patientId)}
+                            className="action-button"
+                          >
+                            View
+                          </Button>
+                          <Button
+                            size="small"
+                            startIcon={<Edit />}
+                            className="action-button secondary"
+                          >
+                            Edit
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
 
-          {/* Pagination */}
-          {totalCount > pageSize && (
-            <Box display="flex" justifyContent="center" mt={3}>
-              <Pagination
-                count={Math.ceil(totalCount / pageSize)}
-                page={page}
-                onChange={(_, newPage) => setPage(newPage)}
-                color="primary"
-              />
-            </Box>
-          )}
+            {/* Pagination */}
+            {totalCount > pageSize && (
+              <Box display="flex" justifyContent="center" mt={3}>
+                <Pagination
+                  count={Math.ceil(totalCount / pageSize)}
+                  page={page}
+                  onChange={(_, newPage) => setPage(newPage)}
+                  color="primary"
+                />
+              </Box>
+            )}
           </Paper>
         </>
       ) : searchQuery ? (

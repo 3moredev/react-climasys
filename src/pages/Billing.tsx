@@ -4623,16 +4623,15 @@ export default function Treatment() {
                                 <button
                                     type="button"
                                     onClick={handleBackToAppointments}
-                                    disabled={isFormDisabled}
                                     style={{
-                                        backgroundColor: isFormDisabled ? '#D5D5D8' : '#1976d2',
-                                        color: isFormDisabled ? '#666' : 'white',
+                                        backgroundColor: '#1976d2',
+                                        color: 'white',
                                         border: 'none',
                                         padding: '8px 12px',
                                         borderRadius: '4px',
-                                        cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                        cursor: 'pointer',
                                         fontSize: '12px',
-                                        opacity: isFormDisabled ? 0.7 : 1
+                                        opacity: 1
                                     }}
                                 >
                                     Close
