@@ -192,7 +192,7 @@ button:not(.MuiTab-root):hover,
 .action-button:hover,
 .quick-action-btn:hover {
   /* background: linear-gradient(135deg, #366794 0%, #2d5a7c 100%) !important; */
-  transform: translateY(-1px) !important;
+  /* transform: translateY(-1px) !important; */
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15) !important;
 }
 
@@ -220,7 +220,7 @@ textarea:disabled,
 .MuiFormControl-root input:disabled {
   cursor: not-allowed !important;
   background-color: #f5f5f5 !important;
-  opacity: 0.8 !important;
+  /* opacity: 0.8 !important; */
 }
 
 .MuiFormHelperText-root {
@@ -715,7 +715,6 @@ form {
     box-shadow: none;
     border: 1px solid #ddd;
   }
-<<<<<<< HEAD
 }
 
 /* Fix for patient name overflow in appointments table */
@@ -762,6 +761,3 @@ form {
 #textarea-autosize:focus{
   border-color: #1E88E5 !important;
 }
-=======
-}
->>>>>>> 45c79156f084f3713c5e990866b6174860d443a5
