@@ -174,7 +174,7 @@ export default function Dashboard() {
 
   return (
     <div className="d-flex justify-content-between align-items-center mb-3">
-      <h2>Dashboard...(Coming Soon)</h2>
+      <h2>Coming Soon...!</h2>
     </div>
   )
 }
