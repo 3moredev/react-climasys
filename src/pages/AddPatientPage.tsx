@@ -98,6 +98,9 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
   const [isSearchingReferral, setIsSearchingReferral] = useState(false)
   const [selectedDoctor, setSelectedDoctor] = useState<any>(null)
 
+  // State to manage DoB input focus for placeholder visibility
+  const [dobFocused, setDobFocused] = useState(false)
+
   // Update doctorId and clinicId when props change
   useEffect(() => {
     if (doctorId) {
@@ -1001,6 +1004,8 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
     // Validate date of birth
     if (!formData.dobDate) {
       newErrors.dobDate = 'DoB is required'
+    } else if (dayjs(formData.dobDate).isAfter(dayjs(), 'day')) {
+      newErrors.dobDate = 'DoB cannot be in the future'
     }
 
     // Validate mobile number format - must be exactly 10 digits
@@ -1671,7 +1676,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         inputProps={{
                           max: dayjs().format('YYYY-MM-DD')
                         }}
-                        disabled={loading || readOnly}
+                        disabled={loading || readOnly}                      
                       />
                     </Box>
                     <Box sx={{ width: '50% !important' }}>

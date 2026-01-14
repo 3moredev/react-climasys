@@ -510,61 +510,61 @@ export default function AppointmentTable() {
     };
 
     // Convert backend Appointment objects to AppointmentRow format
-    const convertAppointmentsToRows = (items: Appointment[]): AppointmentRow[] => {
-        return items.map((item, index) => {
-            // Fix time handling - properly format the time string
-            let timeString: string;
-            let displayTime: string;
+    // const convertAppointmentsToRows = (items: Appointment[]): AppointmentRow[] => {
+    //     return items.map((item, index) => {
+    //         // Fix time handling - properly format the time string
+    //         let timeString: string;
+    //         let displayTime: string;
 
-            if (item.appointmentTime) {
-                // Handle LocalTime object from backend (e.g., "14:30:00" or "14:30")
-                const timeStr = String(item.appointmentTime);
-                const timeParts = timeStr.split(':');
+    //         if (item.appointmentTime) {
+    //             // Handle LocalTime object from backend (e.g., "14:30:00" or "14:30")
+    //             const timeStr = String(item.appointmentTime);
+    //             const timeParts = timeStr.split(':');
 
-                if (timeParts.length >= 2) {
-                    const hours = timeParts[0].padStart(2, '0');
-                    const minutes = timeParts[1].padStart(2, '0');
-                    displayTime = `${hours}:${minutes}`;
-                    timeString = `${item.appointmentDate}T${hours}:${minutes}:00`;
-                } else {
-                    displayTime = '00:00';
-                    timeString = `${item.appointmentDate}T00:00:00`;
-                }
-            } else {
-                displayTime = '00:00';
-                timeString = `${item.appointmentDate}T00:00:00`;
-            }
+    //             if (timeParts.length >= 2) {
+    //                 const hours = timeParts[0].padStart(2, '0');
+    //                 const minutes = timeParts[1].padStart(2, '0');
+    //                 displayTime = `${hours}:${minutes}`;
+    //                 timeString = `${item.appointmentDate}T${hours}:${minutes}:00`;
+    //             } else {
+    //                 displayTime = '00:00';
+    //                 timeString = `${item.appointmentDate}T00:00:00`;
+    //             }
+    //         } else {
+    //             displayTime = '00:00';
+    //             timeString = `${item.appointmentDate}T00:00:00`;
+    //         }
 
-            const status = (item.status || '').toUpperCase();
-            // Prefer First Middle Last if available in item fields
-            const first = String((item as any).firstName || (item as any).first_name || '').trim();
-            const middle = String((item as any).middleName || (item as any).middle_name || '').trim();
-            const last = String((item as any).lastName || (item as any).last_name || '').trim();
-            const nameComposed = `${first} ${middle} ${last}`.replace(/\s+/g, ' ').trim();
+    //         const status = (item.status || '').toUpperCase();
+    //         // Prefer First Middle Last if available in item fields
+    //         const first = String((item as any).firstName || (item as any).first_name || '').trim();
+    //         const middle = String((item as any).middleName || (item as any).middle_name || '').trim();
+    //         const last = String((item as any).lastName || (item as any).last_name || '').trim();
+    //         const nameComposed = `${first} ${middle} ${last}`.replace(/\s+/g, ' ').trim();
 
-            return {
-                appointmentId: item.appointmentId,
-                sr: index + 1,
-                patientId: String(item.patientId || ''),
-                patient: nameComposed || item.patientName || '',
-                visitDate: item.appointmentDate || '',
-                age: typeof item.age === 'number' ? item.age : 0,
-                gender: '', // Gender not available in Appointment interface
-                contact: item.mobileNumber || '',
-                time: displayTime, // Use the properly formatted time directly
-                provider: formatProviderLabel(item.doctorName || doctorFirstName || 'Tongaonkar'),
-                online: item.onlineAppointmentTime || '',
-                status: status,
-                statusColor: getStatusColor(status),
-                lastOpd: "", // Will be populated by formatLastVisitDisplay
-                labs: '',
-                reports_received: item.reportsAsked ?? false,
-                doctorId: '',
-                visitNumber: (item as any).visitNumber || 1, // Use visit number from API or default to 1
-                actions: true
-            };
-        });
-    };
+    //         return {
+    //             appointmentId: item.appointmentId,
+    //             sr: index + 1,
+    //             patientId: String(item.patientId || ''),
+    //             patient: nameComposed || item.patientName || '',
+    //             visitDate: item.appointmentDate || '',
+    //             age: typeof item.age === 'number' ? item.age : 0,
+    //             gender: '', // Gender not available in Appointment interface
+    //             contact: item.mobileNumber || '',
+    //             time: displayTime, // Use the properly formatted time directly
+    //             provider: formatProviderLabel(item.doctorName || doctorFirstName || 'Tongaonkar'),
+    //             online: item.onlineAppointmentTime || '',
+    //             status: status,
+    //             statusColor: getStatusColor(status),
+    //             lastOpd: "", // Will be populated by formatLastVisitDisplay
+    //             labs: '',
+    //             reports_received: item.reportsAsked ?? false,
+    //             doctorId: '',
+    //             visitNumber: (item as any).visitNumber || 1, // Use visit number from API or default to 1
+    //             actions: true
+    //         };
+    //     });
+    // };
 
     // Enhanced search for patients using backend API
     const searchPatients = async (query: string) => {
@@ -2739,7 +2739,7 @@ export default function AppointmentTable() {
                             }}
                             style={{ borderWidth: "2px", height: "38px", fontFamily: "'Roboto', sans-serif", fontWeight: 500, minWidth: "300px", width: "400px", paddingRight: "30px" }}
                         />
-                        {searchTerm && (
+                        {/* {searchTerm && (
                             <button
                                 className="btn btn-link position-absolute top-50 translate-middle-y text-decoration-none text-muted"
                                 style={{ right: '10px', zIndex: 10, padding: 0, width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
@@ -2752,7 +2752,7 @@ export default function AppointmentTable() {
                             >
                                 <i className="fas fa-times"></i>
                             </button>
-                        )}
+                        )} */}
 
                         {/* Search Dropdown for Doctor Screen */}
                         {showDropdown && searchMenuPosition && (
@@ -4091,7 +4091,7 @@ export default function AppointmentTable() {
                         ref={searchInputRef}
                         style={{ borderWidth: "2px", height: "38px", fontFamily: "'Roboto', sans-serif", fontWeight: 500, minWidth: "300px", width: "400px", paddingRight: "30px" }}
                     />
-                    {searchTerm && (
+                    {/* {searchTerm && (
                         <button
                             className="btn btn-link position-absolute top-50 translate-middle-y text-decoration-none text-muted"
                             style={{ right: '10px', zIndex: 10, padding: 0, width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
@@ -4104,7 +4104,7 @@ export default function AppointmentTable() {
                         >
                             <i className="fas fa-times"></i>
                         </button>
-                    )}
+                    )} */}
 
                     {/* Search Dropdown */}
                     {showDropdown && searchMenuPosition && (
