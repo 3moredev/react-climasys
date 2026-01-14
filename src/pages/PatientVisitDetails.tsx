@@ -1075,21 +1075,21 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
 
             // Reset referral name search when referral type changes
             if (field === 'referralBy') {
-                if (value !== 'D') {
-                    // Clear selected doctor if not a doctor referral
-                    setSelectedDoctor(null);
-                    setReferralNameSearch('');
-                    setReferralNameOptions([]);
-                    // Clear referral contact fields when not a doctor referral
-                    newData.referralContact = '';
-                    newData.referralEmail = '';
-                    newData.referralAddress = '';
-                } else {
-                    // If changing to 'D', sync referralNameSearch with referralName if it exists
-                    if (newData.referralName && newData.referralName.trim() !== '') {
-                        setReferralNameSearch(newData.referralName);
-                    }
-                }
+                // Clear referral details
+                newData.referralName = '';
+                newData.referralContact = '';
+                newData.referralEmail = '';
+                newData.referralAddress = '';
+
+                // Clear selected doctor state
+                setSelectedDoctor(null);
+                setReferralNameSearch('');
+                setReferralNameOptions([]);
+            }
+
+            // Handle alphabets-only input for referralName
+            if (field === 'referralName') {
+                newData[field] = value.replace(/[^a-zA-Z\s]/g, '');
             }
 
             return newData;
@@ -1116,8 +1116,11 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
 
     // Search referral names when typing
     const handleReferralNameSearch = async (searchTerm: string) => {
-        setReferralNameSearch(searchTerm);
-        if (searchTerm.length < 2) {
+        // Allow only alphabets and spaces
+        const cleanSearchTerm = searchTerm.replace(/[^a-zA-Z\s]/g, '');
+        setReferralNameSearch(cleanSearchTerm);
+
+        if (cleanSearchTerm.length < 2) {
             setReferralNameOptions([]);
             return;
         }
@@ -1129,12 +1132,12 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
             const doctors = await getReferralDoctors(1); // languageId = 1
 
             console.log('=== REFERRAL DOCTORS SEARCH DEBUG ===');
-            console.log('Search term:', searchTerm);
+            console.log('Search term:', cleanSearchTerm);
             console.log('All doctors from API:', doctors);
 
             // Filter doctors by name containing the search term
             const filteredDoctors = doctors.filter(doctor =>
-                doctor.doctorName.toLowerCase().includes(searchTerm.toLowerCase())
+                doctor.doctorName.toLowerCase().includes(cleanSearchTerm.toLowerCase())
             );
 
             console.log('Filtered doctors:', filteredDoctors);
@@ -1922,7 +1925,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                         className="referral-add-icon"
                                                         onClick={() => !readOnly && setShowReferralPopup(true)}
                                                         disabled={readOnly}
-                                                         title="Add New Referral Doctor"
+                                                        title="Add New Referral Doctor"
                                                         style={{
                                                             position: 'absolute',
                                                             right: '4px',
@@ -2133,6 +2136,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                         <input
                                             type="text"
                                             placeholder="Address"
+                                            maxLength={150}
                                             value={formData.referralAddress}
                                             onChange={(e) => handleInputChange('referralAddress', e.target.value)}
                                             disabled={readOnly || selectedDoctor !== null}
