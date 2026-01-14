@@ -824,14 +824,13 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                         style={{
                             backgroundColor: 'white',
                             borderRadius: '8px',
-                            maxWidth: '1000px',
+                            maxWidth: '1400px',
                             width: '80%',
-                            maxHeight: '95vh',
+                            maxHeight: '90vh',
                             overflow: 'auto',
                             boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
                             display: 'flex',
                             flexDirection: 'column',
-                            fontFamily: 'Roboto, sans-serif',
                         }}
                         onClick={(e) => e.stopPropagation()}
                     >
@@ -839,18 +838,42 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                         <div style={{
                             background: 'white',
                             padding: '15px 20px',
-                            // borderBottom: '1px solid #e0e0e0',
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            position: 'sticky',
-                            top: 0,
-                            zIndex: 1000
+                            borderTopLeftRadius: '8px',
+                            borderTopRightRadius: '8px',
+                            fontSize: '0.9rem'
                         }}>
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}>
-                                <h3 style={{ margin: 0, color: '#000000', fontSize: '20px', fontWeight: 'bold' }}>
+                            <div style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                marginBottom: '10px'
+                            }}>
+                                <h3 style={{ margin: '0px !important', color: '#000000', fontSize: '20px', fontWeight: 'bold' }} className='mb-0'>
                                     Lab Details
                                 </h3>
+                                {onClose && (
+                                    <button
+                                        onClick={onClose}
+                                        style={{
+                                            background: 'rgb(25, 118, 210)',
+                                            border: 'none',
+                                            cursor: 'pointer',
+                                            padding: '2px',
+                                            borderRadius: '4px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            color: '#666',
+                                            fontSize: '18px',
+                                            width: '36px',
+                                            height: '36px'
+                                        }}
+                                    >
+                                        <Close />
+                                    </button>
+                                )}
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
                                 <PatientNameDisplay
                                     patientData={patientData}
                                     onClick={() => {
@@ -860,18 +883,13 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                     }}
                                     style={{
                                         color: '#4caf50',
-                                        fontSize: '16px',
+                                        fontSize: '14px',
                                         fontWeight: '500',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '8px',
                                         cursor: patientData?.patientId ? 'pointer' : 'default',
                                         textDecoration: patientData?.patientId ? 'underline' : 'none'
                                     }}
                                     title={patientData?.patientId ? 'Click to view patient details' : ''}
                                 />
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                                 <div style={{
                                     color: '#666',
                                     fontSize: '14px',
@@ -879,34 +897,14 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                 }}>
                                     <div>{doctorDisplayName}</div>
                                 </div>
-                                <button
-                                    onClick={onClose}
-                                    style={{
-                                        background: 'rgb(25, 118, 210)',
-                                        border: 'none',
-                                        cursor: 'pointer',
-                                        padding: '2px',
-                                        borderRadius: '4px',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        color: '#666',
-                                        fontSize: '18px',
-                                        width: '36px',
-                                        height: '36px'
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        e.currentTarget.style.backgroundColor = 'rgb(25, 118, 210)';
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.currentTarget.style.backgroundColor = 'rgb(25, 118, 210)';
-                                    }}
-                                >
-                                    <Close />
-                                </button>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+
+
                             </div>
                         </div>
                         <DialogContent sx={{
+                            overflow: 'visible',
                             p: '4px 20px 8px',
                             '& .MuiTextField-root, & .MuiFormControl-root': { width: '100%' },
                             // Remove right padding on last column so fields align with actions
@@ -1021,19 +1019,9 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                             position: 'relative'
                         }}>
                             {/* Form Content */}
-                            <div style={{ padding: '0px', flex: 1, overflow: 'auto' }}>
+                            <div style={{ padding: '0px', flex: 1 }}>
                                 {/* Lab Report Information Section */}
                                 <div style={{ marginBottom: '30px' }}>
-                                    {/* <h3 style={{ 
-                                    color: '#1976d2', 
-                                    marginBottom: '20px', 
-                                    fontSize: '18px',
-                                    fontWeight: '600',
-                                    borderBottom: '2px solid #1976d2',
-                                    paddingBottom: '8px'
-                                }}>
-                                    Lab Report Information
-                                </h3> */}
 
                                     <div style={{ marginBottom: '20px' }}>
                                         <Grid container spacing={2}>
@@ -1158,7 +1146,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                         fontWeight: 700,
                                         color: '#333'
                                     }}>
-                                        Lab Tests *
+                                        Lab Tests <span style={{ color: 'red' }}>*</span>
                                     </label>
                                     <div ref={labTestsRef} style={{ display: 'flex', gap: '10px', alignItems: 'end' }}>
                                         <div style={{ position: 'relative', flex: 1 }}>
@@ -1207,7 +1195,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                     border: '1px solid #B7B7B7',
                                                     borderRadius: '6px',
                                                     boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                                                    zIndex: 1000,
+                                                    zIndex: 10001,
                                                     marginTop: '4px'
                                                 }}>
                                                     <div style={{ padding: '6px' }}>

@@ -17,6 +17,7 @@ export interface Appointment {
   onlineAppointmentTime?: string
   reportsAsked?: boolean
   visitNumber?: number
+  dob: string
 }
 
 export interface AppointmentParams {
