@@ -75,21 +75,21 @@ const subMenus: Record<string, Array<SubMenuItem>> = {
   'OPD Reports': [
     {
       label: 'OPD – Collection', children: [
-        { label: 'OPD Collection Statement', path: '/settings?t=operation-keyword' },
-        { label: 'OPD-IIIC Register(Service-wise collection)', path: '/settings?t=sub-category' },
+        { label: 'OPD Collection Statement', path: '/dashboard' },
+        { label: 'OPD-IIIC Register(Service-wise collection)', path: '/dashboard' },
       ],
     },
-    { label: 'OPD - Daily Collection', path: '/reports?type=receipts' },
-    { label: 'OPD - Defaulters', path: '/reports?type=dashboard' },
+    { label: 'OPD - Daily Collection', path: '/dashboard' },
+    { label: 'OPD - Defaulters', path: '/dashboard' },
     {
       label: 'Dashboard & Reports', children: [
-        { label: 'Area-Wise Patient Summary ', path: '/settings?t=operation-keyword' },
-        { label: 'Summary Of Lab Suggested', path: '/settings?t=sub-category' },
-        { label: 'Print Patient Details', path: '/settings?t=sub-category' },
-        { label: 'Patient Appointment History', path: '/settings?t=sub-category' },
+        { label: 'Area-Wise Patient Summary ', path: '/dashboard' },
+        { label: 'Summary Of Lab Suggested', path: '/dashboard' },
+        { label: 'Print Patient Details', path: '/dashboard' },
+        { label: 'Patient Appointment History', path: '/dashboard' },
       ],
     },
-    { label: 'IIIC Summary (IPD & OPD)', path: '/reports?type=dashboard' },
+    { label: 'IIIC Summary (IPD & OPD)', path: '/dashboard' },
   ],
   'OPD Master': [
     {

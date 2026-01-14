@@ -915,23 +915,26 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
       if (field === 'mobileNumber' || field === 'referralContact') {
         processedValue = handleNumericInput(value)
       }
+      // Handle alphabets-only input for referralName
+      if (field === 'referralName') {
+        processedValue = value.replace(/[^a-zA-Z\s]/g, '')
+      }
 
       const next = { ...prev, [field]: processedValue }
 
 
-      // Reset referral name search when referral type changes
+      // Reset referral fields when referral type changes
       if (field === 'referredBy') {
-        if (value !== 'D') {
-          // Clear selected doctor if not a doctor referral
-          setSelectedDoctor(null)
-          setReferralNameSearch('')
-          setReferralNameOptions([])
-        } else {
-          // If changing to 'D', sync referralNameSearch with referralName if it exists
-          if (next.referralName && next.referralName.trim() !== '') {
-            setReferralNameSearch(next.referralName)
-          }
-        }
+        // Clear referral details
+        next.referralName = ''
+        next.referralContact = ''
+        next.referralEmail = ''
+        next.referralAddress = ''
+
+        // Clear selected doctor state
+        setSelectedDoctor(null)
+        setReferralNameSearch('')
+        setReferralNameOptions([])
       }
 
       return next
@@ -944,8 +947,11 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
 
   // Search referral names when typing
   const handleReferralNameSearch = async (searchTerm: string) => {
-    setReferralNameSearch(searchTerm)
-    if (searchTerm.length < 2) {
+    // Allow only alphabets and spaces
+    const cleanSearchTerm = searchTerm.replace(/[^a-zA-Z\s]/g, '')
+    setReferralNameSearch(cleanSearchTerm)
+
+    if (cleanSearchTerm.length < 2) {
       setReferralNameOptions([])
       return
     }
@@ -957,12 +963,12 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
       const doctors = await getReferralDoctors(1) // languageId = 1
 
       console.log('=== REFERRAL DOCTORS SEARCH DEBUG ===')
-      console.log('Search term:', searchTerm)
+      console.log('Search term:', cleanSearchTerm)
       console.log('All doctors from API:', doctors)
 
       // Filter doctors by name containing the search term
       const filteredDoctors = doctors.filter(doctor =>
-        doctor.doctorName.toLowerCase().includes(searchTerm.toLowerCase())
+        doctor.doctorName.toLowerCase().includes(cleanSearchTerm.toLowerCase())
       )
 
       console.log('Filtered doctors:', filteredDoctors)
@@ -1274,6 +1280,10 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
       onClose()
     }
   }
+
+
+  // Check if "Self" is selected in Referred By
+  const isSelfReferral = formData.referredBy === 'S' || referByOptions.find(opt => opt.id === formData.referredBy)?.name === 'Self';
 
   return (<>
     {/* Success Snackbar (outside Dialog so it persists after close) */}
@@ -1817,7 +1827,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     Area <span style={{ color: 'red' }}>*</span>
                   </Typography>
                   <Autocomplete
-                    freeSolo
+
                     options={areaOptions}
                     loading={areaLoading}
                     disabled={loading || readOnly}
@@ -2113,6 +2123,20 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         error={!!errors.area}
                         helperText={errors.area}
                         disabled={loading || readOnly}
+                        onBlur={() => {
+                          // Clear input if it doesn't match selected area (enforce selection)
+                          if (areaInput !== formData.area) {
+                            handleInputChange('area', '')
+                            setAreaInput('')
+                            setAreaOpen(false)
+                            setSelectedAreaCityId(null)
+                            // Clear city and reset state when area is cleared
+                            handleInputChange('city', '')
+                            setCityInput('')
+                            setCityOptions([])
+                            handleInputChange('state', 'Maharashtra')
+                          }
+                        }}
                         InputProps={{
                           ...params.InputProps,
                           endAdornment: (
@@ -2146,6 +2170,13 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                       value={formData.city}
                       onChange={(e) => handleInputChange('city', e.target.value)}
                       disabled={loading || readOnly}
+                      InputProps={{
+                        endAdornment: (
+                          <InputAdornment position="end" sx={{ pr: 1 }}>
+                            <Search sx={{ color: '#666' }} />
+                          </InputAdornment>
+                        )
+                      }}
                     />
                   ) : (
                     // If no area is selected, show Autocomplete for searching
@@ -2434,7 +2465,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         placeholder="Referral Name"
                         value={formData.referralName}
                         onChange={(e) => handleInputChange('referralName', e.target.value)}
-                        disabled={loading || readOnly || selectedDoctor !== null}
+                        disabled={loading || readOnly || selectedDoctor !== null || isSelfReferral}
                         sx={{
                           '& .MuiInputBase-input': {
                             backgroundColor: selectedDoctor !== null ? '#f5f5f5' : 'white',
@@ -2545,7 +2576,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                       placeholder="Referral Name"
                       value={formData.referralName}
                       onChange={(e) => handleInputChange('referralName', e.target.value)}
-                      disabled={loading || readOnly}
+                      disabled={loading || readOnly || isSelfReferral}
                     />
                   )}
                 </Box>
@@ -2566,7 +2597,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     placeholder="Referral Number(10 Digits)"
                     value={formData.referralContact}
                     onChange={(e) => handleInputChange('referralContact', e.target.value)}
-                    disabled={loading || readOnly || selectedDoctor !== null}
+                    disabled={loading || readOnly || selectedDoctor !== null || isSelfReferral}
                     error={!!errors.referralContact || (formData.referralContact.length > 0 && formData.referralContact.length !== 10)}
                     helperText={errors.referralContact || (formData.referralContact.length > 0 && formData.referralContact.length !== 10 ? 'Referral contact must be 10 digits' : '')}
                     inputProps={{
@@ -2593,7 +2624,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     placeholder="Referral Email"
                     value={formData.referralEmail}
                     onChange={(e) => handleInputChange('referralEmail', e.target.value)}
-                    disabled={loading || readOnly || selectedDoctor !== null}
+                    disabled={loading || readOnly || selectedDoctor !== null || isSelfReferral}
                     error={!!errors.referralEmail}
                     helperText={errors.referralEmail}
                     sx={{
@@ -2615,7 +2646,8 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     placeholder="Referral Address"
                     value={formData.referralAddress}
                     onChange={(e) => handleInputChange('referralAddress', e.target.value)}
-                    disabled={loading || readOnly || selectedDoctor !== null}
+                    disabled={loading || readOnly || selectedDoctor !== null || isSelfReferral}
+                    inputProps={{ maxLength: 150 }}
                     sx={{
                       '& .MuiInputBase-input': {
                         backgroundColor: selectedDoctor !== null ? '#f5f5f5' : 'white',
