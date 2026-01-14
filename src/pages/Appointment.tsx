@@ -43,6 +43,7 @@ export type AppointmentRow = {
     visitDetailsSubmitted?: boolean;
     created_on?: string;
     dob: string;
+    labDetailsSubmitted?: boolean;
 };
 
 
@@ -274,7 +275,8 @@ export default function AppointmentTable() {
                 labs: "No Reports", // Placeholder
                 reports_received: patient.reports_received,
                 visitNumber: 1, // New patients start with visit number 1
-                actions: true
+                actions: true,
+                labDetailsSubmitted: false
             };
         });
     };
@@ -344,6 +346,7 @@ export default function AppointmentTable() {
             const clinicIdFromRow = toStringSafe(getField(row, ['clinic_id', 'Clinic_ID', 'clinicId'], ''));
             const genderDescription = toStringSafe(getField(row, ['gender_description', 'genderDescription', 'gender', 'sex'], ''));
             const visitDetailsSubmitted = !!getField(row, ['Is_Submit_Patient_Visit_Details', 'is_submit_patient_visit_details', 'visitDetailsSubmitted'], false);
+            const labDetailsSubmitted = !!getField(row, ['Is_Submit_Lab_Test_Details', 'is_submit_lab_test_details', 'Is_Submit_Lab_Results', 'is_submit_lab_results', 'labDetailsSubmitted', 'lab_details_submitted'], false);
             const createdOn = toStringSafe(getField(row, ['created_on', 'createdOn', 'created_at', 'createdAt'], ''));
 
             // Fix time formatting - ensure proper HH:mm format
@@ -448,6 +451,7 @@ export default function AppointmentTable() {
                 visitDetailsSubmitted: visitDetailsSubmitted,
                 created_on: createdOn,
                 dob: dateOfBirth,
+                labDetailsSubmitted: labDetailsSubmitted,
             };
         });
     };
@@ -973,6 +977,12 @@ export default function AppointmentTable() {
 
     const handleSearchChange = (value: string) => {
         setSearchTerm(value);
+
+        // For doctor, we only do local filtering (handled by filteredAppointments), so we don't need to search via API
+        if (isDoctor) {
+            setShowDropdown(false);
+            return;
+        }
 
         const search = value.trim().toLowerCase();
         if (!search) {
@@ -1978,17 +1988,29 @@ export default function AppointmentTable() {
 
         // For doctor screen, show patients with "WAITING", "WITH DOCTOR", "CONSULT ON CALL", "WAITING FOR MEDICINE", "SAVE", "SUBMITTED", "COLLECTION", or "COMPLETE" status
         if (isDoctor) {
+            // Search filter for Doctor Screen
+            let searchOk = true;
+            if (searchTerm) {
+                const term = searchTerm.toLowerCase();
+                searchOk =
+                    (a.patient || '').toLowerCase().includes(term) ||
+                    (a.contact || '').toString().includes(term) ||
+                    (a.patientId || '').toString().toLowerCase().includes(term);
+            }
+
             const normalizedStatus = normalizeStatusLabel(a.status);
             const doctorStatusOk = normalizedStatus === 'WAITING' || normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'WAITING FOR MEDICINE' || normalizedStatus === 'SAVE' || normalizedStatus === 'SUBMITTED' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'COMPLETE';
             if (!doctorStatusOk) {
+                /* Reduced logging to avoid noise
                 console.log('🔍 Appointment filtered out:', {
                     patient: a.patient,
                     status: a.status,
                     normalizedStatus: normalizedStatus,
                     isDoctor: isDoctor
                 });
+                */
             }
-            return nameOk && contactOk && statusOk && doctorStatusOk;
+            return nameOk && contactOk && statusOk && doctorStatusOk && searchOk;
         }
 
         return nameOk && contactOk && statusOk;
@@ -2295,7 +2317,7 @@ export default function AppointmentTable() {
         return counts;
     }, [appointments, isDoctor]);
 
-    const getAgeString = (dob:string) => {
+    const getAgeString = (dob: string) => {
         if (dob) {
             const birthDate = dayjs(dob);
             if (birthDate.isValid()) {
@@ -4418,7 +4440,7 @@ export default function AppointmentTable() {
                                                     </a>
                                                 </td>
                                                 <td className="gender-col">{a.gender}</td>
-                                                <td className="age-col">{getAgeString(a.dob)}</td>  
+                                                <td className="age-col">{getAgeString(a.dob)}</td>
                                                 <td className="contact-col">{(a.contact || '').toString().slice(0, 12)}</td>
                                                 <td className="time-col">{extractTime(a.time)}</td>
                                                 <td className="provider-col">
@@ -4667,6 +4689,7 @@ export default function AppointmentTable() {
                                                                     const statusId = mapStatusLabelToId(a.status);
                                                                     const shouldDisable = isReceptionist && statusId >= 2;
                                                                     if (shouldDisable) return '#f5f5f5';
+                                                                    if (a.labDetailsSubmitted) return '#FFD700';
                                                                     const isWaiting = statusId === 1;
                                                                     const isComplete = statusId === 5;
                                                                     const shouldEnable = !isReceptionist || isWaiting || isComplete;
@@ -5511,6 +5534,7 @@ export default function AppointmentTable() {
                                                                 const statusId = mapStatusLabelToId(appointment.status);
                                                                 const shouldDisable = isReceptionist && statusId >= 2;
                                                                 if (shouldDisable) return '#f5f5f5';
+                                                                if (appointment.labDetailsSubmitted) return '#FFD700';
                                                                 const isWaiting = statusId === 1;
                                                                 const isComplete = statusId === 5;
                                                                 const shouldEnable = !isReceptionist || isWaiting || isComplete;
@@ -6049,10 +6073,10 @@ export default function AppointmentTable() {
                         await refreshAppointmentsForSelectedDoctor();
 
                         console.log('✅ Appointments refreshed successfully after patient addition');
-                        
+
                         // Show success snackbar
                         const patientName = patientData.fullName || `${patientData.firstName || ''} ${patientData.lastName || ''}`.trim() || 'Patient';
-                        const successMessage = patientData.addToTodaysAppointment 
+                        const successMessage = patientData.addToTodaysAppointment
                             ? `Patient ${patientName} added and appointment booked successfully!`
                             : `Patient ${patientName} added successfully!`;
                         setSnackbarMessage(successMessage);
@@ -6147,6 +6171,14 @@ export default function AppointmentTable() {
                     patientData={selectedPatientForLab}
                     appointment={selectedPatientForLab}
                     sessionData={sessionData}
+                    onSubmissionSuccess={() => {
+                        setAppointments(prev => prev.map(appt => {
+                            if (appt.appointmentId === selectedPatientForLab.appointmentId) {
+                                return { ...appt, labDetailsSubmitted: true };
+                            }
+                            return appt;
+                        }));
+                    }}
                 />
             )}
 

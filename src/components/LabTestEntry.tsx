@@ -44,6 +44,7 @@ interface LabTestEntryProps {
     sessionData?: SessionInfo | null;
     // Callback to pass lab test results data back to parent
     onLabTestResultsFetched?: (results: any[] | null) => void;
+    onSubmissionSuccess?: () => void;
 }
 
 interface LabTestResult {
@@ -53,7 +54,7 @@ interface LabTestResult {
     value: string;
 }
 
-const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData, appointment, sessionData, onLabTestResultsFetched }) => {
+const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData, appointment, sessionData, onLabTestResultsFetched, onSubmissionSuccess }) => {
     const [formData, setFormData] = useState({
         labName: '',
         labDoctorName: '',
@@ -765,6 +766,12 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
             setSuccess(successMsg);
             setSnackbarMessage('Lab added successfully');
             setSnackbarOpen(true);
+
+            // Notify parent of success
+            if (onSubmissionSuccess) {
+                onSubmissionSuccess();
+            }
+
             // Allow a brief moment for snackbar to be visible before closing
             setTimeout(() => {
                 onClose();
