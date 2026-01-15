@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Close, Delete } from '@mui/icons-material';
 import { useSession } from '../store/hooks/useSession';
 import GlobalSnackbar from './GlobalSnackbar';
+// Services are now handled by parent component
 
 export interface LabTestRow {
     id: string;
@@ -100,6 +101,8 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
         }));
     };
 
+    const isValidId = (id: any) => id !== undefined && id !== null && String(id) !== 'undefined' && String(id) !== 'null' && String(id).trim() !== '';
+
     const handleRemoveParameter = (id: string) => {
         setTestLabData(prev => ({ ...prev, labTestRows: prev.labTestRows.filter(row => row.id !== id) }));
     };
@@ -112,6 +115,9 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
 
         setIsSaving(true);
         try {
+            // All CRUD operations (Create, Update, Delete) are handled by the parent component
+            // in the onSave callback. This mimics the "all changes in session" behavior
+            // where database commits happen only on final submit.
             const result = await onSave(testLabData);
             if (result !== false) onClose();
         } catch (error: any) {

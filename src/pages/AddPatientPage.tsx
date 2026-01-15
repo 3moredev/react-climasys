@@ -2658,26 +2658,28 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                   />
                 </Box>
               </Grid>
-              <Grid item xs={12} md={3}>
-                <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', height: '100%' }}>
-                  <Box>
-                    <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
-                      Add to Today’s Appointments
-                    </Typography>
-                    <FormControlLabel
-                      control={
-                        <Switch
-                          checked={formData.addToTodaysAppointment}
-                          onChange={(e) => handleInputChange('addToTodaysAppointment', e.target.checked as any)}
-                          disabled={loading || readOnly}
-                          color="primary"
-                        />
-                      }
-                      label=""
-                    />
+              {(!patientId && !readOnly) && (
+                <Grid item xs={12} md={3}>
+                  <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', height: '100%' }}>
+                    <Box>
+                      <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
+                        Add to Today’s Appointments
+                      </Typography>
+                      <FormControlLabel
+                        control={
+                          <Switch
+                            checked={formData.addToTodaysAppointment}
+                            onChange={(e) => handleInputChange('addToTodaysAppointment', e.target.checked as any)}
+                            disabled={loading || readOnly}
+                            color="primary"
+                          />
+                        }
+                        label=""
+                      />
+                    </Box>
                   </Box>
-                </Box>
-              </Grid>
+                </Grid>
+              )}
             </Grid>
           </Grid>
         </Grid>

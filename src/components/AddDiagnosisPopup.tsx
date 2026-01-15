@@ -24,7 +24,7 @@ const AddDiagnosisPopup: React.FC<AddDiagnosisPopupProps> = ({ open, onClose, on
     const [shortDescription, setShortDescription] = useState('');
     const [diagnosisDescription, setDiagnosisDescription] = useState('');
     const [priority, setPriority] = useState('');
-    
+
     // Snackbar state management
     const [snackbarOpen, setSnackbarOpen] = useState(false);
     const [snackbarMessage, setSnackbarMessage] = useState('');
@@ -66,7 +66,7 @@ const AddDiagnosisPopup: React.FC<AddDiagnosisPopupProps> = ({ open, onClose, on
         // Normalize text fields to uppercase before saving
         const shortDescUpper = shortDescription.trim().toUpperCase();
         const diagnosisDescUpper = diagnosisDescription.trim().toUpperCase();
-        
+
         // Determine priority (optional; default to "9" if not provided)
         const priorityValue = priority.trim() || '9';
 
@@ -82,12 +82,12 @@ const AddDiagnosisPopup: React.FC<AddDiagnosisPopupProps> = ({ open, onClose, on
         if (result === false) {
             return;
         }
-        
+
         // Reset form
         setShortDescription('');
         setDiagnosisDescription('');
         setPriority('');
-        
+
         // Close popup - success message will be shown in parent component
         onClose();
     };
@@ -111,154 +111,158 @@ const AddDiagnosisPopup: React.FC<AddDiagnosisPopupProps> = ({ open, onClose, on
 
     return (
         <>
-        <div
-            style={{
-                position: 'fixed',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                zIndex: 10001,
-            }}
-            onClick={handleClose}
-        >
             <div
                 style={{
-                    backgroundColor: 'white',
-                    borderRadius: '8px',
-                    maxWidth: '500px',
-                    width: '90%',
-                    maxHeight: '80vh',
-                    overflow: 'auto',
-                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
                     display: 'flex',
-                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 10001,
                 }}
-                onClick={(e) => e.stopPropagation()}
+                onClick={handleClose}
             >
-                {/* Popup Header */}
-                <div style={{
-                    background: 'white',
-                    padding: '15px 20px',
-                    borderTopLeftRadius: '8px',
-                    borderTopRightRadius: '8px',
-                    fontFamily: "'Roboto', sans-serif",
-                    color: '#212121',
-                    fontSize: '0.9rem'
-                }}>
-                    <div style={{
+                <div
+                    style={{
+                        backgroundColor: 'white',
+                        borderRadius: '8px',
+                        maxWidth: '500px',
+                        width: '90%',
+                        maxHeight: '80vh',
+                        overflow: 'auto',
+                        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
                         display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center'
+                        flexDirection: 'column',
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    {/* Popup Header */}
+                    <div style={{
+                        background: 'white',
+                        padding: '15px 20px',
+                        borderTopLeftRadius: '8px',
+                        borderTopRightRadius: '8px',
+                        fontFamily: "'Roboto', sans-serif",
+                        color: '#212121',
+                        fontSize: '0.9rem'
                     }}>
-                        <h3 style={{ margin: 0, color: '#000000', fontSize: '18px', fontWeight: 'bold' }}>
-                            {editData ? 'Edit Diagnosis' : 'Add Diagnosis'}
-                        </h3>
-                        <button
-                            onClick={handleClose}
-                            style={{
-                                background: 'none',
-                                border: 'none',
-                                cursor: 'pointer',
-                                padding: '5px',
-                                borderRadius: '50%',
-                                color: '#fff',
-                                backgroundColor: 'rgb(0, 123, 255)',
-                                width: '32px',
-                                height: '32px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                transition: 'background-color 0.2s'
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.backgroundColor = 'rgb(0, 100, 200)';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.backgroundColor = 'rgb(0, 123, 255)';
-                            }}
-                        >
-                            <Close fontSize="small" />
-                        </button>
-                    </div>
-                </div>
-
-                {/* Popup Content */}
-                <div style={{ padding: '20px', flex: 1 }}>
-                    <div style={{ marginBottom: '15px' }}>
-                        <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                            Short Description <span style={{ color: '#d32f2f' }}>*</span>
-                        </label>
-                        <input
-                            type="text"
-                            placeholder="Diagnosis Short Description"
-                            value={shortDescription}
-                            onChange={(e) => setShortDescription(e.target.value)}
-                            disabled={!!editData}
-                            style={{
-                                width: '100%',
-                                padding: '8px 12px',
-                                border: '1px solid #ced4da',
-                                borderRadius: '4px',
-                                fontSize: '0.9rem',
-                                backgroundColor: editData ? '#e9ecef' : 'white',
-                                outline: 'none',
-                                boxSizing: 'border-box',
-                                cursor: editData ? 'not-allowed' : 'text'
-                            }}
-                        />
+                        <div style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center'
+                        }}>
+                            <h3 style={{ margin: 0, color: '#000000', fontSize: '18px', fontWeight: 'bold' }}>
+                                {editData ? 'Edit Diagnosis' : 'Add Diagnosis'}
+                            </h3>
+                            <button
+                                onClick={handleClose}
+                                style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    padding: '5px',
+                                    borderRadius: '50%',
+                                    color: '#fff',
+                                    backgroundColor: 'rgb(0, 123, 255)',
+                                    width: '32px',
+                                    height: '32px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    transition: 'background-color 0.2s'
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.backgroundColor = 'rgb(0, 100, 200)';
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.backgroundColor = 'rgb(0, 123, 255)';
+                                }}
+                            >
+                                <Close fontSize="small" />
+                            </button>
+                        </div>
                     </div>
 
-                    <div style={{ marginBottom: '15px' }}>
-                        <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                            Diagnosis Description <span style={{ color: '#d32f2f' }}>*</span>
-                        </label>
-                        <input
-                            type="text"
-                            placeholder="Diagnosis Description"
-                            value={diagnosisDescription}
-                            onChange={(e) => setDiagnosisDescription(e.target.value)}
-                            style={{
-                                width: '100%',
-                                padding: '8px 12px',
-                                border: '1px solid #ced4da',
-                                borderRadius: '4px',
-                                fontSize: '0.9rem',
-                                backgroundColor: 'white',
-                                outline: 'none',
-                                boxSizing: 'border-box'
-                            }}
-                        />
-                    </div>
+                    {/* Popup Content */}
+                    <div style={{ padding: '20px', flex: 1 }}>
+                        <div style={{ marginBottom: '15px' }}>
+                            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                                Short Description <span style={{ color: '#d32f2f' }}>*</span>
+                            </label>
+                            <input
+                                type="text"
+                                placeholder="Diagnosis Short Description"
+                                value={shortDescription}
+                                onChange={(e) => setShortDescription(e.target.value)}
+                                disabled={!!editData}
+                                maxLength={40}
+                                style={{
+                                    width: '100%',
+                                    padding: '8px 12px',
+                                    border: '1px solid #ced4da',
+                                    borderRadius: '4px',
+                                    fontSize: '0.9rem',
+                                    backgroundColor: editData ? '#e9ecef' : 'white',
+                                    outline: 'none',
+                                    boxSizing: 'border-box',
+                                    cursor: editData ? 'not-allowed' : 'text'
+                                }}
+                            />
+                        </div>
 
-                    <div style={{ marginBottom: '15px' }}>
-                        <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                            Priority
-                        </label>
-                        <input
-                            type="text"
-                            placeholder="Priority"
-                            value={priority}
-                            onChange={(e) => setPriority(e.target.value)}
-                            style={{
-                                width: '100%',
-                                padding: '8px 12px',
-                                border: '1px solid #ced4da',
-                                borderRadius: '4px',
-                                fontSize: '0.9rem',
-                                backgroundColor: 'white',
-                                outline: 'none',
-                                boxSizing: 'border-box'
-                            }}
-                        />
-                    </div>
-                </div>
+                        <div style={{ marginBottom: '15px' }}>
+                            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                                Diagnosis Description <span style={{ color: '#d32f2f' }}>*</span>
+                            </label>
+                            <input
+                                type="text"
+                                placeholder="Diagnosis Description"
+                                value={diagnosisDescription}
+                                onChange={(e) => setDiagnosisDescription(e.target.value)}
+                                maxLength={40}
+                                style={{
+                                    width: '100%',
+                                    padding: '8px 12px',
+                                    border: '1px solid #ced4da',
+                                    borderRadius: '4px',
+                                    fontSize: '0.9rem',
+                                    backgroundColor: 'white',
+                                    outline: 'none',
+                                    boxSizing: 'border-box'
+                                }}
+                            />
+                        </div>
 
-                {/* Popup Footer */}
+                        <div style={{ marginBottom: '15px' }}>
+                            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                                Priority
+                            </label>
+                            <input
+                                type="text"
+                                placeholder="Priority"
+                                value={priority}
+                                onChange={(e) => setPriority(e.target.value)}
+                                style={{
+                                    width: '100%',
+                                    padding: '8px 12px',
+                                    border: '1px solid #ced4da',
+                                    borderRadius: '4px',
+                                    fontSize: '0.9rem',
+                                    backgroundColor: 'white',
+                                    outline: 'none',
+                                    boxSizing: 'border-box'
+                                }}
+                            />
+                        </div>
+                    </div>
+                    
+
+                    {/* Popup Footer */}
+                    
                 <div style={{
                     background: 'transparent',
                     padding: '0 20px 20px',
@@ -342,27 +346,32 @@ const AddDiagnosisPopup: React.FC<AddDiagnosisPopupProps> = ({ open, onClose, on
                         Submit
                     </button>                    
                 </div>
+                </div>
+
+                {/* Popup Content */}
+                
+
+                {/* Popup Footer */}
             </div>
-        </div>
-        
-        {/* Success/Error Snackbar */}
-        <Snackbar
-            open={snackbarOpen}
-            autoHideDuration={2000}
-            onClose={() => {
-                setSnackbarOpen(false);
-            }}
-            message={snackbarMessage}
-            anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-            sx={{
-                zIndex: 99999, // Ensure snackbar appears above everything
-                '& .MuiSnackbarContent-root': {
-                    backgroundColor: snackbarMessage.includes('successfully') ? '#4caf50' : '#f44336',
-                    color: 'white',
-                    fontWeight: 'bold'
-                }
-            }}
-        />
+
+            {/* Success/Error Snackbar */}
+            <Snackbar
+                open={snackbarOpen}
+                autoHideDuration={2000}
+                onClose={() => {
+                    setSnackbarOpen(false);
+                }}
+                message={snackbarMessage}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+                sx={{
+                    zIndex: 99999, // Ensure snackbar appears above everything
+                    '& .MuiSnackbarContent-root': {
+                        backgroundColor: snackbarMessage.includes('successfully') ? '#4caf50' : '#f44336',
+                        color: 'white',
+                        fontWeight: 'bold'
+                    }
+                }}
+            />
         </>
     );
 };
