@@ -1351,7 +1351,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                 originalDiscount: 0,
 
                 // Status and user - Use appropriate status for submitted visit details
-                statusId: 2, // WITH DOCTOR status for submitted visit details
+                statusId: 1, // WITH DOCTOR status for submitted visit details
                 userId: String(userId), // Use validated user ID as string
                 isSubmitPatientVisitDetails: true
             };
@@ -1473,6 +1473,20 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                 // Notify parent component that visit details were submitted
                 if (onVisitDetailsSubmitted) {
                     onVisitDetailsSubmitted(true);
+                }
+
+                // Persist submission state to localStorage for persistence across refreshes
+                try {
+                    if (patientData?.patientId && patientData?.visitDate) {
+                        const pid = String(patientData.patientId).trim();
+                        // Extract YYYY-MM-DD from visitDate
+                        const vDate = String(patientData.visitDate).split('T')[0];
+                        const lsKey = `onehealth_visit_submitted_${pid}_${vDate}`;
+                        localStorage.setItem(lsKey, 'true');
+                        console.log(`Saved visit submission state to localStorage: ${lsKey} = true`);
+                    }
+                } catch (e) {
+                    console.error('Failed to save visit submission state to localStorage', e);
                 }
 
                 setError(null);

@@ -345,8 +345,13 @@ export default function AppointmentTable() {
             const shiftId = toNumberSafe(getField(row, ['shift_id', 'Shift_ID', 'shiftId'], 1));
             const clinicIdFromRow = toStringSafe(getField(row, ['clinic_id', 'Clinic_ID', 'clinicId'], ''));
             const genderDescription = toStringSafe(getField(row, ['gender_description', 'genderDescription', 'gender', 'sex'], ''));
-            const visitDetailsSubmitted = !!getField(row, ['Is_Submit_Patient_Visit_Details', 'is_submit_patient_visit_details', 'visitDetailsSubmitted'], false);
-            const labDetailsSubmitted = !!getField(row, ['Is_Submit_Lab_Test_Details', 'is_submit_lab_test_details', 'Is_Submit_Lab_Results', 'is_submit_lab_results', 'labDetailsSubmitted', 'lab_details_submitted'], false);
+            const visitDateKey = (apptDate || '').split('T')[0];
+            const pidKey = String(patientIdRaw || '').trim();
+            const visitLsKey = `onehealth_visit_submitted_${pidKey}_${visitDateKey}`;
+            const visitDetailsSubmitted = !!getField(row, ['Is_Submit_Patient_Visit_Details', 'is_submit_patient_visit_details', 'visitDetailsSubmitted'], false) || (localStorage.getItem(visitLsKey) === 'true');
+            const lsKey = `onehealth_lab_submitted_${pidKey}_${visitDateKey}`;
+
+            const labDetailsSubmitted = !!getField(row, ['Is_Submit_Lab_Test_Details', 'is_submit_lab_test_details', 'Is_Submit_Lab_Results', 'is_submit_lab_results', 'labDetailsSubmitted', 'lab_details_submitted'], false) || (localStorage.getItem(lsKey) === 'true');
             const createdOn = toStringSafe(getField(row, ['created_on', 'createdOn', 'created_at', 'createdAt'], ''));
 
             // Fix time formatting - ensure proper HH:mm format
@@ -4276,10 +4281,10 @@ export default function AppointmentTable() {
                     <option value="">ALL</option>
                     {(() => {
                         const filteredStatuses = (availableStatuses.length ? availableStatuses : [
-                            'WAITING', 'WITH DOCTOR', 'CONSULT ON CALL', 'CHECK OUT', 'SAVE', 'COMPLETE'
+                            'WAITING', 'WITH DOCTOR', 'CONSULT ON CALL', 'CHECK OUT', 'SAVE', 'COMPLETE', 'WAITING FOR MEDICINE'
                         ]).filter(status => {
                             const statusId = mapStatusLabelToId(status);
-                            return statusId === 1 || statusId === 2 || statusId === 3; // show key workflow statuses
+                            return statusId === 1 || statusId === 2 || statusId === 3 || statusId === 4 || statusId === 5; // show key workflow statuses
                         });
                         return filteredStatuses.map(s => (
                             <option key={s} value={s}>{s}</option>
@@ -4375,6 +4380,14 @@ export default function AppointmentTable() {
                     </div>
                     <h5 className="text-muted">No Appointments Booked</h5>
                     <p className="text-muted">Search for a patient and click "Book Appointment" to add them to your schedule.</p>
+                </div>
+            ) : filteredAppointments.length === 0 ? (
+                <div className="text-center py-5">
+                    <div className="mb-3">
+                        <i className="fas fa-filter" style={{ fontSize: "3rem", color: "#6c757d" }}></i>
+                    </div>
+                    <h5 className="text-muted">No Records</h5>
+                    <p className="text-muted">No appointments match your current filter criteria.</p>
                 </div>
             ) : (
                 <>
@@ -4715,8 +4728,14 @@ export default function AppointmentTable() {
                                                                 const isComplete = statusId === 5;
                                                                 const shouldEnable = !isReceptionist || isWaiting || isComplete;
                                                                 if (!shouldEnable) return; // Disable hover effects for reception
-                                                                e.currentTarget.style.backgroundColor = 'transparent';
-                                                                e.currentTarget.style.borderColor = 'black';
+
+                                                                if (a.labDetailsSubmitted) {
+                                                                    e.currentTarget.style.backgroundColor = '#FFD700';
+                                                                    e.currentTarget.style.borderColor = '#FFA000';
+                                                                } else {
+                                                                    e.currentTarget.style.backgroundColor = 'transparent';
+                                                                    e.currentTarget.style.borderColor = 'black';
+                                                                }
                                                             }}
                                                             onMouseLeave={(e) => {
                                                                 const statusId = mapStatusLabelToId(a.status);
@@ -4726,7 +4745,12 @@ export default function AppointmentTable() {
                                                                 const isComplete = statusId === 5;
                                                                 const shouldEnable = !isReceptionist || isWaiting || isComplete;
                                                                 if (!shouldEnable) return; // Disable hover effects for reception
-                                                                e.currentTarget.style.backgroundColor = 'transparent';
+
+                                                                if (a.labDetailsSubmitted) {
+                                                                    e.currentTarget.style.backgroundColor = '#FFD700';
+                                                                } else {
+                                                                    e.currentTarget.style.backgroundColor = 'transparent';
+                                                                }
                                                                 e.currentTarget.style.borderColor = '#ddd';
                                                             }}
                                                         >
@@ -5011,11 +5035,12 @@ export default function AppointmentTable() {
                                                                     const statusId = mapStatusLabelToId(a.status);
                                                                     const shouldDisable = isReceptionist && statusId >= 2;
                                                                     if (shouldDisable) return '#f5f5f5';
+                                                                    if (a.visitDetailsSubmitted) return '#FFD700';
                                                                     const isWaiting = statusId === 1;
                                                                     const isComplete = statusId === 5;
                                                                     const shouldEnable = !isReceptionist || isWaiting || isComplete;
                                                                     if (!shouldEnable) return '#f5f5f5';
-                                                                    return a.status === 'WITH DOCTOR' ? 'rgb(96, 125, 139)' : (a.visitDetailsSubmitted ? '#FFD700' : 'transparent');
+                                                                    return a.status === 'WITH DOCTOR' ? 'rgb(96, 125, 139)' : 'transparent';
                                                                 })(),
                                                                 borderRadius: '4px',
                                                                 border: '1px solid #ddd',
@@ -5054,7 +5079,12 @@ export default function AppointmentTable() {
                                                                 const isComplete = statusId === 5;
                                                                 const shouldEnable = !isReceptionist || isWaiting || isComplete;
                                                                 if (!shouldEnable || a.status === 'WITH DOCTOR') return; // Disable hover effects when disabled
-                                                                e.currentTarget.style.backgroundColor = a.status === 'WITH DOCTOR' ? 'rgb(96, 125, 139)' : (a.visitDetailsSubmitted ? '#FFD700' : 'transparent');
+
+                                                                if (a.visitDetailsSubmitted) {
+                                                                    e.currentTarget.style.backgroundColor = '#FFD700';
+                                                                } else {
+                                                                    e.currentTarget.style.backgroundColor = 'transparent';
+                                                                }
                                                                 e.currentTarget.style.borderColor = '#ddd';
                                                             }}
                                                         >
@@ -5510,6 +5540,8 @@ export default function AppointmentTable() {
                                                             setShowDropdown(false);
                                                             // Navigate to lab details or open modal
                                                             console.log('Lab Details clicked for patient:', appointment.patientId);
+                                                            setSelectedPatientForLab(appointment);
+                                                            setShowLabTestEntry(true);
                                                         }}
                                                         style={{
                                                             opacity: (() => {
@@ -5540,6 +5572,39 @@ export default function AppointmentTable() {
                                                                 const shouldEnable = !isReceptionist || isWaiting || isComplete;
                                                                 return shouldEnable ? 'transparent' : '#f5f5f5';
                                                             })()
+                                                        }}
+                                                        onMouseEnter={(e) => {
+                                                            const statusId = mapStatusLabelToId(appointment.status);
+                                                            const shouldDisable = isReceptionist && statusId >= 2;
+                                                            if (shouldDisable) return;
+                                                            const isWaiting = statusId === 1;
+                                                            const isComplete = statusId === 5;
+                                                            const shouldEnable = !isReceptionist || isWaiting || isComplete;
+                                                            if (!shouldEnable) return;
+
+                                                            if (appointment.labDetailsSubmitted) {
+                                                                e.currentTarget.style.backgroundColor = '#FFD700';
+                                                                e.currentTarget.style.borderColor = '#FFA000';
+                                                            } else {
+                                                                e.currentTarget.style.backgroundColor = 'transparent';
+                                                                e.currentTarget.style.borderColor = '#000000';
+                                                            }
+                                                        }}
+                                                        onMouseLeave={(e) => {
+                                                            const statusId = mapStatusLabelToId(appointment.status);
+                                                            const shouldDisable = isReceptionist && statusId >= 2;
+                                                            if (shouldDisable) return;
+                                                            const isWaiting = statusId === 1;
+                                                            const isComplete = statusId === 5;
+                                                            const shouldEnable = !isReceptionist || isWaiting || isComplete;
+                                                            if (!shouldEnable) return;
+
+                                                            if (appointment.labDetailsSubmitted) {
+                                                                e.currentTarget.style.backgroundColor = '#FFD700';
+                                                            } else {
+                                                                e.currentTarget.style.backgroundColor = 'transparent';
+                                                            }
+                                                            e.currentTarget.style.borderColor = '#CFD8DC';
                                                         }}
                                                     >
                                                         <img src="/images/avatar/test-tubes_3523917.png" alt="Lab Test" style={{ width: 16, height: 16 }} />
@@ -6059,7 +6124,8 @@ export default function AppointmentTable() {
                         </div>
                     )}
                 </>
-            )}
+            )
+            }
             {/* Add Patient Modal */}
             <AddPatientPage
                 open={showAddPatient}
@@ -6096,104 +6162,122 @@ export default function AppointmentTable() {
             />
 
             {/* Patient Form Dialog */}
-            {showPatientFormDialog && (
-                <div
-                    style={{
-                        position: 'fixed',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                        zIndex: 9999,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: '20px'
-                    }}
-                    onClick={(e) => {
-                        // Close dialog when clicking on the overlay (outside the form)
-                        if (e.target === e.currentTarget) {
-                            setShowPatientFormDialog(false);
-                        }
-                    }}
-                >
+            {
+                showPatientFormDialog && (
                     <div
                         style={{
-                            backgroundColor: 'white',
-                            borderRadius: '8px',
-                            width: '1100vw',
-                            maxWidth: '1500px',
-                            maxHeight: '85vh',
-                            overflow: 'auto',
-                            position: 'relative'
+                            position: 'fixed',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                            zIndex: 9999,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: '20px'
                         }}
                         onClick={(e) => {
-                            // Prevent closing when clicking inside the form content
-                            e.stopPropagation();
+                            // Close dialog when clicking on the overlay (outside the form)
+                            if (e.target === e.currentTarget) {
+                                setShowPatientFormDialog(false);
+                            }
                         }}
                     >
-                        {/* Patient Form Content */}
-                        <PatientFormTest
-                            onClose={() => setShowPatientFormDialog(false)}
-                            initialData={formPatientData || undefined}
-                            visitDates={visitDates}
-                            currentVisitIndex={currentVisitIndex}
-                            onVisitDateChange={handleVisitDateChange}
-                        />
+                        <div
+                            style={{
+                                backgroundColor: 'white',
+                                borderRadius: '8px',
+                                width: '1100vw',
+                                maxWidth: '1500px',
+                                maxHeight: '85vh',
+                                overflow: 'auto',
+                                position: 'relative'
+                            }}
+                            onClick={(e) => {
+                                // Prevent closing when clicking inside the form content
+                                e.stopPropagation();
+                            }}
+                        >
+                            {/* Patient Form Content */}
+                            <PatientFormTest
+                                onClose={() => setShowPatientFormDialog(false)}
+                                initialData={formPatientData || undefined}
+                                visitDates={visitDates}
+                                currentVisitIndex={currentVisitIndex}
+                                onVisitDateChange={handleVisitDateChange}
+                            />
+                        </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* Quick Registration Form Modal */}
-            {showQuickRegistration && selectedPatientForQuickReg && (
-                <AddPatientPage
-                    open={showQuickRegistration}
-                    onClose={() => {
-                        setShowQuickRegistration(false);
-                        setSelectedPatientForQuickReg(null);
-                    }}
-                    patientId={selectedPatientForQuickReg.patientId}
-                    readOnly={true}
-                    doctorId={doctorId}
-                    clinicId={clinicId}
-                />
-            )}
+            {
+                showQuickRegistration && selectedPatientForQuickReg && (
+                    <AddPatientPage
+                        open={showQuickRegistration}
+                        onClose={() => {
+                            setShowQuickRegistration(false);
+                            setSelectedPatientForQuickReg(null);
+                        }}
+                        patientId={selectedPatientForQuickReg.patientId}
+                        readOnly={true}
+                        doctorId={doctorId}
+                        clinicId={clinicId}
+                    />
+                )
+            }
 
             {/* Lab Test Entry Popup */}
-            {showLabTestEntry && selectedPatientForLab && (
-                <LabTestEntry
-                    open={true}
-                    onClose={() => {
-                        setShowLabTestEntry(false);
-                        setSelectedPatientForLab(null);
-                    }}
-                    patientData={selectedPatientForLab}
-                    appointment={selectedPatientForLab}
-                    sessionData={sessionData}
-                    onSubmissionSuccess={() => {
-                        setAppointments(prev => prev.map(appt => {
-                            if (appt.appointmentId === selectedPatientForLab.appointmentId) {
-                                return { ...appt, labDetailsSubmitted: true };
-                            }
-                            return appt;
-                        }));
-                    }}
-                />
-            )}
+            {
+                showLabTestEntry && selectedPatientForLab && (
+                    <LabTestEntry
+                        open={true}
+                        onClose={() => {
+                            setShowLabTestEntry(false);
+                            setSelectedPatientForLab(null);
+                        }}
+                        patientData={selectedPatientForLab}
+                        appointment={selectedPatientForLab}
+                        sessionData={sessionData}
+                        onSubmissionSuccess={() => {
+                            setAppointments(prev => prev.map(appt => {
+                                // Check matching patientId to ensure we only update the specific patient
+                                // Using patientId is safer than appointmentId which might be undefined in some cases
+                                if (appt.patientId === selectedPatientForLab.patientId) {
+                                    // Persist to localStorage
+                                    try {
+                                        const vDate = (appt.visitDate || '').split('T')[0];
+                                        const lsKey = `onehealth_lab_submitted_${appt.patientId}_${vDate}`;
+                                        localStorage.setItem(lsKey, 'true');
+                                    } catch (e) {
+                                        console.error('Failed to save to localStorage', e);
+                                    }
+                                    return { ...appt, labDetailsSubmitted: true };
+                                }
+                                return appt;
+                            }));
+                        }}
+                    />
+                )
+            }
 
             {/* Visit Details Popup */}
-            {showVisitDetails && selectedPatientForVisit && (
-                <PatientVisitDetails
-                    open={showVisitDetails}
-                    onClose={() => {
-                        setShowVisitDetails(false);
-                        setSelectedPatientForVisit(null);
-                    }}
-                    patientData={selectedPatientForVisit}
-                    onVisitDetailsSubmitted={handleVisitDetailsSubmitted}
-                />
-            )}
+            {
+                showVisitDetails && selectedPatientForVisit && (
+                    <PatientVisitDetails
+                        open={showVisitDetails}
+                        onClose={() => {
+                            setShowVisitDetails(false);
+                            setSelectedPatientForVisit(null);
+                        }}
+                        patientData={selectedPatientForVisit}
+                        onVisitDetailsSubmitted={handleVisitDetailsSubmitted}
+                    />
+                )
+            }
 
             {/* Delete Appointment Confirmation Dialog */}
             <DeleteConfirmationDialog
@@ -6223,6 +6307,6 @@ export default function AppointmentTable() {
                 onClose={() => setShowBookedSnackbar(false)}
                 autoHideDuration={1000}
             />
-        </div>
+        </div >
     );
 }

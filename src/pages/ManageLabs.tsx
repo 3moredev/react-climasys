@@ -208,6 +208,10 @@ export default function ManageLabs() {
           !currentRows.some(cr => cr.parameterId === op.parameterId)
         );
 
+        console.log('Original Params:', originalParams);
+        console.log('Current Rows:', currentRows);
+        console.log('Params to Delete:', paramsToDelete);
+
         // Identify Updates
         const paramsToUpdate = currentRows.filter(cr => cr.parameterId);
 
@@ -218,12 +222,24 @@ export default function ManageLabs() {
 
         // Execute Deletes
         for (const p of paramsToDelete) {
-          if (p.parameterId) {
+          if (p.parameterId !== undefined && p.parameterId !== null) {
             try {
-              await labParameterService.deleteLabTestParameter(Number(p.parameterId));
+              const deleteResp = await labParameterService.deleteLabTestParameter(
+                doctorIdToUse,
+                Number(p.parameterId),
+                Number(labTestId),
+                clinicId
+              );
+              console.log(`Delete response for ${p.parameterId}:`, deleteResp);
+
+              if (deleteResp && deleteResp.success === false) {
+                console.error(`Failed to delete parameter ${p.parameterId}: ${deleteResp.message || deleteResp.error}`);
+                throw new Error(deleteResp.message || deleteResp.error || 'Failed to delete parameter');
+              }
               console.log(`Deleted parameter ${p.parameterId}`);
             } catch (e) {
               console.error(`Failed to delete parameter ${p.parameterId}`, e);
+              throw e; // Rethrow to stop saving and notify user
             }
           }
         }
@@ -231,17 +247,31 @@ export default function ManageLabs() {
         // Execute Updates
         for (const p of paramsToUpdate) {
           if (p.parameterId) {
+            // Optimization: Check if parameter actually changed
+            const originalParam = originalParams.find(op => op.parameterId === p.parameterId);
+            if (originalParam && originalParam.parameterName === p.parameterName) {
+              console.log(`Parameter ${p.parameterId} unchanged, skipping update`);
+              continue;
+            }
+
             try {
-              await labParameterService.updateLabTestParameter(Number(p.parameterId), {
+              const updateResp = await labParameterService.updateLabTestParameter({
+                id: Number(p.parameterId),
                 parameterName: p.parameterName,
                 parameter_name: p.parameterName,
                 doctorId: doctorIdToUse,
                 clinicId: clinicId,
                 labTestId: labTestId
               });
+
+              if (updateResp && updateResp.success === false) {
+                console.error(`Failed to update parameter ${p.parameterId}: ${updateResp.message || updateResp.error}`);
+                throw new Error(updateResp.message || updateResp.error || 'Failed to update parameter');
+              }
               console.log(`Updated parameter ${p.parameterId}`);
             } catch (e) {
               console.error(`Failed to update parameter ${p.parameterId}`, e);
+              throw e;
             }
           }
         }
@@ -279,12 +309,16 @@ export default function ManageLabs() {
               parameters: parametersToAdd
             };
 
-            await labParameterService.insertLabTestAndParameters(createRequest);
+            const createResp = await labParameterService.insertLabTestAndParameters(createRequest);
+
+            if (createResp && createResp.success === false) {
+              throw new Error(createResp.message || createResp.error || 'Failed to create parameters');
+            }
             console.log('Successfully added new parameters');
 
           } catch (e: any) {
             console.error("Failed to create new parameters", e);
-            setSnackbarMessage(`Lab test updated, but failed to add parameters: ${e.message || 'Unknown error'}`);
+            throw new Error(`Lab test updated, but failed to add parameters: ${e.message || 'Unknown error'}`);
           }
         }
 
@@ -543,7 +577,12 @@ export default function ManageLabs() {
             const paramId = param.ID || param.id;
             if (paramId) {
               try {
-                await labParameterService.deleteLabTestParameter(Number(paramId));
+                await labParameterService.deleteLabTestParameter(
+                  doctorIdToUse,
+                  Number(paramId),
+                  Number(labTestId),
+                  clinicId
+                );
                 console.log('Deleted parameter:', param.Parameter_Name || param.parameterName || param.parameter_name);
               } catch (paramError: any) {
                 console.error('Error deleting parameter:', paramError);

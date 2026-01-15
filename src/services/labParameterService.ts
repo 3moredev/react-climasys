@@ -619,20 +619,18 @@ export const labParameterService = {
 
   /**
    * Update an existing lab test parameter
-   * PUT /api/lab/master/parameters/{parameterId}
-   * @param parameterId - Parameter ID to update
-   * @param parameter - Updated parameter data
+   * PUT /api/lab/master/parameters
+   * @param parameter - Updated parameter data (must include id, doctorId, clinicId, labTestId)
    * @returns Promise<UpdateLabTestParameterResponse> - Updated parameter or error message
    */
   async updateLabTestParameter(
-    parameterId: number,
-    parameter: UpdateLabTestParameterRequest
+    parameter: UpdateLabTestParameterRequest & { id?: number; doctorId?: string; clinicId?: string; labTestId?: number }
   ): Promise<UpdateLabTestParameterResponse> {
     try {
-      console.log('Updating lab test parameter:', parameterId, parameter);
+      console.log('Updating lab test parameter:', parameter);
 
       const resp = await api.put<UpdateLabTestParameterResponse>(
-        `/lab/master/parameters/${parameterId}`,
+        `/lab/master/parameters`,
         parameter
       );
       console.log('Update lab test parameter response:', resp.data);
@@ -663,18 +661,24 @@ export const labParameterService = {
 
   /**
    * Delete a lab test parameter
-   * DELETE /api/lab/master/parameters/{parameterId}
+   * DELETE /api/lab/master/parameters/doctor/{doctorId}/id/{id}/lab-test/{labTestId}/clinic/{clinicId}
+   * @param doctorId - Doctor ID
    * @param parameterId - Parameter ID to delete
+   * @param labTestId - Lab Test ID
+   * @param clinicId - Clinic ID
    * @returns Promise<DeleteLabTestParameterResponse> - Success or error message
    */
   async deleteLabTestParameter(
-    parameterId: number
+    doctorId: string,
+    parameterId: number,
+    labTestId: number,
+    clinicId: string
   ): Promise<DeleteLabTestParameterResponse> {
     try {
-      console.log('Deleting lab test parameter:', parameterId);
+      console.log(`Deleting lab test parameter: doctorId=${doctorId}, id=${parameterId}, labTestId=${labTestId}, clinicId=${clinicId}`);
 
       const resp = await api.delete<DeleteLabTestParameterResponse>(
-        `/lab/master/parameters/${parameterId}`
+        `/lab/master/parameters/doctor/${encodeURIComponent(doctorId)}/id/${parameterId}/lab-test/${labTestId}/clinic/${encodeURIComponent(clinicId)}`
       );
       console.log('Delete lab test parameter response:', resp.data);
       return resp.data;
