@@ -533,6 +533,40 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
                             Close
                         </button>
                         <button
+                            onClick={()=>{
+                                setFormData({
+                                    rdId: 0,
+                                    doctorName: '',
+                                    doctorAddress: '',
+                                    doctorMob: '',
+                                    doctorMail: '',
+                                    referId: 'D',
+                                    languageId: 1,
+                                    remarks: '',
+                                    deleteFlag: false
+                                });
+                            }}
+                            style={{
+                                padding: '8px 16px',
+                                backgroundColor: '#1976d2',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '14px',
+                                fontWeight: '500',
+                                transition: 'background-color 0.2s'
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = '#1976d2';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = '#1976d2';
+                            }}
+                        >
+                            Reset
+                        </button>
+                        <button
                             onClick={handleSave}
                             style={{
                                 padding: '8px 16px',

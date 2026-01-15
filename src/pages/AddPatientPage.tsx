@@ -1601,8 +1601,9 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                       </Typography>
                       <TextField
                         fullWidth
-                        type="date"
-                        required
+                        type="date" 
+                        data-date-format="DD-MM-YYYY"
+                        required                        
                         value={formData.dobDate}
                         onChange={(e) => {
                           const newValue = e.target.value
@@ -1684,9 +1685,9 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         error={!!errors.dobDate}
                         helperText={errors.dobDate}
                         inputProps={{
-                          max: dayjs().format('YYYY-MM-DD')
+                          max: dayjs().format('YYYY-MM-DD'),
                         }}
-                        disabled={loading || readOnly}                      
+                        disabled={loading || readOnly}
                       />
                     </Box>
                     <Box sx={{ width: '50% !important' }}>
@@ -2684,6 +2685,17 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
 
       <DialogActions sx={{ padding: '0 20px 14px', backgroundColor: 'transparent', borderTop: 'none', justifyContent: 'flex-end' }}>
         <Box sx={{ display: 'flex', gap: 1, bgcolor: 'transparent', boxShadow: 'none', borderRadius: 0, p: 0 }}>
+          <Button
+            onClick={onClose}
+            variant="contained"
+            disabled={loading || readOnly}
+            sx={{
+              backgroundColor: '#1976d2',
+              '&:hover': { backgroundColor: '#1565c0' }
+            }}
+          >
+            Close
+          </Button>
           <Button
             onClick={resetForm}
             variant="contained"

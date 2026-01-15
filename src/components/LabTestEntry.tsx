@@ -1483,6 +1483,21 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                             backgroundColor: '#fafafa'
                         }}>
                             <button
+                                onClick={onClose}
+                                style={{
+                                    backgroundColor: 'rgb(25, 118, 210)',
+                                    color: '#333',
+                                    border: '1px solid #ddd',
+                                    padding: '12px 24px',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer',
+                                    fontSize: '14px',
+                                    fontWeight: '500'
+                                }}
+                            >
+                                Close
+                            </button>
+                            <button
                                 onClick={handleReset}
                                 style={{
                                     backgroundColor: 'rgb(25, 118, 210)',
