@@ -197,7 +197,7 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
 
                     {/* Footer */}
                     <div style={{ padding: '0 20px 14px', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                        <button onClick={onClose} style={btnStyle()}>Cancel</button>
+                        <button onClick={onClose} style={btnStyle()}>Close</button>
                         <button onClick={()=>{
                             setTestLabData({
                                 labTestName: '',

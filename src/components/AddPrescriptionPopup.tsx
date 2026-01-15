@@ -653,7 +653,7 @@ const AddPrescriptionPopup: React.FC<AddPrescriptionPopupProps> = ({
                             e.currentTarget.style.backgroundColor = '#1976d2';
                         }}
                     >
-                        Cancel
+                        Close
                     </button>
                     <button
                         onClick={()=>{

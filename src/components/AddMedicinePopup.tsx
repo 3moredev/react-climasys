@@ -590,7 +590,7 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                             e.currentTarget.style.backgroundColor = '#1976d2';
                         }}
                     >
-                        Cancel
+                        Close
                     </button>
                     <button
                         onClick={()=>{
