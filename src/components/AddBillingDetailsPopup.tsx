@@ -562,7 +562,7 @@ const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
                 e.currentTarget.style.backgroundColor = 'rgb(0, 123, 255)';
             }}
             >
-              Cancel
+              Close
             </button>
             <button
               onClick={()=>{
