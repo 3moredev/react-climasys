@@ -295,6 +295,57 @@ const AddComplaintPopup: React.FC<AddComplaintPopupProps> = ({ open, onClose, on
                     gap: '8px'
                 }}>
                     <button
+                        onClick={handleCancel}
+                        style={{
+                            padding: '8px 16px',
+                            backgroundColor: 'rgb(0, 123, 255)',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '0.9rem',
+                            fontWeight: '500',
+                            transition: 'background-color 0.2s',
+                            whiteSpace: 'nowrap'
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = 'rgb(0, 100, 200)';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'rgb(0, 123, 255)';
+                        }}
+                    >
+                        Close
+                    </button>
+                    <button
+                        onClick={()=>{
+                            setShortDescription('');
+                            setComplaintDescription('');
+                            setPriority('');
+                            setDisplayToOperator(false);
+                        }}
+                        style={{
+                            padding: '8px 16px',
+                            backgroundColor: 'rgb(0, 123, 255)',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '0.9rem',
+                            fontWeight: '500',
+                            transition: 'background-color 0.2s',
+                            whiteSpace: 'nowrap'
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = 'rgb(0, 100, 200)';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'rgb(0, 123, 255)';
+                        }}
+                    >
+                        Reset
+                    </button>
+                    <button
                         onClick={handleSubmit}
                         style={{
                             padding: '8px 16px',
@@ -316,53 +367,7 @@ const AddComplaintPopup: React.FC<AddComplaintPopupProps> = ({ open, onClose, on
                         }}
                     >
                         Submit
-                    </button>
-                    <button
-                        onClick={handleCancel}
-                        style={{
-                            padding: '8px 16px',
-                            backgroundColor: 'rgb(0, 123, 255)',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontSize: '0.9rem',
-                            fontWeight: '500',
-                            transition: 'background-color 0.2s',
-                            whiteSpace: 'nowrap'
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = 'rgb(0, 100, 200)';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = 'rgb(0, 123, 255)';
-                        }}
-                    >
-                        Cancel
-                    </button>
-                    <button
-                        onClick={handleBack}
-                        style={{
-                            padding: '8px 16px',
-                            backgroundColor: 'rgb(0, 123, 255)',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontSize: '0.9rem',
-                            fontWeight: '500',
-                            transition: 'background-color 0.2s',
-                            whiteSpace: 'nowrap'
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = 'rgb(0, 100, 200)';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = 'rgb(0, 123, 255)';
-                        }}
-                    >
-                        Back
-                    </button>
+                    </button>                    
                 </div>
             </div>
         </div>

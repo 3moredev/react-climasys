@@ -596,6 +596,59 @@ const AddProcedurePopup: React.FC<AddProcedurePopupProps> = ({ open, onClose, on
                     gap: '8px'
                 }}>
                     <button
+                        onClick={handleCancel}
+                        style={{
+                            padding: '8px 16px',
+                            backgroundColor: '#1976d2',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            fontFamily: "'Roboto', sans-serif",
+                            fontWeight: '500',
+                            transition: 'background-color 0.2s',
+                            whiteSpace: 'nowrap'
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = '#1565c0';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = '#1976d2';
+                        }}
+                    >
+                        Close
+                    </button>
+                    <button
+                        onClick={()=>{
+                            setProcedureDescription('');
+                            setPriority('');
+                            setFindingsDescription('');
+                            setFindings([]);
+                        }}
+                        style={{
+                            padding: '8px 16px',
+                            backgroundColor: '#1976d2',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            fontFamily: "'Roboto', sans-serif",
+                            fontWeight: '500',
+                            transition: 'background-color 0.2s',
+                            whiteSpace: 'nowrap'
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = '#1565c0';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = '#1976d2';
+                        }}
+                    >
+                        Reset
+                    </button>
+                    <button
                         onClick={handleSubmit}
                         disabled={loading}
                         style={{
@@ -624,55 +677,7 @@ const AddProcedurePopup: React.FC<AddProcedurePopupProps> = ({ open, onClose, on
                         }}
                     >
                         {loading ? 'Saving...' : 'Submit'}
-                    </button>
-                    <button
-                        onClick={handleCancel}
-                        style={{
-                            padding: '8px 16px',
-                            backgroundColor: '#1976d2',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontSize: '12px',
-                            fontFamily: "'Roboto', sans-serif",
-                            fontWeight: '500',
-                            transition: 'background-color 0.2s',
-                            whiteSpace: 'nowrap'
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = '#1565c0';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = '#1976d2';
-                        }}
-                    >
-                        Cancel
-                    </button>
-                    <button
-                        onClick={handleBack}
-                        style={{
-                            padding: '8px 16px',
-                            backgroundColor: '#1976d2',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontSize: '12px',
-                            fontFamily: "'Roboto', sans-serif",
-                            fontWeight: '500',
-                            transition: 'background-color 0.2s',
-                            whiteSpace: 'nowrap'
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = '#1565c0';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = '#1976d2';
-                        }}
-                    >
-                        Back
-                    </button>
+                    </button>                    
                 </div>
             </div>
         </div>

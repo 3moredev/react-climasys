@@ -633,29 +633,6 @@ const AddPrescriptionPopup: React.FC<AddPrescriptionPopupProps> = ({
                     }}
                 >
                     <button
-                        onClick={handleSave}
-                        style={{
-                            padding: '8px 16px',
-                            backgroundColor: '#1976d2',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontSize: '14px',
-                            fontWeight: '500',
-                            transition: 'background-color 0.2s',
-                            fontFamily: "'Roboto', sans-serif",
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = '#1565c0';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = '#1976d2';
-                        }}
-                    >
-                        Submit
-                    </button>
-                    <button
                         onClick={handleClose}
                         style={{
                             padding: '8px 16px',
@@ -679,7 +656,21 @@ const AddPrescriptionPopup: React.FC<AddPrescriptionPopupProps> = ({
                         Cancel
                     </button>
                     <button
-                        onClick={handleClose}
+                        onClick={()=>{
+                            setPrescriptionData(createDefaultPrescription());                            
+                            setSnackbarOpen(false);
+                            setSnackbarMessage('');
+                            setCategoryOptions([
+                                'ALLERGY',
+                                'ANAESTHETICS',
+                                'ANTIBIOTICS',
+                                'ANTIBODIES',
+                                'CNS',
+                                'CVS & HA',
+                                'DERMATOLOGY',
+                            ]);
+                            setSubCategoryOptions([]);
+                        }}
                         style={{
                             padding: '8px 16px',
                             backgroundColor: '#1976d2',
@@ -699,8 +690,31 @@ const AddPrescriptionPopup: React.FC<AddPrescriptionPopupProps> = ({
                             e.currentTarget.style.backgroundColor = '#1976d2';
                         }}
                     >
-                        Back
+                        Reset
                     </button>
+                    <button
+                        onClick={handleSave}
+                        style={{
+                            padding: '8px 16px',
+                            backgroundColor: '#1976d2',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '14px',
+                            fontWeight: '500',
+                            transition: 'background-color 0.2s',
+                            fontFamily: "'Roboto', sans-serif",
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = '#1565c0';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = '#1976d2';
+                        }}
+                    >
+                        Submit
+                    </button>                                        
                 </div>
             </div>
         </div>

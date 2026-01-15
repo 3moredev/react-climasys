@@ -259,88 +259,99 @@ const AddDiagnosisPopup: React.FC<AddDiagnosisPopupProps> = ({ open, onClose, on
                             />
                         </div>
                     </div>
+                    
 
                     {/* Popup Footer */}
-                    <div style={{
-                        background: 'transparent',
-                        padding: '0 20px 20px',
-                        borderBottomLeftRadius: '8px',
-                        borderBottomRightRadius: '8px',
-                        display: 'flex',
-                        justifyContent: 'flex-end',
-                        gap: '8px'
-                    }}>
-                        <button
-                            onClick={handleSubmit}
-                            style={{
-                                padding: '8px 16px',
-                                backgroundColor: 'rgb(0, 123, 255)',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '4px',
-                                cursor: 'pointer',
-                                fontSize: '0.9rem',
-                                fontWeight: '500',
-                                transition: 'background-color 0.2s',
-                                whiteSpace: 'nowrap'
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.backgroundColor = 'rgb(0, 100, 200)';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.backgroundColor = 'rgb(0, 123, 255)';
-                            }}
-                        >
-                            Submit
-                        </button>
-                        <button
-                            onClick={handleCancel}
-                            style={{
-                                padding: '8px 16px',
-                                backgroundColor: 'rgb(0, 123, 255)',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '4px',
-                                cursor: 'pointer',
-                                fontSize: '0.9rem',
-                                fontWeight: '500',
-                                transition: 'background-color 0.2s',
-                                whiteSpace: 'nowrap'
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.backgroundColor = 'rgb(0, 100, 200)';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.backgroundColor = 'rgb(0, 123, 255)';
-                            }}
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            onClick={handleBack}
-                            style={{
-                                padding: '8px 16px',
-                                backgroundColor: 'rgb(0, 123, 255)',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '4px',
-                                cursor: 'pointer',
-                                fontSize: '0.9rem',
-                                fontWeight: '500',
-                                transition: 'background-color 0.2s',
-                                whiteSpace: 'nowrap'
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.backgroundColor = 'rgb(0, 100, 200)';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.backgroundColor = 'rgb(0, 123, 255)';
-                            }}
-                        >
-                            Back
-                        </button>
-                    </div>
+                    
+                <div style={{
+                    background: 'transparent',
+                    padding: '0 20px 20px',
+                    borderBottomLeftRadius: '8px',
+                    borderBottomRightRadius: '8px',
+                    display: 'flex',
+                    justifyContent: 'flex-end',
+                    gap: '8px'
+                }}>
+                    <button
+                        onClick={handleCancel}
+                        style={{
+                            padding: '8px 16px',
+                            backgroundColor: 'rgb(0, 123, 255)',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '0.9rem',
+                            fontWeight: '500',
+                            transition: 'background-color 0.2s',
+                            whiteSpace: 'nowrap'
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = 'rgb(0, 100, 200)';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'rgb(0, 123, 255)';
+                        }}
+                    >
+                        Close
+                    </button>
+                    <button
+                        onClick={() => {
+                            setShortDescription('');
+                            setDiagnosisDescription('');
+                            setPriority('');
+                        }}
+                        style={{
+                            padding: '8px 16px',
+                            backgroundColor: 'rgb(0, 123, 255)',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '0.9rem',
+                            fontWeight: '500',
+                            transition: 'background-color 0.2s',
+                            whiteSpace: 'nowrap'
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = 'rgb(0, 100, 200)';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'rgb(0, 123, 255)';
+                        }}
+                    >
+                        Reset
+                    </button>
+                    <button
+                        onClick={handleSubmit}
+                        style={{
+                            padding: '8px 16px',
+                            backgroundColor: 'rgb(0, 123, 255)',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '0.9rem',
+                            fontWeight: '500',
+                            transition: 'background-color 0.2s',
+                            whiteSpace: 'nowrap'
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = 'rgb(0, 100, 200)';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'rgb(0, 123, 255)';
+                        }}
+                    >
+                        Submit
+                    </button>                    
                 </div>
+                </div>
+
+                {/* Popup Content */}
+                
+
+                {/* Popup Footer */}
             </div>
 
             {/* Success/Error Snackbar */}

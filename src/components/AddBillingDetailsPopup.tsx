@@ -345,7 +345,7 @@ const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
                 {/* Group */}
                 <div style={{ marginBottom: '15px' }}>
                   <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                    Group*
+                    Group <span style={{ color: 'red' }}>*</span>
                   </label>
                   <select
                     value={billingData.group}
@@ -394,7 +394,7 @@ const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
                 {/* Visit Type */}
                 <div style={{ marginBottom: '15px' }}>
                   <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                    Visit Type*
+                    Visit Type <span style={{ color: 'red' }}>*</span>
                   </label>
                   <select
                     value={billingData.visitType}
@@ -488,7 +488,7 @@ const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
                 {/* Default Fee */}
                 <div style={{ marginBottom: '15px' }}>
                   <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                    Default Fee (Rs)*
+                    Default Fee (Rs) <span style={{ color: 'red' }}>*</span>
                   </label>
                   <input
                     type="text"
@@ -510,7 +510,7 @@ const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
                 {/* Sequence No */}
                 <div style={{ marginBottom: '15px' }}>
                   <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                    Sequence No*
+                    Sequence No <span style={{ color: 'red' }}>*</span>
                   </label>
                   <input
                     type="text"
@@ -543,6 +543,62 @@ const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
             gap: '8px'
           }}>
             <button
+              onClick={handleClose}
+              style={{
+                padding: '8px 16px',
+                backgroundColor: 'rgb(0, 100, 200)',
+                color: '#1976d2',
+                border: '1px solid #1976d2',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: '500',
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgb(0, 100, 200)';
+            }}
+            onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgb(0, 123, 255)';
+            }}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={()=>{
+                setBillingData({
+                  group: '',
+                  subGroup: '',
+                  details: '',
+                  defaultFee: '',
+                  sequenceNo: '',
+                  visitType: '',
+                  isDefault: false,
+                  lunch: '',
+                  clinicId: ''
+                });
+              }}
+              style={{
+                padding: '8px 16px',
+                backgroundColor: 'rgb(0, 100, 200)',
+                color: '#1976d2',
+                border: '1px solid #1976d2',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: '500',
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgb(0, 100, 200)';
+            }}
+            onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgb(0, 123, 255)';
+            }}
+            >
+              Reset
+            </button>
+            <button
               onClick={handleSave}
               disabled={isSaving}
               style={{
@@ -569,51 +625,7 @@ const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
               }}
             >
               {isSaving ? 'Saving...' : 'Submit'}
-            </button>
-            <button
-              onClick={handleClose}
-              style={{
-                padding: '8px 16px',
-                backgroundColor: 'rgb(0, 100, 200)',
-                color: '#1976d2',
-                border: '1px solid #1976d2',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: '500',
-                transition: 'all 0.2s'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgb(0, 100, 200)';
-            }}
-            onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgb(0, 123, 255)';
-            }}
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleClose}
-              style={{
-                padding: '8px 16px',
-                backgroundColor: 'rgb(0, 100, 200)',
-                color: '#1976d2',
-                border: '1px solid #1976d2',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: '500',
-                transition: 'all 0.2s'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgb(0, 100, 200)';
-            }}
-            onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgb(0, 123, 255)';
-            }}
-            >
-              Back
-            </button>
+            </button>                      
           </div>
         </div>
       </div>

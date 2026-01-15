@@ -3361,6 +3361,34 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                             gap: '8px'
                         }}>
                             <button
+                                onClick={onClose}
+                                disabled={readOnly}
+                                style={{
+                                    padding: '10px 20px',
+                                    backgroundColor: readOnly ? '#9e9e9e' : '#1976d2',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    cursor: readOnly ? 'not-allowed' : 'pointer',
+                                    fontSize: '14px',
+                                    fontWeight: '500',
+                                    transition: 'background-color 0.2s',
+                                    opacity: readOnly ? 0.6 : 1
+                                }}
+                                onMouseEnter={(e) => {
+                                    if (!readOnly) {
+                                        e.currentTarget.style.backgroundColor = '#1565c0';
+                                    }
+                                }}
+                                onMouseLeave={(e) => {
+                                    if (!readOnly) {
+                                        e.currentTarget.style.backgroundColor = '#1976d2';
+                                    }
+                                }}
+                            >
+                                Close
+                            </button>
+                            <button
                                 onClick={handleReset}
                                 disabled={readOnly}
                                 style={{
