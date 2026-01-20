@@ -1020,7 +1020,7 @@ export default function ManageLabs() {
                 <th style={{ width: '5%' }}>Sr.</th>
                 <th style={{ width: '60%' }}>Lab Test Name</th>
                 <th style={{ width: '10%' }}>Priority</th>
-                <th style={{ width: '15%' }}>Action</th>
+                <th style={{ width: '15%' }} className="text-center">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -1030,7 +1030,7 @@ export default function ManageLabs() {
                     <td>{labTest.sr}</td>
                     <td>{labTest.labTestName}</td>
                     <td>{labTest.priority}</td>
-                    <td>
+                    <td className="d-flex justify-content-center">
                       <div className="action-icons">
                         <div title="Edit" onClick={() => handleEdit(labTest)}>
                           <Edit style={{ fontSize: '20px' }} />

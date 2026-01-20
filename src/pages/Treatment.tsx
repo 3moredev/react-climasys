@@ -32,6 +32,7 @@ import { buildPrescriptionPrintHTML, buildLabTestsPrintHTML, getHeaderImageUrl }
 import prescriptionDetailsService, {
     PrescriptionTemplate as PrescriptionTemplateApiModel,
 } from "../services/prescriptionDetailsService";
+import PatientNameDisplay from "../components/PatientNameDisplay";
 
 // Specific styles for Duration/Comment input in table
 const durationCommentStyles = `
@@ -4968,6 +4969,21 @@ export default function Treatment() {
                                     >
                                         {treatmentData?.patientName || 'Amit Kalamkar'} / {treatmentData?.gender || 'Male'} / {treatmentData?.age || 48} Y / {treatmentData?.contact || 'N/A'}
                                     </div>
+                                    {/* <PatientNameDisplay onClick={() => {
+                                        if (treatmentData?.patientId) {
+                                            setShowQuickRegistration(true);
+                                        }
+                                    }}
+                                        style={{
+                                            fontSize: '16px',
+                                            fontWeight: 'bold',
+                                            color: '#2e7d32',
+                                            cursor: treatmentData?.patientId ? 'pointer' : 'default',
+                                            textDecoration: treatmentData?.patientId ? 'underline' : 'none'
+                                        }}
+                                        title={treatmentData?.patientId ? 'Click to view patient details' : ''}
+                                        patientData={treatmentData}
+                                    /> */}
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                             <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px', whiteSpace: 'nowrap' }}>Referred By:</label>
@@ -7804,6 +7820,14 @@ export default function Treatment() {
                             <div style={{ display: 'flex', gap: 8, marginTop: 14, justifyContent: 'flex-end' }}>
                                 <button
                                     type="button"
+                                    onClick={() => setShowAddendumModal(false)}
+                                    title="Close addendum"
+                                    style={{ backgroundColor: 'rgb(24, 120, 215)', color: '#000', border: '1px solid #cfd8dc', padding: '6px 12px', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
+                                >
+                                    Close
+                                </button>
+                                <button
+                                    type="button"
                                     onClick={() => setAddendumText('')}
                                     title="Reset addendum"
                                     style={{ backgroundColor: 'rgb(25, 118, 210)', color: '#000', border: 'none', padding: '6px 12px', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
@@ -7841,14 +7865,6 @@ export default function Treatment() {
                                     style={{ backgroundColor: '#1976d2', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
                                 >
                                     Submit
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setShowAddendumModal(false)}
-                                    title="Close addendum"
-                                    style={{ backgroundColor: 'rgb(24, 120, 215)', color: '#000', border: '1px solid #cfd8dc', padding: '6px 12px', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
-                                >
-                                    Close
                                 </button>
                             </div>
                         </div>

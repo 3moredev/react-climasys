@@ -593,7 +593,7 @@ export default function ManageMedicine() {
               <th style={{ width: '5%' }}>D</th>
               <th style={{ width: '8%' }}>Days</th>
               <th style={{ width: '15%' }}>Instruction</th>
-              <th style={{ width: '10%' }}>Action</th>
+              <th style={{ width: '10%' }} className="text-center">Action</th>
             </tr>
           </thead>
           <tbody>
@@ -609,7 +609,7 @@ export default function ManageMedicine() {
                   <td>{medicine.d}</td>
                   <td>{medicine.days}</td>
                   <td>{medicine.instruction || ''}</td>
-                  <td>
+                  <td className="d-flex justify-content-center">
                     <div className="action-icons">
                       <div title="Edit" onClick={() => handleEdit(medicine)}>
                         <Edit style={{ fontSize: '20px' }} />

@@ -1,6 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { Close } from '@mui/icons-material';
-import { Snackbar } from '@mui/material';
+import {
+    Snackbar,
+    TextField,
+    FormControlLabel,
+    Checkbox,
+    Button,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    Grid,
+    Box,
+    Typography,
+    IconButton
+} from '@mui/material';
 import { useSession } from '../store/hooks/useSession';
 
 interface AddComplaintPopupProps {
@@ -27,7 +41,13 @@ const AddComplaintPopup: React.FC<AddComplaintPopupProps> = ({ open, onClose, on
     const [complaintDescription, setComplaintDescription] = useState('');
     const [priority, setPriority] = useState('');
     const [displayToOperator, setDisplayToOperator] = useState(false);
-    
+
+    // Validation state
+    const [errors, setErrors] = useState({
+        shortDescription: '',
+        complaintDescription: ''
+    });
+
     // Snackbar state management
     const [snackbarOpen, setSnackbarOpen] = useState(false);
     const [snackbarMessage, setSnackbarMessage] = useState('');
@@ -39,25 +59,34 @@ const AddComplaintPopup: React.FC<AddComplaintPopupProps> = ({ open, onClose, on
             setComplaintDescription(editData.complaintDescription || '');
             setPriority(editData.priority?.toString() || '');
             setDisplayToOperator(editData.displayToOperator || false);
+            setErrors({ shortDescription: '', complaintDescription: '' });
         } else {
             // Reset form when not in edit mode
             setShortDescription('');
             setComplaintDescription('');
             setPriority('');
             setDisplayToOperator(false);
+            setErrors({ shortDescription: '', complaintDescription: '' });
         }
     }, [editData, open]);
 
     const handleSubmit = async () => {
+        let newErrors = { shortDescription: '', complaintDescription: '' };
+        let hasError = false;
+
         if (!shortDescription.trim()) {
-            setSnackbarMessage('Short Description is required');
-            setSnackbarOpen(true);
-            return;
+            newErrors.shortDescription = 'Short Description is required';
+            hasError = true;
         }
 
         if (!complaintDescription.trim()) {
-            setSnackbarMessage('Complaint Description is required');
-            setSnackbarOpen(true);
+            newErrors.complaintDescription = 'Complaint Description is required';
+            hasError = true;
+        }
+
+        setErrors(newErrors);
+
+        if (hasError) {
             return;
         }
 
@@ -71,7 +100,7 @@ const AddComplaintPopup: React.FC<AddComplaintPopupProps> = ({ open, onClose, on
         // Normalize text fields to uppercase before saving
         const shortDescUpper = shortDescription.trim().toUpperCase();
         const complaintDescUpper = complaintDescription.trim().toUpperCase();
-        
+
         // Determine priority (optional; default to "9" if not provided)
         const priorityValue = priority.trim() || '9';
 
@@ -88,13 +117,14 @@ const AddComplaintPopup: React.FC<AddComplaintPopupProps> = ({ open, onClose, on
         if (result === false) {
             return;
         }
-        
+
         // Reset form
         setShortDescription('');
         setComplaintDescription('');
         setPriority('');
         setDisplayToOperator(false);
-        
+        setErrors({ shortDescription: '', complaintDescription: '' });
+
         // Close popup - success message will be shown in parent component
         onClose();
     };
@@ -104,292 +134,187 @@ const AddComplaintPopup: React.FC<AddComplaintPopupProps> = ({ open, onClose, on
         setComplaintDescription('');
         setPriority('');
         setDisplayToOperator(false);
+        setErrors({ shortDescription: '', complaintDescription: '' });
         onClose();
     };
 
-    const handleBack = () => {
-        handleClose();
+    const handleReset = () => {
+        setShortDescription('');
+        setComplaintDescription('');
+        setPriority('');
+        setDisplayToOperator(false);
+        setErrors({ shortDescription: '', complaintDescription: '' });
     };
-
-    const handleCancel = () => {
-        handleClose();
-    };
-
-    if (!open) return null;
 
     return (
         <>
-        <div
-            style={{
-                position: 'fixed',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                zIndex: 10001,
-            }}
-            onClick={handleClose}
-        >
-            <div
-                style={{
-                    backgroundColor: 'white',
-                    borderRadius: '8px',
-                    maxWidth: '500px',
-                    width: '90%',
-                    maxHeight: '80vh',
-                    overflow: 'auto',
-                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
-                    display: 'flex',
-                    flexDirection: 'column',
+            <Dialog
+                open={open}
+                onClose={handleClose}
+                maxWidth="sm"
+                fullWidth
+                PaperProps={{
+                    style: { borderRadius: '8px' }
                 }}
-                onClick={(e) => e.stopPropagation()}
             >
-                {/* Popup Header */}
-                <div style={{
-                    background: 'white',
-                    padding: '15px 20px',
-                    borderTopLeftRadius: '8px',
-                    borderTopRightRadius: '8px',
-                    fontFamily: "'Roboto', sans-serif",
-                    color: '#212121',
-                    fontSize: '0.9rem'
-                }}>
-                    <div style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center'
-                    }}>
-                        <h3 style={{ margin: 0, color: '#000000', fontSize: '18px', fontWeight: 'bold' }}>
-                            {editData ? 'Edit Complaint' : 'Add Complaint'}
-                        </h3>
-                        <button
-                            onClick={handleClose}
-                            style={{
-                                background: 'none',
-                                border: 'none',
-                                cursor: 'pointer',
-                                padding: '5px',
-                                borderRadius: '50%',
-                                color: '#fff',
-                                backgroundColor: 'rgb(0, 123, 255)',
-                                width: '32px',
-                                height: '32px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                transition: 'background-color 0.2s'
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.backgroundColor = 'rgb(0, 100, 200)';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.backgroundColor = 'rgb(0, 123, 255)';
-                            }}
-                        >
-                            <Close fontSize="small" />
-                        </button>
-                    </div>
-                </div>
-
-                {/* Popup Content */}
-                <div style={{ padding: '20px', flex: 1 }}>
-                    <div style={{ marginBottom: '15px' }}>
-                        <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                            Short Description <span style={{ color: '#d32f2f' }}>*</span>
-                        </label>
-                        <input
-                            type="text"
-                            placeholder="Complaint Short Description"
-                            value={shortDescription}
-                            onChange={(e) => setShortDescription(e.target.value)}
-                            disabled={!!editData}
-                            style={{
-                                width: '100%',
-                                padding: '8px 12px',
-                                border: '1px solid #ced4da',
-                                borderRadius: '4px',
-                                fontSize: '0.9rem',
-                                backgroundColor: editData ? '#e9ecef' : 'white',
-                                outline: 'none',
-                                boxSizing: 'border-box',
-                                cursor: editData ? 'not-allowed' : 'text'
-                            }}
-                        />
-                    </div>
-
-                    <div style={{ marginBottom: '15px' }}>
-                        <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                            Complaint Description <span style={{ color: '#d32f2f' }}>*</span>
-                        </label>
-                        <input
-                            type="text"
-                            placeholder="Complaint Description"
-                            value={complaintDescription}
-                            onChange={(e) => setComplaintDescription(e.target.value)}
-                            style={{
-                                width: '100%',
-                                padding: '8px 12px',
-                                border: '1px solid #ced4da',
-                                borderRadius: '4px',
-                                fontSize: '0.9rem',
-                                backgroundColor: 'white',
-                                outline: 'none',
-                                boxSizing: 'border-box'
-                            }}
-                        />
-                    </div>
-
-                    <div style={{ marginBottom: '15px' }}>
-                        <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                            Priority
-                        </label>
-                        <input
-                            type="text"
-                            placeholder="Priority"
-                            value={priority}
-                            onChange={(e) => setPriority(e.target.value)}
-                            style={{
-                                width: '100%',
-                                padding: '8px 12px',
-                                border: '1px solid #ced4da',
-                                borderRadius: '4px',
-                                fontSize: '0.9rem',
-                                backgroundColor: 'white',
-                                outline: 'none',
-                                boxSizing: 'border-box'
-                            }}
-                        />
-                    </div>
-
-                    <div style={{ marginBottom: '15px' }}>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                            <input
-                                type="checkbox"
-                                checked={displayToOperator}
-                                onChange={(e) => setDisplayToOperator(e.target.checked)}
-                                style={{
-                                    width: '18px',
-                                    height: '18px',
-                                    cursor: 'pointer'
-                                }}
-                            />
-                            <span style={{ fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                Display to Operator
-                            </span>
-                        </label>
-                    </div>
-                </div>
-
-                {/* Popup Footer */}
-                <div style={{
-                    background: 'transparent',
-                    padding: '0 20px 20px',
-                    borderBottomLeftRadius: '8px',
-                    borderBottomRightRadius: '8px',
-                    display: 'flex',
-                    justifyContent: 'flex-end',
-                    gap: '8px'
-                }}>
-                    <button
-                        onClick={handleCancel}
-                        style={{
-                            padding: '8px 16px',
+                <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="h6" component="div" style={{ fontWeight: 'bold' }} className="mb-0">
+                        {editData ? 'Edit Complaint' : 'Add Complaint'}
+                    </Typography>
+                    <IconButton
+                        onClick={handleClose}
+                        disableRipple
+                        sx={{
+                            color: '#fff',
+                            backgroundColor: '#1976d2',
+                            '&:hover': { backgroundColor: '#1565c0' },
+                            width: 36,
+                            height: 36,
+                            borderRadius: '8px'
+                        }}
+                    >
+                        <Close />
+                    </IconButton>
+                </DialogTitle>
+                <DialogContent>
+                    <Grid container spacing={2}>
+                        <Grid item xs={12}>
+                            <Box sx={{ mb: 2 }}>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
+                                    Short Description <span style={{ color: 'red' }}>*</span> <span className="text-muted">(Displayed on UI)</span>
+                                </Typography>
+                                <TextField
+                                    fullWidth
+                                    placeholder="Complaint Short Description"
+                                    variant="outlined"
+                                    size="small"
+                                    value={shortDescription}
+                                    onChange={(e) => {
+                                        setShortDescription(e.target.value);
+                                        if (errors.shortDescription) {
+                                            setErrors(prev => ({ ...prev, shortDescription: '' }));
+                                        }
+                                    }}
+                                    disabled={!!editData}
+                                    error={!!errors.shortDescription}
+                                    helperText={errors.shortDescription}
+                                />
+                            </Box>
+                        </Grid>
+                        <Grid item xs={12}>
+                            <Box sx={{ mb: 2 }}>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
+                                    Complaint Description <span style={{ color: 'red' }}>*</span>
+                                </Typography>
+                                <TextField
+                                    fullWidth
+                                    placeholder="Complaint Description"
+                                    variant="outlined"
+                                    size="small"
+                                    value={complaintDescription}
+                                    onChange={(e) => {
+                                        setComplaintDescription(e.target.value);
+                                        if (errors.complaintDescription) {
+                                            setErrors(prev => ({ ...prev, complaintDescription: '' }));
+                                        }
+                                    }}
+                                    error={!!errors.complaintDescription}
+                                    helperText={errors.complaintDescription}
+                                />
+                            </Box>
+                        </Grid>
+                        <Grid item xs={12}>
+                            <Box sx={{ mb: 2 }}>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
+                                    Priority
+                                </Typography>
+                                <TextField
+                                    fullWidth
+                                    placeholder="Priority"
+                                    variant="outlined"
+                                    size="small"
+                                    value={priority}
+                                    onChange={(e) => setPriority(e.target.value)}
+                                />
+                            </Box>
+                        </Grid>
+                        <Grid item xs={12} className='my-0 py-0'>
+                            <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', height: '100%' }} className='my-0'>
+                                <FormControlLabel
+                                    control={
+                                        <Checkbox
+                                            checked={displayToOperator}
+                                            onChange={(e) => setDisplayToOperator(e.target.checked)}
+                                            color="primary"
+                                        />
+                                    }
+                                    label={<Typography variant="subtitle2" className='my-0' sx={{ fontWeight: 'bold' }}>Display to Operator</Typography>}
+                                />
+                            </Box>
+                        </Grid>
+                    </Grid>
+                </DialogContent>
+                <DialogActions sx={{ p: 2 }}>
+                    <Button
+                        onClick={handleClose}
+                        variant="contained"
+                        sx={{
                             backgroundColor: 'rgb(0, 123, 255)',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontSize: '0.9rem',
-                            fontWeight: '500',
-                            transition: 'background-color 0.2s',
-                            whiteSpace: 'nowrap'
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = 'rgb(0, 100, 200)';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = 'rgb(0, 123, 255)';
+                            textTransform: 'none',
+                            '&:hover': {
+                                backgroundColor: 'rgb(0, 100, 200)',
+                            }
                         }}
                     >
                         Close
-                    </button>
-                    <button
-                        onClick={()=>{
-                            setShortDescription('');
-                            setComplaintDescription('');
-                            setPriority('');
-                            setDisplayToOperator(false);
-                        }}
-                        style={{
-                            padding: '8px 16px',
+                    </Button>
+                    <Button
+                        onClick={handleReset}
+                        variant="contained"
+                        sx={{
                             backgroundColor: 'rgb(0, 123, 255)',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontSize: '0.9rem',
-                            fontWeight: '500',
-                            transition: 'background-color 0.2s',
-                            whiteSpace: 'nowrap'
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = 'rgb(0, 100, 200)';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = 'rgb(0, 123, 255)';
+                            textTransform: 'none',
+                            '&:hover': {
+                                backgroundColor: 'rgb(0, 100, 200)',
+                            }
                         }}
                     >
                         Reset
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                         onClick={handleSubmit}
-                        style={{
-                            padding: '8px 16px',
+                        variant="contained"
+                        sx={{
                             backgroundColor: 'rgb(0, 123, 255)',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontSize: '0.9rem',
-                            fontWeight: '500',
-                            transition: 'background-color 0.2s',
-                            whiteSpace: 'nowrap'
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = 'rgb(0, 100, 200)';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = 'rgb(0, 123, 255)';
+                            textTransform: 'none',
+                            '&:hover': {
+                                backgroundColor: 'rgb(0, 100, 200)',
+                            }
                         }}
                     >
                         Submit
-                    </button>                    
-                </div>
-            </div>
-        </div>
-        
-        {/* Success/Error Snackbar */}
-        <Snackbar
-            open={snackbarOpen}
-            autoHideDuration={2000}
-            onClose={() => {
-                setSnackbarOpen(false);
-            }}
-            message={snackbarMessage}
-            anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-            sx={{
-                zIndex: 99999, // Ensure snackbar appears above everything
-                '& .MuiSnackbarContent-root': {
-                    backgroundColor: snackbarMessage.includes('successfully') ? '#4caf50' : '#f44336',
-                    color: 'white',
-                    fontWeight: 'bold'
-                }
-            }}
-        />
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Success/Error Snackbar */}
+            <Snackbar
+                open={snackbarOpen}
+                autoHideDuration={2000}
+                onClose={() => {
+                    setSnackbarOpen(false);
+                }}
+                message={snackbarMessage}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+                sx={{
+                    zIndex: 99999, // Ensure snackbar appears above everything
+                    '& .MuiSnackbarContent-root': {
+                        backgroundColor: snackbarMessage.includes('successfully') ? '#4caf50' : '#f44336',
+                        color: 'white',
+                        fontWeight: 'bold'
+                    }
+                }}
+            />
         </>
     );
 };

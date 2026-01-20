@@ -676,9 +676,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
             }
 
             if (Object.keys(newErrors).length > 0) {
-                setErrors(newErrors);
-                setIsLoading(false); // Ensure loading state is reset
-                return;
+                setErrors(newErrors);                               
             }
 
             if (labTestResults.length === 0) {
@@ -694,8 +692,12 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
             });
 
             if (missingIds.size > 0) {
-                setResultErrors(missingIds);
-                throw new Error('Please provide a value for each result');
+                setResultErrors(missingIds);                             
+            }
+
+            if(missingIds.size > 0 || Object.keys(newErrors).length > 0){
+                setIsLoading(false);
+                return
             }
 
             // Build request payload
@@ -1028,7 +1030,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                             {/* Form Content */}
                             <div style={{ padding: '0px', flex: 1 }}>
                                 {/* Lab Report Information Section */}
-                                <div style={{ marginBottom: '30px' }}>
+                                <div style={{ marginBottom: '20px' }}>
 
                                     <div style={{ marginBottom: '20px' }}>
                                         <Grid container spacing={2}>
@@ -1393,7 +1395,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                             color: 'black',
                                                             width: '120px'
                                                         }}>
-                                                            Value / Results *
+                                                            Value / Results <span style={{ color: 'red' }}>*</span>
                                                         </th>
                                                         <th style={{
                                                             padding: '12px',
@@ -1411,7 +1413,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                     {labTestResults.map((result) => (
                                                         <tr key={result.id}>
                                                             <td style={{
-                                                                padding: '12px',
+                                                                padding: '16px',
                                                                 borderBottom: '1px solid #eee',
                                                                 color: 'black',
                                                                 height: '38px',
@@ -1420,7 +1422,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                                 {result.labTestName}
                                                             </td>
                                                             <td style={{
-                                                                padding: '12px',
+                                                                padding: '16px',
                                                                 borderBottom: '1px solid #eee',
                                                                 color: 'black',
                                                                 height: '38px',
@@ -1428,7 +1430,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                             }}>
                                                                 {result.parameterName}
                                                             </td>
-                                                            <td style={{ padding: '12px', borderBottom: '1px solid #eee', height: '38px' }}>
+                                                            <td style={{ padding: '16px', borderBottom: '1px solid #eee' }}>
                                                                 <TextField
                                                                     fullWidth
                                                                     placeholder="Value / Results"
@@ -1436,13 +1438,14 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                                     onChange={(e) => handleResultChange(result.id, 'value', e.target.value)}
                                                                     required
                                                                     error={resultErrors.has(result.id)}
+                                                                    helperText={resultErrors.has(result.id) ? 'Value is required' : ''}
                                                                     variant="outlined"
                                                                     size="small"
                                                                     sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
                                                                 />
                                                             </td>
                                                             <td style={{
-                                                                padding: '12px',
+                                                                padding: '16px',
                                                                 borderBottom: '1px solid #eee',
                                                                 textAlign: 'center',
                                                                 height: '38px'

@@ -627,7 +627,7 @@ export default function ManageBillingDetails() {
                 <th style={{ width: '8%' }}>Sequence No</th>
                 <th style={{ width: '10%' }}>Visit Type</th>
                 <th style={{ width: '8%' }}>Is Default</th>
-                <th style={{ width: '10%' }}>Action</th>
+                <th style={{ width: '10%' }} className="text-center">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -649,7 +649,7 @@ export default function ManageBillingDetails() {
                         style={{ cursor: 'not-allowed' }}
                       />
                     </td>
-                    <td>
+                    <td className="d-flex justify-content-center">
                       <div className="action-icons">
                         <div title="Edit" onClick={() => handleEdit(billing)}>
                           <Edit style={{ fontSize: '20px' }} />

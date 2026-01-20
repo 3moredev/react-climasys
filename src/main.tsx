@@ -48,16 +48,9 @@ import PrescriptionDetails from './pages/PrescriptionDetails'
 import ChangePasswordPage from './pages/ChangePassword'
 import './utils/devHelpers'
 import UpdateDischargeCard from './pages/UpdateDischargeCard'
-const theme = createTheme({
-  palette: {
-    primary: {
-      main: '#1976d2',
-    },
-    secondary: {
-      main: '#dc004e',
-    },
-  },
-})
+import AppTheme from './theme/AppTheme'
+
+const theme = AppTheme
 
 function App() {
   return (

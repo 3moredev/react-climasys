@@ -1,6 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { Close } from '@mui/icons-material';
-import { Snackbar, CircularProgress } from '@mui/material';
+import {
+  Snackbar,
+  TextField,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Grid,
+  Box,
+  Typography,
+  IconButton,
+  Alert,
+  Checkbox,
+  FormControlLabel,
+  MenuItem
+} from '@mui/material';
 import { billingService } from '../services/billingService';
 import { useSession } from '../store/hooks/useSession';
 
@@ -34,16 +50,16 @@ const VISIT_TYPE_OPTIONS = [
   { value: 'Followup', label: 'Followup' },
 ];
 
-const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({ 
-  open, 
-  onClose, 
-  onSave, 
+const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
+  open,
+  onClose,
+  onSave,
   editData,
   doctorId
 }) => {
   const session = useSession();
   const finalDoctorId = doctorId || session.doctorId;
-  
+
   const [billingData, setBillingData] = useState<BillingDetailData>({
     group: '',
     subGroup: '',
@@ -55,36 +71,24 @@ const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
     lunch: '',
     clinicId: ''
   });
-  
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState('');
+
+  // Validation state
+  const [errors, setErrors] = useState<{
+    group: string;
+    defaultFee: string;
+    sequenceNo: string;
+    visitType: string;
+  }>({
+    group: '',
+    defaultFee: '',
+    sequenceNo: '',
+    visitType: ''
+  });
+
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
   const [isSaving, setIsSaving] = useState(false);
-  const [billingCategories, setBillingCategories] = useState<Record<string, any>[]>([]);
-  const [loadingCategories, setLoadingCategories] = useState(false);
   const [subCategories, setSubCategories] = useState<Record<string, any>[]>([]);
   const [loadingSubCategories, setLoadingSubCategories] = useState(false);
-
-  // Fetch billing categories when popup opens
-  useEffect(() => {
-    const fetchBillingCategories = async () => {
-      if (open && finalDoctorId) {
-        setLoadingCategories(true);
-        try {
-          const categories = await billingService.getBillingCategories(finalDoctorId);
-          setBillingCategories(categories);
-        } catch (error: any) {
-          console.error('Error fetching billing categories:', error);
-          setSnackbarMessage('Failed to load billing categories: ' + (error.message || 'Unknown error'));
-          setSnackbarOpen(true);
-          setBillingCategories([]);
-        } finally {
-          setLoadingCategories(false);
-        }
-      }
-    };
-
-    fetchBillingCategories();
-  }, [open, finalDoctorId]);
 
   // Load edit data when popup opens or editData changes
   useEffect(() => {
@@ -109,10 +113,18 @@ const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
         sequenceNo: '',
         visitType: '',
         isDefault: false,
-        lunch: ''
+        lunch: '',
+        clinicId: ''
       });
       setSubCategories([]);
     }
+    // Reset errors
+    setErrors({
+      group: '',
+      defaultFee: '',
+      sequenceNo: '',
+      visitType: ''
+    });
   }, [open, editData]);
 
   // Fetch sub-categories when group is set in edit mode
@@ -122,13 +134,11 @@ const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
         setLoadingSubCategories(true);
         try {
           const subCats = await billingService.getBillingSubCategories(editData.group, finalDoctorId);
-          console.log('Fetched sub-categories for edit:', subCats);
           // Ensure we're using billing_subgroup_name from the response
           const mappedSubCats = subCats.map((cat: Record<string, any>) => ({
             ...cat,
             billing_subgroup_name: cat.billing_subgroup_name || cat.billingSubgroupName || cat.subGroup || cat.Sub_Group || cat.sub_group || ''
           }));
-          console.log('Mapped sub-categories for edit with billing_subgroup_name:', mappedSubCats);
           setSubCategories(mappedSubCats);
         } catch (error: any) {
           console.error('Error fetching sub-categories for edit:', error);
@@ -147,7 +157,7 @@ const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
     if (field === 'group' && typeof value === 'string' && value.trim() && finalDoctorId) {
       setLoadingSubCategories(true);
       setSubCategories([]);
-      
+
       // Update group and reset subGroup
       setBillingData(prev => ({
         ...prev,
@@ -157,18 +167,15 @@ const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
 
       try {
         const subCats = await billingService.getBillingSubCategories(value, finalDoctorId);
-        console.log('Fetched sub-categories:', subCats);
         // Ensure we're using billing_subgroup_name from the response
         const mappedSubCats = subCats.map((cat: Record<string, any>) => ({
           ...cat,
           billing_subgroup_name: cat.billing_subgroup_name || cat.billingSubgroupName || cat.subGroup || cat.Sub_Group || cat.sub_group || ''
         }));
-        console.log('Mapped sub-categories with billing_subgroup_name:', mappedSubCats);
         setSubCategories(mappedSubCats);
       } catch (error: any) {
         console.error('Error fetching sub-categories:', error);
-        setSnackbarMessage('Failed to load sub-categories: ' + (error.message || 'Unknown error'));
-        setSnackbarOpen(true);
+        setSnackbar({ open: true, message: 'Failed to load sub-categories', severity: 'error' });
         setSubCategories([]);
       } finally {
         setLoadingSubCategories(false);
@@ -180,63 +187,78 @@ const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
         [field]: value
       }));
     }
+
+    // Clear errors
+    if (field === 'group' && errors.group) setErrors(prev => ({ ...prev, group: '' }));
+    if (field === 'defaultFee' && errors.defaultFee) setErrors(prev => ({ ...prev, defaultFee: '' }));
+    if (field === 'sequenceNo' && errors.sequenceNo) setErrors(prev => ({ ...prev, sequenceNo: '' }));
+    if (field === 'visitType' && errors.visitType) setErrors(prev => ({ ...prev, visitType: '' }));
   };
 
   const handleSave = async () => {
+    let hasError = false;
+    const newErrors = {
+      group: '',
+      defaultFee: '',
+      sequenceNo: '',
+      visitType: ''
+    };
+
     // Validate required fields
     if (!billingData.group.trim()) {
-      setSnackbarMessage('Group is required');
-      setSnackbarOpen(true);
-      return;
+      newErrors.group = 'Group is required';
+      hasError = true;
     }
-    if (!billingData.defaultFee.trim()) {
-      setSnackbarMessage('Default Fee is required');
-      setSnackbarOpen(true);
-      return;
+    if (!billingData.defaultFee.toString().trim()) {
+      newErrors.defaultFee = 'Default Fee is required';
+      hasError = true;
     }
-    if (!billingData.sequenceNo.trim()) {
-      setSnackbarMessage('Sequence No is required');
-      setSnackbarOpen(true);
-      return;
+    if (!billingData.sequenceNo.toString().trim()) {
+      newErrors.sequenceNo = 'Sequence No is required';
+      hasError = true;
     }
     if (!billingData.visitType.trim()) {
-      setSnackbarMessage('Visit Type is required');
-      setSnackbarOpen(true);
-      return;
+      newErrors.visitType = 'Visit Type is required';
+      hasError = true;
     }
 
     // Validate numeric fields
-    if (isNaN(Number(billingData.defaultFee)) || Number(billingData.defaultFee) < 0) {
-      setSnackbarMessage('Default Fee must be a valid number');
-      setSnackbarOpen(true);
-      return;
+    if (billingData.defaultFee && (isNaN(Number(billingData.defaultFee)) || Number(billingData.defaultFee) < 0)) {
+      newErrors.defaultFee = 'Default Fee must be a valid number';
+      hasError = true;
     }
-    if (isNaN(Number(billingData.sequenceNo)) || Number(billingData.sequenceNo) < 0) {
-      setSnackbarMessage('Sequence No must be a valid number');
-      setSnackbarOpen(true);
-      return;
+    if (billingData.sequenceNo && (isNaN(Number(billingData.sequenceNo)) || Number(billingData.sequenceNo) < 0)) {
+      newErrors.sequenceNo = 'Sequence No must be a valid number';
+      hasError = true;
     }
 
     // Validate clinicId from session
     if (!session.clinicId) {
-      setSnackbarMessage('Clinic ID is required. Please ensure you are logged in.');
-      setSnackbarOpen(true);
+      setSnackbar({ open: true, message: 'Clinic ID is required. Please ensure you are logged in.', severity: 'error' });
+      return;
+    }
+
+    setErrors(newErrors);
+
+    if (hasError) {
       return;
     }
 
     setIsSaving(true);
-    
+
     try {
       await onSave(billingData);
-      setSnackbarMessage(editData ? 'Billing detail updated successfully!' : 'Billing detail created successfully!');
-      setSnackbarOpen(true);
+      setSnackbar({
+        open: true,
+        message: editData ? 'Billing detail updated successfully!' : 'Billing detail created successfully!',
+        severity: 'success'
+      });
       setTimeout(() => {
-        onClose();
+        handleClose();
       }, 1500);
     } catch (error: any) {
       console.error('Error saving billing detail:', error);
-      setSnackbarMessage(error.message || 'Failed to save billing detail');
-      setSnackbarOpen(true);
+      setSnackbar({ open: true, message: error.message || 'Failed to save billing detail', severity: 'error' });
     } finally {
       setIsSaving(false);
     }
@@ -251,403 +273,327 @@ const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
       sequenceNo: '',
       visitType: '',
       isDefault: false,
-      lunch: ''
+      lunch: '',
+      clinicId: ''
     });
     setSubCategories([]);
+    setErrors({
+      group: '',
+      defaultFee: '',
+      sequenceNo: '',
+      visitType: ''
+    });
     onClose();
+  };
+
+  const handleReset = () => {
+    setBillingData({
+      group: '',
+      subGroup: '',
+      details: '',
+      defaultFee: '',
+      sequenceNo: '',
+      visitType: '',
+      isDefault: false,
+      lunch: '',
+      clinicId: ''
+    });
+    setSubCategories([]);
+    setErrors({
+      group: '',
+      defaultFee: '',
+      sequenceNo: '',
+      visitType: ''
+    });
   };
 
   if (!open) return null;
 
   return (
     <>
-      <div
-        style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 10001,
+      <Dialog
+        open={open}
+        onClose={handleClose}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          style: { borderRadius: '8px', maxWidth: '800px' }
         }}
-        onClick={handleClose}
+        onClick={(e) => e.stopPropagation()}
       >
-        <div
-          style={{
-            backgroundColor: 'white',
-            borderRadius: '8px',
-            maxWidth: '1200px',
-            width: '95%',
-            maxHeight: '90vh',
-            overflow: 'auto',
-            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
-            display: 'flex',
-            flexDirection: 'column',
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* Popup Header */}
-          <div style={{
-            background: 'white',
-            padding: '15px 20px',
-            borderTopLeftRadius: '8px',
-            borderTopRightRadius: '8px',
-            fontFamily: "'Roboto', sans-serif",
-            color: '#212121',
-            fontSize: '0.9rem'
-          }}>
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center'
-            }}>
-              <h3 style={{ margin: 0, color: '#000000', fontSize: '18px', fontWeight: 'bold' }}>
-                Add Billing Details
-              </h3>
-              <button
-                onClick={handleClose}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  padding: '5px',
-                  borderRadius: '8px',
-                  color: '#fff',
-                  backgroundColor: '#1976d2',
-                  width: '32px',
-                  height: '32px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'background-color 0.2s'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#1565c0';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = '#1976d2';
-                }}
-              >
-                <Close fontSize="small" />
-              </button>
-            </div>
-          </div>
+        <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="h6" component="div" style={{ fontWeight: 'bold' }} className="mb-0">
+            Add Billing Details
+          </Typography>
+          <IconButton
+            onClick={handleClose}
+            disableRipple
+            sx={{
+              color: '#fff',
+              backgroundColor: '#1976d2',
+              '&:hover': { backgroundColor: '#1565c0' },
+              width: 36,
+              height: 36,
+              borderRadius: '8px'
+            }}
+          >
+            <Close />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent>
+          <Grid container spacing={2}>
+            {/* Left Column */}
+            <Grid item xs={12} sm={6}>
+              {/* Group */}
+              <Box sx={{ mb: 2 }} className='mb-4'>
+                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
+                  Group <span style={{ color: 'red' }}>*</span>
+                </Typography>
+                <TextField
+                  select
+                  fullWidth
+                  variant="outlined"
+                  size="small"
+                  value={billingData.group}
+                  onChange={(e) => handleInputChange('group', e.target.value)}
+                  error={!!errors.group}
+                  helperText={errors.group}
+                  SelectProps={{
+                    displayEmpty: true,
+                    renderValue: (selected: any) => {
+                      if (!selected || selected.length === 0) {
+                        return <em style={{ color: "gray", fontStyle: "normal" }}>Select Group</em>;
+                      }
+                      return selected;
+                    },
+                    MenuProps: { PaperProps: { style: { maxHeight: 300 } } }
+                  }}
+                >
+                  {GROUP_OPTIONS.map(option => (
+                    <MenuItem key={option.value} value={option.value}>
+                      {option.label}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </Box>
 
-          {/* Popup Content */}
-          <div style={{ padding: '20px', flex: 1 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-              {/* Left Column */}
-              <div>
-                {/* Group */}
-                <div style={{ marginBottom: '15px' }}>
-                  <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                    Group <span style={{ color: 'red' }}>*</span>
-                  </label>
-                  <select
-                    value={billingData.group}
-                    onChange={(e) => handleInputChange('group', e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '6px 10px',
-                      border: '1px solid #ccc',
-                      borderRadius: '4px',
-                      fontSize: '13px',
-                      backgroundColor: 'white',
-                      outline: 'none'
-                    }}
-                  >
-                    <option value="">Select Group</option>
-                    {GROUP_OPTIONS.map(option => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              {/* Details */}
+              <Box sx={{ mb: 2 }} className='mb-4'>
+                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
+                  Details
+                </Typography>
+                <TextField
+                  fullWidth
+                  placeholder="Details"
+                  variant="outlined"
+                  size="small"
+                  value={billingData.details}
+                  onChange={(e) => handleInputChange('details', e.target.value)}
+                />
+              </Box>
 
-                {/* Details */}
-                <div style={{ marginBottom: '15px' }}>
-                  <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                    Details
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Details"
-                    value={billingData.details}
-                    onChange={(e) => handleInputChange('details', e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '6px 10px',
-                      border: '1px solid #ccc',
-                      borderRadius: '4px',
-                      fontSize: '13px',
-                      backgroundColor: 'white',
-                      outline: 'none'
-                    }}
-                  />
-                </div>
+              {/* Visit Type */}
+              <Box sx={{ mb: 2 }} className='mb-4'>
+                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
+                  Visit Type <span style={{ color: 'red' }}>*</span>
+                </Typography>
+                <TextField
+                  select
+                  fullWidth
+                  variant="outlined"
+                  size="small"
+                  value={billingData.visitType}
+                  onChange={(e) => handleInputChange('visitType', e.target.value)}
+                  error={!!errors.visitType}
+                  helperText={errors.visitType}
+                  SelectProps={{
+                    displayEmpty: true,
+                    renderValue: (selected: any) => {
+                      if (!selected || selected.length === 0) {
+                        return <em style={{ color: "gray", fontStyle: "normal" }}>Select Visit Type</em>;
+                      }
+                      return selected;
+                    },
+                    MenuProps: { PaperProps: { style: { maxHeight: 300 } } }
+                  }}
+                >
+                  {VISIT_TYPE_OPTIONS.map(option => (
+                    <MenuItem key={option.value} value={option.value}>
+                      {option.label}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </Box>
 
-                {/* Visit Type */}
-                <div style={{ marginBottom: '15px' }}>
-                  <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                    Visit Type <span style={{ color: 'red' }}>*</span>
-                  </label>
-                  <select
-                    value={billingData.visitType}
-                    onChange={(e) => handleInputChange('visitType', e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '6px 10px',
-                      border: '1px solid #ccc',
-                      borderRadius: '4px',
-                      fontSize: '13px',
-                      backgroundColor: 'white',
-                      outline: 'none'
-                    }}
-                  >
-                    <option value="">Select Visit Type</option>
-                    {VISIT_TYPE_OPTIONS.map(option => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Is Default Checkbox */}
-                <div style={{ marginBottom: '15px' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                    <input
-                      type="checkbox"
+              {/* Is Default Checkbox */}
+              <Box sx={{ mt: 3 }}>
+                <FormControlLabel
+                  control={
+                    <Checkbox
                       checked={billingData.isDefault}
                       onChange={(e) => handleInputChange('isDefault', e.target.checked)}
-                      style={{
-                        width: '18px',
-                        height: '18px',
-                        cursor: 'pointer'
-                      }}
+                      size="small"
                     />
-                    <span style={{ fontSize: '13px', color: '#333' }}>Is Default</span>
-                  </label>
-                </div>
-              </div>
+                  }
+                  label={<Typography variant="body2" sx={{ fontWeight: 'bold', color: '#333' }}>Is Default</Typography>}
+                />
+              </Box>
+            </Grid>
 
-              {/* Right Column */}
-              <div>
-                {/* Sub-Group */}
-                <div style={{ marginBottom: '15px' }}>
-                  <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                    Sub-Group
-                  </label>
-                  <select
-                    value={billingData.subGroup}
-                    onChange={(e) => handleInputChange('subGroup', e.target.value)}
-                    disabled={!billingData.group || loadingSubCategories}
-                    style={{
-                      width: '100%',
-                      padding: '6px 10px',
-                      border: '1px solid #ccc',
-                      borderRadius: '4px',
-                      fontSize: '13px',
-                      backgroundColor: billingData.group && !loadingSubCategories ? 'white' : '#f5f5f5',
-                      outline: 'none',
-                      cursor: billingData.group && !loadingSubCategories ? 'pointer' : 'not-allowed',
-                      opacity: billingData.group && !loadingSubCategories ? 1 : 0.6
-                    }}
-                  >
-                    <option value="">
-                      {loadingSubCategories 
-                        ? 'Loading sub-categories...' 
-                        : !billingData.group 
-                          ? 'Select Group first' 
-                          : 'Select Sub-Group'}
-                    </option>
-                    {subCategories.map((subCat: Record<string, any>, index: number) => {
-                      // Prioritize billing_subgroup_name as the primary field from API response
-                      const subGroupName = subCat.billing_subgroup_name;
-                      
-                      // Skip if billing_subgroup_name is not available or invalid
-                      if (!subGroupName || subGroupName === 'undefined' || subGroupName === 'null' || subGroupName === '') {
-                        return null;
+            {/* Right Column */}
+            <Grid item xs={12} sm={6}>
+              {/* Sub-Group */}
+              <Box sx={{ mb: 2 }} className='mb-4'>
+                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
+                  Sub-Group
+                </Typography>
+                <TextField
+                  select
+                  fullWidth
+                  variant="outlined"
+                  size="small"
+                  value={billingData.subGroup}
+                  onChange={(e) => handleInputChange('subGroup', e.target.value)}
+                  disabled={!billingData.group || loadingSubCategories}
+                  SelectProps={{
+                    displayEmpty: true,
+                    renderValue: (selected: any) => {
+                      if (loadingSubCategories) return <em style={{ color: "gray", fontStyle: "normal" }}>Loading sub-categories...</em>;
+                      if (!billingData.group) return <em style={{ color: "gray", fontStyle: "normal" }}>Select Group first</em>;
+                      if (!selected || selected.length === 0) {
+                        return <em style={{ color: "gray", fontStyle: "normal" }}>Select Sub-Group</em>;
                       }
-                      
-                      return (
-                        <option key={`subcat-${index}-${subGroupName}`} value={subGroupName}>
-                          {subGroupName}
-                        </option>
-                      );
-                    }).filter(Boolean)}
-                  </select>
-                </div>
-                  
-                  
-                {/* Default Fee */}
-                <div style={{ marginBottom: '15px' }}>
-                  <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                    Default Fee (Rs) <span style={{ color: 'red' }}>*</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Default Fee"
-                    value={billingData.defaultFee}
-                    onChange={(e) => handleInputChange('defaultFee', e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '6px 10px',
-                      border: '1px solid #ccc',
-                      borderRadius: '4px',
-                      fontSize: '13px',
-                      backgroundColor: 'white',
-                      outline: 'none'
-                    }}
-                  />
-                </div>
-                
-                {/* Sequence No */}
-                <div style={{ marginBottom: '15px' }}>
-                  <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                    Sequence No <span style={{ color: 'red' }}>*</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Sequence No"
-                    value={billingData.sequenceNo}
-                    onChange={(e) => handleInputChange('sequenceNo', e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '6px 10px',
-                      border: '1px solid #ccc',
-                      borderRadius: '4px',
-                      fontSize: '13px',
-                      backgroundColor: 'white',
-                      outline: 'none'
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
+                      return selected;
+                    },
+                    MenuProps: { PaperProps: { style: { maxHeight: 300 } } }
+                  }}
+                >
+                  {subCategories.map((subCat: Record<string, any>, index: number) => {
+                    // Prioritize billing_subgroup_name as the primary field from API response
+                    const subGroupName = subCat.billing_subgroup_name;
 
-          {/* Popup Footer */}
-          <div style={{
-            background: 'transparent',
-            padding: '0 20px 14px',
-            borderBottomLeftRadius: '8px',
-            borderBottomRightRadius: '8px',
-            display: 'flex',
-            justifyContent: 'flex-end',
-            gap: '8px'
-          }}>
-            <button
-              onClick={handleClose}
-              style={{
-                padding: '8px 16px',
-                backgroundColor: 'rgb(0, 100, 200)',
-                color: '#1976d2',
-                border: '1px solid #1976d2',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: '500',
-                transition: 'all 0.2s'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgb(0, 100, 200)';
+                    // Skip if billing_subgroup_name is not available or invalid
+                    if (!subGroupName || subGroupName === 'undefined' || subGroupName === 'null' || subGroupName === '') {
+                      return null;
+                    }
+
+                    return (
+                      <MenuItem key={`subcat-${index}-${subGroupName}`} value={subGroupName}>
+                        {subGroupName}
+                      </MenuItem>
+                    );
+                  }).filter(Boolean)}
+                </TextField>
+              </Box>
+
+              {/* Default Fee */}
+              <Box sx={{ mb: 2 }} className='mb-4'>
+                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
+                  Default Fee (Rs) <span style={{ color: 'red' }}>*</span>
+                </Typography>
+                <TextField
+                  fullWidth
+                  placeholder="Default Fee"
+                  variant="outlined"
+                  size="small"
+                  value={billingData.defaultFee}
+                  onChange={(e) => handleInputChange('defaultFee', e.target.value)}
+                  error={!!errors.defaultFee}
+                  helperText={errors.defaultFee}
+                  inputProps={{ inputMode: 'numeric' }}
+                />
+              </Box>
+
+              {/* Sequence No */}
+              <Box sx={{ mb: 2 }} className='mb-4'>
+                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
+                  Sequence No <span style={{ color: 'red' }}>*</span>
+                </Typography>
+                <TextField
+                  fullWidth
+                  placeholder="Sequence No"
+                  variant="outlined"
+                  size="small"
+                  value={billingData.sequenceNo}
+                  onChange={(e) => handleInputChange('sequenceNo', e.target.value)}
+                  error={!!errors.sequenceNo}
+                  helperText={errors.sequenceNo}
+                  inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
+                />
+              </Box>
+            </Grid>
+          </Grid>
+        </DialogContent>
+
+        {/* Popup Footer */}
+        <DialogActions sx={{ p: 2 }}>
+          <Button
+            onClick={handleClose}
+            variant="contained"
+            sx={{
+              backgroundColor: '#1976d2',
+              textTransform: 'none',
+              '&:hover': {
+                backgroundColor: '#1565c0',
+              }
             }}
-            onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgb(0, 123, 255)';
+          >
+            Close
+          </Button>
+          <Button
+            onClick={handleReset}
+            variant="contained"
+            sx={{
+              backgroundColor: '#1976d2',
+              textTransform: 'none',
+              '&:hover': {
+                backgroundColor: '#1565c0',
+              }
             }}
-            >
-              Close
-            </button>
-            <button
-              onClick={()=>{
-                setBillingData({
-                  group: '',
-                  subGroup: '',
-                  details: '',
-                  defaultFee: '',
-                  sequenceNo: '',
-                  visitType: '',
-                  isDefault: false,
-                  lunch: '',
-                  clinicId: ''
-                });
-              }}
-              style={{
-                padding: '8px 16px',
-                backgroundColor: 'rgb(0, 100, 200)',
-                color: '#1976d2',
-                border: '1px solid #1976d2',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: '500',
-                transition: 'all 0.2s'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgb(0, 100, 200)';
+          >
+            Reset
+          </Button>
+          <Button
+            onClick={handleSave}
+            variant="contained"
+            sx={{
+              backgroundColor: '#1976d2',
+              textTransform: 'none',
+              '&:hover': {
+                backgroundColor: '#1565c0',
+              }
             }}
-            onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgb(0, 123, 255)';
-            }}
-            >
-              Reset
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={isSaving}
-              style={{
-                padding: '8px 16px',
-                backgroundColor: isSaving ? '#ccc' : '#1976d2',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: isSaving ? 'not-allowed' : 'pointer',
-                fontSize: '14px',
-                fontWeight: '500',
-                transition: 'background-color 0.2s',
-                opacity: isSaving ? 0.7 : 1
-              }}
-              onMouseEnter={(e) => {
-                if (!isSaving) {
-                  e.currentTarget.style.backgroundColor = '#1565c0';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!isSaving) {
-                  e.currentTarget.style.backgroundColor = '#1976d2';
-                }
-              }}
-            >
-              {isSaving ? 'Saving...' : 'Submit'}
-            </button>                      
-          </div>
-        </div>
-      </div>
-      
+            disabled={isSaving}
+          >
+            {isSaving ? 'Saving...' : 'Submit'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Success/Error Snackbar */}
       <Snackbar
-        open={snackbarOpen}
+        open={snackbar.open}
         autoHideDuration={2000}
-        onClose={() => {
-          setSnackbarOpen(false);
-        }}
-        message={snackbarMessage}
+        onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
         sx={{
           zIndex: 99999,
           '& .MuiSnackbarContent-root': {
-            backgroundColor: snackbarMessage.includes('successfully') ? '#4caf50' : '#f44336',
+            backgroundColor: snackbar.message.includes('successfully') ? '#4caf50' : '#f44336',
             color: 'white',
             fontWeight: 'bold'
           }
         }}
-      />
+      >
+        <Alert
+          onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+          severity={snackbar.severity}
+          sx={{ width: '100%', fontWeight: 'bold' }}
+          variant="filled"
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </>
   );
 };
