@@ -1,6 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { Close } from '@mui/icons-material';
-import { Snackbar } from '@mui/material';
+import {
+    Snackbar,
+    TextField,
+    Button,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    Grid,
+    Box,
+    Typography,
+    IconButton
+} from '@mui/material';
 import { useSession } from '../store/hooks/useSession';
 
 interface AddDiagnosisPopupProps {
@@ -25,6 +37,12 @@ const AddDiagnosisPopup: React.FC<AddDiagnosisPopupProps> = ({ open, onClose, on
     const [diagnosisDescription, setDiagnosisDescription] = useState('');
     const [priority, setPriority] = useState('');
 
+    // Validation state
+    const [errors, setErrors] = useState({
+        shortDescription: '',
+        diagnosisDescription: ''
+    });
+
     // Snackbar state management
     const [snackbarOpen, setSnackbarOpen] = useState(false);
     const [snackbarMessage, setSnackbarMessage] = useState('');
@@ -35,24 +53,33 @@ const AddDiagnosisPopup: React.FC<AddDiagnosisPopupProps> = ({ open, onClose, on
             setShortDescription(editData.shortDescription || '');
             setDiagnosisDescription(editData.diagnosisDescription || '');
             setPriority(editData.priority?.toString() || '');
+            setErrors({ shortDescription: '', diagnosisDescription: '' });
         } else {
             // Reset form when not in edit mode
             setShortDescription('');
             setDiagnosisDescription('');
             setPriority('');
+            setErrors({ shortDescription: '', diagnosisDescription: '' });
         }
     }, [editData, open]);
 
     const handleSubmit = async () => {
+        let newErrors = { shortDescription: '', diagnosisDescription: '' };
+        let hasError = false;
+
         if (!shortDescription.trim()) {
-            setSnackbarMessage('Short Description is required');
-            setSnackbarOpen(true);
-            return;
+            newErrors.shortDescription = 'Short Description is required';
+            hasError = true;
         }
 
         if (!diagnosisDescription.trim()) {
-            setSnackbarMessage('Diagnosis Description is required');
-            setSnackbarOpen(true);
+            newErrors.diagnosisDescription = 'Diagnosis Description is required';
+            hasError = true;
+        }
+
+        setErrors(newErrors);
+
+        if (hasError) {
             return;
         }
 
@@ -87,6 +114,7 @@ const AddDiagnosisPopup: React.FC<AddDiagnosisPopupProps> = ({ open, onClose, on
         setShortDescription('');
         setDiagnosisDescription('');
         setPriority('');
+        setErrors({ shortDescription: '', diagnosisDescription: '' });
 
         // Close popup - success message will be shown in parent component
         onClose();
@@ -96,263 +124,153 @@ const AddDiagnosisPopup: React.FC<AddDiagnosisPopupProps> = ({ open, onClose, on
         setShortDescription('');
         setDiagnosisDescription('');
         setPriority('');
+        setErrors({ shortDescription: '', diagnosisDescription: '' });
         onClose();
     };
 
-    const handleBack = () => {
-        handleClose();
+    const handleReset = () => {
+        setShortDescription('');
+        setDiagnosisDescription('');
+        setPriority('');
+        setErrors({ shortDescription: '', diagnosisDescription: '' });
     };
-
-    const handleCancel = () => {
-        handleClose();
-    };
-
-    if (!open) return null;
 
     return (
         <>
-            <div
-                style={{
-                    position: 'fixed',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    zIndex: 10001,
+            <Dialog
+                open={open}
+                onClose={handleClose}
+                maxWidth="sm"
+                fullWidth
+                PaperProps={{
+                    style: { borderRadius: '8px' }
                 }}
-                onClick={handleClose}
             >
-                <div
-                    style={{
-                        backgroundColor: 'white',
-                        borderRadius: '8px',
-                        maxWidth: '500px',
-                        width: '90%',
-                        maxHeight: '80vh',
-                        overflow: 'auto',
-                        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
-                        display: 'flex',
-                        flexDirection: 'column',
-                    }}
-                    onClick={(e) => e.stopPropagation()}
-                >
-                    {/* Popup Header */}
-                    <div style={{
-                        background: 'white',
-                        padding: '15px 20px',
-                        borderTopLeftRadius: '8px',
-                        borderTopRightRadius: '8px',
-                        fontFamily: "'Roboto', sans-serif",
-                        color: '#212121',
-                        fontSize: '0.9rem'
-                    }}>
-                        <div style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center'
-                        }}>
-                            <h3 style={{ margin: 0, color: '#000000', fontSize: '18px', fontWeight: 'bold' }}>
-                                {editData ? 'Edit Diagnosis' : 'Add Diagnosis'}
-                            </h3>
-                            <button
-                                onClick={handleClose}
-                                style={{
-                                    background: 'none',
-                                    border: 'none',
-                                    cursor: 'pointer',
-                                    padding: '5px',
-                                    borderRadius: '50%',
-                                    color: '#fff',
-                                    backgroundColor: 'rgb(0, 123, 255)',
-                                    width: '32px',
-                                    height: '32px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    transition: 'background-color 0.2s'
-                                }}
-                                onMouseEnter={(e) => {
-                                    e.currentTarget.style.backgroundColor = 'rgb(0, 100, 200)';
-                                }}
-                                onMouseLeave={(e) => {
-                                    e.currentTarget.style.backgroundColor = 'rgb(0, 123, 255)';
-                                }}
-                            >
-                                <Close fontSize="small" />
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Popup Content */}
-                    <div style={{ padding: '20px', flex: 1 }}>
-                        <div style={{ marginBottom: '15px' }}>
-                            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                Short Description <span style={{ color: '#d32f2f' }}>*</span>
-                            </label>
-                            <input
-                                type="text"
-                                placeholder="Diagnosis Short Description"
-                                value={shortDescription}
-                                onChange={(e) => setShortDescription(e.target.value)}
-                                disabled={!!editData}
-                                maxLength={40}
-                                style={{
-                                    width: '100%',
-                                    padding: '8px 12px',
-                                    border: '1px solid #ced4da',
-                                    borderRadius: '4px',
-                                    fontSize: '0.9rem',
-                                    backgroundColor: editData ? '#e9ecef' : 'white',
-                                    outline: 'none',
-                                    boxSizing: 'border-box',
-                                    cursor: editData ? 'not-allowed' : 'text'
-                                }}
-                            />
-                        </div>
-
-                        <div style={{ marginBottom: '15px' }}>
-                            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                Diagnosis Description <span style={{ color: '#d32f2f' }}>*</span>
-                            </label>
-                            <input
-                                type="text"
-                                placeholder="Diagnosis Description"
-                                value={diagnosisDescription}
-                                onChange={(e) => setDiagnosisDescription(e.target.value)}
-                                maxLength={40}
-                                style={{
-                                    width: '100%',
-                                    padding: '8px 12px',
-                                    border: '1px solid #ced4da',
-                                    borderRadius: '4px',
-                                    fontSize: '0.9rem',
-                                    backgroundColor: 'white',
-                                    outline: 'none',
-                                    boxSizing: 'border-box'
-                                }}
-                            />
-                        </div>
-
-                        <div style={{ marginBottom: '15px' }}>
-                            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                Priority
-                            </label>
-                            <input
-                                type="text"
-                                placeholder="Priority"
-                                value={priority}
-                                onChange={(e) => setPriority(e.target.value)}
-                                style={{
-                                    width: '100%',
-                                    padding: '8px 12px',
-                                    border: '1px solid #ced4da',
-                                    borderRadius: '4px',
-                                    fontSize: '0.9rem',
-                                    backgroundColor: 'white',
-                                    outline: 'none',
-                                    boxSizing: 'border-box'
-                                }}
-                            />
-                        </div>
-                    </div>
-                    
-
-                    {/* Popup Footer */}
-                    
-                <div style={{
-                    background: 'transparent',
-                    padding: '0 20px 20px',
-                    borderBottomLeftRadius: '8px',
-                    borderBottomRightRadius: '8px',
-                    display: 'flex',
-                    justifyContent: 'flex-end',
-                    gap: '8px'
-                }}>
-                    <button
-                        onClick={handleCancel}
-                        style={{
-                            padding: '8px 16px',
+                <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="h6" component="div" style={{ fontWeight: 'bold' }} className="mb-0">
+                        {editData ? 'Edit Diagnosis' : 'Add Diagnosis'}
+                    </Typography>
+                    <IconButton
+                        onClick={handleClose}
+                        disableRipple
+                        sx={{
+                            color: '#fff',
+                            backgroundColor: '#1976d2',
+                            '&:hover': { backgroundColor: '#1565c0' },
+                            width: 36,
+                            height: 36,
+                            borderRadius: '8px'
+                        }}
+                    >
+                        <Close />
+                    </IconButton>
+                </DialogTitle>
+                <DialogContent>
+                    <Grid container spacing={2}>
+                        <Grid item xs={12}>
+                            <Box sx={{ mb: 2 }}>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className="mb-0">
+                                    Short Description <span style={{ color: 'red' }}>*</span> <span className="text-muted">(Displayed on UI)</span>
+                                </Typography>
+                                <TextField
+                                    fullWidth
+                                    placeholder="Diagnosis Short Description"
+                                    variant="outlined"
+                                    size="small"
+                                    value={shortDescription}
+                                    onChange={(e) => {
+                                        setShortDescription(e.target.value);
+                                        if (errors.shortDescription) {
+                                            setErrors(prev => ({ ...prev, shortDescription: '' }));
+                                        }
+                                    }}
+                                    disabled={!!editData}
+                                    error={!!errors.shortDescription}
+                                    helperText={errors.shortDescription}
+                                />
+                            </Box>
+                        </Grid>
+                        <Grid item xs={12}>
+                            <Box sx={{ mb: 2 }}>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className="mb-0">
+                                    Diagnosis Description <span style={{ color: 'red' }}>*</span>
+                                </Typography>
+                                <TextField
+                                    fullWidth
+                                    placeholder="Diagnosis Description"
+                                    variant="outlined"
+                                    size="small"
+                                    value={diagnosisDescription}
+                                    onChange={(e) => {
+                                        setDiagnosisDescription(e.target.value);
+                                        if (errors.diagnosisDescription) {
+                                            setErrors(prev => ({ ...prev, diagnosisDescription: '' }));
+                                        }
+                                    }}
+                                    error={!!errors.diagnosisDescription}
+                                    helperText={errors.diagnosisDescription}
+                                />
+                            </Box>
+                        </Grid>
+                        <Grid item xs={12}>
+                            <Box sx={{ mb: 2 }}>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className="mb-0">
+                                    Priority
+                                </Typography>
+                                <TextField
+                                    fullWidth
+                                    placeholder="Priority"
+                                    variant="outlined"
+                                    size="small"
+                                    value={priority}
+                                    onChange={(e) => setPriority(e.target.value)}
+                                />
+                            </Box>
+                        </Grid>
+                    </Grid>
+                </DialogContent>
+                <DialogActions sx={{ p: 2 }}>
+                    <Button
+                        onClick={handleClose}
+                        variant="contained"
+                        sx={{
                             backgroundColor: 'rgb(0, 123, 255)',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontSize: '0.9rem',
-                            fontWeight: '500',
-                            transition: 'background-color 0.2s',
-                            whiteSpace: 'nowrap'
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = 'rgb(0, 100, 200)';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = 'rgb(0, 123, 255)';
+                            textTransform: 'none',
+                            '&:hover': {
+                                backgroundColor: 'rgb(0, 100, 200)',
+                            }
                         }}
                     >
                         Close
-                    </button>
-                    <button
-                        onClick={() => {
-                            setShortDescription('');
-                            setDiagnosisDescription('');
-                            setPriority('');
-                        }}
-                        style={{
-                            padding: '8px 16px',
+                    </Button>
+                    <Button
+                        onClick={handleReset}
+                        variant="contained"
+                        sx={{
                             backgroundColor: 'rgb(0, 123, 255)',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontSize: '0.9rem',
-                            fontWeight: '500',
-                            transition: 'background-color 0.2s',
-                            whiteSpace: 'nowrap'
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = 'rgb(0, 100, 200)';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = 'rgb(0, 123, 255)';
+                            textTransform: 'none',
+                            '&:hover': {
+                                backgroundColor: 'rgb(0, 100, 200)',
+                            }
                         }}
                     >
                         Reset
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                         onClick={handleSubmit}
-                        style={{
-                            padding: '8px 16px',
+                        variant="contained"
+                        sx={{
                             backgroundColor: 'rgb(0, 123, 255)',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontSize: '0.9rem',
-                            fontWeight: '500',
-                            transition: 'background-color 0.2s',
-                            whiteSpace: 'nowrap'
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = 'rgb(0, 100, 200)';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = 'rgb(0, 123, 255)';
+                            textTransform: 'none',
+                            '&:hover': {
+                                backgroundColor: 'rgb(0, 100, 200)',
+                            }
                         }}
                     >
                         Submit
-                    </button>                    
-                </div>
-                </div>
-
-                {/* Popup Content */}
-                
-
-                {/* Popup Footer */}
-            </div>
+                    </Button>
+                </DialogActions>
+            </Dialog>
 
             {/* Success/Error Snackbar */}
             <Snackbar

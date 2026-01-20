@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { buildReceiptPrintHTML, getHeaderImageUrl } from "../utils/printTemplates";
 import { receiptService, SaveReceiptPayload } from "../services/receiptService";
+import { Close } from "@mui/icons-material";
 
 export interface PrintReceiptFormValues {
     receiptNo: string;
@@ -223,10 +224,10 @@ const PrintReceiptPopup: React.FC<PrintReceiptPopupProps> = ({
         const headerImageUrl = getHeaderImageUrl();
         const formattedDate = values.receiptDate
             ? new Date(values.receiptDate).toLocaleDateString("en-GB", {
-                  day: "2-digit",
-                  month: "short",
-                  year: "numeric",
-              })
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+            })
             : "-";
         const amountNumeric = parseFloat(values.receiptAmount) || 0;
         const amountInWords = convertAmountToWords(amountNumeric);
@@ -302,10 +303,10 @@ const PrintReceiptPopup: React.FC<PrintReceiptPopupProps> = ({
                 <div
                     style={{
                         background: "#fff",
-                        padding: "15px 20px",
+                        padding: "10px 20px 0px 20px",
                         borderTopLeftRadius: 12,
                         borderTopRightRadius: 12,
-                        borderBottom: "1px solid #eee",
+                        // borderBottom: "1px solid #eee",
                     }}
                 >
                     <div
@@ -322,6 +323,7 @@ const PrintReceiptPopup: React.FC<PrintReceiptPopupProps> = ({
                                 fontSize: 18,
                                 fontWeight: 700,
                             }}
+                            className="mb-0"
                         >
                             Reciept Details
                         </h3>
@@ -348,66 +350,66 @@ const PrintReceiptPopup: React.FC<PrintReceiptPopupProps> = ({
                             }}
                             aria-label="Close receipt details"
                         >
-                            ×
+                            <Close fontSize="small" />
                         </button>
                     </div>
                 </div>
                 <div style={{ padding: "22px 26px", overflowY: "auto" }}>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-                    <div>
-                        <label style={fieldLabelStyle}>Receipt No</label>
-                        <input
-                            type="text"
-                            value={formValues.receiptNo}
-                            disabled
-                            style={disabledInputStyle}
-                        />
+                        <div>
+                            <label style={fieldLabelStyle}>Receipt No</label>
+                            <input
+                                type="text"
+                                value={formValues.receiptNo}
+                                disabled
+                                style={disabledInputStyle}
+                            />
+                        </div>
+                        <div>
+                            <label style={fieldLabelStyle}>Receipt Date</label>
+                            <input
+                                type="text"
+                                value={formatDateDdMmmYy(formValues.receiptDate)}
+                                disabled
+                                style={disabledInputStyle}
+                            />
+                        </div>
+                        <div>
+                            <label style={fieldLabelStyle}>Receipt Amount (Rs)</label>
+                            <input
+                                type="text"
+                                value={formValues.receiptAmount}
+                                disabled
+                                style={disabledInputStyle}
+                            />
+                        </div>
+                        <div>
+                            <label style={fieldLabelStyle}>Payment By</label>
+                            <input
+                                type="text"
+                                value={formValues.paymentBy}
+                                disabled
+                                style={disabledInputStyle}
+                            />
+                        </div>
+                        <div>
+                            <label style={fieldLabelStyle}>Payment Remark</label>
+                            <input
+                                type="text"
+                                value={formValues.paymentRemark}
+                                disabled
+                                style={disabledInputStyle}
+                            />
+                        </div>
+                        <div style={{ gridColumn: "span 2" }}>
+                            <label style={fieldLabelStyle}>Details</label>
+                            <textarea
+                                value={formValues.details}
+                                onChange={(e) => handleChange("details", e.target.value)}
+                                style={{ ...inputStyle, minHeight: 70, resize: "vertical" }}
+                            />
+                        </div>
                     </div>
-                    <div>
-                        <label style={fieldLabelStyle}>Receipt Date</label>
-                        <input
-                            type="text"
-                            value={formatDateDdMmmYy(formValues.receiptDate)}
-                            disabled
-                            style={disabledInputStyle}
-                        />
-                    </div>
-                    <div>
-                        <label style={fieldLabelStyle}>Receipt Amount (Rs)</label>
-                        <input
-                            type="text"
-                            value={formValues.receiptAmount}
-                            disabled
-                            style={disabledInputStyle}
-                        />
-                    </div>
-                    <div>
-                        <label style={fieldLabelStyle}>Payment By</label>
-                        <input
-                            type="text"
-                            value={formValues.paymentBy}
-                            disabled
-                            style={disabledInputStyle}
-                        />
-                    </div>
-                    <div>
-                        <label style={fieldLabelStyle}>Payment Remark</label>
-                        <input
-                            type="text"
-                            value={formValues.paymentRemark}
-                            disabled
-                            style={disabledInputStyle}
-                        />
-                    </div>
-                    <div style={{ gridColumn: "span 2" }}>
-                        <label style={fieldLabelStyle}>Details</label>
-                        <textarea
-                            value={formValues.details}
-                            onChange={(e) => handleChange("details", e.target.value)}
-                            style={{ ...inputStyle, minHeight: 70, resize: "vertical" }}
-                        />
-                    </div>
-                </div>
 
                     <div
                         style={{
@@ -421,20 +423,38 @@ const PrintReceiptPopup: React.FC<PrintReceiptPopupProps> = ({
                             {statusMessage}
                         </div>
                         <button
+                            onClick={onClose}
+                            disabled={isSavingReceipt}
+                            style={{
+                                fontSize: 13,
+                                marginRight: 15,
+                                backgroundColor: isSavingReceipt ? "#9e9e9e" : "#1976d2",
+                            }}
+                        >
+                            Close
+                        </button>
+                        <button
+                            onClick={() => {
+                                setFormValues({
+                                    ...formValues,
+                                    details: ""
+                                })
+                            }}
+                            disabled={isSavingReceipt}
+                            style={{
+                                fontSize: 13,
+                                marginRight: 15,
+                                backgroundColor: isSavingReceipt ? "#9e9e9e" : "#1976d2",
+                            }}
+                        >
+                            Reset
+                        </button>
+                        <button
                             onClick={handleSubmit}
                             disabled={isSavingReceipt}
                             style={{
-                                minWidth: 120,
-                                padding: "10px 22px",
-                                borderRadius: 4,
-                                border: "none",
-                                cursor: isSavingReceipt ? "not-allowed" : "pointer",
-                                fontWeight: 600,
                                 fontSize: 13,
                                 backgroundColor: isSavingReceipt ? "#9e9e9e" : "#1976d2",
-                                color: "#fff",
-                                boxShadow: "0 4px 10px rgba(0,0,0,0.15)",
-                                transition: "background-color 0.2s",
                             }}
                         >
                             {isSavingReceipt ? "Generating..." : "Submit"}

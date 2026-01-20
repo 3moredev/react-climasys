@@ -600,7 +600,7 @@ export default function ManageDiagnosis() {
                 <th style={{ width: '20%' }}>Short Description</th>
                 <th style={{ width: '40%' }}>Diagnosis Description</th>
                 <th style={{ width: '10%' }}>Priority</th>
-                <th style={{ width: '15%' }}>Action</th>
+                <th style={{ width: '15%' }} className="text-center">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -611,7 +611,7 @@ export default function ManageDiagnosis() {
                     <td>{diagnosis.shortDescription}</td>
                     <td>{diagnosis.diagnosisDescription}</td>
                     <td>{diagnosis.priority}</td>
-                    <td>
+                    <td className="d-flex justify-content-center">
                       <div className="action-icons">
                         <div title="Edit" onClick={() => handleEdit(diagnosis)}>
                           <Edit style={{ fontSize: '20px' }} />

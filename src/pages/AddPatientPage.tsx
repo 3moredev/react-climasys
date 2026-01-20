@@ -1601,9 +1601,9 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                       </Typography>
                       <TextField
                         fullWidth
-                        type="date" 
+                        type="date"
                         data-date-format="DD-MM-YYYY"
-                        required                        
+                        required
                         value={formData.dobDate}
                         onChange={(e) => {
                           const newValue = e.target.value

@@ -628,8 +628,8 @@ export default function ManageComplaints() {
                 <th style={{ width: '20%' }}>Short Description</th>
                 <th style={{ width: '30%' }}>Complaint Description</th>
                 <th style={{ width: '10%' }}>Priority</th>
-                <th style={{ width: '20%' }}>Display to Operator</th>
-                <th style={{ width: '15%' }}>Action</th>
+                <th style={{ width: '20%' }} className="text-center">Display to Operator</th>
+                <th style={{ width: '15%' }} className="text-center">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -648,7 +648,7 @@ export default function ManageComplaints() {
                         style={{ cursor: 'pointer' }}
                       />
                     </td>
-                    <td>
+                    <td className="d-flex justify-content-center">
                       <div className="action-icons">
                         <div title="Edit" onClick={() => handleEdit(complaint)}>
                           <Edit style={{ fontSize: '20px' }} />

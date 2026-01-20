@@ -1,8 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { Close, Delete } from '@mui/icons-material';
 import { useSession } from '../store/hooks/useSession';
-import GlobalSnackbar from './GlobalSnackbar';
-// Services are now handled by parent component
+import {
+    Snackbar,
+    TextField,
+    Button,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    Grid,
+    Box,
+    Typography,
+    IconButton,
+    Alert
+} from '@mui/material';
 
 export interface LabTestRow {
     id: string;
@@ -32,28 +44,6 @@ interface AddTestLabPopupProps {
     doctorId?: string;
 }
 
-const inputStyle = {
-    width: '100%',
-    padding: '6px 10px',
-    border: '1px solid #ccc',
-    borderRadius: '4px',
-    fontSize: '13px',
-    backgroundColor: 'white',
-    outline: 'none'
-};
-
-const btnStyle = (bg = '#1E88E5') => ({
-    padding: '8px 16px',
-    backgroundColor: bg,
-    color: 'white',
-    border: 'none',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    fontSize: '14px',
-    fontWeight: '500',
-    transition: 'background-color 0.2s'
-});
-
 const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave, editData, clinicId, doctorId }) => {
     const session = useSession();
     const [testLabData, setTestLabData] = useState<TestLabData>({
@@ -62,11 +52,24 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
         parameterName: '',
         labTestRows: []
     });
-    const [snackbar, setSnackbar] = useState({ open: false, message: '' });
+
+    // Validation state
+    const [errors, setErrors] = useState<{
+        labTestName: string;
+        priority: string;
+        parameterName: string;
+    }>({
+        labTestName: '',
+        priority: '',
+        parameterName: ''
+    });
+
+    const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
     const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
         if (!open) return;
+
         setTestLabData({
             labTestName: editData?.labTestName || '',
             priority: String(editData?.priority || ''),
@@ -78,20 +81,39 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
                 parameterId: (param as any).parameterId
             })) || []
         });
+        setErrors({ labTestName: '', priority: '', parameterName: '' });
     }, [open, editData]);
 
     const handleInputChange = (field: keyof TestLabData, value: string) => {
         setTestLabData(prev => ({ ...prev, [field]: value }));
+
+        // Clear error when user types
+        if (field === 'labTestName' && errors.labTestName) {
+            setErrors(prev => ({ ...prev, labTestName: '' }));
+        }
+        if (field === 'priority' && errors.priority) {
+            setErrors(prev => ({ ...prev, priority: '' }));
+        }
+        if (field === 'parameterName' && errors.parameterName) {
+            setErrors(prev => ({ ...prev, parameterName: '' }));
+        }
     };
 
-    const showSnackbar = (message: string) => setSnackbar({ open: true, message });
+    const showSnackbar = (message: string, severity: 'success' | 'error' = 'error') => {
+        setSnackbar({ open: true, message, severity });
+    };
 
     const handleAddParameter = () => {
         const name = testLabData.parameterName.trim();
-        if (!name) return showSnackbar('Please enter a parameter name');
+
+        if (!name) {
+            showSnackbar('Please enter a parameter name', 'error');
+            return;
+        }
 
         if (testLabData.labTestRows.some(row => row.parameterName.trim().toLowerCase() === name.toLowerCase())) {
-            return showSnackbar('This parameter already exists in the list');
+            showSnackbar('This parameter already exists in the list', 'error');
+            return;
         }
 
         setTestLabData(prev => ({
@@ -101,119 +123,339 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
         }));
     };
 
-    const isValidId = (id: any) => id !== undefined && id !== null && String(id) !== 'undefined' && String(id) !== 'null' && String(id).trim() !== '';
-
     const handleRemoveParameter = (id: string) => {
         setTestLabData(prev => ({ ...prev, labTestRows: prev.labTestRows.filter(row => row.id !== id) }));
     };
 
     const handleSave = async () => {
-        if (!testLabData.labTestName.trim()) return showSnackbar('Lab Test Name is required');
-        if (!(clinicId || session.clinicId) || !(doctorId || session.doctorId)) {
-            return showSnackbar('Clinic ID and Doctor ID are required');
+        let hasError = false;
+        const newErrors = { labTestName: '', priority: '', parameterName: '' };
+
+        if (!testLabData.labTestName.trim()) {
+            newErrors.labTestName = 'Lab Test Name is required';
+            hasError = true;
         }
+
+        if (!testLabData.priority.trim()) {
+            newErrors.priority = 'Priority is required';
+            hasError = true;
+        }
+
+        if (!(clinicId || session.clinicId) || !(doctorId || session.doctorId)) {
+            showSnackbar('Clinic ID and Doctor ID are required', 'error');
+            return;
+        }
+
+        setErrors(newErrors);
+
+        if (hasError) return;
 
         setIsSaving(true);
         try {
             // All CRUD operations (Create, Update, Delete) are handled by the parent component
-            // in the onSave callback. This mimics the "all changes in session" behavior
-            // where database commits happen only on final submit.
             const result = await onSave(testLabData);
-            if (result !== false) onClose();
+            if (result !== false) {
+                showSnackbar(editData ? 'Lab test updated successfully!' : 'Lab test added successfully!', 'success');
+                setTimeout(() => {
+                    onClose();
+                }, 1000);
+            }
         } catch (error: any) {
             console.error('Error saving lab test:', error);
-            showSnackbar(error.message || 'Failed to save lab test');
+            showSnackbar(error.message || 'Failed to save lab test', 'error');
         } finally {
             setIsSaving(false);
         }
+    };
+
+    const handleClose = () => {
+        setErrors({ labTestName: '', priority: '', parameterName: '' });
+        onClose();
+    };
+
+    const handleReset = () => {
+        setTestLabData({
+            labTestName: '',
+            priority: '',
+            parameterName: '',
+            labTestRows: []
+        });
+        setErrors({ labTestName: '', priority: '', parameterName: '' });
     };
 
     if (!open) return null;
 
     return (
         <>
-            <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10001 }} onClick={onClose}>
-                <div style={{ backgroundColor: 'white', borderRadius: '8px', maxWidth: '800px', width: '90%', maxHeight: '90vh', overflow: 'hidden', boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
-                    {/* Header */}
-                    <div style={{ padding: '15px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #eee' }}>
-                        <h3 style={{ margin: 0, color: '#000', fontSize: '18px', fontWeight: 'bold' }}>{editData ? 'Edit Lab Test' : 'Add Lab Test'}</h3>
-                        <button onClick={onClose} style={{ ...btnStyle(), width: '32px', height: '32px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <Close fontSize="small" />
-                        </button>
-                    </div>
-
-                    {/* Content */}
-                    <div style={{ padding: '20px', overflowY: 'auto', flex: 1 }}>
-                        <div style={{ marginBottom: '15px' }}>
-                            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', fontSize: '13px', color: '#333' }}>Lab Test Name <span style={{ color: '#d32f2f' }}>*</span></label>
-                            <input type="text" value={testLabData.labTestName} onChange={e => handleInputChange('labTestName', e.target.value)} style={inputStyle} placeholder="Lab test name" />
-                        </div>
-                        <div style={{ marginBottom: '15px' }}>
-                            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', fontSize: '13px', color: '#333' }}>Priority <span style={{ color: '#d32f2f' }}>*</span></label>
-                            <input type="text" value={testLabData.priority} onChange={e => handleInputChange('priority', e.target.value)} style={inputStyle} placeholder="Priority" />
-                        </div>
-                        <div style={{ marginBottom: '15px' }}>
-                            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', fontSize: '13px', color: '#333' }}>Parameter Name *</label>
-                            <div style={{ display: 'flex', gap: '8px' }}>
-                                <input
-                                    type="text"
-                                    value={testLabData.parameterName}
-                                    onChange={e => handleInputChange('parameterName', e.target.value)}
-                                    onKeyPress={e => e.key === 'Enter' && (e.preventDefault(), handleAddParameter())}
-                                    style={{ ...inputStyle, flex: 1 }}
-                                    placeholder="Parameter Name"
+            <Dialog
+                open={open}
+                onClose={handleClose}
+                maxWidth="sm"
+                fullWidth
+                PaperProps={{
+                    style: { borderRadius: '8px', maxWidth: '600px' }
+                }}
+            >
+                <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="h6" component="div" style={{ fontWeight: 'bold' }} className="mb-0">
+                        {editData ? 'Edit Lab Test' : 'Add Lab Test'}
+                    </Typography>
+                    <IconButton
+                        onClick={handleClose}
+                        disableRipple
+                        sx={{
+                            color: '#fff',
+                            backgroundColor: '#1976d2',
+                            '&:hover': { backgroundColor: '#1565c0' },
+                            width: 36,
+                            height: 36,
+                            borderRadius: '8px'
+                        }}
+                    >
+                        <Close />
+                    </IconButton>
+                </DialogTitle>
+                <DialogContent>
+                    <Grid container spacing={2}>
+                        <Grid item xs={12}>
+                            <Box sx={{ mb: 2 }}>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className="mb-0">
+                                    Lab Test Name <span style={{ color: 'red' }}>*</span>
+                                </Typography>
+                                <TextField
+                                    fullWidth
+                                    placeholder="Lab Test Name"
+                                    variant="outlined"
+                                    size="small"
+                                    value={testLabData.labTestName}
+                                    onChange={(e) => handleInputChange('labTestName', e.target.value)}
+                                    error={!!errors.labTestName}
+                                    helperText={errors.labTestName}
                                 />
-                                <button type="button" onClick={handleAddParameter} style={btnStyle()}>Add Parameter</button>
-                            </div>
-                        </div>
-
-                        {/* Table */}
-                        <div style={{ border: '1px solid #ccc', borderRadius: '4px', overflow: 'hidden' }}>
-                            <div style={{ display: 'grid', gridTemplateColumns: '60px 1fr 80px', backgroundColor: '#1E88E5', color: 'white', fontWeight: 'bold', fontSize: '12px' }}>
-                                <div style={{ padding: '8px', borderRight: '1px solid rgba(255,255,255,0.2)', textAlign: 'center' }}>Sr.</div>
-                                <div style={{ padding: '8px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Parameter Name</div>
-                                <div style={{ padding: '8px', textAlign: 'center' }}>Action</div>
-                            </div>
-                            {testLabData.labTestRows.length > 0 ? testLabData.labTestRows.map((row, index) => (
-                                <div key={row.id} style={{ display: 'grid', gridTemplateColumns: '60px 1fr 80px', backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white', borderBottom: '1px solid #e0e0e0' }}>
-                                    <div style={{ padding: '8px', borderRight: '1px solid #e0e0e0', fontSize: '12px', textAlign: 'center' }}>{index + 1}</div>
-                                    <div style={{ padding: '8px', borderRight: '1px solid #e0e0e0', fontSize: '12px' }}>{row.parameterName}</div>
-                                    <div style={{ padding: '8px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                                        <div
-                                            onClick={() => handleRemoveParameter(row.id)}
-                                            style={{ cursor: 'pointer', color: '#666', borderRadius: '4px', padding: '2px', display: 'flex' }}
-                                            onMouseEnter={e => { e.currentTarget.style.color = '#EF5350'; e.currentTarget.style.backgroundColor = '#ffebee'; }}
-                                            onMouseLeave={e => { e.currentTarget.style.color = '#666'; e.currentTarget.style.backgroundColor = 'transparent'; }}
+                            </Box>
+                        </Grid>
+                        <Grid item xs={12}>
+                            <Box sx={{ mb: 2 }}>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className="mb-0">
+                                    Priority <span style={{ color: 'red' }}>*</span>
+                                </Typography>
+                                <TextField
+                                    fullWidth
+                                    placeholder="Priority"
+                                    variant="outlined"
+                                    size="small"
+                                    value={testLabData.priority}
+                                    onChange={(e) => handleInputChange('priority', e.target.value)}
+                                    inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
+                                    error={!!errors.priority}
+                                    helperText={errors.priority}
+                                />
+                            </Box>
+                        </Grid>
+                        <Grid item xs={12}>
+                            <Box sx={{ mb: 2 }}>
+                                <Grid container spacing={1} alignItems="flex-end">
+                                    <Grid item xs>
+                                        <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }} className="mb-0">
+                                            Parameter Name <span style={{ color: 'red' }}>*</span> 
+                                        </Typography>
+                                        <TextField
+                                            fullWidth
+                                            placeholder="Parameter Name"
+                                            variant="outlined"
+                                            size="small"
+                                            value={testLabData.parameterName}
+                                            onChange={(e) => handleInputChange('parameterName', e.target.value)}
+                                            onKeyPress={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    handleAddParameter();
+                                                }
+                                            }}
+                                        />
+                                    </Grid>
+                                    <Grid item>
+                                        <Button
+                                            onClick={handleAddParameter}
+                                            variant="contained"
+                                            sx={{
+                                                backgroundColor: '#1976d2',
+                                                textTransform: 'none',
+                                                height: '38px',
+                                                '&:hover': {
+                                                    backgroundColor: '#1565c0',
+                                                }
+                                            }}
                                         >
-                                            <Delete fontSize="small" />
-                                        </div>
-                                    </div>
-                                </div>
-                            )) : (
-                                <div style={{ padding: '20px', textAlign: 'center', color: '#999', fontSize: '12px' }}>No parameters added yet</div>
-                            )}
-                        </div>
-                    </div>
+                                            Add Parameter
+                                        </Button>
+                                    </Grid>
+                                </Grid>
+                            </Box>
+                        </Grid>
 
-                    {/* Footer */}
-                    <div style={{ padding: '0 20px 14px', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                        <button onClick={onClose} style={btnStyle()}>Close</button>
-                        <button onClick={()=>{
-                            setTestLabData({
-                                labTestName: '',
-                                priority: '',
-                                parameterName: '',
-                                labTestRows: []
-                            });
-                        }} style={btnStyle()}>Reset</button>
-                        <button onClick={handleSave} disabled={isSaving} style={{ ...btnStyle(isSaving ? '#ccc' : '#1E88E5'), cursor: isSaving ? 'not-allowed' : 'pointer' }}>
-                            {isSaving ? 'Saving...' : 'Submit'}
-                        </button>
+                        <Grid item xs={12}>
+                            {/* Table */}
+                            <table style={{
+                                width: '100%',
+                                borderCollapse: 'collapse',
+                                border: '1px solid #dee2e6'
+                            }}>
+                                <thead>
+                                    <tr>
+                                        <th style={{
+                                            backgroundColor: '#1976d2',
+                                            color: '#ffffff',
+                                            padding: '8px 12px',
+                                            textAlign: 'left',
+                                            fontWeight: 'bold',
+                                            fontSize: '14px',                                            
+                                            border: '1px solid #dee2e6'
+                                        }}>Sr.</th>
+                                        <th style={{
+                                            backgroundColor: '#1976d2',
+                                            color: '#ffffff',
+                                            padding: '8px 12px',
+                                            textAlign: 'left',
+                                            fontWeight: 'bold',
+                                            fontSize: '14px',                                            
+                                            border: '1px solid #dee2e6'
+                                        }}>Parameter Name</th>
+                                        <th style={{
+                                            backgroundColor: '#1976d2',
+                                            color: '#ffffff',
+                                            padding: '8px 12px',
+                                            textAlign: 'center',
+                                            fontWeight: 'bold',
+                                            fontSize: '14px',                                            
+                                            border: '1px solid #dee2e6'
+                                        }} className='text-center'>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {testLabData.labTestRows.length > 0 ? (
+                                        testLabData.labTestRows.map((row, index) => (
+                                            <tr key={row.id}>
+                                                <td style={{
+                                                    padding: '8px 12px',
+                                                    border: '1px solid #dee2e6',
+                                                    fontSize: '13px',                                                    
+                                                    backgroundColor: index % 2 === 0 ? '#f8f9fa' : '#ffffff'
+                                                }}>{index + 1}</td>
+                                                <td style={{
+                                                    padding: '8px 12px',
+                                                    border: '1px solid #dee2e6',
+                                                    fontSize: '13px',                                                    
+                                                    backgroundColor: index % 2 === 0 ? '#f8f9fa' : '#ffffff'
+                                                }}>{row.parameterName}</td>
+                                                <td style={{
+                                                    padding: '8px 12px',
+                                                    border: '1px solid #dee2e6',
+                                                    fontSize: '13px',                                                    
+                                                    backgroundColor: index % 2 === 0 ? '#f8f9fa' : '#ffffff',
+                                                    textAlign: 'center'
+                                                }}>
+                                                    <div
+                                                        onClick={() => handleRemoveParameter(row.id)}
+                                                        title="Delete"
+                                                        style={{
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            cursor: 'pointer',
+                                                            color: '#666',
+                                                            transition: 'color 0.2s'
+                                                        }}
+                                                        onMouseEnter={(e) => {
+                                                            e.currentTarget.style.color = '#d32f2f';
+                                                        }}
+                                                        onMouseLeave={(e) => {
+                                                            e.currentTarget.style.color = '#666';
+                                                        }}
+                                                    >
+                                                        <Delete style={{ fontSize: '18px' }} />
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr>
+                                            <td colSpan={3} style={{
+                                                padding: '12px',
+                                                border: '1px solid #dee2e6',
+                                                fontSize: '13px',
+                                                fontFamily: "'Roboto', sans-serif",
+                                                textAlign: 'center',
+                                                color: '#666'
+                                            }}>
+                                                No parameters added yet
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </Grid>
+                    </Grid>
+                </DialogContent>
+                <DialogActions sx={{ p: 2 }}>
+                    <Button
+                        onClick={handleClose}
+                        variant="contained"
+                        sx={{
+                            backgroundColor: 'rgb(0, 123, 255)',
+                            textTransform: 'none',
+                            '&:hover': {
+                                backgroundColor: 'rgb(0, 100, 200)',
+                            }
+                        }}
+                    >
+                        Close
+                    </Button>
+                    <Button
+                        onClick={handleReset}
+                        variant="contained"
+                        sx={{
+                            backgroundColor: 'rgb(0, 123, 255)',
+                            textTransform: 'none',
+                            '&:hover': {
+                                backgroundColor: 'rgb(0, 100, 200)',
+                            }
+                        }}
+                    >
+                        Reset
+                    </Button>
+                    <Button
+                        onClick={handleSave}
+                        variant="contained"
+                        sx={{
+                            backgroundColor: 'rgb(0, 123, 255)',
+                            textTransform: 'none',
+                            '&:hover': {
+                                backgroundColor: 'rgb(0, 100, 200)',
+                            }
+                        }}
+                        disabled={isSaving}
+                    >
+                        {isSaving ? 'Saving...' : 'Submit'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
 
-                    </div>
-                </div>
-            </div>
-            <GlobalSnackbar show={snackbar.open} message={snackbar.message} onClose={() => setSnackbar(prev => ({ ...prev, open: false }))} autoHideDuration={5000} />
+            <Snackbar
+                open={snackbar.open}
+                autoHideDuration={5000}
+                onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+                sx={{ zIndex: 99999 }}
+            >
+                <Alert
+                    onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+                    severity={snackbar.severity}
+                    sx={{ width: '100%', fontWeight: 'bold' }}
+                    variant="filled"
+                >
+                    {snackbar.message}
+                </Alert>
+            </Snackbar>
         </>
     );
 };

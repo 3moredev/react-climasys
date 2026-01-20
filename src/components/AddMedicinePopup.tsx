@@ -1,13 +1,28 @@
 import React, { useState } from 'react';
 import { Close } from '@mui/icons-material';
-import { Snackbar } from '@mui/material';
+import {
+    Snackbar,
+    TextField,
+    Button,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    Grid,
+    Box,
+    Typography,
+    IconButton,
+    Alert,
+    Checkbox,
+    FormControlLabel
+} from '@mui/material';
 import medicineService, { MedicineMaster } from '../services/medicineService';
 import { sessionService } from '../services/sessionService';
 
 export interface MedicineData {
     shortDescription: string;
     medicineName: string;
-    priority: string;    
+    priority: string;
     breakfast: string;
     lunch: string;
     dinner: string;
@@ -36,10 +51,18 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
     const [days, setDays] = useState('');
     const [instruction, setInstruction] = useState('');
     const [addToActiveList, setAddToActiveList] = useState(true);
-    
+
+    // Validation state
+    const [errors, setErrors] = useState<{
+        shortDescription: string;
+        medicineName: string;
+    }>({
+        shortDescription: '',
+        medicineName: ''
+    });
+
     // Snackbar state management
-    const [snackbarOpen, setSnackbarOpen] = useState(false);
-    const [snackbarMessage, setSnackbarMessage] = useState('');
+    const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
     const [loading, setLoading] = useState(false);
 
     // Populate form when editData changes or popup opens
@@ -66,29 +89,49 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
             setInstruction('');
             setAddToActiveList(true);
         }
+        setErrors({ shortDescription: '', medicineName: '' });
     }, [open, editData]);
 
+    const handleInputChange = (setter: (v: string) => void, field: string, value: string) => {
+        setter(value);
+        if (field === 'shortDescription' && errors.shortDescription) {
+            setErrors(prev => ({ ...prev, shortDescription: '' }));
+        }
+        if (field === 'medicineName' && errors.medicineName) {
+            setErrors(prev => ({ ...prev, medicineName: '' }));
+        }
+    };
+
+    const showSnackbar = (message: string, severity: 'success' | 'error' = 'error') => {
+        setSnackbar({ open: true, message, severity });
+    };
+
     const handleSubmit = async () => {
+        const newErrors = { shortDescription: '', medicineName: '' };
+        let hasError = false;
+
         if (!shortDescription.trim()) {
-            setSnackbarMessage('Short Description is required');
-            setSnackbarOpen(true);
-            return;
+            newErrors.shortDescription = 'Short Description is required';
+            hasError = true;
         }
-        
+
         if (!medicineName.trim()) {
-            setSnackbarMessage('Medicine Name is required');
-            setSnackbarOpen(true);
-            return;
+            newErrors.medicineName = 'Medicine Name is required';
+            hasError = true;
         }
+
+        setErrors(newErrors);
+
+        if (hasError) return;
 
         try {
             setLoading(true);
-            
+
             // Get doctorId and clinicId from props or session
             let finalDoctorId = doctorId;
             let finalClinicId = clinicId;
             let userName = "System";
-            
+
             try {
                 const sessionResult = await sessionService.getSessionInfo();
                 if (sessionResult.success && sessionResult.data) {
@@ -104,22 +147,21 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
             } catch (err) {
                 console.warn('Could not get session info:', err);
             }
-            
+
             // Validate that we have required IDs
             if (!finalDoctorId || !finalClinicId) {
-                setSnackbarMessage('Doctor ID and Clinic ID are required. Please ensure you are logged in.');
-                setSnackbarOpen(true);
+                showSnackbar('Doctor ID and Clinic ID are required. Please ensure you are logged in.', 'error');
                 setLoading(false);
                 return;
             }
 
             const isEditMode = !!editData;
             const originalShortDescription = editData?.shortDescription || '';
-            
+
             // Normalize text fields to uppercase before saving
             const newShortDescription = shortDescription.trim().toUpperCase();
             const newMedicineName = medicineName.trim().toUpperCase();
-            
+
             // Determine priority (optional; default to "9" if not provided)
             const priorityValue = priority.trim() || '9';
 
@@ -141,7 +183,7 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
 
             if (isEditMode) {
                 const shortDescriptionChanged = originalShortDescription !== newShortDescription;
-                
+
                 if (shortDescriptionChanged) {
                     // If short description changed, we need to delete old and create new
                     // because short description is part of the composite key
@@ -151,7 +193,7 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                     } catch (err) {
                         console.warn('Error deleting old medicine (may not exist):', err);
                     }
-                    
+
                     // Create new medicine with new short description
                     medicineData.createdByName = userName;
                     await medicineService.createMedicine(medicineData);
@@ -177,56 +219,43 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                 instruction: instruction.trim().toUpperCase(),
                 addToActiveList
             });
-            
-            // Reset form
-            setShortDescription('');
-            setMedicineName('');
-            setPriority('');
-            setBreakfast('');
-            setLunch('');
-            setDinner('');
-            setDays('');
-            setInstruction('');
-            setAddToActiveList(true);
-            
-            // Close popup immediately - success message will be shown in parent component
-            onClose();
+
+            showSnackbar(isEditMode ? 'Medicine updated successfully!' : 'Medicine added successfully!', 'success');
+
+            setTimeout(() => {
+                handleClose();
+            }, 1000);
+
         } catch (error: any) {
             console.error('Error saving medicine:', error);
-            
+
             // Check if error is about duplicate medicine
             const errorMessage = error?.message || error?.toString() || 'Failed to save medicine';
-            const isDuplicateError = errorMessage.toLowerCase().includes('already exists') || 
-                                     errorMessage.toLowerCase().includes('already exist');
-            
+            const isDuplicateError = errorMessage.toLowerCase().includes('already exists') ||
+                errorMessage.toLowerCase().includes('already exist');
+
             let userFriendlyMessage = '';
             if (isDuplicateError) {
                 // Extract short description from error message if possible
-                // Error format: "Medicine with short description 'TEST' already exists..."
                 const match = errorMessage.match(/short description ['"]([^'"]+)['"]/i);
-                const shortDesc = match ? match[1] : newShortDescription;
+                const shortDesc = match ? match[1] : shortDescription.trim().toUpperCase();
                 userFriendlyMessage = `Medicine "${shortDesc}" is already added.`;
 
-                // For duplicate errors, KEEP the popup open and just show the error
                 if (onError) {
                     onError(userFriendlyMessage);
                 } else {
-                    setSnackbarMessage(userFriendlyMessage);
-                    setSnackbarOpen(true);
+                    showSnackbar(userFriendlyMessage, 'error');
                 }
             } else {
                 userFriendlyMessage = errorMessage;
 
-                // For non-duplicate errors, close popup and show error in parent component snackbar (like before)
-                onClose();
                 if (onError) {
+                    onClose();
                     setTimeout(() => {
                         onError(userFriendlyMessage);
-                    }, 100); // Small delay to ensure popup is closed
+                    }, 100);
                 } else {
-                    // Fallback to popup snackbar if onError not provided
-                    setSnackbarMessage(userFriendlyMessage);
-                    setSnackbarOpen(true);
+                    showSnackbar(userFriendlyMessage, 'error');
                 }
             }
         } finally {
@@ -244,15 +273,8 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
         setDays('');
         setInstruction('');
         setAddToActiveList(true);
+        setErrors({ shortDescription: '', medicineName: '' });
         onClose();
-    };
-
-    const handleCancel = () => {
-        handleClose();
-    };
-
-    const handleBack = () => {
-        handleClose();
     };
 
     // Numeric-only helper for dose/priority inputs
@@ -265,335 +287,195 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
 
     return (
         <>
-        <div
-            style={{
-                position: 'fixed',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                zIndex: 10001,
-            }}
-            onClick={handleClose}
-        >
-            <div
-                style={{
-                    backgroundColor: 'white',
-                    borderRadius: '8px',
-                    maxWidth: '700px',
-                    width: '90%',
-                    maxHeight: '85vh',
-                    overflow: 'auto',
-                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
-                    display: 'flex',
-                    flexDirection: 'column',
+            <Dialog
+                open={open}
+                onClose={handleClose}
+                maxWidth="md"
+                fullWidth
+                PaperProps={{
+                    style: { borderRadius: '8px', maxWidth: '700px' }
                 }}
-                onClick={(e) => e.stopPropagation()}
             >
-                {/* Popup Header */}
-                <div style={{
-                    background: 'white',
-                    padding: '15px 20px',
-                    borderTopLeftRadius: '8px',
-                    borderTopRightRadius: '8px',
-                    fontFamily: "'Roboto', sans-serif"
-                }}>
-                    <div style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center'
-                    }}>
-                        <h3 style={{ margin: 0, color: '#000000', fontSize: '18px', fontWeight: 'bold' }}>
-                            {editData ? 'Edit Medicine' : 'Add Medicine'}
-                        </h3>
-                        <button
-                            onClick={handleClose}
-                            style={{
-                                background: 'none',
-                                border: 'none',
-                                cursor: 'pointer',
-                                padding: '5px',
-                                borderRadius: '50%',
-                                color: '#fff',
-                                backgroundColor: '#1976d2',
-                                width: '32px',
-                                height: '32px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                transition: 'background-color 0.2s'
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.backgroundColor = '#1565c0';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.backgroundColor = '#1976d2';
-                            }}
-                        >
-                            <Close fontSize="small" style={{ color: '#fff' }} />
-                        </button>
-                    </div>
-                </div>
-
-                {/* Popup Content */}
-                <div style={{ padding: '20px', flex: 1 }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="h6" component="div" style={{ fontWeight: 'bold' }} className="mb-0">
+                        {editData ? 'Edit Medicine' : 'Add Medicine'}
+                    </Typography>
+                    <IconButton
+                        onClick={handleClose}
+                        disableRipple
+                        sx={{
+                            color: '#fff',
+                            backgroundColor: '#1976d2',
+                            '&:hover': { backgroundColor: '#1565c0' },
+                            width: 36,
+                            height: 36,
+                            borderRadius: '8px'
+                        }}
+                    >
+                        <Close />
+                    </IconButton>
+                </DialogTitle>
+                <DialogContent>
+                    <Grid container spacing={2}>
                         {/* Left Column */}
-                        <div>
-                            <div style={{ marginBottom: '15px' }}>
-                                <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                    Short Description <span style={{ color: '#d32f2f' }}>*</span>
-                                </label>
-                                <input
-                                    type="text"
+                        <Grid item xs={12} sm={6} spacing={2}>
+                            <Box sx={{ mb: 2 }} className='mb-4'>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
+                                    Short Description <span style={{ color: 'red' }}>*</span>
+                                </Typography>
+                                <TextField
+                                    fullWidth
                                     placeholder="Medicine Short Description"
+                                    variant="outlined"
+                                    size="small"
                                     value={shortDescription}
-                                    onChange={(e) => setShortDescription(e.target.value)}
-                                    style={{
-                                        width: '100%',
-                                        padding: '8px 12px',
-                                        border: '1px solid #B7B7B7',
-                                        borderRadius: '4px',
-                                        fontSize: '12px',
-                                        fontFamily: "'Roboto', sans-serif",
-                                        backgroundColor: 'white',
-                                        outline: 'none',
-                                        boxSizing: 'border-box'
-                                    }}
+                                    onChange={(e) => handleInputChange(setShortDescription, 'shortDescription', e.target.value)}
+                                    error={!!errors.shortDescription}
+                                    helperText={errors.shortDescription}
                                 />
-                            </div>
+                            </Box>
 
-                            <div style={{ marginBottom: '15px' }}>
-                                <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                    Medicine Name <span style={{ color: '#d32f2f' }}>*</span>
-                                </label>
-                                <input
-                                    type="text"
+                            <Box sx={{ mb: 2 }} className='mb-4'>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
+                                    Medicine Name <span style={{ color: 'red' }}>*</span>
+                                </Typography>
+                                <TextField
+                                    fullWidth
                                     placeholder="Medicine Name"
+                                    variant="outlined"
+                                    size="small"
                                     value={medicineName}
-                                    onChange={(e) => setMedicineName(e.target.value)}
-                                    style={{
-                                        width: '100%',
-                                        padding: '8px 12px',
-                                        border: '1px solid #B7B7B7',
-                                        borderRadius: '4px',
-                                        fontSize: '12px',
-                                        fontFamily: "'Roboto', sans-serif",
-                                        backgroundColor: 'white',
-                                        outline: 'none',
-                                        boxSizing: 'border-box'
-                                    }}
+                                    onChange={(e) => handleInputChange(setMedicineName, 'medicineName', e.target.value)}
+                                    error={!!errors.medicineName}
+                                    helperText={errors.medicineName}
                                 />
-                            </div>
+                            </Box>
 
-                            <div style={{ marginBottom: '15px' }}>
-                                <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                            <Box sx={{ mb: 2 }} className='mb-4'>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                                     Priority
-                                </label>
-                                <input
-                                    type="text"
+                                </Typography>
+                                <TextField
+                                    fullWidth
                                     placeholder="Priority"
+                                    variant="outlined"
+                                    size="small"
                                     value={priority}
                                     onChange={(e) => handleNumericChange(setPriority, e.target.value)}
-                                    style={{
-                                        width: '100%',
-                                        padding: '8px 12px',
-                                        border: '1px solid #B7B7B7',
-                                        borderRadius: '4px',
-                                        fontSize: '12px',
-                                        fontFamily: "'Roboto', sans-serif",
-                                        backgroundColor: 'white',
-                                        outline: 'none',
-                                        boxSizing: 'border-box'
-                                    }}
+                                    inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
                                 />
-                            </div>
+                            </Box>
 
-                            <div style={{ marginBottom: '15px' }}>
-                                <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                            <Box sx={{ mb: 2 }} className='mb-4'>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                                     Breakfast
-                                </label>
-                                <input
-                                    type="text"
+                                </Typography>
+                                <TextField
+                                    fullWidth
                                     placeholder="Breakfast"
+                                    variant="outlined"
+                                    size="small"
                                     value={breakfast}
                                     onChange={(e) => handleNumericChange(setBreakfast, e.target.value)}
-                                    style={{
-                                        width: '100%',
-                                        padding: '8px 12px',
-                                        border: '1px solid #B7B7B7',
-                                        borderRadius: '4px',
-                                        fontSize: '12px',
-                                        fontFamily: "'Roboto', sans-serif",
-                                        backgroundColor: 'white',
-                                        outline: 'none',
-                                        boxSizing: 'border-box'
-                                    }}
                                 />
-                            </div>
+                            </Box>
 
-                            <div style={{ marginBottom: '15px' }}>
-                                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                                    <input
-                                        type="checkbox"
-                                        checked={addToActiveList}
-                                        onChange={(e) => setAddToActiveList(e.target.checked)}
-                                        style={{
-                                            width: '18px',
-                                            height: '18px',
-                                            cursor: 'pointer'
-                                        }}
-                                    />
-                                    <span style={{ fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                        Add to active list of medicine
-                                    </span>
-                                </label>
-                            </div>
-                        </div>
+                            <Box sx={{ mb: 2 }} className='mb-4'>
+                                <FormControlLabel
+                                    control={
+                                        <Checkbox
+                                            checked={addToActiveList}
+                                            onChange={(e) => setAddToActiveList(e.target.checked)}
+                                            size="small"
+                                        />
+                                    }
+                                    label={<Typography variant="body2" sx={{ fontWeight: 'bold', color: 'black' }}>Add to active list of medicine</Typography>}
+                                />
+                            </Box>
+                        </Grid>
 
                         {/* Right Column */}
-                        <div>
-                            <div style={{ marginBottom: '15px' }}>
-                                <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                        <Grid item xs={12} sm={6}>
+                            <Box sx={{ mb: 2 }} className='mb-4'>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                                     Lunch
-                                </label>
-                                <input
-                                    type="text"
+                                </Typography>
+                                <TextField
+                                    fullWidth
                                     placeholder="Lunch"
+                                    variant="outlined"
+                                    size="small"
                                     value={lunch}
                                     onChange={(e) => handleNumericChange(setLunch, e.target.value)}
-                                    style={{
-                                        width: '100%',
-                                        padding: '8px 12px',
-                                        border: '1px solid #B7B7B7',
-                                        borderRadius: '4px',
-                                        fontSize: '12px',
-                                        fontFamily: "'Roboto', sans-serif",
-                                        backgroundColor: 'white',
-                                        outline: 'none',
-                                        boxSizing: 'border-box'
-                                    }}
                                 />
-                            </div>
+                            </Box>
 
-                            <div style={{ marginBottom: '15px' }}>
-                                <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                            <Box sx={{ mb: 2 }} className='mb-4'>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                                     Dinner
-                                </label>
-                                <input
-                                    type="text"
+                                </Typography>
+                                <TextField
+                                    fullWidth
                                     placeholder="Dinner"
+                                    variant="outlined"
+                                    size="small"
                                     value={dinner}
                                     onChange={(e) => handleNumericChange(setDinner, e.target.value)}
-                                    style={{
-                                        width: '100%',
-                                        padding: '8px 12px',
-                                        border: '1px solid #B7B7B7',
-                                        borderRadius: '4px',
-                                        fontSize: '12px',
-                                        fontFamily: "'Roboto', sans-serif",
-                                        backgroundColor: 'white',
-                                        outline: 'none',
-                                        boxSizing: 'border-box'
-                                    }}
                                 />
-                            </div>
+                            </Box>
 
-                            <div style={{ marginBottom: '15px' }}>
-                                <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                            <Box sx={{ mb: 2 }} className='mb-4'>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                                     Days
-                                </label>
-                                <input
-                                    type="text"
+                                </Typography>
+                                <TextField
+                                    fullWidth
                                     placeholder="Days"
+                                    variant="outlined"
+                                    size="small"
                                     value={days}
                                     onChange={(e) => handleNumericChange(setDays, e.target.value)}
-                                    style={{
-                                        width: '100%',
-                                        padding: '8px 12px',
-                                        border: '1px solid #B7B7B7',
-                                        borderRadius: '4px',
-                                        fontSize: '12px',
-                                        fontFamily: "'Roboto', sans-serif",
-                                        backgroundColor: 'white',
-                                        outline: 'none',
-                                        boxSizing: 'border-box'
-                                    }}
                                 />
-                            </div>
+                            </Box>
 
-                            <div style={{ marginBottom: '15px' }}>
-                                <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                            <Box sx={{ mb: 2 }} className='mb-4'>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                                     Instruction
-                                </label>
-                                <input
-                                    type="text"
+                                </Typography>
+                                <TextField
+                                    fullWidth
                                     placeholder="Instruction"
+                                    variant="outlined"
+                                    size="small"
                                     value={instruction}
                                     onChange={(e) => setInstruction(e.target.value)}
-                                    style={{
-                                        width: '100%',
-                                        padding: '8px 12px',
-                                        border: '1px solid #B7B7B7',
-                                        borderRadius: '4px',
-                                        fontSize: '12px',
-                                        fontFamily: "'Roboto', sans-serif",
-                                        backgroundColor: 'white',
-                                        outline: 'none',
-                                        boxSizing: 'border-box'
-                                    }}
                                 />
-                            </div>
+                            </Box>
 
-                            <div style={{ marginTop: '15px', marginBottom: '15px' }}>
-                                <div style={{ fontSize: '12px', color: '#666', fontFamily: "'Roboto', sans-serif" }}>
+                            <Box sx={{ mt: 2, mb: 2 }} className='mb-4'>
+                                <Typography variant="caption" sx={{ color: 'black', fontSize: '12px' }}>
                                     भोजनानंतर / AFTER MEAL, भोजनापूर्वी / BEFORE MEAL
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Popup Footer - Submit / Cancel / Back */}
-                <div style={{
-                    background: 'transparent',
-                    padding: '0 20px 20px',
-                    borderBottomLeftRadius: '8px',
-                    borderBottomRightRadius: '8px',
-                    display: 'flex',
-                    justifyContent: 'flex-end',
-                    gap: '8px'
-                }}>
-                    <button
-                        onClick={handleCancel}
-                        style={{
-                            padding: '8px 16px',
-                            backgroundColor: '#1976d2',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontSize: '12px',
-                            fontFamily: "'Roboto', sans-serif",
-                            fontWeight: '500',
-                            transition: 'background-color 0.2s',
-                            whiteSpace: 'nowrap'
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = '#1565c0';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = '#1976d2';
+                                </Typography>
+                            </Box>
+                        </Grid>
+                    </Grid>
+                </DialogContent>
+                <DialogActions sx={{ p: 2 }}>
+                    <Button
+                        onClick={handleClose}
+                        variant="contained"
+                        sx={{
+                            backgroundColor: 'rgb(0, 123, 255)',
+                            textTransform: 'none',
+                            '&:hover': {
+                                backgroundColor: 'rgb(0, 100, 200)',
+                            }
                         }}
                     >
                         Close
-                    </button>
-                    <button
-                        onClick={()=>{
+                    </Button>
+                    <Button
+                        onClick={() => {
                             setShortDescription('');
                             setMedicineName('');
                             setPriority('');
@@ -603,81 +485,52 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                             setDays('');
                             setInstruction('');
                             setAddToActiveList(true);
+                            setErrors({ shortDescription: '', medicineName: '' });
                         }}
-                        style={{
-                            padding: '8px 16px',
-                            backgroundColor: '#1976d2',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontSize: '12px',
-                            fontFamily: "'Roboto', sans-serif",
-                            fontWeight: '500',
-                            transition: 'background-color 0.2s',
-                            whiteSpace: 'nowrap'
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = '#1565c0';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = '#1976d2';
+                        variant="contained"
+                        sx={{
+                            backgroundColor: 'rgb(0, 123, 255)',
+                            textTransform: 'none',
+                            '&:hover': {
+                                backgroundColor: 'rgb(0, 100, 200)',
+                            }
                         }}
                     >
                         Reset
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                         onClick={handleSubmit}
+                        variant="contained"
+                        sx={{
+                            backgroundColor: 'rgb(0, 123, 255)',
+                            textTransform: 'none',
+                            '&:hover': {
+                                backgroundColor: 'rgb(0, 100, 200)',
+                            }
+                        }}
                         disabled={loading}
-                        style={{
-                            padding: '8px 16px',
-                            backgroundColor: loading ? '#ccc' : '#1976d2',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: loading ? 'not-allowed' : 'pointer',
-                            fontSize: '12px',
-                            fontFamily: "'Roboto', sans-serif",
-                            fontWeight: '500',
-                            transition: 'background-color 0.2s',
-                            whiteSpace: 'nowrap',
-                            opacity: loading ? 0.6 : 1
-                        }}
-                        onMouseEnter={(e) => {
-                            if (!loading) {
-                                e.currentTarget.style.backgroundColor = '#1565c0';
-                            }
-                        }}
-                        onMouseLeave={(e) => {
-                            if (!loading) {
-                                e.currentTarget.style.backgroundColor = '#1976d2';
-                            }
-                        }}
                     >
                         {loading ? 'Saving...' : 'Submit'}
-                    </button>                    
-                </div>
-            </div>
-        </div>
-        
-        {/* Success/Error Snackbar */}
-        <Snackbar
-            open={snackbarOpen}
-            autoHideDuration={2000}
-            onClose={() => {
-                setSnackbarOpen(false);
-            }}
-            message={snackbarMessage}
-            anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-            sx={{
-                zIndex: 99999, // Ensure snackbar appears above everything
-                '& .MuiSnackbarContent-root': {
-                    backgroundColor: snackbarMessage.includes('successfully') ? '#4caf50' : '#f44336',
-                    color: 'white',
-                    fontWeight: 'bold'
-                }
-            }}
-        />
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            <Snackbar
+                open={snackbar.open}
+                autoHideDuration={5000}
+                onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+                sx={{ zIndex: 99999 }}
+            >
+                <Alert
+                    onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+                    severity={snackbar.severity}
+                    sx={{ width: '100%', fontWeight: 'bold' }}
+                    variant="filled"
+                >
+                    {snackbar.message}
+                </Alert>
+            </Snackbar>
         </>
     );
 };
