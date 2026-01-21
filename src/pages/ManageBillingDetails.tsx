@@ -8,6 +8,7 @@ import { useSession } from "../store/hooks/useSession";
 import AddBillingDetailsPopup, { BillingDetailData } from "../components/AddBillingDetailsPopup";
 import GlobalSnackbar from "../components/GlobalSnackbar";
 import DeleteConfirmationDialog from "../components/DeleteConfirmationDialog";
+import SearchInput from "../components/SearchInput";
 
 type BillingDetailRow = BillingDetail & {
   sr: number;
@@ -531,20 +532,21 @@ export default function ManageBillingDetails() {
 
       {/* Search and Action Section */}
       <div className="search-section">
-        <div className="search-input-wrapper">
-          <input
-            type="text"
-            placeholder="Enter Group / Sub-Group / Details / Default Fees / Sequence Number"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            onKeyPress={(e) => {
-              if (e.key === 'Enter') {
-                handleSearch();
-              }
-            }}
-          />
-          <Search className="search-icon" style={{ fontSize: '20px' }} />
-        </div>
+        <SearchInput
+          value={searchTerm}
+          onChange={setSearchTerm}
+          onClear={() => {
+            setSearchTerm('');
+            setCurrentPage(1);
+          }}
+          placeholder="Enter Group / Sub-Group / Details / Default Fees / Sequence Number"
+          onKeyPress={(e) => {
+            if (e.key === 'Enter') {
+              handleSearch();
+            }
+          }}
+          className="search-input-wrapper"
+        />
 
         <button className="btn-primary-custom" onClick={handleAddNew}>
           <Add style={{ fontSize: '18px' }} />

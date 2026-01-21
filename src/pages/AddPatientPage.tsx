@@ -30,6 +30,7 @@ import { patientService, QuickRegistrationRequest } from '../services/patientSer
 import { appointmentService, AppointmentRequest } from '../services/appointmentService'
 import AddReferralPopup, { ReferralData } from '../components/AddReferralPopup'
 import GlobalSnackbar from '../components/GlobalSnackbar'
+import ClearableTextField from '../components/ClearableTextField'
 
 interface AddPatientPageProps {
   open: boolean
@@ -1970,11 +1971,11 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                   <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
                     First Name <span style={{ color: 'red' }}>*</span>
                   </Typography>
-                  <TextField
+                  <ClearableTextField
                     fullWidth
                     placeholder="First Name"
                     value={formData.firstName}
-                    onChange={(e) => handleInputChange('firstName', e.target.value)}
+                    onChange={(value) => handleInputChange('firstName', value)}
                     error={!!errors.firstName}
                     helperText={errors.firstName}
                     disabled={loading || readOnly}
@@ -1986,11 +1987,11 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                   <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
                     Middle Name
                   </Typography>
-                  <TextField
+                  <ClearableTextField
                     fullWidth
                     placeholder="Middle Name"
                     value={formData.middleName}
-                    onChange={(e) => handleInputChange('middleName', e.target.value)}
+                    onChange={(value) => handleInputChange('middleName', value)}
                     disabled={loading || readOnly}
                   />
                 </Box>
@@ -2000,11 +2001,11 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                   <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
                     Last Name <span style={{ color: 'red' }}>*</span>
                   </Typography>
-                  <TextField
+                  <ClearableTextField
                     fullWidth
                     placeholder="Last Name"
                     value={formData.lastName}
-                    onChange={(e) => handleInputChange('lastName', e.target.value)}
+                    onChange={(value) => handleInputChange('lastName', value)}
                     error={!!errors.lastName}
                     helperText={errors.lastName}
                     disabled={loading || readOnly}
@@ -2022,11 +2023,11 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                   <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
                     Mobile Number
                   </Typography>
-                  <TextField
+                  <ClearableTextField
                     fullWidth
                     placeholder="Mobile Number(10 Digits)"
                     value={formData.mobileNumber}
-                    onChange={(e) => handleInputChange('mobileNumber', e.target.value)}
+                    onChange={(value) => handleInputChange('mobileNumber', value)}
                     error={!!errors.mobileNumber || (formData.mobileNumber.length > 0 && formData.mobileNumber.length !== 10)}
                     helperText={errors.mobileNumber || (formData.mobileNumber.length > 0 && formData.mobileNumber.length !== 10 ? 'Mobile number must be 10 digits' : '')}
                     disabled={loading || readOnly}
@@ -2141,12 +2142,11 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         Age (Completed)
                       </Typography>
                       <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
-                        <TextField
+                        <ClearableTextField
                           sx={{ width: '55% !important', mb: 0 }}
                           placeholder="NN"
                           value={formData.age}
-                          onChange={(e) => {
-                            const val = e.target.value
+                          onChange={(val) => {
                             // Allow only numbers
                             if (!/^\d*$/.test(val)) return
 
@@ -2990,11 +2990,13 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                   <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
                     Address
                   </Typography>
-                  <TextField
+                  <ClearableTextField
                     fullWidth
                     placeholder="Address"
                     value={formData.address}
-                    onChange={(e) => handleInputChange('address', e.target.value)}
+                    onChange={(value) => handleInputChange('address', value)}
+                    multiline
+                    rows={2}
                     disabled={loading || readOnly}
                   />
                 </Box>
@@ -3004,11 +3006,11 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                   <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
                     E-Mail ID
                   </Typography>
-                  <TextField
+                  <ClearableTextField
                     fullWidth
                     placeholder="E-Mail ID - preferably facebook / gm"
                     value={formData.email}
-                    onChange={(e) => handleInputChange('email', e.target.value)}
+                    onChange={(value) => handleInputChange('email', value)}
                     error={!!errors.email}
                     helperText={errors.email}
                     disabled={loading || readOnly}
@@ -3061,11 +3063,11 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     // Show regular text field if referral name exists (data was patched/loaded)
                     // Show search field with add button only if no referral name exists yet
                     (formData.referralName && formData.referralName.trim() !== '') || selectedDoctor !== null ? (
-                      <TextField
+                      <ClearableTextField
                         fullWidth
                         placeholder="Referral Name"
                         value={formData.referralName}
-                        onChange={(e) => handleInputChange('referralName', e.target.value)}
+                        onChange={(value) => handleInputChange('referralName', value)}
                         disabled={loading || readOnly || selectedDoctor !== null || isSelfReferral}
                         sx={{
                           '& .MuiInputBase-input': {
@@ -3076,11 +3078,11 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                       />
                     ) : (
                       <Box sx={{ position: 'relative' }}>
-                        <TextField
+                        <ClearableTextField
                           fullWidth
                           placeholder="Search Doctor Name"
                           value={referralNameSearch}
-                          onChange={(e) => handleReferralNameSearch(e.target.value)}
+                          onChange={(value) => handleReferralNameSearch(value)}
                           disabled={loading || readOnly}
                           InputProps={{
                             endAdornment: (
@@ -3172,11 +3174,11 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                       </Box>
                     )
                   ) : (
-                    <TextField
+                    <ClearableTextField
                       fullWidth
                       placeholder="Referral Name"
                       value={formData.referralName}
-                      onChange={(e) => handleInputChange('referralName', e.target.value)}
+                      onChange={(value) => handleInputChange('referralName', value)}
                       disabled={loading || readOnly || isSelfReferral}
                     />
                   )}
@@ -3193,11 +3195,11 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                   <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
                     Referral Contact
                   </Typography>
-                  <TextField
+                  <ClearableTextField
                     fullWidth
                     placeholder="Referral Number(10 Digits)"
                     value={formData.referralContact}
-                    onChange={(e) => handleInputChange('referralContact', e.target.value)}
+                    onChange={(value) => handleInputChange('referralContact', value)}
                     disabled={loading || readOnly || selectedDoctor !== null || isSelfReferral}
                     error={!!errors.referralContact || (formData.referralContact.length > 0 && formData.referralContact.length !== 10)}
                     helperText={errors.referralContact || (formData.referralContact.length > 0 && formData.referralContact.length !== 10 ? 'Referral contact must be 10 digits' : '')}
@@ -3220,11 +3222,11 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                   <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
                     Referral Email
                   </Typography>
-                  <TextField
+                  <ClearableTextField
                     fullWidth
                     placeholder="Referral Email"
                     value={formData.referralEmail}
-                    onChange={(e) => handleInputChange('referralEmail', e.target.value)}
+                    onChange={(value) => handleInputChange('referralEmail', value)}
                     disabled={loading || readOnly || selectedDoctor !== null || isSelfReferral}
                     error={!!errors.referralEmail}
                     helperText={errors.referralEmail}
@@ -3242,13 +3244,14 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                   <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
                     Referral Address
                   </Typography>
-                  <TextField
+                  <ClearableTextField
                     fullWidth
                     placeholder="Referral Address"
                     value={formData.referralAddress}
-                    onChange={(e) => handleInputChange('referralAddress', e.target.value)}
+                    onChange={(value) => handleInputChange('referralAddress', value)}
                     disabled={loading || readOnly || selectedDoctor !== null || isSelfReferral}
-                    inputProps={{ maxLength: 150 }}
+                    multiline
+                    rows={2}
                     sx={{
                       '& .MuiInputBase-input': {
                         backgroundColor: selectedDoctor !== null ? '#f5f5f5' : 'white',

@@ -3,6 +3,7 @@ import { Add, Delete, Edit, Refresh, Search } from '@mui/icons-material'
 import { Snackbar } from '@mui/material'
 import AddPrescriptionPopup, { PrescriptionData } from '../components/AddPrescriptionPopup'
 import DeleteConfirmationDialog from '../components/DeleteConfirmationDialog'
+import SearchInput from '../components/SearchInput'
 import { doctorService, Doctor } from '../services/doctorService'
 import { useSession } from '../store/hooks/useSession'
 import prescriptionDetailsService, {
@@ -570,19 +571,20 @@ export default function PrescriptionDetails() {
 
       {/* Search and Action Section */}
       <div className="search-section">
-        <div className="search-input-wrapper">
-          <input
-            type="text"
-            value={searchDraft}
-            onChange={(event) => {
-              const value = event.target.value
-              setSearchDraft(value)
-              setSearchQuery(value)
-            }}
-            placeholder="Enter Category / Sub Category / Medicine / Brand / Priority"
-          />
-          <Search className="search-icon" style={{ fontSize: '20px' }} />
-        </div>
+        <SearchInput
+          value={searchDraft}
+          onChange={(value) => {
+            setSearchDraft(value)
+            setSearchQuery(value)
+          }}
+          onClear={() => {
+            setSearchDraft('')
+            setSearchQuery('')
+            setCurrentPage(1)
+          }}
+          placeholder="Enter Category / Sub Category / Medicine / Brand / Priority"
+          className="search-input-wrapper"
+        />
 
         <button className="btn-primary-custom" onClick={openAddPopup}>
           <label>Add New Prescription</label>

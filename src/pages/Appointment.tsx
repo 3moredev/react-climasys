@@ -7,6 +7,7 @@ import { doctorService, DoctorDetail, Doctor } from "../services/doctorService";
 import { patientService, Patient, formatVisitDateTime, getVisitStatusText } from "../services/patientService";
 import type { PatientVisit } from "../services/patientService";
 import { useNavigate, useLocation } from "react-router-dom";
+import SearchInput from "../components/SearchInput";
 import AddPatientPage from "./AddPatientPage";
 import PatientVisitDetails from "./PatientVisitDetails";
 import { sessionService, SessionInfo } from "../services/sessionService";
@@ -2750,12 +2751,14 @@ export default function AppointmentTable() {
                 <div className="d-flex mb-3 align-items-center" style={{ gap: '8px', overflow: 'visible' }}>
                     {/* Search for patients - Read only for doctors */}
                     <div className="position-relative" ref={searchRef}>
-                        <input
-                            type="text"
-                            placeholder="Search by Patient ID/Name/ContactNumber"
-                            className="form-control"
+                        <SearchInput
                             value={searchTerm}
-                            onChange={(e) => handleSearchChange(e.target.value)}
+                            onChange={(val) => handleSearchChange(val)}
+                            onClear={() => {
+                                handleSearchChange('');
+                                searchInputRef.current?.focus();
+                            }}
+                            placeholder="Search by Patient ID/Name/ContactNumber"
                             ref={searchInputRef}
                             autoFocus={isDoctor}
                             onBlur={() => {
@@ -2764,22 +2767,8 @@ export default function AppointmentTable() {
                                     setTimeout(() => searchInputRef.current?.focus(), 0);
                                 }
                             }}
-                            style={{ borderWidth: "2px", height: "38px", fontFamily: "'Roboto', sans-serif", fontWeight: 500, minWidth: "300px", width: "400px", paddingRight: "30px" }}
+                            inputStyle={{ borderWidth: "2px", height: "38px", fontFamily: "'Roboto', sans-serif", fontWeight: 500, minWidth: "300px", width: "400px" }}
                         />
-                        {/* {searchTerm && (
-                            <button
-                                className="btn btn-link position-absolute top-50 translate-middle-y text-decoration-none text-muted"
-                                style={{ right: '10px', zIndex: 10, padding: 0, width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                                onClick={() => {
-                                    setSearchTerm('');
-                                    setSearchResults([]);
-                                    setShowDropdown(false);
-                                    searchInputRef.current?.focus();
-                                }}
-                            >
-                                <i className="fas fa-times"></i>
-                            </button>
-                        )} */}
 
                         {/* Search Dropdown for Doctor Screen */}
                         {showDropdown && searchMenuPosition && (
@@ -4116,22 +4105,20 @@ export default function AppointmentTable() {
                         value={searchTerm}
                         onChange={(e) => handleSearchChange(e.target.value)}
                         ref={searchInputRef}
-                        style={{ borderWidth: "2px", height: "38px", fontFamily: "'Roboto', sans-serif", fontWeight: 500, minWidth: "300px", width: "400px", paddingRight: "30px" }}
+                        style={{ borderWidth: "2px", height: "38px", fontFamily: "'Roboto', sans-serif", fontWeight: 500, minWidth: "300px", width: "400px", paddingRight: "40px" }}
                     />
-                    {/* {searchTerm && (
+                    {searchTerm && (
                         <button
                             className="btn btn-link position-absolute top-50 translate-middle-y text-decoration-none text-muted"
                             style={{ right: '10px', zIndex: 10, padding: 0, width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                             onClick={() => {
-                                setSearchTerm('');
-                                setSearchResults([]);
-                                setShowDropdown(false);
+                                handleSearchChange('');
                                 searchInputRef.current?.focus();
                             }}
                         >
                             <i className="fas fa-times"></i>
                         </button>
-                    )} */}
+                    )}
 
                     {/* Search Dropdown */}
                     {showDropdown && searchMenuPosition && (

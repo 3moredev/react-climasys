@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
-import { Edit, Close } from "@mui/icons-material";
+import { Edit } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
+import SearchInput from "../components/SearchInput";
 import { patientService, Patient } from "../services/patientService";
 import AddPatientPage from "./AddPatientPage";
 import { sessionService } from "../services/sessionService";
@@ -47,10 +48,10 @@ export default function ManageAdvanceCollection() {
 
     // Dynamic data from API
     const [advanceCollections, setAdvanceCollections] = useState<AdvanceCollection[]>([]);
-    
+
     // Search results for first table
     const [searchResultsTable, setSearchResultsTable] = useState<AdvanceCollection[]>([]);
-    
+
     // Pagination state
     const [currentPage, setCurrentPage] = useState<number>(1);
     const [pageSize, setPageSize] = useState<number>(10);
@@ -69,18 +70,18 @@ export default function ManageAdvanceCollection() {
 
             // Check if query looks like an IPD number (starts with IPD- or contains IPD pattern)
             const isIpdSearch = /^IPD-/i.test(query.trim()) || /IPD/i.test(query.trim());
-            
+
             // Try advance collection search first (supports IPD numbers and patient names)
             // This is especially important for IPD number searches
             try {
                 const advanceSearchParams: AdvanceCollectionSearchRequest = {
                     searchStr: query.trim()
                 };
-                
+
                 console.log('Dropdown: Calling advance collection search API with params:', advanceSearchParams, 'isIpdSearch:', isIpdSearch);
                 const advanceResponse = await advanceCollectionService.searchPatientsWithAdvanceCard(advanceSearchParams);
                 console.log('Dropdown: Advance collection search API response:', advanceResponse);
-                
+
                 if (advanceResponse.success && advanceResponse.data && advanceResponse.data.length > 0) {
                     console.log(`Dropdown: Found ${advanceResponse.data.length} results from advance collection search`);
                     // Map advance collection search results to Patient format for dropdown
@@ -91,9 +92,9 @@ export default function ManageAdvanceCollection() {
                         const firstName = nameParts[0] || '';
                         const middleName = nameParts.length > 2 ? nameParts.slice(1, -1).join(' ') : '';
                         const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : '';
-                        
+
                         console.log(`Dropdown: Mapping result - IPD: ${result.ipdRefNo}, Patient: ${result.patientId}, Name: ${fullName}`);
-                        
+
                         return {
                             id: result.patientId,
                             folder_no: '',
@@ -111,7 +112,7 @@ export default function ManageAdvanceCollection() {
                             doctor_id: ''
                         };
                     });
-                    
+
                     console.log(`Dropdown: Mapped ${mappedPatients.length} patients for dropdown`);
                     setSearchResults(mappedPatients);
                     setShowDropdown(true);
@@ -140,7 +141,7 @@ export default function ManageAdvanceCollection() {
                     status: advanceError.response?.status,
                     url: advanceError.config?.url
                 });
-                
+
                 if (isIpdSearch) {
                     // For IPD searches, don't fall back - show error
                     setSearchError(advanceError.message || "Failed to search IPD number");
@@ -157,10 +158,10 @@ export default function ManageAdvanceCollection() {
                 const fallbackAdvanceSearchParams: AdvanceCollectionSearchRequest = {
                     searchStr: query.trim()
                 };
-                
+
                 console.log('Dropdown: Fallback advance collection search with params:', fallbackAdvanceSearchParams);
                 const fallbackAdvanceResponse = await advanceCollectionService.searchPatientsWithAdvanceCard(fallbackAdvanceSearchParams);
-                
+
                 if (fallbackAdvanceResponse.success && fallbackAdvanceResponse.data && fallbackAdvanceResponse.data.length > 0) {
                     // Map advance collection search results to Patient format for dropdown
                     const mappedPatients = fallbackAdvanceResponse.data.map((result: AdvanceCollectionSearchResultDTO): Patient => {
@@ -169,7 +170,7 @@ export default function ManageAdvanceCollection() {
                         const firstName = nameParts[0] || '';
                         const middleName = nameParts.length > 2 ? nameParts.slice(1, -1).join(' ') : '';
                         const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : '';
-                        
+
                         return {
                             id: result.patientId,
                             folder_no: '',
@@ -187,7 +188,7 @@ export default function ManageAdvanceCollection() {
                             doctor_id: ''
                         };
                     });
-                    
+
                     setSearchResults(mappedPatients);
                     setShowDropdown(true);
                     return;
@@ -195,7 +196,7 @@ export default function ManageAdvanceCollection() {
             } catch (fallbackError) {
                 console.error('Dropdown: Fallback advance collection search failed:', fallbackError);
             }
-            
+
             // If all searches fail, show empty results
             setSearchResults([]);
             setShowDropdown(true);
@@ -210,10 +211,10 @@ export default function ManageAdvanceCollection() {
 
     const handleSearchChange = (value: string) => {
         setSearchTerm(value);
-        
+
         // Clear selected patient when user types
         setSelectedPatient(null);
-        
+
         const search = value.trim().toLowerCase();
         if (!search) {
             setSearchResults([]);
@@ -229,10 +230,10 @@ export default function ManageAdvanceCollection() {
         setSearchTerm(patientFullName);
         setSearchResults([]);
         setShowDropdown(false);
-        
+
         // Store selected patient
         setSelectedPatient(patient);
-        
+
         console.log("Selected patient:", patient);
     };
 
@@ -246,7 +247,7 @@ export default function ManageAdvanceCollection() {
         try {
             setSearchingAdvanceCards(true);
             setSearchError("");
-            
+
             // Use the search API endpoint for patients with advance cards
             // Not passing doctorId or clinicId as per user requirement
             const searchParams: AdvanceCollectionSearchRequest = {
@@ -255,7 +256,7 @@ export default function ManageAdvanceCollection() {
 
             console.log('Calling advance collection search API with params:', searchParams);
             const response = await advanceCollectionService.searchPatientsWithAdvanceCard(searchParams);
-            
+
             console.log('Search advance cards response:', response);
             console.log('Response details:', {
                 success: response.success,
@@ -263,27 +264,27 @@ export default function ManageAdvanceCollection() {
                 dataLength: response.data?.length,
                 data: response.data
             });
-            
+
             if (response.success && response.data && response.data.length > 0) {
                 // First, try to match search results with admitted patients list
                 const mappedCollections: AdvanceCollection[] = await Promise.all(
                     response.data.map(async (result: AdvanceCollectionSearchResultDTO, index: number) => {
                         // Try to find matching record in admitted patients list
                         let matchedCollection: AdvanceCollection | null = null;
-                        
+
                         // Match by IPD number first, then by patient ID
                         if (result.ipdRefNo) {
                             matchedCollection = advanceCollections.find(
                                 (ac) => ac.admissionIpdNo === result.ipdRefNo
                             ) || null;
                         }
-                        
+
                         if (!matchedCollection && result.patientId) {
                             matchedCollection = advanceCollections.find(
                                 (ac) => ac.patientId === result.patientId
                             ) || null;
                         }
-                        
+
                         // If found in admitted patients list, use that data
                         if (matchedCollection) {
                             console.log(`Matched search result ${index + 1} with admitted patient:`, matchedCollection);
@@ -294,7 +295,7 @@ export default function ManageAdvanceCollection() {
                                 patientId: result.patientId || matchedCollection.patientId
                             };
                         }
-                        
+
                         // If not found in admitted patients list, fetch admission data
                         let admissionData: any = null;
                         if (result.patientId) {
@@ -310,7 +311,7 @@ export default function ManageAdvanceCollection() {
                                 console.error(`Error fetching admission data for patient ${result.patientId}:`, error);
                             }
                         }
-                        
+
                         // Fetch advance collection details for dateOfAdvance, receiptNo, and advance amount
                         let latestAdvance: { dateOfAdvance?: string; receiptNo?: string; advance?: number } = {};
                         if (result.patientId && clinicId && result.ipdRefNo) {
@@ -320,7 +321,7 @@ export default function ManageAdvanceCollection() {
                                     clinicId: clinicId,
                                     ipdRefNo: result.ipdRefNo
                                 });
-                                
+
                                 if (advanceDetailsResponse.success && advanceDetailsResponse.data && advanceDetailsResponse.data.length > 0) {
                                     // Get the most recent advance (last in array or by date)
                                     const latestRecord = advanceDetailsResponse.data[advanceDetailsResponse.data.length - 1];
@@ -334,7 +335,7 @@ export default function ManageAdvanceCollection() {
                                 console.error(`Error fetching advance details for patient ${result.patientId}, IPD ${result.ipdRefNo}:`, error);
                             }
                         }
-                        
+
                         // Build the collection with fetched data
                         const collection: AdvanceCollection = {
                             sr: index + 1,
@@ -348,14 +349,14 @@ export default function ManageAdvanceCollection() {
                             receiptNo: latestAdvance.receiptNo || '--',
                             advance: latestAdvance.advance || admissionData?.first_advance || admissionData?.advance_rs || 0.00
                         };
-                        
+
                         return collection;
                     })
                 );
-                
+
                 // Update the search results table (first table)
                 setSearchResultsTable(mappedCollections);
-                
+
                 console.log(`Found ${response.data.length} patients with advance cards, mapped with complete data`);
             } else {
                 console.log("No patients with advance cards found for:", searchTerm);
@@ -395,7 +396,7 @@ export default function ManageAdvanceCollection() {
             setSearchError("Please select a patient first by searching and selecting from the dropdown.");
             return;
         }
-        
+
         const patientIdStr = String(selectedPatient.id);
         const patientName = `${selectedPatient.first_name} ${selectedPatient.middle_name || ''} ${selectedPatient.last_name}`.trim();
 
@@ -408,16 +409,16 @@ export default function ManageAdvanceCollection() {
 
         try {
             setLoadingAdmissionData(true);
-            
+
             // Fetch full admission data by patient ID
             const response = await admissionService.getAdmissionDataByPatientId(patientIdStr);
-            
+
             console.log('Admission Data by Patient ID Response:', response);
-            
+
             if (response.success && response.data && response.data.length > 0) {
                 // Get the first (most recent) admission record
                 const admissionData = response.data[0];
-                
+
                 // Format admission date to yyyy-mm-dd for API call
                 const formatDateToYYYYMMDD = (dateString: string): string => {
                     if (!dateString) return '';
@@ -435,10 +436,10 @@ export default function ManageAdvanceCollection() {
                     }
                     return '';
                 };
-                
+
                 const ipdRefNo = admissionData.ipd_refno || '';
                 const ipdDate = formatDateToYYYYMMDD(admissionData.admission_date || '');
-                
+
                 // Fetch admission card data if we have required parameters
                 let admissionCardData: any = null;
                 if (ipdRefNo && ipdDate && clinicId && doctorId) {
@@ -450,11 +451,11 @@ export default function ManageAdvanceCollection() {
                             ipdRefNo: ipdRefNo,
                             ipdDate: ipdDate
                         };
-                        
+
                         console.log('Fetching admission card data with params:', admissionCardParams);
                         const admissionCardResponse = await advanceCollectionService.getAdmissionCardData(admissionCardParams);
                         console.log('Admission Card Data Response:', admissionCardResponse);
-                        
+
                         if (admissionCardResponse.success && admissionCardResponse.data) {
                             admissionCardData = admissionCardResponse.data;
                         }
@@ -463,7 +464,7 @@ export default function ManageAdvanceCollection() {
                         // Continue with regular admission data if this fails
                     }
                 }
-                
+
                 // Map API response fields to dialog format, using admission card data if available
                 setDialogAdmissionData({
                     admissionIpdNo: ipdRefNo,
@@ -530,7 +531,7 @@ export default function ManageAdvanceCollection() {
         // Open dialog for editing advance collection
         try {
             setLoadingAdmissionData(true);
-            
+
             // Try to get patient details
             let patient: Patient | null = null;
             if (collection.patientId) {
@@ -548,7 +549,7 @@ export default function ManageAdvanceCollection() {
                     const searchResponse = await advanceCollectionService.searchPatientsWithAdvanceCard({
                         searchStr: collection.patientName.trim()
                     });
-                    
+
                     if (searchResponse.success && searchResponse.data && searchResponse.data.length > 0) {
                         // Try to find exact match by patient name
                         const normalizedCollectionName = collection.patientName.trim().toLowerCase().replace(/\s+/g, ' ');
@@ -556,7 +557,7 @@ export default function ManageAdvanceCollection() {
                             const resultName = (result.patientName || '').trim().toLowerCase().replace(/\s+/g, ' ');
                             return resultName === normalizedCollectionName;
                         });
-                        
+
                         if (exactMatch) {
                             // Map the result to Patient format
                             const fullName = (exactMatch.patientName || '').trim();
@@ -564,7 +565,7 @@ export default function ManageAdvanceCollection() {
                             const firstName = nameParts[0] || '';
                             const middleName = nameParts.length > 2 ? nameParts.slice(1, -1).join(' ') : '';
                             const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : '';
-                            
+
                             patient = {
                                 id: exactMatch.patientId,
                                 folder_no: '',
@@ -589,7 +590,7 @@ export default function ManageAdvanceCollection() {
                                 const resultName = (result.patientName || '').trim().toLowerCase().replace(/\s+/g, ' ');
                                 return collectionWords.every(word => resultName.includes(word));
                             });
-                            
+
                             if (partialMatch) {
                                 // Map the result to Patient format
                                 const fullName = (partialMatch.patientName || '').trim();
@@ -597,7 +598,7 @@ export default function ManageAdvanceCollection() {
                                 const firstName = nameParts[0] || '';
                                 const middleName = nameParts.length > 2 ? nameParts.slice(1, -1).join(' ') : '';
                                 const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : '';
-                                
+
                                 patient = {
                                     id: partialMatch.patientId,
                                     folder_no: '',
@@ -623,7 +624,7 @@ export default function ManageAdvanceCollection() {
                                 const firstName = nameParts[0] || '';
                                 const middleName = nameParts.length > 2 ? nameParts.slice(1, -1).join(' ') : '';
                                 const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : '';
-                                
+
                                 patient = {
                                     id: firstResult.patientId,
                                     folder_no: '',
@@ -648,7 +649,7 @@ export default function ManageAdvanceCollection() {
                     console.error('Error searching patient:', error);
                 }
             }
-            
+
             // If still no patient found, try to get patientId from admission data
             if (!patient && !collection.patientId) {
                 try {
@@ -656,12 +657,12 @@ export default function ManageAdvanceCollection() {
                     const searchResponse = await advanceCollectionService.searchPatientsWithAdvanceCard({
                         searchStr: collection.admissionIpdNo
                     });
-                    
+
                     if (searchResponse.success && searchResponse.data && searchResponse.data.length > 0) {
                         const foundCollection = searchResponse.data.find(
                             (item: any) => item.ipdRefNo === collection.admissionIpdNo
                         );
-                        
+
                         if (foundCollection && foundCollection.patientId) {
                             try {
                                 patient = await patientService.getPatient(foundCollection.patientId);
@@ -704,13 +705,13 @@ export default function ManageAdvanceCollection() {
             if (collection.patientId) {
                 try {
                     const response = await admissionService.getAdmissionDataByPatientId(collection.patientId);
-                    
+
                     console.log('Admission Data by Patient ID Response (Edit):', response);
-                    
+
                     if (response.success && response.data && response.data.length > 0) {
                         // Get the first (most recent) admission record
                         const admissionData = response.data[0];
-                        
+
                         // Format admission date to yyyy-mm-dd for API call
                         const formatDateToYYYYMMDD = (dateString: string): string => {
                             if (!dateString) return '';
@@ -728,10 +729,10 @@ export default function ManageAdvanceCollection() {
                             }
                             return '';
                         };
-                        
+
                         const ipdRefNo = admissionData.ipd_refno || collection.admissionIpdNo || '';
                         const ipdDate = formatDateToYYYYMMDD(admissionData.admission_date || collection.admissionDate || '');
-                        
+
                         // Fetch admission card data if we have required parameters
                         let admissionCardData: any = null;
                         if (ipdRefNo && ipdDate && clinicId && doctorId) {
@@ -743,11 +744,11 @@ export default function ManageAdvanceCollection() {
                                     ipdRefNo: ipdRefNo,
                                     ipdDate: ipdDate
                                 };
-                                
+
                                 console.log('Fetching admission card data for edit with params:', admissionCardParams);
                                 const admissionCardResponse = await advanceCollectionService.getAdmissionCardData(admissionCardParams);
                                 console.log('Admission Card Data Response (Edit):', admissionCardResponse);
-                                
+
                                 if (admissionCardResponse.success && admissionCardResponse.data) {
                                     admissionCardData = admissionCardResponse.data;
                                 }
@@ -756,7 +757,7 @@ export default function ManageAdvanceCollection() {
                                 // Continue with regular admission data if this fails
                             }
                         }
-                        
+
                         // Map API response fields to dialog format with all admission data, using admission card data if available
                         const mappedAdmissionData = {
                             admissionIpdNo: ipdRefNo,
@@ -795,10 +796,10 @@ export default function ManageAdvanceCollection() {
                             }
                             return '';
                         };
-                        
+
                         const ipdRefNo = collection.admissionIpdNo || '';
                         const ipdDate = formatDateToYYYYMMDD(collection.admissionDate || '');
-                        
+
                         if (ipdRefNo && ipdDate && clinicId && doctorId && collection.patientId) {
                             try {
                                 const admissionCardParams: AdmissionCardDataRequest = {
@@ -808,10 +809,10 @@ export default function ManageAdvanceCollection() {
                                     ipdRefNo: ipdRefNo,
                                     ipdDate: ipdDate
                                 };
-                                
+
                                 console.log('Fetching admission card data for edit (fallback) with params:', admissionCardParams);
                                 const admissionCardResponse = await advanceCollectionService.getAdmissionCardData(admissionCardParams);
-                                
+
                                 if (admissionCardResponse.success && admissionCardResponse.data) {
                                     admissionCardData = admissionCardResponse.data;
                                 }
@@ -819,7 +820,7 @@ export default function ManageAdvanceCollection() {
                                 console.error('Error fetching admission card data for edit (fallback):', error);
                             }
                         }
-                        
+
                         // Use collection data with admission card data if available
                         setDialogAdmissionData({
                             admissionIpdNo: collection.admissionIpdNo,
@@ -856,10 +857,10 @@ export default function ManageAdvanceCollection() {
                         }
                         return '';
                     };
-                    
+
                     const ipdRefNo = collection.admissionIpdNo || '';
                     const ipdDate = formatDateToYYYYMMDD(collection.admissionDate || '');
-                    
+
                     if (ipdRefNo && ipdDate && clinicId && doctorId && collection.patientId) {
                         try {
                             const admissionCardParams: AdmissionCardDataRequest = {
@@ -869,10 +870,10 @@ export default function ManageAdvanceCollection() {
                                 ipdRefNo: ipdRefNo,
                                 ipdDate: ipdDate
                             };
-                            
+
                             console.log('Fetching admission card data for edit (error fallback) with params:', admissionCardParams);
                             const admissionCardResponse = await advanceCollectionService.getAdmissionCardData(admissionCardParams);
-                            
+
                             if (admissionCardResponse.success && admissionCardResponse.data) {
                                 admissionCardData = admissionCardResponse.data;
                             }
@@ -880,7 +881,7 @@ export default function ManageAdvanceCollection() {
                             console.error('Error fetching admission card data (error fallback):', cardError);
                         }
                     }
-                    
+
                     // Use collection data
                     setDialogAdmissionData({
                         admissionIpdNo: collection.admissionIpdNo,
@@ -1017,9 +1018,9 @@ export default function ManageAdvanceCollection() {
                 };
 
                 const response = await admissionService.getAdmissionCards(params);
-                
+
                 console.log('Advance Collections API Response:', response);
-                
+
                 if (response.success && response.data) {
                     // Map the API response to AdvanceCollection format
                     const mappedCollections: AdvanceCollection[] = response.data.map((card: AdmissionCardDTO, index: number) => ({
@@ -1034,7 +1035,7 @@ export default function ManageAdvanceCollection() {
                         receiptNo: card.receiptNo || '--',
                         advance: card.advanceRs || 0.00
                     }));
-                    
+
                     setAdvanceCollections(mappedCollections);
                 } else {
                     console.error('Failed to fetch advance collections:', response.error);
@@ -1197,9 +1198,9 @@ export default function ManageAdvanceCollection() {
             `}</style>
 
             <div className="mb-4">
-                <h2 style={{ 
-                    fontWeight: 'bold', 
-                    fontSize: '1.5rem', 
+                <h2 style={{
+                    fontWeight: 'bold',
+                    fontSize: '1.5rem',
                     color: '#212121',
                     marginBottom: '0'
                 }}>
@@ -1209,14 +1210,13 @@ export default function ManageAdvanceCollection() {
 
             <div className="d-flex mb-3 align-items-center" style={{ gap: '8px', flexWrap: 'wrap', overflow: 'visible' }}>
                 <div className="position-relative" ref={searchRef}>
-                    <input
-                        type="text"
-                        placeholder="Search with Patient ID / Patient Name / IPD No"
-                        className="form-control"
+                    <SearchInput
                         value={searchTerm}
-                        onChange={(e) => handleSearchChange(e.target.value)}
+                        onChange={(val) => handleSearchChange(val)}
+                        onClear={() => handleSearchChange("")}
+                        placeholder="Search with Patient ID / Patient Name / IPD No"
                         ref={searchInputRef}
-                        style={{ borderWidth: "2px", height: "38px", fontFamily: "'Roboto', sans-serif", fontWeight: 500, minWidth: "300px", width: "400px" }}
+                        inputStyle={{ borderWidth: "2px", height: "38px", fontFamily: "'Roboto', sans-serif", fontWeight: 500, minWidth: "300px", width: "400px" }}
                     />
 
                     {showDropdown && (
@@ -1299,9 +1299,9 @@ export default function ManageAdvanceCollection() {
             </div>
 
             <div className="mb-4">
-                <h5 style={{ 
-                    fontWeight: '600', 
-                    fontSize: '1.1rem', 
+                <h5 style={{
+                    fontWeight: '600',
+                    fontSize: '1.1rem',
                     color: '#212121',
                     marginBottom: '16px'
                 }}>
@@ -1334,18 +1334,18 @@ export default function ManageAdvanceCollection() {
                                 </tr>
                             ) : searchResultsTable.length > 0 ? (
                                 searchResultsTable.map((collection, index) => (
-                                    <tr 
+                                    <tr
                                         key={collection.sr || index}
                                         onClick={async () => {
                                             // When clicking on a row, open dialog with that patient's data
                                             if (collection.patientId) {
                                                 try {
                                                     setLoadingAdmissionData(true);
-                                                    
+
                                                     // Fetch patient details with all required fields
                                                     const patient = await patientService.getPatient(collection.patientId);
                                                     const patientName = `${patient.first_name} ${patient.middle_name || ''} ${patient.last_name}`.trim();
-                                                    
+
                                                     setDialogPatientData({
                                                         name: patientName,
                                                         id: patient.id, // patientId as string
@@ -1364,7 +1364,7 @@ export default function ManageAdvanceCollection() {
                                                     console.log('Admission Data from Search Result:', response);
                                                     if (response.success && response.data && response.data.length > 0) {
                                                         const admissionData = response.data[0];
-                                                        
+
                                                         // Format admission date to yyyy-mm-dd for API call
                                                         const formatDateToYYYYMMDD = (dateString: string): string => {
                                                             if (!dateString) return '';
@@ -1380,10 +1380,10 @@ export default function ManageAdvanceCollection() {
                                                             }
                                                             return '';
                                                         };
-                                                        
+
                                                         const ipdRefNo = admissionData.ipd_refno || collection.admissionIpdNo || '';
                                                         const ipdDate = formatDateToYYYYMMDD(admissionData.admission_date || collection.admissionDate || '');
-                                                        
+
                                                         // Fetch admission card data if we have required parameters
                                                         let admissionCardData: any = null;
                                                         if (ipdRefNo && ipdDate && clinicId && doctorId) {
@@ -1395,11 +1395,11 @@ export default function ManageAdvanceCollection() {
                                                                     ipdRefNo: ipdRefNo,
                                                                     ipdDate: ipdDate
                                                                 };
-                                                                
+
                                                                 console.log('Fetching admission card data from search result with params:', admissionCardParams);
                                                                 const admissionCardResponse = await advanceCollectionService.getAdmissionCardData(admissionCardParams);
                                                                 console.log('Admission Card Data Response from Search Result:', admissionCardResponse);
-                                                                
+
                                                                 if (admissionCardResponse.success && admissionCardResponse.data) {
                                                                     admissionCardData = admissionCardResponse.data;
                                                                 }
@@ -1407,7 +1407,7 @@ export default function ManageAdvanceCollection() {
                                                                 console.error('Error fetching admission card data from search result:', error);
                                                             }
                                                         }
-                                                        
+
                                                         const mappedAdmissionData = {
                                                             admissionIpdNo: ipdRefNo,
                                                             ipdFileNo: admissionData.ipdfileno || '',
@@ -1444,10 +1444,10 @@ export default function ManageAdvanceCollection() {
                                                             }
                                                             return '';
                                                         };
-                                                        
+
                                                         const ipdRefNo = collection.admissionIpdNo || '';
                                                         const ipdDate = formatDateToYYYYMMDD(collection.admissionDate || '');
-                                                        
+
                                                         if (ipdRefNo && ipdDate && clinicId && doctorId && collection.patientId) {
                                                             try {
                                                                 const admissionCardParams: AdmissionCardDataRequest = {
@@ -1457,10 +1457,10 @@ export default function ManageAdvanceCollection() {
                                                                     ipdRefNo: ipdRefNo,
                                                                     ipdDate: ipdDate
                                                                 };
-                                                                
+
                                                                 console.log('Fetching admission card data from search result (fallback) with params:', admissionCardParams);
                                                                 const admissionCardResponse = await advanceCollectionService.getAdmissionCardData(admissionCardParams);
-                                                                
+
                                                                 if (admissionCardResponse.success && admissionCardResponse.data) {
                                                                     admissionCardData = admissionCardResponse.data;
                                                                 }
@@ -1468,7 +1468,7 @@ export default function ManageAdvanceCollection() {
                                                                 console.error('Error fetching admission card data from search result (fallback):', error);
                                                             }
                                                         }
-                                                        
+
                                                         const fallbackAdmissionData = {
                                                             admissionIpdNo: collection.admissionIpdNo,
                                                             admissionDate: collection.admissionDate,
@@ -1488,7 +1488,7 @@ export default function ManageAdvanceCollection() {
                                                         setDialogAdmissionData(fallbackAdmissionData);
                                                         console.warn('No admission data found, using collection data:', fallbackAdmissionData);
                                                     }
-                                                    
+
                                                     setShowAdvanceCollectionDialog(true);
                                                 } catch (error) {
                                                     console.error('Error opening dialog from search result:', error);
@@ -1545,9 +1545,9 @@ export default function ManageAdvanceCollection() {
             </div>
 
             <div className="mt-4">
-                <h5 style={{ 
-                    fontWeight: '600', 
-                    fontSize: '1.1rem', 
+                <h5 style={{
+                    fontWeight: '600',
+                    fontSize: '1.1rem',
                     color: '#212121',
                     marginBottom: '16px'
                 }}>
@@ -1584,7 +1584,7 @@ export default function ManageAdvanceCollection() {
                                 currentAdvanceCollections.map((collection, index) => (
                                     <tr key={collection.sr}>
                                         <td className="sr-col">{startIndex + index + 1}</td>
-                                        <td 
+                                        <td
                                             className="patient-name-col"
                                             onClick={() => handlePatientNameClick(collection)}
                                             style={{

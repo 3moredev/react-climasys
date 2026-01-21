@@ -7,6 +7,8 @@ import { doctorService, DoctorDetail, Doctor } from "../services/doctorService";
 import { patientService, Patient, formatVisitDateTime, getVisitStatusText } from "../services/patientService";
 import type { PatientVisit } from "../services/patientService";
 import { useNavigate, useLocation } from "react-router-dom";
+import { IconButton } from "@mui/material";
+import SearchInput from "../components/SearchInput";
 import AddPatientPage from "./AddPatientPage";
 import PatientVisitDetails from "./PatientVisitDetails";
 import { sessionService, SessionInfo } from "../services/sessionService";
@@ -637,22 +639,25 @@ export default function AppointmentTableEnhanced() {
             </div>
 
             {/* Enhanced search with sanitization warning */}
-            <div className="position-relative" ref={searchRef}>
-                <input
-                    type="text"
-                    placeholder="Search by Patient ID/Name/ContactNumber"
-                    className="form-control"
+            <div className="mb-3" ref={searchRef}>
+                <SearchInput
                     value={searchTerm}
-                    onChange={(e) => {
-                        const sanitized = sanitizeSearchQuery(e.target.value);
-                        if (sanitized !== e.target.value) {
+                    onChange={(val) => {
+                        const sanitized = sanitizeSearchQuery(val);
+                        if (sanitized !== val) {
                             console.warn('🚨 Input sanitized');
                         }
                         setSearchTerm(sanitized);
                         handleSearchChange(sanitized);
                     }}
+                    onClear={() => {
+                        setSearchResults([]);
+                        setShowDropdown(false);
+                        setSearchError("");
+                    }}
+                    placeholder="Search by Patient ID/Name/ContactNumber"
                     ref={searchInputRef}
-                    style={{ borderWidth: "2px", height: "38px" }}
+                    className="w-100"
                 />
 
                 {/* Search error display */}
