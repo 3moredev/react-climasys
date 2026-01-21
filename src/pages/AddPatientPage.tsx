@@ -1356,122 +1356,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
         </IconButton>
       </DialogTitle>
 
-      <DialogContent sx={{
-        p: '4px 20px 8px',
-        '& .MuiTextField-root, & .MuiFormControl-root': { width: '100%' },
-        // Remove right padding on last column so fields align with actions
-        '& .MuiGrid-container > .MuiGrid-item:last-child': { paddingRight: 0 },
-        // Match Appointment page input/select height (38px)
-        '& .MuiTextField-root .MuiOutlinedInput-root, & .MuiFormControl-root .MuiOutlinedInput-root': { height: 38 },
-        // Typography and padding to match Appointment inputs
-        '& .MuiInputBase-input, & .MuiSelect-select': {
-          fontFamily: "'Roboto', sans-serif",
-          fontWeight: 500,
-          padding: '6px 12px',
-          lineHeight: 1.5
-        },
-        // Outline thickness and colors (normal and focused)
-        '& .MuiOutlinedInput-root .MuiOutlinedInput-notchedOutline': {
-          borderWidth: '2px',
-          borderColor: '#B7B7B7',
-          borderRadius: '8px'
-        },
-        '& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline': {
-          borderColor: '#999',
-          borderRadius: '8px'
-        },
-        '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
-          borderWidth: '2px',
-          borderColor: '#1E88E5',
-          borderRadius: '8px'
-        },
-        // Add border radius to all input elements
-        '& .MuiOutlinedInput-root': {
-          borderRadius: '8px',
-          boxShadow: 'none'
-        },
-        '& .MuiOutlinedInput-root.Mui-focused': { boxShadow: 'none !important' },
-        // Disabled look similar to Appointment header select
-        '& .MuiOutlinedInput-root.Mui-disabled .MuiOutlinedInput-input, & .MuiOutlinedInput-root.Mui-disabled .MuiSelect-select': {
-          backgroundColor: '#ECEFF1',
-          WebkitTextFillColor: 'inherit'
-        },
-        // Autocomplete styling to match other inputs and remove inner borders
-        '& .MuiAutocomplete-root .MuiAutocomplete-input': {
-          opacity: 1,
-          border: 'none !important',
-          outline: 'none !important'
-        },
-        '& .MuiAutocomplete-root .MuiOutlinedInput-root': {
-          height: 38,
-          borderRadius: '8px',
-          boxShadow: 'none',
-          padding: '0 !important'
-        },
-        '& .MuiAutocomplete-root .MuiOutlinedInput-root .MuiOutlinedInput-input': {
-          border: 'none !important',
-          outline: 'none !important',
-          padding: '6px 12px !important'
-        },
-        '& .MuiAutocomplete-root .MuiOutlinedInput-root .MuiOutlinedInput-notchedOutline': {
-          borderWidth: '2px',
-          borderColor: '#B7B7B7',
-          borderRadius: '8px'
-        },
-        '& .MuiAutocomplete-root .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline': {
-          borderColor: '#999',
-          borderRadius: '8px'
-        },
-        '& .MuiAutocomplete-root .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
-          borderWidth: '2px',
-          borderColor: '#1E88E5',
-          borderRadius: '8px'
-        },
-        '& .MuiAutocomplete-root .MuiOutlinedInput-root.Mui-focused': {
-          boxShadow: 'none !important'
-        },
-        '& .MuiAutocomplete-root .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-input': {
-          border: 'none !important',
-          outline: 'none !important'
-        },
-        // Ensure no double borders on Autocomplete input elements
-        '& .MuiAutocomplete-root input': {
-          border: 'none !important',
-          outline: 'none !important',
-          boxShadow: 'none !important'
-        },
-        '& .MuiAutocomplete-root .MuiTextField-root': {
-          '& .MuiOutlinedInput-root .MuiOutlinedInput-input': {
-            border: 'none !important',
-            outline: 'none !important'
-          }
-        },
-        // Hide loading indicator (rotating spinner) in Autocomplete
-        '& .MuiAutocomplete-root .MuiCircularProgress-root': {
-          display: 'none !important'
-        },
-        // Remove global input borders on this page only
-        '& input, & textarea, & select, & .MuiTextField-root input, & .MuiFormControl-root input': {
-          border: 'none !important'
-        },
-        '& .MuiBox-root': { mb: 0 },
-        '& .MuiTypography-root': { mb: 0.25 },
-        // Local override for headings inside this dialog only
-        '& h1, & h2, & h3, & h4, & h5, & h6, & .MuiTypography-h1, & .MuiTypography-h2, & .MuiTypography-h3, & .MuiTypography-h4, & .MuiTypography-h5, & .MuiTypography-h6': {
-          margin: '0 0 2px 0 !important'
-        },
-        // Consistent error message styling
-        '& .MuiFormHelperText-root': {
-          fontSize: '0.75rem',
-          lineHeight: 1.66,
-          fontFamily: "'Roboto', sans-serif",
-          margin: '3px 0 0 0 !important',
-          padding: '0 !important',
-          minHeight: '1.25rem',
-          textAlign: 'left !important'
-        },
-        position: 'relative'
-      }}>
+      <DialogContent >
         {/* Loading Overlay - Shows when fetching patient data */}
         {loading && patientId && (
           <Box
@@ -1503,7 +1388,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
             <Grid container spacing={3}>
               <Grid item xs={12} md={3}>
                 <Box sx={{ mb: 2 }}>
-                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
                     Patient ID
                   </Typography>
                   <TextField
@@ -1521,7 +1406,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
               </Grid>
               <Grid item xs={12} md={3}>
                 <Box sx={{ mb: 2 }}>
-                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
                     First Name <span style={{ color: 'red' }}>*</span>
                   </Typography>
                   <TextField
@@ -1537,7 +1422,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
               </Grid>
               <Grid item xs={12} md={3}>
                 <Box sx={{ mb: 2 }}>
-                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
                     Middle Name
                   </Typography>
                   <TextField
@@ -1551,7 +1436,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
               </Grid>
               <Grid item xs={12} md={3}>
                 <Box sx={{ mb: 2 }}>
-                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
                     Last Name <span style={{ color: 'red' }}>*</span>
                   </Typography>
                   <TextField
@@ -1573,7 +1458,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
             <Grid container spacing={3}>
               <Grid item xs={12} md={3}>
                 <Box sx={{ mb: 2 }}>
-                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
                     Mobile Number
                   </Typography>
                   <TextField
@@ -1596,7 +1481,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                 <Box sx={{ mb: 2 }}>
                   <Box sx={{ display: 'flex', gap: 1 }}>
                     <Box sx={{ width: '50% !important' }}>
-                      <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
                         DoB(DD-MM-YYYY) <span style={{ color: 'red' }}>*</span>
                       </Typography>
                       <TextField
@@ -1691,7 +1576,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                       />
                     </Box>
                     <Box sx={{ width: '50% !important' }}>
-                      <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
                         Age (Completed)
                       </Typography>
                       <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
@@ -1789,7 +1674,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
               </Grid>
               <Grid item xs={12} md={3}>
                 <Box sx={{ mb: 2 }}>
-                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
                     Gender <span style={{ color: 'red' }}>*</span>
                   </Typography>
                   <FormControl fullWidth error={!!errors.gender} variant="outlined">
@@ -1824,7 +1709,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
               </Grid>
               <Grid item xs={12} md={3}>
                 <Box sx={{ mb: 2 }}>
-                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
                     Area <span style={{ color: 'red' }}>*</span>
                   </Typography>
                   <Autocomplete
@@ -2160,7 +2045,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
             <Grid container spacing={3}>
               <Grid item xs={12} md={3}>
                 <Box sx={{ mb: 2 }}>
-                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
                     City
                   </Typography>
                   {formData.area && formData.area.trim() !== '' ? (
@@ -2293,7 +2178,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
               </Grid>
               <Grid item xs={12} md={3}>
                 <Box sx={{ mb: 2 }}>
-                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
                     State
                   </Typography>
                   <TextField
@@ -2307,7 +2192,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
               </Grid>
               <Grid item xs={12} md={3}>
                 <Box sx={{ mb: 2 }}>
-                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
                     Marital Status
                   </Typography>
                   <FormControl fullWidth variant="outlined">
@@ -2344,7 +2229,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
               </Grid>
               <Grid item xs={12} md={3}>
                 <Box sx={{ mb: 2 }}>
-                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
                     Occupation
                   </Typography>
                   <FormControl fullWidth variant="outlined">
@@ -2387,7 +2272,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
             <Grid container spacing={3}>
               <Grid item xs={12} md={3}>
                 <Box sx={{ mb: 2 }}>
-                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
                     Address
                   </Typography>
                   <TextField
@@ -2401,7 +2286,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
               </Grid>
               <Grid item xs={12} md={3}>
                 <Box sx={{ mb: 2 }}>
-                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
                     E-Mail ID
                   </Typography>
                   <TextField
@@ -2417,7 +2302,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
               </Grid>
               <Grid item xs={12} md={3}>
                 <Box sx={{ mb: 2 }}>
-                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
                     Referred By
                   </Typography>
                   <FormControl fullWidth>
@@ -2454,7 +2339,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
               </Grid>
               <Grid item xs={12} md={3}>
                 <Box sx={{ mb: 2 }}>
-                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
                     Referral Name
                   </Typography>
                   {isDoctorReferral() ? (
@@ -2590,7 +2475,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
             <Grid container spacing={3}>
               <Grid item xs={12} md={3}>
                 <Box sx={{ mb: 2 }}>
-                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
                     Referral Contact
                   </Typography>
                   <TextField
@@ -2617,7 +2502,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
               </Grid>
               <Grid item xs={12} md={3}>
                 <Box sx={{ mb: 2 }}>
-                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
                     Referral Email
                   </Typography>
                   <TextField
@@ -2639,7 +2524,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
               </Grid>
               <Grid item xs={12} md={3}>
                 <Box sx={{ mb: 2 }}>
-                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
                     Referral Address
                   </Typography>
                   <TextField
@@ -2662,7 +2547,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                 <Grid item xs={12} md={3}>
                   <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', height: '100%' }}>
                     <Box>
-                      <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
                         Add to Today’s Appointments
                       </Typography>
                       <FormControlLabel
