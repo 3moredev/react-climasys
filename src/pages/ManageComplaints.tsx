@@ -9,6 +9,7 @@ import { useAppSelector } from "../store/hooks";
 import AddComplaintPopup from "../components/AddComplaintPopup";
 import GlobalSnackbar from "../components/GlobalSnackbar";
 import DeleteConfirmationDialog from "../components/DeleteConfirmationDialog";
+import SearchInput from "../components/SearchInput";
 
 // Complaint type definition
 type Complaint = {
@@ -537,20 +538,21 @@ export default function ManageComplaints() {
 
       {/* Search and Action Section */}
       <div className="search-section">
-        <div className="search-input-wrapper">
-          <input
-            type="text"
-            placeholder="Enter Short Description / Complaint Description / Priority"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            onKeyPress={(e) => {
-              if (e.key === 'Enter') {
-                handleSearch();
-              }
-            }}
-          />
-          <Search className="search-icon" style={{ fontSize: '20px' }} />
-        </div>
+        <SearchInput
+          value={searchTerm}
+          onChange={setSearchTerm}
+          onClear={() => {
+            setSearchTerm('');
+            setCurrentPage(1);
+          }}
+          placeholder="Enter Short Description / Complaint Description / Priority"
+          onKeyPress={(e) => {
+            if (e.key === 'Enter') {
+              handleSearch();
+            }
+          }}
+          className="search-input-wrapper"
+        />
 
         <button className="btn-primary-custom " onClick={handleAddNew}>
           <label>Add New Complaint</label>

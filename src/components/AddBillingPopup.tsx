@@ -1,4 +1,6 @@
 import React from "react";
+import SearchInput from "./SearchInput";
+
 
 export interface BillingDetailOption {
     id: string;
@@ -123,7 +125,7 @@ export default function AddBillingPopup({
                 // Extract billing data from master-lists API response (data.data.billing)
                 const billingArray = data?.data?.billing || [];
                 let matchedIds: string[] = [];
-                
+
                 // Match billing items from API response to loaded options and pre-select them
                 if (!cancelled && Array.isArray(billingArray) && billingArray.length > 0 && mapped.length > 0) {
                     billingArray.forEach((billingItem: any) => {
@@ -132,11 +134,11 @@ export default function AddBillingPopup({
                             const optGroup = (opt.billing_group_name || '').trim().toLowerCase();
                             const optSubgroup = (opt.billing_subgroup_name || '').trim().toLowerCase();
                             const optDetails = (opt.billing_details || '').trim().toLowerCase();
-                            
+
                             const itemGroup = (billingItem.billing_group_name || '').trim().toLowerCase();
                             const itemSubgroup = (billingItem.billing_subgroup_name || '').trim().toLowerCase();
                             const itemDetails = (billingItem.billing_details || '').trim().toLowerCase();
-                            
+
                             return optGroup === itemGroup && optSubgroup === itemSubgroup && optDetails === itemDetails;
                         });
 
@@ -199,19 +201,19 @@ export default function AddBillingPopup({
                 shouldSkipAutoSelectionRef.current = false;
                 return;
             }
-            
+
             // Only run once per popup open to prevent re-adding items when user unchecks them
             if (hasMatchedBillingRef.current) {
                 return;
             }
-            
+
             // Only run if parent provided filteredBillingDetails (popup didn't load its own data)
             // If filteredBillingDetails is not provided, loadBillingDetails will handle matching
             if (!filteredBillingDetails || filteredBillingDetails.length === 0) return;
-            
+
             // Need options to match against
             if (!effectiveOptions || effectiveOptions.length === 0) return;
-            
+
             // Need context to call master-lists API
             if (!patientId || !doctorId || !clinicId || shiftId == null || !visitDate || patientVisitNo == null) return;
 
@@ -235,7 +237,7 @@ export default function AddBillingPopup({
 
                 // Extract billing array from response
                 const billingArray = data?.data?.billing || [];
-                
+
                 // If billing array is empty, don't do anything (show popup as normal)
                 if (!Array.isArray(billingArray) || billingArray.length === 0) {
                     console.log('No billing data in master-lists, showing popup as normal');
@@ -246,18 +248,18 @@ export default function AddBillingPopup({
 
                 // Match billing items from API response to available options
                 const matchedIds: string[] = [];
-                
+
                 billingArray.forEach((billingItem: any) => {
                     // Find matching option by comparing billing fields (case-insensitive, trimmed)
                     const match = effectiveOptions.find(opt => {
                         const optGroup = (opt.billing_group_name || '').trim().toLowerCase();
                         const optSubgroup = (opt.billing_subgroup_name || '').trim().toLowerCase();
                         const optDetails = (opt.billing_details || '').trim().toLowerCase();
-                        
+
                         const itemGroup = (billingItem.billing_group_name || '').trim().toLowerCase();
                         const itemSubgroup = (billingItem.billing_subgroup_name || '').trim().toLowerCase();
                         const itemDetails = (billingItem.billing_details || '').trim().toLowerCase();
-                        
+
                         return optGroup === itemGroup && optSubgroup === itemSubgroup && optDetails === itemDetails;
                     });
 
@@ -280,7 +282,7 @@ export default function AddBillingPopup({
                     // Mark that we should skip auto-selection since master-lists data exists
                     shouldSkipAutoSelectionRef.current = true;
                 }
-                
+
                 // Mark as done so this doesn't run again until popup closes and reopens
                 hasMatchedBillingRef.current = true;
             } catch (e) {
@@ -292,7 +294,7 @@ export default function AddBillingPopup({
         if (open) {
             matchBillingFromMasterLists();
         }
-        
+
         return () => { cancelled = true; };
     }, [open, filteredBillingDetails, effectiveOptions, patientId, doctorId, clinicId, shiftId, visitDate, patientVisitNo]);
 
@@ -386,14 +388,14 @@ export default function AddBillingPopup({
     React.useEffect(() => {
         if (effectiveOptions.length === 0) return;
         if (followUp === undefined) return; // Only act when followUp is explicitly provided
-        
+
         // Don't auto-select if master-lists matching has already happened or should be skipped
         // This prevents auto-selection on page refresh when master-lists data exists
         if (hasMatchedBillingRef.current || shouldSkipAutoSelectionRef.current) {
             console.log('Skipping Professional Fees auto-selection - master-lists matching already done or should skip');
             return;
         }
-        
+
         // Also skip if there are already selected items (from master-lists or user selection)
         if (effectiveSelectedIds.length > 0) {
             console.log('Skipping Professional Fees auto-selection - items already selected');
@@ -411,7 +413,7 @@ export default function AddBillingPopup({
 
         // Determine which subgroup to select
         const targetSubgroup = followUp ? 'Follow-up' : 'New';
-        
+
         // Find the matching item
         const targetItem = professionalFeesItems.find(opt => {
             const subgroupName = (opt.billing_subgroup_name || '').trim();
@@ -428,7 +430,7 @@ export default function AddBillingPopup({
         // Check if we need to update selections
         const currentSelectedIds = effectiveSelectedIds;
         const hasTargetItem = currentSelectedIds.includes(targetItem.id);
-        
+
         // Check if any other Professional Fees items are selected
         const hasOtherProfessionalFees = currentSelectedIds.some(id => {
             const opt = effectiveOptions.find(o => o.id === id);
@@ -486,11 +488,11 @@ export default function AddBillingPopup({
             .map(id => {
                 const item = effectiveOptions.find(opt => opt.id === id);
                 if (!item) return null;
-                
-                const defaultFees = typeof item.default_fees === 'number' 
-                    ? item.default_fees 
+
+                const defaultFees = typeof item.default_fees === 'number'
+                    ? item.default_fees
                     : Number(item.default_fees || 0);
-                
+
                 return {
                     billingGroupName: item.billing_group_name || '',
                     billingSubgroupName: item.billing_subgroup_name || '',
@@ -639,7 +641,7 @@ export default function AddBillingPopup({
                 </div>
 
                 <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-                    
+
                     {/* Error message display */}
                     {errorMessage && (
                         <div style={{
@@ -658,7 +660,7 @@ export default function AddBillingPopup({
                             <span>{errorMessage}</span>
                         </div>
                     )}
-                    
+
                     <div
                         style={{
                             display: 'flex',
@@ -679,6 +681,17 @@ export default function AddBillingPopup({
                         }}>
                             ₹{totalSelectedFees.toFixed(2)}
                         </div>
+                    </div>
+
+                    {/* Search Field */}
+                    <div className="position-relative mb-2" style={{ maxWidth: '400px' }}>
+                        <SearchInput
+                            value={effectiveSearch}
+                            onChange={(val) => setEffectiveSearch(val)}
+                            onClear={() => setEffectiveSearch('')}
+                            placeholder="Search charge name..."
+                            className="w-100"
+                        />
                     </div>
 
                     <div style={{ border: '1px solid #ccc', borderRadius: '4px', overflow: 'hidden' }}>
@@ -763,24 +776,24 @@ export default function AddBillingPopup({
                     <div style={{ display: 'flex', gap: 8, marginTop: 6, justifyContent: 'flex-end' }}>
                         <button
                             type="button"
-                            style={{ 
-                                backgroundColor: isSubmitting || isFormDisabled ? '#9e9e9e' : '#1976d2', 
-                                color: '#fff', 
-                                border: 'none', 
-                                padding: '8px 16px', 
-                                borderRadius: '4px', 
-                                cursor: (isSubmitting || isFormDisabled) ? 'not-allowed' : 'pointer', 
+                            style={{
+                                backgroundColor: isSubmitting || isFormDisabled ? '#9e9e9e' : '#1976d2',
+                                color: '#fff',
+                                border: 'none',
+                                padding: '8px 16px',
+                                borderRadius: '4px',
+                                cursor: (isSubmitting || isFormDisabled) ? 'not-allowed' : 'pointer',
                                 fontSize: '14px',
                                 fontWeight: '500',
                                 transition: 'background-color 0.2s',
                                 minWidth: '100px'
                             }}
-                            onMouseEnter={(e) => { 
+                            onMouseEnter={(e) => {
                                 if (!isSubmitting && !isFormDisabled) {
                                     (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#1565c0';
                                 }
                             }}
-                            onMouseLeave={(e) => { 
+                            onMouseLeave={(e) => {
                                 if (!isSubmitting && !isFormDisabled) {
                                     (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#1976d2';
                                 }

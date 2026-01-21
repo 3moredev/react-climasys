@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Box, Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, Button, Alert, CircularProgress, TextField, Grid, Card, CardContent } from '@mui/material'
 import { LocalPharmacy, Add, Visibility, Edit, Search, Medication, Inventory, Receipt } from '@mui/icons-material'
+import ClearableTextField from '../components/ClearableTextField'
 
 export default function PharmacyPage() {
   const [prescriptions, setPrescriptions] = useState<any[]>([])
@@ -19,14 +20,14 @@ export default function PharmacyPage() {
           { id: 2, patientName: 'Jane Smith', medicine: 'Amoxicillin', dosage: '250mg', quantity: 20, status: 'dispensed' },
           { id: 3, patientName: 'Bob Johnson', medicine: 'Ibuprofen', dosage: '400mg', quantity: 15, status: 'pending' }
         ]
-        
+
         const mockMedicines = [
           { id: 1, name: 'Paracetamol', stock: 150, price: 2.50, category: 'Pain Relief' },
           { id: 2, name: 'Amoxicillin', stock: 75, price: 5.00, category: 'Antibiotic' },
           { id: 3, name: 'Ibuprofen', stock: 200, price: 3.25, category: 'Pain Relief' },
           { id: 4, name: 'Aspirin', stock: 100, price: 1.75, category: 'Pain Relief' }
         ]
-        
+
         setPrescriptions(mockPrescriptions)
         setMedicines(mockMedicines)
       } catch (err) {
@@ -35,7 +36,7 @@ export default function PharmacyPage() {
         setLoading(false)
       }
     }
-    
+
     fetchPharmacyData()
   }, [])
 
@@ -77,10 +78,10 @@ export default function PharmacyPage() {
 
       {/* Search and Quick Actions */}
       <Paper className="search-filter-bar">
-        <TextField
+        <ClearableTextField
           placeholder="Search prescriptions or medicines..."
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={setSearchTerm}
           className="search-input"
           InputProps={{
             startAdornment: <Search sx={{ mr: 1, color: '#3a6f9f' }} />
@@ -126,7 +127,7 @@ export default function PharmacyPage() {
             </CardContent>
           </Card>
         </Grid>
-        
+
         <Grid item xs={12} sm={6} md={3}>
           <Card className="stat-card green">
             <CardContent>
@@ -149,7 +150,7 @@ export default function PharmacyPage() {
             </CardContent>
           </Card>
         </Grid>
-        
+
         <Grid item xs={12} sm={6} md={3}>
           <Card className="stat-card orange">
             <CardContent>
@@ -172,7 +173,7 @@ export default function PharmacyPage() {
             </CardContent>
           </Card>
         </Grid>
-        
+
         <Grid item xs={12} sm={6} md={3}>
           <Card className="stat-card purple">
             <CardContent>
@@ -211,7 +212,7 @@ export default function PharmacyPage() {
             Add Prescription
           </Button>
         </Box>
-        
+
         <TableContainer>
           <Table>
             <TableHead className="data-table-header">
@@ -317,7 +318,7 @@ export default function PharmacyPage() {
             Add Medicine
           </Button>
         </Box>
-        
+
         <TableContainer>
           <Table>
             <TableHead className="data-table-header">

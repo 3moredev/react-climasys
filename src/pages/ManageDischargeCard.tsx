@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
-import { Edit, Close } from "@mui/icons-material";
+import { Edit } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
+import SearchInput from "../components/SearchInput";
 import { patientService, Patient } from "../services/patientService";
 import { admissionService, AdmissionCardDTO, AdmissionCardsRequest } from "../services/admissionService";
 import { useSession } from "../store/hooks/useSession";
@@ -512,14 +513,13 @@ export default function ManageDischargeCard() {
 
             <div className="d-flex mb-3 align-items-center" style={{ gap: '8px', flexWrap: 'wrap', overflow: 'visible' }}>
                 <div className="position-relative" ref={searchRef}>
-                    <input
-                        type="text"
-                        placeholder="Search with Patient ID / Patient Name / IPD Number"
-                        className="form-control"
+                    <SearchInput
                         value={searchTerm}
-                        onChange={(e) => handleSearchChange(e.target.value)}
+                        onChange={(val) => handleSearchChange(val)}
+                        onClear={() => handleSearchChange("")}
+                        placeholder="Search with Patient ID / Patient Name / IPD Number"
                         ref={searchInputRef}
-                        style={{ borderWidth: "2px", height: "38px", fontFamily: "'Roboto', sans-serif", fontWeight: 500, minWidth: "300px", width: "400px" }}
+                        inputStyle={{ borderWidth: "2px", height: "38px", fontFamily: "'Roboto', sans-serif", fontWeight: 500, minWidth: "300px", width: "400px" }}
                     />
 
                     {showDropdown && (

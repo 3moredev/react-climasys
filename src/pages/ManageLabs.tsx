@@ -9,6 +9,7 @@ import { useSession } from "../store/hooks/useSession";
 import AddTestLabPopup, { TestLabData } from "../components/AddTestLabPopup";
 import GlobalSnackbar from "../components/GlobalSnackbar";
 import DeleteConfirmationDialog from "../components/DeleteConfirmationDialog";
+import SearchInput from "../components/SearchInput";
 
 // Lab Test type definition
 type LabTest = {
@@ -933,20 +934,21 @@ export default function ManageLabs() {
 
       {/* Search and Action Section */}
       <div className="search-section">
-        <div className="search-input-wrapper">
-          <input
-            type="text"
-            placeholder="Search Lab Test"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            onKeyPress={(e) => {
-              if (e.key === 'Enter') {
-                handleSearch();
-              }
-            }}
-          />
-          <Search className="search-icon" style={{ fontSize: '20px' }} />
-        </div>
+        <SearchInput
+          value={searchTerm}
+          onChange={setSearchTerm}
+          onClear={() => {
+            setSearchTerm('');
+            setCurrentPage(1);
+          }}
+          placeholder="Search Lab Test"
+          onKeyPress={(e) => {
+            if (e.key === 'Enter') {
+              handleSearch();
+            }
+          }}
+          className="search-input-wrapper"
+        />
 
         <button className="btn-primary-custom " onClick={handleAddNew}>
           <label>Add New Lab Test</label>
