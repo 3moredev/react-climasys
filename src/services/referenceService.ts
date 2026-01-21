@@ -84,6 +84,18 @@ export async function searchAreas(query?: string): Promise<AreaItem[]> {
   })
 }
 
+export async function getAreaById(areaId: number, languageId: number = 1): Promise<{ areaId?: number; areaName?: string; cityId?: string; stateId?: string; countryId?: string; error?: string }> {
+  try {
+    const response = await api.get('/reference/areas/by-id', {
+      params: { areaId, languageId }
+    })
+    return response.data || {}
+  } catch (error: any) {
+    console.error('Error fetching area by id:', error)
+    return { error: error.response?.data?.error || error.message || 'Failed to fetch area by id' }
+  }
+}
+
 export interface CityItem {
   id: string
   name: string
@@ -107,6 +119,55 @@ export async function searchCities(query?: string): Promise<CityItem[]> {
       const stateId = item?.stateId
       return { id: String(id), name: String(name), stateId: stateId ? String(stateId) : undefined }
     })
+}
+
+export async function getCitiesByState(stateId?: string): Promise<CityItem[]> {
+  try {
+    if (!stateId) {
+      return []
+    }
+    
+    // Use search endpoint with common search terms to get cities with translations
+    // Then filter by stateId since the /cities endpoint returns entities without cityName
+    const searchTerms = ['a', 'e', 'i', 'o', 'u', 'p', 'm', 'd']
+    const allCitiesSet = new Set<string>()
+    const allCities: CityItem[] = []
+    
+    for (const term of searchTerms) {
+      try {
+        const response = await api.get('/reference/cities/search', {
+          params: { searchStr: term, languageId: 1 }
+        })
+        const data = Array.isArray(response?.data) ? response.data : []
+        data
+          .filter((item: any) => !item?.error)
+          .forEach((item: any) => {
+            const id = item?.cityId ?? item?.id ?? ''
+            const name = item?.cityName ?? item?.name ?? String(id)
+            const itemStateId = item?.stateId
+            const key = `${id}-${name}`
+            
+            // Only add if not already added and matches the requested stateId
+            if (!allCitiesSet.has(key) && itemStateId && String(itemStateId) === String(stateId)) {
+              allCitiesSet.add(key)
+              allCities.push({
+                id: String(id),
+                name: String(name),
+                stateId: itemStateId ? String(itemStateId) : undefined
+              })
+            }
+          })
+      } catch (e) {
+        console.warn(`Failed to search cities with term "${term}":`, e)
+      }
+    }
+    
+    // Sort by name for better UX
+    return allCities.sort((a, b) => a.name.localeCompare(b.name))
+  } catch (error) {
+    console.error('Error fetching cities by state:', error)
+    return []
+  }
 }
 
 
@@ -225,6 +286,38 @@ export async function getKeywords(): Promise<string[]> {
   } catch (error) {
     console.error('Error fetching keywords:', error)
     return []
+  }
+}
+
+export async function createArea(
+  areaName: string,
+  cityId: string,
+  stateId: string,
+  countryId: string = 'IND',
+  languageId: number = 1
+): Promise<{ success: boolean; areaId?: number; areaName?: string; error?: string }> {
+  try {
+    const response = await api.post('/reference/areas/create', null, {
+      params: {
+        areaName,
+        cityId,
+        stateId,
+        countryId,
+        languageId
+      }
+    })
+    return {
+      success: response.data.success || false,
+      areaId: response.data.areaId,
+      areaName: response.data.areaName,
+      error: response.data.error
+    }
+  } catch (error: any) {
+    console.error('Error creating area:', error)
+    return {
+      success: false,
+      error: error.response?.data?.error || error.message || 'Failed to create area'
+    }
   }
 }
 

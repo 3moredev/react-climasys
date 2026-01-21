@@ -82,6 +82,13 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
   const [cityOptions, setCityOptions] = useState<{ id: string; name: string; stateId?: string }[]>([])
   const [cityInput, setCityInput] = useState('')
   const [cityLoading, setCityLoading] = useState(false)
+  const [cityOpen, setCityOpen] = useState(false)
+  const [stateOptions, setStateOptions] = useState<{ id: string; name: string }[]>([])
+  const [stateInput, setStateInput] = useState('')
+  const [stateLoading, setStateLoading] = useState(false)
+  const [stateOpen, setStateOpen] = useState(false)
+  const [selectedStateId, setSelectedStateId] = useState<string | null>(null)
+  const [selectedCityId, setSelectedCityId] = useState<string | null>(null)
   const [referByOptions, setReferByOptions] = useState<{ id: string; name: string }[]>([])
   const [snackbarOpen, setSnackbarOpen] = useState(false)
   const [snackbarMessage, setSnackbarMessage] = useState('')
@@ -148,226 +155,320 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
             }
           }
 
-          // Fetch area name if area_id exists
-          let areaName = ''
+          // Fetch area by id (authoritative) to populate area/city/state when editing
+          // Prioitize area_name from patient object if available (as backend now returns it)
+          let areaName = (patient as any).area_name || ''
+
           if (patient.area_id) {
             try {
-              console.log('🔍 Searching for area with ID:', patient.area_id)
-              const { searchAreas } = await import('../services/referenceService')
-              // Try searching with common terms to find the area
-              const searchTerms = ['pune', 'mumbai', 'delhi', 'a']
-              let matchingArea = null
+              const { getAreaById } = await import('../services/referenceService')
+              const areaDetails = await getAreaById(patient.area_id, 1)
 
-              for (const term of searchTerms) {
-                try {
-                  const searchResults = await searchAreas(term)
-                  matchingArea = searchResults.find(a => {
-                    const areaIdNum = parseInt(a.id)
-                    return areaIdNum === patient.area_id || areaIdNum === parseInt(String(patient.area_id))
-                  })
-                  if (matchingArea) {
-                    console.log(`✅ Found area with term "${term}":`, matchingArea.name)
-                    break
-                  }
-                } catch (e) {
-                  console.warn(`Search failed for term "${term}":`, e)
+              if (areaDetails?.areaName) {
+                // If we didn't have name from patient, use this one
+                if (!areaName) {
+                  areaName = areaDetails.areaName
                 }
-              }
 
-              if (matchingArea) {
-                areaName = matchingArea.name
-                // Preserve cityId and stateId if available from API response
-                const areaWithCityId = {
-                  ...matchingArea,
-                  cityId: (matchingArea as any).cityId || undefined,
-                  stateId: (matchingArea as any).stateId || undefined
-                }
-                // Add area to options first, then set input
+                // Ensure area shows in dropdown
                 setAreaOptions(prev => {
-                  if (!prev.find(o => o.id === matchingArea.id)) {
-                    return [...prev, areaWithCityId]
+                  const idStr = String(areaDetails.areaId ?? patient.area_id)
+                  if (!prev.find(o => o.id === idStr)) {
+                    return [...prev, {
+                      id: idStr,
+                      name: areaDetails.areaName,
+                      cityId: areaDetails.cityId ? String(areaDetails.cityId) : undefined,
+                      stateId: areaDetails.stateId ? String(areaDetails.stateId) : undefined
+                    }]
                   }
                   return prev
                 })
 
-                // Fetch City and State based on area's cityId and stateId from database (must match exactly)
-                const fetchCityAndStateForLoadedArea = async () => {
-                  try {
-                    const { searchCities, getStates, getAreaDetails } = await import('../services/referenceService')
-                    const areaCityId = areaWithCityId.cityId
-                    const areaStateId = areaWithCityId.stateId
-                    let matchingCity: { id: string; name: string; stateId?: string } | null = null
-
-                    // First, try to get stateName directly from area details (this includes stateName from state_translations.state_name)
-                    let stateNameFromArea: string | null = null
-                    if (areaStateId) {
-                      try {
-                        const areaDetails = await getAreaDetails(areaName, 1)
-                        if (areaDetails?.stateName) {
-                          stateNameFromArea = areaDetails.stateName
-                          console.log(`✅ Got stateName from area details for loaded patient:`, stateNameFromArea)
-                        }
-                      } catch (e) {
-                        console.warn('Could not get area details for stateName:', e)
-                      }
-                    }
-
-                    // Step 1: Fetch city using area's cityId (must match exactly)
-                    if (areaCityId) {
-                      const searchTerms = ['a', 'e', 'i', 'o', 'u', 'p', 'm', 'd']
-
-                      for (const term of searchTerms) {
-                        try {
-                          const results = await searchCities(term)
-                          matchingCity = results.find(city => {
-                            const matches = city.id === areaCityId ||
-                              city.id?.toUpperCase() === areaCityId.toUpperCase() ||
-                              String(city.id) === String(areaCityId)
-                            return matches
-                          }) || null
-                          if (matchingCity) {
-                            console.log(`✅ Found city for loaded area (cityId: ${areaCityId}):`, matchingCity.name)
-                            break
-                          }
-                        } catch (e) {
-                          console.warn(`Search failed for term "${term}":`, e)
-                        }
-                      }
-
-                      if (matchingCity) {
-                        // Update city in form data
-                        setFormData(prev => ({ ...prev, city: matchingCity!.name }))
-                        setCityInput(matchingCity.name)
-                      } else {
-                        console.warn('⚠️ Could not find city for area cityId:', areaCityId)
-                      }
-                    }
-
-                    // Step 2: Fetch state using area's stateId (must match exactly from database)
-                    // Priority: 1) stateName from area details (state_translations.state_name), 2) from getStates, 3) fallback to city
-                    if (areaStateId) {
-                      try {
-                        // First, use stateName from area details if available (this comes from state_translations.state_name)
-                        if (stateNameFromArea) {
-                          setFormData(prev => ({ ...prev, state: stateNameFromArea }))
-                          console.log(`✅ Using stateName from area details for loaded patient (stateId: ${areaStateId}):`, stateNameFromArea)
-                        } else {
-                          // Fallback: try to get from getStates
-                          const allStates = await getStates()
-                          const matchingState = allStates.find(state => {
-                            const matches = state.id === areaStateId ||
-                              state.id?.toUpperCase() === areaStateId.toUpperCase() ||
-                              String(state.id) === String(areaStateId)
-                            return matches
-                          })
-                          if (matchingState && matchingState.name && matchingState.name !== matchingState.id) {
-                            setFormData(prev => ({ ...prev, state: matchingState.name }))
-                            console.log(`✅ Found state from getStates for loaded patient (stateId: ${areaStateId}):`, matchingState.name)
-                          } else {
-                            console.warn('⚠️ Could not find state name for area stateId:', areaStateId)
-                            // Fallback: try to get state from city if available
-                            if (matchingCity?.stateId) {
-                              const cityStateId = matchingCity.stateId
-                              const cityStateMatch = allStates.find(state => {
-                                const matches = state.id === cityStateId ||
-                                  state.id?.toUpperCase() === cityStateId.toUpperCase() ||
-                                  String(state.id) === String(cityStateId)
-                                return matches
-                              })
-                              if (cityStateMatch && cityStateMatch.name && cityStateMatch.name !== cityStateMatch.id) {
-                                setFormData(prev => ({ ...prev, state: cityStateMatch.name }))
-                                console.log(`✅ Found state from city fallback (stateId: ${cityStateId}):`, cityStateMatch.name)
-                              }
-                            }
-                          }
-                        }
-                      } catch (e) {
-                        console.error('Error fetching state for loaded area:', e)
-                      }
-                    } else if (matchingCity?.stateId) {
-                      // Fallback: use city's stateId if area doesn't have stateId
-                      try {
-                        const allStates = await getStates()
-                        const cityStateId = matchingCity.stateId
-                        const matchingState = allStates.find(state => {
-                          const matches = state.id === cityStateId ||
-                            state.id?.toUpperCase() === cityStateId.toUpperCase() ||
-                            String(state.id) === String(cityStateId)
-                          return matches
-                        })
-                        if (matchingState && matchingState.name && matchingState.name !== matchingState.id) {
-                          setFormData(prev => ({ ...prev, state: matchingState.name }))
-                          console.log(`✅ Found state from city for loaded patient (stateId: ${cityStateId}):`, matchingState.name)
-                        }
-                      } catch (e) {
-                        console.error('Error fetching state from city:', e)
-                      }
-                    }
-                  } catch (e) {
-                    console.error('Error fetching city and state for loaded area:', e)
-                  }
+                // Patch state/city from IDs - BUT DO NOT SET INPUTS TO IDs directly if we want names
+                if (areaDetails.stateId) {
+                  const sid = String(areaDetails.stateId)
+                  setSelectedStateId(sid)
+                  // Don't set stateInput to ID, let it be resolved by name later
+                  // setStateInput(sid) 
+                  // handleInputChange('state', sid)
                 }
-                fetchCityAndStateForLoadedArea()
-
-                // Set areaInput after a small delay to ensure options are updated
-                // Close dropdown when patching data
-                setTimeout(() => {
-                  setAreaInput(areaName)
-                  setAreaOpen(false) // Ensure dropdown is closed when patching
-                  // Store cityId for filtering cities
-                  if (areaWithCityId.cityId) {
-                    setSelectedAreaCityId(areaWithCityId.cityId)
-                    console.log('📋 Stored area cityId for filtering:', areaWithCityId.cityId)
-                  }
-                }, 0)
+                if (areaDetails.cityId) {
+                  const cid = String(areaDetails.cityId)
+                  setSelectedCityId(cid)
+                  // Don't set cityInput to ID, to prevent "NAS" showing up
+                  // setCityInput(cid)
+                  // handleInputChange('city', cid)
+                }
               } else {
-                console.warn('⚠️ Could not find area with ID:', patient.area_id, '- will try to fetch later when user searches')
+                console.warn('⚠️ Area details not found for area_id:', patient.area_id, areaDetails?.error)
               }
             } catch (e) {
-              console.error('Error fetching area:', e)
+              console.warn('Error fetching area by id:', e)
             }
           }
 
-          // Fetch city name if city_id exists
-          let cityName = ''
-          if (patient.city_id) {
+
+          // Define variables for area search
+          const searchTerms = ['pune', 'mumbai', 'delhi', 'a']
+          let matchingArea: any = null
+
+          // Strategy 0: Direct lookup by Area ID (Primary)
+          if (patient.area_id) {
             try {
-              console.log('🔍 Searching for city with ID:', patient.city_id)
-              const { searchCities } = await import('../services/referenceService')
-              // Try multiple search terms - city IDs are usually short codes like "PU", "MU", etc.
-              const searchTerms = ['pune', 'mumbai', 'delhi', 'a']
+              const { getAreaById } = await import('../services/referenceService')
+              const areaDetails = await getAreaById(patient.area_id, 1)
+              if (areaDetails && areaDetails.areaName) {
+                matchingArea = {
+                  id: String(patient.area_id),
+                  name: areaDetails.areaName,
+                  cityId: areaDetails.cityId,
+                  stateId: areaDetails.stateId
+                }
+                console.log('✅ Found area via getAreaById:', matchingArea.name)
+              }
+            } catch (e) {
+              console.warn('getAreaById failed, falling back to search:', e)
+            }
+          }
+
+          // Strategy 1: Search fallback if direct lookup failed
+          if (!matchingArea) {
+            for (const term of searchTerms) {
+              try {
+                const searchResults = await searchAreas(term)
+                matchingArea = searchResults.find(a => {
+                  const areaIdNum = parseInt(a.id)
+                  return areaIdNum === patient.area_id || areaIdNum === parseInt(String(patient.area_id))
+                })
+                if (matchingArea) {
+                  console.log(`✅ Found area with term "${term}":`, matchingArea.name)
+                  break
+                }
+              } catch (e) {
+                console.warn(`Search failed for term "${term}":`, e)
+              }
+            }
+          }
+
+          if (matchingArea) {
+            areaName = matchingArea.name
+            // Preserve cityId and stateId if available from API response
+            const areaWithCityId = {
+              ...matchingArea,
+              cityId: (matchingArea as any).cityId || undefined,
+              stateId: (matchingArea as any).stateId || undefined
+            }
+            // Add area to options first, then set input
+            setAreaOptions(prev => {
+              if (!prev.find(o => o.id === matchingArea.id)) {
+                return [...prev, areaWithCityId]
+              }
+              return prev
+            })
+
+            // Fetch City and State based on area's cityId and stateId from database (must match exactly)
+            const fetchCityAndStateForLoadedArea = async () => {
+              try {
+                const { searchCities, getStates, getAreaDetails } = await import('../services/referenceService')
+                const areaCityId = areaWithCityId.cityId
+                const areaStateId = areaWithCityId.stateId
+                let matchingCity: { id: string; name: string; stateId?: string } | null = null
+
+                // First, try to get stateName directly from area details (this includes stateName from state_translations.state_name)
+                let stateNameFromArea: string | null = null
+                if (areaStateId) {
+                  try {
+                    const areaDetails = await getAreaDetails(areaName, 1)
+                    if (areaDetails?.stateName) {
+                      stateNameFromArea = areaDetails.stateName
+                      console.log(`✅ Got stateName from area details for loaded patient:`, stateNameFromArea)
+                    }
+                  } catch (e) {
+                    console.warn('Could not get area details for stateName:', e)
+                  }
+                }
+
+                // Step 1: Fetch city using area's cityId (must match exactly)
+                if (areaCityId) {
+                  const searchTerms = ['a', 'e', 'i', 'o', 'u', 'p', 'm', 'd']
+
+                  for (const term of searchTerms) {
+                    try {
+                      const results = await searchCities(term)
+                      matchingCity = results.find(city => {
+                        const matches = city.id === areaCityId ||
+                          city.id?.toUpperCase() === areaCityId.toUpperCase() ||
+                          String(city.id) === String(areaCityId)
+                        return matches
+                      }) || null
+                      if (matchingCity) {
+                        console.log(`✅ Found city for loaded area (cityId: ${areaCityId}):`, matchingCity.name)
+                        break
+                      }
+                    } catch (e) {
+                      console.warn(`Search failed for term "${term}":`, e)
+                    }
+                  }
+
+                  if (matchingCity) {
+                    // Update city in form data
+                    setFormData(prev => ({ ...prev, city: matchingCity!.name }))
+                    setCityInput(matchingCity.name)
+                  } else {
+                    console.warn('⚠️ Could not find city for area cityId:', areaCityId)
+                  }
+                }
+
+                // Step 2: Fetch state using area's stateId (must match exactly from database)
+                // Priority: 1) stateName from area details (state_translations.state_name), 2) from getStates, 3) fallback to city
+                if (areaStateId) {
+                  try {
+                    // First, use stateName from area details if available (this comes from state_translations.state_name)
+                    if (stateNameFromArea) {
+                      setFormData(prev => ({ ...prev, state: stateNameFromArea }))
+                      // Delay setting state ID to ensure city ID is set first (prevents race condition in useEffect)
+                      setTimeout(() => setSelectedStateId(areaStateId), 100)
+                      console.log(`✅ Using stateName from area details for loaded patient (stateId: ${areaStateId}):`, stateNameFromArea)
+                    } else {
+                      // Fallback: try to get from getStates
+                      const allStates = await getStates()
+                      const matchingState = allStates.find(state => {
+                        const matches = state.id === areaStateId ||
+                          state.id?.toUpperCase() === areaStateId.toUpperCase() ||
+                          String(state.id) === String(areaStateId)
+                        return matches
+                      })
+                      if (matchingState && matchingState.name && matchingState.name !== matchingState.id) {
+                        setFormData(prev => ({ ...prev, state: matchingState.name }))
+                        setTimeout(() => setSelectedStateId(matchingState.id), 100)
+                        console.log(`✅ Found state from getStates for loaded patient (stateId: ${areaStateId}):`, matchingState.name)
+                      } else {
+                        console.warn('⚠️ Could not find state name for area stateId:', areaStateId)
+                        // Fallback: try to get state from city if available
+                        if (matchingCity?.stateId) {
+                          const cityStateId = matchingCity.stateId
+                          const cityStateMatch = allStates.find(state => {
+                            const matches = state.id === cityStateId ||
+                              state.id?.toUpperCase() === cityStateId.toUpperCase() ||
+                              String(state.id) === String(cityStateId)
+                            return matches
+                          })
+                          if (cityStateMatch && cityStateMatch.name && cityStateMatch.name !== cityStateMatch.id) {
+                            setFormData(prev => ({ ...prev, state: cityStateMatch.name }))
+                            setTimeout(() => setSelectedStateId(cityStateMatch.id), 100)
+                            console.log(`✅ Found state from city fallback (stateId: ${cityStateId}):`, cityStateMatch.name)
+                          }
+                        }
+                      }
+                    }
+                  } catch (e) {
+                    console.error('Error fetching state for loaded area:', e)
+                  }
+                } else if (matchingCity?.stateId) {
+                  // Fallback: use city's stateId if area doesn't have stateId
+                  try {
+                    const allStates = await getStates()
+                    const cityStateId = matchingCity.stateId
+                    const matchingState = allStates.find(state => {
+                      const matches = state.id === cityStateId ||
+                        state.id?.toUpperCase() === cityStateId.toUpperCase() ||
+                        String(state.id) === String(cityStateId)
+                      return matches
+                    })
+                    if (matchingState && matchingState.name && matchingState.name !== matchingState.id) {
+                      setFormData(prev => ({ ...prev, state: matchingState.name }))
+                      setTimeout(() => setSelectedStateId(matchingState.id), 100)
+                      console.log(`✅ Found state from city for loaded patient (stateId: ${cityStateId}):`, matchingState.name)
+                    }
+                  } catch (e) {
+                    console.error('Error fetching state from city:', e)
+                  }
+                }
+              } catch (e) {
+                console.error('Error fetching city and state for loaded area:', e)
+              }
+            }
+            fetchCityAndStateForLoadedArea()
+
+            // Set areaInput after a small delay to ensure options are updated
+            // Close dropdown when patching data
+            setTimeout(() => {
+              setAreaInput(areaName)
+              setAreaOpen(false) // Ensure dropdown is closed when patching
+              // Store cityId for filtering cities
+              if (areaWithCityId.cityId) {
+                setSelectedAreaCityId(areaWithCityId.cityId)
+                console.log('📋 Stored area cityId for filtering:', areaWithCityId.cityId)
+              }
+            }, 0)
+          } else {
+            console.warn('⚠️ Could not find area with ID:', patient.area_id, '- will try to fetch later when user searches')
+          }
+
+          // Fetch city name if city_id exists
+          let cityName = (patient as any).city_name || ''
+          const targetCityId = patient.city_id || patient.cityId
+
+          if (targetCityId) {
+            try {
+              console.log('🔍 Resolving City Name for ID:', targetCityId, 'Existing Name:', cityName)
+              const { getCitiesByState, searchCities } = await import('../services/referenceService')
               let matchingCity = null
 
-              for (const term of searchTerms) {
+              // If backend returned name, we can skip search but should try to form object for options
+              if (cityName) {
+                matchingCity = { id: targetCityId, name: cityName, stateId: patient.state_id }
+              }
+
+              // Strategy 1: If we have a state ID, fetch cities for that state (Best for accuracy)
+              const stateIdToUse = patient.state_id
+              if (!matchingCity && stateIdToUse) {
                 try {
-                  const searchResults = await searchCities(term)
-                  matchingCity = searchResults.find(c => {
-                    // City ID might be case-sensitive, so check both
-                    return c.id === patient.city_id ||
-                      c.id?.toUpperCase() === String(patient.city_id).toUpperCase() ||
-                      c.id === String(patient.city_id)
-                  })
-                  if (matchingCity) {
-                    console.log(`✅ Found city with term "${term}":`, matchingCity.name)
-                    break
-                  }
+                  const cities = await getCitiesByState(stateIdToUse)
+                  matchingCity = cities.find(c =>
+                    c.id === targetCityId ||
+                    c.id === String(targetCityId) ||
+                    c.name.toLowerCase() === String(targetCityId).toLowerCase()
+                  )
+                  if (matchingCity) console.log('✅ Found city via state list:', matchingCity.name)
                 } catch (e) {
-                  console.warn(`Search failed for term "${term}":`, e)
+                  console.warn('Failed to fetch cities by state:', e)
+                }
+              }
+
+              // Strategy 2: Explicit search by ID if not found in state list
+              if (!matchingCity) {
+                console.log('⚠️ City not found in state list, trying direct search by ID...')
+                try {
+                  // searchCities usually takes a query string. Passing ID might work if backend supports it, 
+                  // otherwise we depend on it returning something relevant for the ID string.
+                  // We'll try searching for the ID itself.
+                  const results = await searchCities(String(targetCityId))
+                  matchingCity = results.find(c =>
+                    c.id === targetCityId ||
+                    c.id === String(targetCityId)
+                  )
+                  if (matchingCity) console.log('✅ Found city via direct search:', matchingCity.name)
+                } catch (e) {
+                  console.warn('Failed direct city search:', e)
                 }
               }
 
               if (matchingCity) {
                 cityName = matchingCity.name
-                setCityInput(cityName)
-                // Filter cities to only show the one matching patient.city_id
-                setCityOptions([matchingCity])
-                console.log('📋 Set city options to filtered city:', matchingCity)
+
+                // Wrap in setTimeout to ensure state updates stick
+                setTimeout(() => {
+                  setCityInput(matchingCity.name)
+                  setCityOptions([matchingCity])
+                  setSelectedCityId(matchingCity.id)
+                  setFormData(prev => ({ ...prev, city: matchingCity.name })) // Sync formData for Autocomplete value match
+                  console.log('📋 Set city to:', matchingCity.name)
+                }, 0)
               } else {
-                console.warn('⚠️ Could not find city with ID:', patient.city_id, '- will try to fetch later when user searches')
-                // Set city_id as fallback if we can't find the name
-                if (patient.city_id) {
-                  setCityInput(String(patient.city_id))
-                }
+                console.warn('❌ Could not resolve City Name for ID:', targetCityId)
+                // Do NOT set ID as input, just leave it empty or let the user search
+                // potentially could set it to "Unknown City (ID)" if critical, but empty is safer for validation
               }
             } catch (e) {
               console.error('Error fetching city:', e)
@@ -456,7 +557,17 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
   // Function to map form data to API request format
   const mapFormDataToApiRequest = (): QuickRegistrationRequest => {
     // Get the selected area, city, gender, marital status, and occupation objects
-    const selectedArea = areaOptions.find(opt => opt.name === formData.area)
+    // For area, check both exact match and case-insensitive match to handle new areas
+    const selectedArea = areaOptions.find(opt =>
+      opt.name === formData.area ||
+      opt.name.toLowerCase() === formData.area.toLowerCase()
+    ) || (formData.area ? {
+      id: `new-${formData.area}`,
+      name: formData.area,
+      cityId: selectedCityId || undefined,
+      stateId: selectedStateId || undefined
+    } : null)
+
     const selectedCity = cityOptions.find(opt => opt.name === formData.city)
     const selectedGender = genderOptions.find(opt => opt.id === formData.gender)
     const selectedMaritalStatus = maritalStatusOptions.find(opt => opt.id === formData.maritalStatus)
@@ -471,6 +582,8 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
 
     console.log('=== MAPPING FORM DATA TO API REQUEST ===')
     console.log('Selected Area:', selectedArea)
+    console.log('Form Data Area:', formData.area)
+    console.log('Area Options:', areaOptions)
     console.log('Selected City:', selectedCity)
     console.log('Selected Gender:', selectedGender)
     console.log('Selected Marital Status:', selectedMaritalStatus)
@@ -481,12 +594,32 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
     const derivedCityId =
       selectedArea?.cityId ||
       selectedCity?.id ||
+      selectedCityId ||
       ''
 
     const derivedStateId =
       selectedArea?.stateId ||
       selectedCity?.stateId ||
+      selectedStateId ||
       ''
+
+    // Handle areaId - if it's a new area (starts with "new-"), we need to search for it first
+    let areaIdValue: number | undefined = undefined
+    if (selectedArea) {
+      if (selectedArea.id.startsWith('new-')) {
+        // For new areas, try to search if it exists in the database
+        // This handles the case where user typed an area that might already exist
+        console.log('⚠️ New area detected, searching for existing area:', selectedArea.name)
+        // Note: We'll need to search before submission, but for now log a warning
+        // The actual search should happen in handleSave before calling mapFormDataToApiRequest
+        areaIdValue = undefined // Will be set after search in handleSave
+      } else {
+        const parsed = parseInt(selectedArea.id)
+        if (!isNaN(parsed)) {
+          areaIdValue = parsed
+        }
+      }
+    }
 
     const apiRequest: QuickRegistrationRequest = {
       doctorId: currentDoctorId,
@@ -494,7 +627,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
       middleName: formData.middleName || '',
       firstName: formData.firstName,
       mobile: formData.mobileNumber,
-      areaId: selectedArea ? parseInt(selectedArea.id) : undefined,
+      areaId: areaIdValue,
       cityId: derivedCityId || 'PU', // Fallback to 'PU' if nothing derived
       stateId: derivedStateId || 'MAH', // Fallback to 'MAH' if nothing derived
       countryId: 'IND', // Default to India
@@ -562,14 +695,46 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
       }
     }
 
+    async function loadStates() {
+      try {
+        const { getStates } = await import('../services/referenceService')
+        const items = await getStates()
+        if (!cancelled) {
+          setStateOptions(items)
+          // Set initial state input if formData.state exists
+          if (formData.state) {
+            const matchingState = items.find(s => s.name === formData.state || s.id === formData.state)
+            if (matchingState) {
+              setStateInput(matchingState.name)
+              setSelectedStateId(matchingState.id)
+            }
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load states', e)
+      }
+    }
+
     // loadGenders()
     loadOccupations()
     loadMaritalStatuses()
     loadReferBy()
+    loadStates()
     return () => {
       cancelled = true
     }
   }, [])
+
+  // Sync selectedStateId when formData.state changes (for external updates like loading patient data)
+  useEffect(() => {
+    if (formData.state && stateOptions.length > 0) {
+      const matchingState = stateOptions.find(s => s.name === formData.state || s.id === formData.state)
+      if (matchingState && selectedStateId !== matchingState.id) {
+        setSelectedStateId(matchingState.id)
+        setStateInput(matchingState.name)
+      }
+    }
+  }, [formData.state, stateOptions, selectedStateId])
 
   // Sync referralNameSearch with formData.referralName when data is loaded
   useEffect(() => {
@@ -669,23 +834,87 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
     }
   }, [open, formData.area, areaInput, areaOptions])
 
+  // Load cities when state is selected
+  useEffect(() => {
+    let cancelled = false
+    const loadCitiesForState = async () => {
+      if (!selectedStateId) {
+        setCityOptions([])
+        return
+      }
+      try {
+        setCityLoading(true)
+        const { getCitiesByState } = await import('../services/referenceService')
+        const cities = await getCitiesByState(selectedStateId)
+        if (!cancelled) {
+          // If formData.city exists, try to match it
+          if (formData.city) {
+            const matchingCity = cities.find(c => c.name === formData.city || c.id === formData.city)
+            if (matchingCity) {
+              setCityInput(matchingCity.name)
+              setSelectedCityId(matchingCity.id)
+            } else if (selectedCityId) {
+              // Critical Fix: If selected city (e.g. from patient load) is NOT in the state's city list 
+              // (e.g. due to state mismatch in DB 'OTH' vs 'MAH'), we must manually add it back to options
+              // so it doesn't disappear or become invalid.
+              const nameToUse = formData.city || cityInput || ''
+              if (nameToUse) {
+                console.log('⚠️ Preserving selected city not found in state list:', nameToUse)
+                cities.push({
+                  id: selectedCityId,
+                  name: nameToUse,
+                  stateId: selectedStateId || undefined
+                })
+                // Ensure input matches if it was empty
+                if (!cityInput) setCityInput(nameToUse)
+              }
+            }
+          }
+          setCityOptions(cities)
+        }
+      } catch (e) {
+        console.error('Failed to load cities for state', e)
+        if (!cancelled) {
+          setCityOptions([])
+        }
+      } finally {
+        if (!cancelled) {
+          setCityLoading(false)
+        }
+      }
+    }
+    loadCitiesForState()
+    return () => {
+      cancelled = true
+    }
+  }, [selectedStateId, formData.city, selectedCityId, cityInput])
+
   useEffect(() => {
     let active = true
     const fetchAreas = async () => {
       try {
         setAreaLoading(true)
-        console.log('🔍 Searching areas with query:', areaInput)
+        console.log('🔍 Searching areas with query:', areaInput, 'cityId:', selectedCityId)
         const { searchAreas } = await import('../services/referenceService')
         const results = await searchAreas(areaInput)
         console.log('✅ Area search results:', results)
         if (active) {
           // Map results to include cityId and stateId from API response (matching database structure)
-          const mappedResults = results.map((item: any) => ({
+          let mappedResults = results.map((item: any) => ({
             id: item.id || item.areaId || '',
             name: item.name || item.areaName || '',
             cityId: item.cityId || undefined,
             stateId: item.stateId || undefined
           }))
+
+          // Filter by selected city if city is selected
+          if (selectedCityId) {
+            mappedResults = mappedResults.filter(area =>
+              area.cityId === selectedCityId ||
+              String(area.cityId) === String(selectedCityId)
+            )
+          }
+
           setAreaOptions(mappedResults)
           // Open dropdown if we have results and user is actively searching
           // Allow opening even if input matches selected value (user might want to change it)
@@ -703,9 +932,9 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
       }
     }
 
-    // Only search if there's input (at least 1 character)
+    // Only search if there's input (at least 1 character) and city is selected
     const trimmedInput = areaInput?.trim() || ''
-    if (trimmedInput.length > 0) {
+    if (trimmedInput.length > 0 && selectedCityId) {
       // Debounce user input
       const handle = setTimeout(() => {
         fetchAreas()
@@ -725,7 +954,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
         active = false
       }
     }
-  }, [areaInput, formData.area])
+  }, [areaInput, selectedCityId])
 
   useEffect(() => {
     let active = true
@@ -782,10 +1011,25 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
           console.log('📊 Search term:', searchTerm, 'Total results:', allResults.length, 'Filtered:', filteredResults.length)
           console.log('📋 Filtered cities:', filteredResults)
         } else {
-          console.log('⚠️ No area selected, showing all cities')
+          if (formData.area && formData.area.trim() !== '') {
+            console.log('ℹ️ Area present but no City ID bound yet (likely new/custom area). Showing matching cities for input.')
+          } else {
+            console.log('⚠️ No area selected, showing all cities')
+          }
         }
 
-        if (active) setCityOptions(filteredResults)
+        if (active) {
+          if (filteredResults.length === 0 && selectedCityId && cityInput) {
+            console.log('⚠️ Preserving selected city in fetchCities search:', cityInput)
+            filteredResults.push({
+              id: selectedCityId,
+              name: cityInput,
+              // stateId is tricky here, but we can try to get it if available
+              stateId: undefined
+            })
+          }
+          setCityOptions(filteredResults)
+        }
       } catch (e) {
         console.error('Failed to search cities', e)
         if (active) setCityOptions([])
@@ -872,7 +1116,17 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
               }
             }
 
-            if (active) setCityOptions(filteredResults)
+            if (active) {
+              if (filteredResults.length === 0 && selectedCityId && cityInput) {
+                console.log('⚠️ Preserving selected city in loadCitiesForArea:', cityInput)
+                filteredResults.push({
+                  id: selectedCityId,
+                  name: cityInput,
+                  stateId: undefined
+                })
+              }
+              setCityOptions(filteredResults)
+            }
           } catch (e) {
             console.error('Failed to load cities for area', e)
             if (active) setCityOptions([])
@@ -1085,8 +1339,200 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
       console.log('=== CALLING PATIENT REGISTRATION API ===')
       console.log('Starting patient registration API call...')
 
+      // Local variable to store the resolved area ID to avoid state update race conditions
+      let resolvedAreaId: number | undefined = undefined;
+
+      // If area is a new one (not in areaOptions with a real ID), search for it first
+      const selectedArea = areaOptions.find(opt =>
+        opt.name === formData.area ||
+        opt.name.toLowerCase() === formData.area.toLowerCase()
+      )
+
+      if (selectedArea && !selectedArea.id.startsWith('new-')) {
+        // Existing area selected confirm ID
+        const parsed = parseInt(selectedArea.id)
+        if (!isNaN(parsed)) {
+          resolvedAreaId = parsed
+        }
+      }
+
+      if (formData.area && (!selectedArea || selectedArea.id.startsWith('new-'))) {
+        console.log('🔍 Searching for area before submission:', formData.area)
+        try {
+          const { searchAreas } = await import('../services/referenceService')
+          const searchResults = await searchAreas(formData.area)
+
+          // Filter by selected city if available
+          let matchingArea = searchResults.find(a =>
+            a.name.toLowerCase() === formData.area.toLowerCase() &&
+            (!selectedCityId || a.cityId === selectedCityId)
+          )
+
+          if (matchingArea) {
+            console.log('✅ Found existing area:', matchingArea)
+            const parsedId = parseInt(matchingArea.id)
+            if (!isNaN(parsedId)) {
+              resolvedAreaId = parsedId
+            }
+
+            // Update areaOptions with the found area
+            setAreaOptions(prev => {
+              const existing = prev.find(o => o.id === matchingArea!.id)
+              if (!existing) {
+                return [...prev.filter(o => !o.id.startsWith('new-') || o.name.toLowerCase() !== formData.area.toLowerCase()), matchingArea]
+              }
+              return prev
+            })
+            // Update formData.area to ensure it matches exactly
+            handleInputChange('area', matchingArea.name)
+            setAreaInput(matchingArea.name)
+            setSelectedAreaCityId(matchingArea.cityId || null)
+          } else {
+            // Area doesn't exist - create it
+            console.log('🆕 Area not found, creating new area:', formData.area)
+            if (!selectedCityId || !selectedStateId) {
+              setErrors(prev => ({
+                ...prev,
+                area: 'Please select City and State before adding a new area.'
+              }))
+              setLoading(false)
+              setSnackbarMessage('Please select City and State before adding a new area.')
+              setSnackbarOpen(true)
+              return
+            }
+
+            try {
+              const { createArea } = await import('../services/referenceService')
+              const createResult = await createArea(
+                formData.area.trim(),
+                selectedCityId,
+                selectedStateId,
+                'IND', // Default country
+                1 // Default language
+              )
+
+              if (createResult.success && createResult.areaId) {
+                console.log('✅ Area created successfully:', createResult)
+
+                const newId = createResult.areaId
+                resolvedAreaId = newId
+
+                // Create area object with the new ID
+                const newArea = {
+                  id: String(newId),
+                  name: createResult.areaName || formData.area.trim(),
+                  cityId: selectedCityId,
+                  stateId: selectedStateId
+                }
+
+                // Update areaOptions
+                setAreaOptions(prev => {
+                  const existing = prev.find(o => o.id === String(createResult.areaId))
+                  if (!existing) {
+                    return [...prev.filter(o => !o.id.startsWith('new-') || o.name.toLowerCase() !== formData.area.toLowerCase()), newArea]
+                  }
+                  return prev
+                })
+
+                // Verify and fix City Name display if it's showing an ID
+                // Attempt to find the name in existing options or fetch it
+                if (selectedCityId) {
+                  const existingCityOption = cityOptions.find(c => c.id === selectedCityId)
+                  if (existingCityOption && existingCityOption.name && existingCityOption.name !== selectedCityId) {
+                    // We have a name, ensure it's displayed
+                    console.log(`✅ Correcting City Display: ${selectedCityId} -> ${existingCityOption.name}`)
+                    handleInputChange('city', existingCityOption.name)
+                    setCityInput(existingCityOption.name)
+                  } else {
+                    // If finding in options failed, we might need to fetch it to get the real name
+                    console.log(`⚠️ City Name not found in options for ID ${selectedCityId}, attempting fetch...`)
+                    try {
+                      const { searchCities } = await import('../services/referenceService')
+                      // Search by ID to get the specific city details
+                      const cityResults = await searchCities(selectedCityId)
+                      const foundCity = cityResults.find(c => c.id === selectedCityId)
+
+                      if (foundCity && foundCity.name) {
+                        console.log(`✅ Fetched City Name: ${selectedCityId} -> ${foundCity.name}`)
+                        handleInputChange('city', foundCity.name)
+                        setCityInput(foundCity.name)
+
+                        // Update city options to include this found city so it doesn't get lost
+                        setCityOptions(prev => {
+                          // Check if it exists
+                          if (!prev.find(p => p.id === foundCity.id)) {
+                            return [...prev, foundCity]
+                          }
+                          return prev
+                        })
+                      }
+                    } catch (e) {
+                      console.warn('Failed to fetch city details for display correction', e)
+                    }
+                  }
+                }
+
+                // Update formData.area to match exactly and force display
+                if (newArea.name) {
+                  console.log(`✅ Setting Area Input to: ${newArea.name}`)
+                  handleInputChange('area', newArea.name)
+                  setAreaInput(newArea.name)
+                  // Force the autocomplete to close and acknowledge the value
+                  setAreaOpen(false)
+                }
+                setSelectedAreaCityId(selectedCityId)
+
+                // Clear validation error
+                setErrors(prev => {
+                  const newErrors = { ...prev }
+                  delete newErrors.area
+                  return newErrors
+                })
+              } else {
+                // Failed to create area
+                setErrors(prev => ({
+                  ...prev,
+                  area: createResult.error || 'Failed to create area. Please try again or select an existing area.'
+                }))
+                setLoading(false)
+                setSnackbarMessage(createResult.error || 'Failed to create area. Please try again or select an existing area.')
+                setSnackbarOpen(true)
+                return
+              }
+            } catch (createError) {
+              console.error('Error creating area:', createError)
+              setErrors(prev => ({
+                ...prev,
+                area: 'Error creating area. Please try again or select an existing area.'
+              }))
+              setLoading(false)
+              setSnackbarMessage('Error creating area. Please try again or select an existing area.')
+              setSnackbarOpen(true)
+              return
+            }
+          }
+        } catch (searchError) {
+          console.error('Error searching for area:', searchError)
+          setErrors(prev => ({
+            ...prev,
+            area: 'Error searching for area. Please select an existing area from the list.'
+          }))
+          setLoading(false)
+          setSnackbarMessage('Error searching for area. Please select an existing area from the dropdown.')
+          setSnackbarOpen(true)
+          return
+        }
+      }
+
       // Map form data to API request format
       const apiRequest = mapFormDataToApiRequest()
+
+      // Explicitly set the areaId if we resolved it locally
+      // This overrides whatever mapFormDataToApiRequest found (which might be stale due to state updates)
+      if (resolvedAreaId !== undefined) {
+        console.log(`🔒 Applying resolved areaId ${resolvedAreaId} to request (overriding ${apiRequest.areaId})`)
+        apiRequest.areaId = resolvedAreaId
+      }
 
       // Call the patient registration API
       const response = await patientService.quickRegister(apiRequest)
@@ -1568,7 +2014,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
             </Grid>
           </Grid>
 
-          {/* Row 2: Mobile Number, Age, Gender, Area */}
+          {/* Row 2: Mobile Number, Age, Gender, State */}
           <Grid item xs={12}>
             <Grid container spacing={3}>
               <Grid item xs={12} md={3}>
@@ -1825,13 +2271,244 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
               <Grid item xs={12} md={3}>
                 <Box sx={{ mb: 2 }}>
                   <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
+                    State*
+                  </Typography>
+                  <Autocomplete
+                    options={stateOptions}
+                    popupIcon={null}
+                    forcePopupIcon={false}
+                    loading={stateLoading}
+                    disabled={loading || readOnly}
+                    getOptionLabel={(opt) => opt.name || ''}
+                    value={stateOptions.find(o => o.name === formData.state || o.id === formData.state) || null}
+                    inputValue={stateInput}
+                    onInputChange={(_, newInput, reason) => {
+                      setStateInput(newInput)
+                      if (reason === 'clear' || !newInput) {
+                        handleInputChange('state', '')
+                        setSelectedStateId(null)
+                        // Clear city and area when state is cleared
+                        handleInputChange('city', '')
+                        setCityInput('')
+                        setCityOptions([])
+                        setSelectedCityId(null)
+                        handleInputChange('area', '')
+                        setAreaInput('')
+                        setAreaOptions([])
+                        setSelectedAreaCityId(null)
+                      }
+                    }}
+                    onChange={(_, newValue) => {
+                      if (newValue) {
+                        handleInputChange('state', newValue.name)
+                        setStateInput(newValue.name)
+                        setSelectedStateId(newValue.id)
+                        // Clear city and area when state changes
+                        handleInputChange('city', '')
+                        setCityInput('')
+                        setCityOptions([])
+                        setSelectedCityId(null)
+                        handleInputChange('area', '')
+                        setAreaInput('')
+                        setAreaOptions([])
+                        setSelectedAreaCityId(null)
+                      } else {
+                        handleInputChange('state', '')
+                        setSelectedStateId(null)
+                      }
+                    }}
+                    filterOptions={(options) => options}
+                    open={stateOpen}
+                    onOpen={() => {
+                      setStateOpen(true)
+                    }}
+                    onClose={(event, reason) => {
+                      setStateOpen(false)
+                    }}
+                    disablePortal={false}
+                    slotProps={{
+                      popper: {
+                        style: {
+                          zIndex: 11001
+                        },
+                        placement: 'bottom-start',
+                        modifiers: [
+                          {
+                            name: 'offset',
+                            options: {
+                              offset: [0, 4]
+                            }
+                          },
+                          {
+                            name: 'sameWidth',
+                            enabled: true,
+                            fn: ({ state }) => {
+                              state.styles.popper.width = `${state.rects.reference.width}px`
+                              return state
+                            },
+                            phase: 'beforeWrite',
+                            requires: ['computeStyles']
+                          }
+                        ]
+                      },
+                      paper: {
+                        sx: {
+                          zIndex: 11001,
+                          maxHeight: '300px',
+                          width: 'inherit',
+                          minWidth: '100%'
+                        }
+                      }
+                    }}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        fullWidth
+                        placeholder="Select State"
+                        error={!!errors.state}
+                        helperText={errors.state}
+                        disabled={loading || readOnly}
+                      />
+                    )}
+                  />
+                </Box>
+              </Grid>
+
+            </Grid>
+          </Grid>
+
+          {/* Row 3: City, Area, Marital Status, Occupation */}
+          <Grid item xs={12}>
+            <Grid container spacing={3}>
+              <Grid item xs={12} md={3}>
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
+                    City
+                  </Typography>
+                  <Autocomplete
+                    options={cityOptions.filter(opt => opt && typeof opt === 'object' && opt.name)}
+                    popupIcon={null}
+                    forcePopupIcon={false}
+                    loading={cityLoading}
+                    disabled={loading || readOnly || !selectedStateId}
+                    isOptionEqualToValue={(option, value) => {
+                      if (!option || !value) return false
+                      return option.id === value.id || option.name === value.name
+                    }}
+                    getOptionLabel={(opt) => {
+                      if (!opt) return ''
+                      if (typeof opt === 'string') return opt
+                      return opt.name || String(opt.id || '')
+                    }}
+                    value={cityOptions.find(o => o && o.name === formData.city) || null}
+                    inputValue={cityInput}
+                    onInputChange={(_, newInput, reason) => {
+                      setCityInput(newInput)
+                      // Clear formData.city when user clears the input
+                      if (reason === 'clear' || !newInput) {
+                        handleInputChange('city', '')
+                        setSelectedCityId(null)
+                        // Clear area when city is cleared
+                        handleInputChange('area', '')
+                        setAreaInput('')
+                        setAreaOptions([])
+                        setSelectedAreaCityId(null)
+                      }
+                    }}
+                    onChange={(_, newValue) => {
+                      if (newValue) {
+                        handleInputChange('city', newValue.name)
+                        setCityInput(newValue.name)
+                        setSelectedCityId(newValue.id)
+                        // Clear area when city changes
+                        handleInputChange('area', '')
+                        setAreaInput('')
+                        setAreaOptions([])
+                        setSelectedAreaCityId(null)
+                      } else {
+                        handleInputChange('city', '')
+                        setSelectedCityId(null)
+                        // Clear area when city is cleared
+                        handleInputChange('area', '')
+                        setAreaInput('')
+                        setAreaOptions([])
+                        setSelectedAreaCityId(null)
+                      }
+                    }}
+                    filterOptions={(options) => options}
+                    open={cityOpen}
+                    onOpen={() => {
+                      if (selectedStateId) {
+                        setCityOpen(true)
+                      }
+                    }}
+                    onClose={(event, reason) => {
+                      setCityOpen(false)
+                    }}
+                    disablePortal={false}
+                    slotProps={{
+                      popper: {
+                        style: {
+                          zIndex: 11001
+                        },
+                        placement: 'bottom-start',
+                        modifiers: [
+                          {
+                            name: 'offset',
+                            options: {
+                              offset: [0, 4]
+                            }
+                          },
+                          {
+                            name: 'sameWidth',
+                            enabled: true,
+                            fn: ({ state }) => {
+                              state.styles.popper.width = `${state.rects.reference.width}px`
+                              return state
+                            },
+                            phase: 'beforeWrite',
+                            requires: ['computeStyles']
+                          }
+                        ]
+                      },
+                      paper: {
+                        sx: {
+                          zIndex: 11001,
+                          maxHeight: '300px',
+                          width: 'inherit',
+                          minWidth: '100%'
+                        }
+                      }
+                    }}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        fullWidth
+                        placeholder={selectedStateId ? "Search City" : "Select State first"}
+                        disabled={loading || readOnly || !selectedStateId}
+                        InputProps={{
+                          ...params.InputProps,
+                          endAdornment: (
+                            <InputAdornment position="end" sx={{ pr: 1 }}>
+                              <Search sx={{ color: '#666' }} />
+                            </InputAdornment>
+                          )
+                        }}
+                      />
+                    )}
+                  />
+                </Box>
+              </Grid>
+              <Grid item xs={12} md={3}>
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
                     Area <span style={{ color: 'red' }}>*</span>
                   </Typography>
                   <Autocomplete
-
+                    freeSolo
                     options={areaOptions}
                     loading={areaLoading}
-                    disabled={loading || readOnly}
+                    disabled={loading || readOnly || !selectedCityId}
                     getOptionKey={(opt) => {
                       if (typeof opt === 'string') return opt
                       return `${opt.id}-${opt.name}` // Use ID and name to ensure uniqueness
@@ -1840,7 +2517,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                       if (typeof opt === 'string') return opt
                       return opt.name || ''
                     }}
-                    value={formData.area && areaInput === formData.area ? (areaOptions.find(o => o.name === formData.area) || null) : null}
+                    value={formData.area && areaInput === formData.area ? (areaOptions.find(o => o.name === formData.area) || formData.area) : null}
                     inputValue={areaInput || ''}
                     onInputChange={(event, newInput, reason) => {
                       console.log('📝 Area input changed:', { newInput, reason, event: event?.type })
@@ -1850,22 +2527,12 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         handleInputChange('area', '')
                         setAreaOpen(false)
                         setSelectedAreaCityId(null)
-                        // Clear city and reset state when area is cleared
-                        handleInputChange('city', '')
-                        setCityInput('')
-                        setCityOptions([])
-                        handleInputChange('state', 'Maharashtra')
                       } else if (newInput && newInput.trim().length > 0) {
                         // If user is editing and input doesn't match the selected area, clear the selected area
                         // This prevents re-selection when backspacing
                         if (formData.area && newInput.trim() !== formData.area.trim()) {
                           handleInputChange('area', '')
                           setSelectedAreaCityId(null)
-                          // Clear city and reset state when area is being edited
-                          handleInputChange('city', '')
-                          setCityInput('')
-                          setCityOptions([])
-                          handleInputChange('state', 'Maharashtra')
                         }
                         // Allow dropdown to open when user is typing
                         // The useEffect will handle opening when results arrive
@@ -1874,15 +2541,65 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     onChange={(event, newValue, reason) => {
                       console.log('✅ Area value changed:', { newValue, reason })
                       if (typeof newValue === 'string') {
-                        handleInputChange('area', newValue)
-                        setAreaInput(newValue)
-                        setAreaOpen(false) // Close dropdown when value is selected
-                        setSelectedAreaCityId(null) // Clear cityId for string input
-                        // Clear city and reset state when area changes to string value
-                        handleInputChange('city', '')
-                        setCityInput('')
-                        setCityOptions([])
-                        handleInputChange('state', 'Maharashtra')
+                        // User typed a new area name
+                        const trimmedArea = newValue.trim()
+                        if (trimmedArea) {
+                          handleInputChange('area', trimmedArea)
+                          setAreaInput(trimmedArea)
+                          setAreaOpen(false)
+
+                          // Check if this string matches an existing option
+                          const matchingOption = areaOptions.find(o => o.name.toLowerCase() === trimmedArea.toLowerCase())
+                          if (matchingOption) {
+                            console.log('✅ Typed area matches existing option:', matchingOption)
+                            setSelectedAreaCityId(matchingOption.cityId || null)
+
+                            // Also trigger city/state fetch if needed (similar to object selection)
+                            // This ensures consistency
+                            if (matchingOption.cityId) {
+                              // Logic to fetch city/state is driven by selectedAreaCityId change in useEffect
+                            }
+                          } else {
+                            // Truly new area
+                            setSelectedAreaCityId(null) // Clear selected area cityId
+                          }
+
+                          // If we have a selected city, assume the new area belongs to it
+                          // if (selectedCityId) {
+                          //   setSelectedAreaCityId(selectedCityId)
+                          // }
+
+                          // Create a new area option with the selected cityId and stateId
+                          if (selectedCityId && selectedStateId) {
+                            const newArea = {
+                              id: `new-${Date.now()}`,
+                              name: trimmedArea,
+                              cityId: selectedCityId,
+                              stateId: selectedStateId
+                            }
+                            // Add to options if not already there
+                            setAreaOptions(prev => {
+                              const existing = prev.find(o => o.name.toLowerCase() === trimmedArea.toLowerCase())
+                              if (!existing) {
+                                return [...prev, newArea]
+                              }
+                              return prev
+                            })
+                            setSelectedAreaCityId(selectedCityId)
+                            // Clear any area validation error
+                            setErrors(prev => {
+                              const newErrors = { ...prev }
+                              delete newErrors.area
+                              return newErrors
+                            })
+                          } else {
+                            // If city/state not selected, show error
+                            setErrors(prev => ({
+                              ...prev,
+                              area: 'Please select City and State first'
+                            }))
+                          }
+                        }
                       } else if (newValue) {
                         handleInputChange('area', newValue.name)
                         setAreaInput(newValue.name)
@@ -2120,22 +2837,59 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                       <TextField
                         {...params}
                         fullWidth
-                        placeholder="Search Area"
+                        placeholder={selectedCityId ? "Search Area or type new area name" : "Select City first"}
                         error={!!errors.area}
                         helperText={errors.area}
-                        disabled={loading || readOnly}
+                        disabled={loading || readOnly || !selectedCityId}
                         onBlur={() => {
-                          // Clear input if it doesn't match selected area (enforce selection)
-                          if (areaInput !== formData.area) {
+                          // Only clear if input is empty or doesn't match and is not a new area
+                          const trimmedInput = areaInput.trim()
+                          const trimmedArea = formData.area.trim()
+
+                          // If input is empty, clear everything
+                          if (!trimmedInput) {
                             handleInputChange('area', '')
                             setAreaInput('')
                             setAreaOpen(false)
                             setSelectedAreaCityId(null)
-                            // Clear city and reset state when area is cleared
-                            handleInputChange('city', '')
-                            setCityInput('')
-                            setCityOptions([])
-                            handleInputChange('state', 'Maharashtra')
+                            return
+                          }
+
+                          // If input doesn't match formData.area, update formData.area with the input
+                          // This handles the case where user typed a new area
+                          if (trimmedInput !== trimmedArea) {
+                            // Check if it's a valid new area (has city selected)
+                            if (selectedCityId && selectedStateId) {
+                              handleInputChange('area', trimmedInput)
+                              // Ensure it's in options
+                              setAreaOptions(prev => {
+                                const existing = prev.find(o => o.name.toLowerCase() === trimmedInput.toLowerCase())
+                                if (!existing) {
+                                  return [...prev, {
+                                    id: `new-${Date.now()}`,
+                                    name: trimmedInput,
+                                    cityId: selectedCityId,
+                                    stateId: selectedStateId
+                                  }]
+                                }
+                                return prev
+                              })
+                              setSelectedAreaCityId(selectedCityId)
+                              // Clear validation error
+                              setErrors(prev => {
+                                const newErrors = { ...prev }
+                                delete newErrors.area
+                                return newErrors
+                              })
+                            } else {
+                              // If no city/state selected, clear the area
+                              handleInputChange('area', '')
+                              setAreaInput('')
+                              setErrors(prev => ({
+                                ...prev,
+                                area: 'Please select City and State first'
+                              }))
+                            }
                           }
                         }}
                         InputProps={{
@@ -2148,160 +2902,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         }}
                       />
                     )}
-                  />
-                </Box>
-              </Grid>
-
-            </Grid>
-          </Grid>
-
-          {/* Row 3: City, State, Marital Status, Occupation */}
-          <Grid item xs={12}>
-            <Grid container spacing={3}>
-              <Grid item xs={12} md={3}>
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
-                    City
-                  </Typography>
-                  {formData.area && formData.area.trim() !== '' ? (
-                    // If area is selected, show regular TextField (no dropdown)
-                    <TextField
-                      fullWidth
-                      placeholder="City"
-                      value={formData.city}
-                      onChange={(e) => handleInputChange('city', e.target.value)}
-                      disabled={loading || readOnly}
-                      InputProps={{
-                        endAdornment: (
-                          <InputAdornment position="end" sx={{ pr: 1 }}>
-                            <Search sx={{ color: '#666' }} />
-                          </InputAdornment>
-                        )
-                      }}
-                    />
-                  ) : (
-                    // If no area is selected, show Autocomplete for searching
-                    <Autocomplete
-                      options={cityOptions}
-                      popupIcon={null}
-                      forcePopupIcon={false}
-                      loading={cityLoading}
-                      disabled={loading || readOnly}
-                      getOptionLabel={(opt) => opt.name || ''}
-                      value={cityOptions.find(o => o.name === formData.city) || null}
-                      inputValue={cityInput}
-                      onInputChange={(_, newInput, reason) => {
-                        setCityInput(newInput)
-                        // Clear formData.city when user clears the input
-                        if (reason === 'clear' || !newInput) {
-                          handleInputChange('city', '')
-                        }
-                      }}
-                      onChange={(_, newValue) => {
-                        handleInputChange('city', newValue?.name || '')
-                        // Update input to show selected value
-                        if (newValue) {
-                          setCityInput(newValue.name)
-
-                          // Populate state based on city's stateId
-                          const cityStateId = (newValue as any).stateId
-                          if (cityStateId) {
-                            const fetchStateForCity = async () => {
-                              try {
-                                const { getStates } = await import('../services/referenceService')
-                                const allStates = await getStates()
-                                const matchingState = allStates.find(state => {
-                                  const matches = state.id === cityStateId ||
-                                    state.id?.toUpperCase() === cityStateId.toUpperCase() ||
-                                    String(state.id) === String(cityStateId)
-                                  return matches
-                                })
-                                if (matchingState) {
-                                  handleInputChange('state', matchingState.name)
-                                  console.log(`✅ Found state from manually selected city (stateId: ${cityStateId}):`, matchingState.name)
-                                } else {
-                                  console.warn('⚠️ Could not find state for city stateId:', cityStateId)
-                                }
-                              } catch (e) {
-                                console.error('Error fetching state for manually selected city:', e)
-                              }
-                            }
-                            fetchStateForCity()
-                          } else {
-                            console.warn('⚠️ Selected city does not have stateId')
-                          }
-                        } else {
-                          // Clear state when city is cleared
-                          handleInputChange('state', 'Maharashtra')
-                        }
-                      }}
-                      filterOptions={(options) => options}
-                      disablePortal={false}
-                      slotProps={{
-                        popper: {
-                          style: {
-                            zIndex: 11001
-                          },
-                          placement: 'bottom-start',
-                          modifiers: [
-                            {
-                              name: 'offset',
-                              options: {
-                                offset: [0, 4]
-                              }
-                            },
-                            {
-                              name: 'sameWidth',
-                              enabled: true,
-                              fn: ({ state }) => {
-                                state.styles.popper.width = `${state.rects.reference.width}px`
-                                return state
-                              },
-                              phase: 'beforeWrite',
-                              requires: ['computeStyles']
-                            }
-                          ]
-                        },
-                        paper: {
-                          sx: {
-                            zIndex: 11001,
-                            maxHeight: '300px',
-                            width: 'inherit',
-                            minWidth: '100%'
-                          }
-                        }
-                      }}
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          fullWidth
-                          placeholder="Search City"
-                          disabled={loading || readOnly}
-                          InputProps={{
-                            ...params.InputProps,
-                            endAdornment: (
-                              <InputAdornment position="end" sx={{ pr: 1 }}>
-                                <Search sx={{ color: '#666' }} />
-                              </InputAdornment>
-                            )
-                          }}
-                        />
-                      )}
-                    />
-                  )}
-                </Box>
-              </Grid>
-              <Grid item xs={12} md={3}>
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
-                    State
-                  </Typography>
-                  <TextField
-                    fullWidth
-                    placeholder="State"
-                    value={formData.state}
-                    onChange={(e) => handleInputChange('state', e.target.value)}
-                    disabled={loading || readOnly}
                   />
                 </Box>
               </Grid>
