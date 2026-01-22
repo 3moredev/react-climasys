@@ -1104,8 +1104,23 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
         const maxFiles = 3;
         const maxSizeMB = 150;
         const maxSizeBytes = maxSizeMB * 1024 * 1024;
+        const allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'pdf', 'xls', 'xlsx', 'doc', 'docx'];
 
         const currentTotalCount = (formData.attachments?.length || 0) + (existingDocuments?.length || 0);
+
+        // Check file extensions first
+        const invalidFiles = newFiles.filter(file => {
+            const ext = file.name.split('.').pop()?.toLowerCase();
+            return !ext || !allowedExtensions.includes(ext);
+        });
+
+        if (invalidFiles.length > 0) {
+            setSnackbarSeverity('error');
+            setSnackbarMessage(`Invalid file format. Allowed: Image, PDF, Excel, DOC.`);
+            setSnackbarOpen(true);
+            if (e.target) e.target.value = '';
+            return;
+        }
 
         if (currentTotalCount + newFiles.length > maxFiles) {
             setSnackbarSeverity('error');
@@ -3093,6 +3108,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                         id="fileInput"
                                         type="file"
                                         multiple
+                                        accept=".jpg,.jpeg,.png,.gif,.pdf,.xls,.xlsx,.doc,.docx"
                                         onChange={handleFileChange}
                                         style={{ display: 'none' }}
                                     />
