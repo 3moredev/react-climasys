@@ -321,7 +321,7 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                         <Grid item xs={12} sm={6} spacing={2}>
                             <Box sx={{ mb: 2 }} className='mb-4'>
                                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
-                                    Short Description <span style={{ color: 'red' }}>*</span>
+                                    Short Description <span style={{ color: 'red' }}>*</span> <span className="text-muted">(Displayed on UI)</span>
                                 </Typography>
                                 <TextField
                                     fullWidth

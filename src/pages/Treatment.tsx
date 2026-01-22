@@ -5441,12 +5441,12 @@ export default function Treatment() {
                                             backgroundColor: '#1976d2',
                                             color: 'white',
                                             fontWeight: 'bold',
-                                            fontSize: '11px'
+                                            fontSize: '12px'
                                         }}>
                                             <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Sr.</div>
                                             <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Complaint Description</div>
                                             <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Duration / Comment</div>
-                                            <div style={{ padding: '6px' }}>Action</div>
+                                            <div style={{ padding: '6px' }} className="text-center">Action</div>
                                         </div>
                                         {[...complaintsRows].sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999)).map((row, index) => (
                                             <div key={row.id} style={{
@@ -5929,11 +5929,11 @@ export default function Treatment() {
                                             backgroundColor: '#1976d2',
                                             color: 'white',
                                             fontWeight: 'bold',
-                                            fontSize: '11px'
+                                            fontSize: '12px'
                                         }}>
                                             <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Sr.</div>
                                             <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Provisional Diagnosis</div>
-                                            <div style={{ padding: '6px' }}>Action</div>
+                                            <div style={{ padding: '6px' }} className="text-center">Action</div>
                                         </div>
                                         {[...diagnosisRows].sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999)).map((row, index) => (
                                             <div key={row.id} style={{
@@ -6216,7 +6216,7 @@ export default function Treatment() {
                                             backgroundColor: '#1976d2',
                                             color: 'white',
                                             fontWeight: 'bold',
-                                            fontSize: '11px'
+                                            fontSize: '12px'
                                         }}>
                                             <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Sr.</div>
                                             <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Medicine</div>
@@ -6225,7 +6225,7 @@ export default function Treatment() {
                                             <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>D</div>
                                             <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Days</div>
                                             <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Instruction</div>
-                                            <div style={{ padding: '6px' }}>Action</div>
+                                            <div style={{ padding: '6px' }} className="text-center">Action</div>
                                         </div>
                                         {[...medicineRows].sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999)).map((row, index) => (
                                             <div key={row.id} style={{
@@ -6544,7 +6544,7 @@ export default function Treatment() {
                                             backgroundColor: '#1976d2',
                                             color: 'white',
                                             fontWeight: 'bold',
-                                            fontSize: '11px'
+                                            fontSize: '12px'
                                         }}>
                                             <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Sr.</div>
                                             <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Prescriptions</div>
@@ -6553,7 +6553,7 @@ export default function Treatment() {
                                             <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>D</div>
                                             <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Days</div>
                                             <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Instruction</div>
-                                            <div style={{ padding: '6px' }}>Action</div>
+                                            <div style={{ padding: '6px' }} className="text-center">Action</div>
                                         </div>
                                         {prescriptionRows.map((row, index) => (
                                             <div key={row.id} style={{
@@ -7084,11 +7084,11 @@ export default function Treatment() {
                                             backgroundColor: '#1976d2',
                                             color: 'white',
                                             fontWeight: 'bold',
-                                            fontSize: '11px'
+                                            fontSize: '12px'
                                         }}>
                                             <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Sr.</div>
                                             <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Investigation</div>
-                                            <div style={{ padding: '6px' }}>Action</div>
+                                            <div style={{ padding: '6px' }} className="text-center">Action</div>
                                         </div>
                                         {investigationRows.map((row, index) => (
                                             <div key={row.id} style={{
