@@ -2027,7 +2027,8 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     options={stateOptions}
                     popupIcon={null}
                     forcePopupIcon={false}
-                    disabled={loading || readOnly}
+                    forcePopupIcon={false}
+                    disabled={true}
                     getOptionLabel={(opt) => opt.name || ''}
                     value={stateOptions.find(o => o.name === formData.state || o.id === formData.state) || null}
                     inputValue={stateInput}
