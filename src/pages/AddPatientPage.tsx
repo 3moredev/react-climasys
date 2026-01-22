@@ -155,13 +155,14 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                   if (!prev.find(o => o.id === idStr)) {
                     return [...prev, {
                       id: idStr,
-                      name: areaDetails.areaName,
+                      name: areaDetails.areaName || '',
                       cityId: areaDetails.cityId ? String(areaDetails.cityId) : undefined,
                       stateId: areaDetails.stateId ? String(areaDetails.stateId) : undefined
                     }]
                   }
                   return prev
                 })
+
 
                 // Patch state/city from IDs - BUT DO NOT SET INPUTS TO IDs directly if we want names
                 if (areaDetails.stateId) {
@@ -213,6 +214,8 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
           if (!matchingArea) {
             for (const term of searchTerms) {
               try {
+                // Dynamically import searchAreas if not already available in scope
+                const { searchAreas } = await import('../services/referenceService')
                 const searchResults = await searchAreas(term)
                 matchingArea = searchResults.find(a => {
                   const areaIdNum = parseInt(a.id)
@@ -228,7 +231,18 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
           }
 
           if (matchingArea) {
-            areaName = matchingArea.name
+            // Prioritize the name saved in the patient record if available
+            // This ensures we show "ram nagar" instead of "Anandnagar" if that's what was saved
+            if ((patient as any).area_name) {
+              const savedName = (patient as any).area_name
+              console.log('✅ Using saved area_name from patient record:', savedName)
+              areaName = savedName
+              // Update matchingArea name to match the input we will set
+              matchingArea = { ...matchingArea, name: savedName }
+            } else {
+              areaName = matchingArea.name
+            }
+
             // Preserve cityId and stateId if available from API response
             const areaWithCityId = {
               ...matchingArea,
@@ -938,7 +952,54 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
         }
 
         // Search cities
-        const allResults = await searchCities(searchTerm)
+        let rawResults = await searchCities(searchTerm)
+
+        // Deduplicate and prioritize real names over IDs
+        const cityMap = new Map<string, { id: string; name: string; stateId?: string }>()
+        rawResults.forEach(city => {
+          // Normalize key to uppercase/trim to prevent case duplicates
+          const key = String(city.id).trim().toUpperCase()
+          const existing = cityMap.get(key)
+
+          const isCurrentNameValid = city.name && String(city.name).trim().toUpperCase() !== String(city.id).trim().toUpperCase()
+          const isExistingNameValid = existing && existing.name && String(existing.name).trim().toUpperCase() !== String(existing.id).trim().toUpperCase()
+
+          if (!existing) {
+            cityMap.set(key, city)
+          } else {
+            // Update if current has a valid name and existing does NOT
+            if (!isExistingNameValid && isCurrentNameValid) {
+              cityMap.set(key, city)
+            }
+          }
+        })
+        let allResults = Array.from(cityMap.values())
+          // Final filter: Remove any Remaining entries where Name == ID (case-insensitive)
+          // AND remove heuristic codes: 3 letters or less, all uppercase (e.g. "AHE", "MAH")
+          .filter(c => {
+            if (!c.name || !c.id) return false
+            const n = c.name.trim()
+            const i = c.id.trim()
+            const nameIsId = n.toUpperCase() === i.toUpperCase()
+            const isShortCode = n.length <= 3 && n === n.toUpperCase() && /[A-Z]/.test(n)
+
+            // Remove if it matches ID or looks like a short code
+            return !nameIsId && !isShortCode
+          })
+
+        // CRITICAL FIX: If API returns no results for a full name search (e.g. "Solapur"),
+        // but it existed in our options list (from previous partial search "Sol"),
+        // we should preserve it. The backend search might fail for exact full matches due to case/trimming issues.
+        // We check if any EXISTING option matches the current input (case-insensitive).
+        if (allResults.length === 0 && searchTerm && searchTerm.length > 2) {
+          const existingMatch = cityOptions && cityOptions.find(c =>
+            c.name.toLowerCase() === searchTerm.toLowerCase()
+          )
+          if (existingMatch) {
+            console.log('✅ Preserving existing city option for full match:', existingMatch.name)
+            allResults = [existingMatch]
+          }
+        }
 
         // Always filter by area's cityId if an area is selected
         let filteredResults = allResults
@@ -996,18 +1057,27 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
             const { searchCities } = await import('../services/referenceService')
             // Try multiple common search terms to get more cities
             const searchTerms = ['a', 'e', 'i', 'o', 'u', 'p', 'm', 'd']
-            const allResultsSet = new Set<string>()
-            const allResults: Array<{ id: string; name: string; stateId?: string }> = []
-
             // Search with multiple terms and combine results
+            const cityMap = new Map<string, { id: string; name: string; stateId?: string }>()
+
             for (const term of searchTerms) {
               try {
                 const results = await searchCities(term)
                 results.forEach(city => {
-                  const key = `${city.id}-${city.name}`
-                  if (!allResultsSet.has(key)) {
-                    allResultsSet.add(key)
-                    allResults.push(city)
+                  // Normalize key to uppercase/trim to prevent case duplicates
+                  const key = String(city.id).trim().toUpperCase()
+                  const existing = cityMap.get(key)
+
+                  const isCurrentNameValid = city.name && String(city.name).trim().toUpperCase() !== String(city.id).trim().toUpperCase()
+                  const isExistingNameValid = existing && existing.name && String(existing.name).trim().toUpperCase() !== String(existing.id).trim().toUpperCase()
+
+                  if (!existing) {
+                    cityMap.set(key, city)
+                  } else {
+                    // Update if current has a valid name and existing does NOT
+                    if (!isExistingNameValid && isCurrentNameValid) {
+                      cityMap.set(key, city)
+                    }
                   }
                 })
               } catch (e) {
@@ -2072,14 +2142,21 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     disabled={loading || readOnly || !selectedStateId}
                     isOptionEqualToValue={(option, value) => {
                       if (!option || !value) return false
-                      return option.id === value.id || option.name === value.name
+                      return option.id === value.id || option.name?.toLowerCase() === value.name?.toLowerCase()
                     }}
                     getOptionLabel={(opt) => {
                       if (!opt) return ''
                       if (typeof opt === 'string') return opt
-                      return opt.name || String(opt.id || '')
+                      return opt.name || '' // STRICT: Never show ID
                     }}
-                    value={cityOptions.find(o => o && o.name === formData.city) || null}
+                    renderOption={(props, option) => {
+                      return (
+                        <li {...props} key={option.id}>
+                          {option.name}
+                        </li>
+                      )
+                    }}
+                    value={cityOptions.find(o => o && o.name?.toLowerCase() === formData.city?.toLowerCase()) || null}
                     inputValue={cityInput}
                     onInputChange={(_, newInput, reason) => {
                       setCityInput(newInput)
