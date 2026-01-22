@@ -676,7 +676,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
             }
 
             if (Object.keys(newErrors).length > 0) {
-                setErrors(newErrors);                               
+                setErrors(newErrors);
             }
 
             if (labTestResults.length === 0) {
@@ -692,10 +692,10 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
             });
 
             if (missingIds.size > 0) {
-                setResultErrors(missingIds);                             
+                setResultErrors(missingIds);
             }
 
-            if(missingIds.size > 0 || Object.keys(newErrors).length > 0){
+            if (missingIds.size > 0 || Object.keys(newErrors).length > 0) {
                 setIsLoading(false);
                 return
             }
@@ -1271,18 +1271,20 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                             return (
                                                                 <label
                                                                     key={opt.value}
+                                                                    title={opt.label}
                                                                     style={{
                                                                         display: 'flex',
                                                                         alignItems: 'center',
                                                                         gap: '4px',
                                                                         padding: '4px 2px',
-                                                                        cursor: isAdded ? 'default' : 'pointer',
+                                                                        cursor: isAdded ? 'not-allowed' : 'pointer',
                                                                         fontSize: '12px',
                                                                         border: 'none',
-                                                                        backgroundColor: isChecked && !isAdded ? '#e3f2fd' : 'transparent',
+                                                                        backgroundColor: isAdded ? '#f5f5f5' : 'transparent',
                                                                         borderRadius: '3px',
-                                                                        fontWeight: isChecked ? '600' : '400',
-                                                                        opacity: isAdded ? 0.6 : 1
+                                                                        fontWeight: 400,
+                                                                        opacity: isAdded ? 0.6 : 1,
+                                                                        color: isAdded ? '#999' : '#333'
                                                                     }}
                                                                 >
                                                                     <input
@@ -1304,7 +1306,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                                         }}
                                                                         style={{ margin: 0, maxWidth: 16 }}
                                                                     />
-                                                                    <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{opt.label}</span>
+                                                                    <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{opt.label}{isAdded ? ' (Added)' : ''}</span>
                                                                 </label>
                                                             );
                                                         })}

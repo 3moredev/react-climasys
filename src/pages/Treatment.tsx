@@ -5311,6 +5311,8 @@ export default function Treatment() {
                                                             )}
                                                             {!complaintsLoading && !complaintsError && filteredComplaints.map((opt, index) => {
                                                                 const checked = selectedComplaints.includes(opt.value);
+                                                                // Check if this complaint is already added to the table
+                                                                const isAdded = complaintsRows.some(row => row.value === opt.value);
                                                                 const isFirstUnselected = !checked && index > 0 && selectedComplaints.includes(filteredComplaints[index - 1].value);
 
                                                                 return (
@@ -5330,19 +5332,22 @@ export default function Treatment() {
                                                                                 alignItems: 'center',
                                                                                 gap: '4px',
                                                                                 padding: '4px 2px',
-                                                                                cursor: 'pointer',
+                                                                                cursor: isAdded ? 'not-allowed' : 'pointer',
                                                                                 fontSize: '12px',
                                                                                 border: 'none',
-                                                                                backgroundColor: 'transparent',
+                                                                                backgroundColor: isAdded ? '#f5f5f5' : 'transparent',
                                                                                 borderRadius: '3px',
                                                                                 fontWeight: 400,
-                                                                                minWidth: 0
+                                                                                minWidth: 0,
+                                                                                opacity: isAdded ? 0.6 : 1
                                                                             }}
                                                                         >
                                                                             <input
                                                                                 type="checkbox"
-                                                                                checked={checked}
+                                                                                checked={checked || isAdded}
+                                                                                disabled={isAdded}
                                                                                 onChange={(e) => {
+                                                                                    if (isAdded) return;
                                                                                     setSelectedComplaints(prev => {
                                                                                         if (e.target.checked) {
                                                                                             if (prev.includes(opt.value)) return prev;
@@ -5358,7 +5363,7 @@ export default function Treatment() {
                                                                                 whiteSpace: 'nowrap',
                                                                                 overflow: 'hidden',
                                                                                 textOverflow: 'ellipsis'
-                                                                            }}>{opt.label}</span>
+                                                                            }}>{opt.label}{isAdded ? ' (Added)' : ''}</span>
                                                                         </label>
                                                                     </React.Fragment>
                                                                 );
@@ -5802,6 +5807,16 @@ export default function Treatment() {
                                                     )}
                                                     {!diagnosesLoading && !diagnosesError && filteredDiagnoses.map((opt, index) => {
                                                         const checked = selectedDiagnoses.includes(opt.value);
+                                                        // Check if this diagnosis is already added to the table
+                                                        // Using the same logic as the add handler: check value and diagnosis name
+                                                        const normalizedValue = opt.value?.toLowerCase().trim() || '';
+                                                        const normalizedLabel = opt.label?.toLowerCase().trim() || '';
+                                                        
+                                                        const isAdded = diagnosisRows.some(row => 
+                                                            (row.value && row.value.toLowerCase().trim() === normalizedValue) ||
+                                                            (row.diagnosis && row.diagnosis.toLowerCase().trim() === normalizedLabel)
+                                                        );
+
                                                         const isFirstUnselected = !checked && index > 0 && selectedDiagnoses.includes(filteredDiagnoses[index - 1].value);
 
                                                         return (
@@ -5821,19 +5836,22 @@ export default function Treatment() {
                                                                         alignItems: 'center',
                                                                         gap: '4px',
                                                                         padding: '4px 2px',
-                                                                        cursor: 'pointer',
+                                                                        cursor: isAdded ? 'not-allowed' : 'pointer',
                                                                         fontSize: '12px',
                                                                         border: 'none',
-                                                                        backgroundColor: 'transparent',
+                                                                        backgroundColor: isAdded ? '#f5f5f5' : 'transparent',
                                                                         borderRadius: '3px',
                                                                         fontWeight: 400,
-                                                                        minWidth: 0
+                                                                        minWidth: 0,
+                                                                        opacity: isAdded ? 0.6 : 1
                                                                     }}
                                                                 >
                                                                     <input
                                                                         type="checkbox"
-                                                                        checked={checked}
+                                                                        checked={checked || isAdded}
+                                                                        disabled={isAdded}
                                                                         onChange={(e) => {
+                                                                            if (isAdded) return;
                                                                             setSelectedDiagnoses(prev => {
                                                                                 if (e.target.checked) {
                                                                                     if (prev.includes(opt.value)) return prev;
@@ -5849,7 +5867,7 @@ export default function Treatment() {
                                                                         whiteSpace: 'nowrap',
                                                                         overflow: 'hidden',
                                                                         textOverflow: 'ellipsis'
-                                                                    }}>{opt.label}</span>
+                                                                    }}>{opt.label}{isAdded ? ' (Added)' : ''}</span>
                                                                 </label>
                                                             </React.Fragment>
                                                         );
@@ -6096,6 +6114,12 @@ export default function Treatment() {
                                                     )}
                                                     {!medicinesLoading && !medicinesError && filteredMedicines.map((opt, index) => {
                                                         const checked = selectedMedicines.includes(opt.value);
+                                                        // Check if medicine is already added using short_description mathing the helper logic
+                                                        const shortDesc = opt.short_description?.toLowerCase().trim() || '';
+                                                        const isAdded = medicineRows.some(row => 
+                                                            row.short_description?.toLowerCase().trim() === shortDesc
+                                                        );
+
                                                         const isFirstUnselected = !checked && index > 0 && selectedMedicines.includes(filteredMedicines[index - 1].value);
 
                                                         return (
@@ -6115,19 +6139,22 @@ export default function Treatment() {
                                                                         alignItems: 'center',
                                                                         gap: '4px',
                                                                         padding: '4px 2px',
-                                                                        cursor: 'pointer',
+                                                                        cursor: isAdded ? 'not-allowed' : 'pointer',
                                                                         fontSize: '12px',
                                                                         border: 'none',
-                                                                        backgroundColor: 'transparent',
+                                                                        backgroundColor: isAdded ? '#f5f5f5' : 'transparent',
                                                                         borderRadius: '3px',
                                                                         fontWeight: 400,
-                                                                        minWidth: 0
+                                                                        minWidth: 0,
+                                                                        opacity: isAdded ? 0.6 : 1
                                                                     }}
                                                                 >
                                                                     <input
                                                                         type="checkbox"
-                                                                        checked={checked}
+                                                                        checked={checked || isAdded}
+                                                                        disabled={isAdded}
                                                                         onChange={(e) => {
+                                                                            if (isAdded) return;
                                                                             setSelectedMedicines(prev => {
                                                                                 if (e.target.checked) {
                                                                                     if (prev.includes(opt.value)) return prev;
@@ -6143,7 +6170,7 @@ export default function Treatment() {
                                                                         whiteSpace: 'nowrap',
                                                                         overflow: 'hidden',
                                                                         textOverflow: 'ellipsis'
-                                                                    }}>{opt.label}</span>
+                                                                    }}>{opt.label}{isAdded ? ' (Added)' : ''}</span>
                                                                 </label>
                                                             </React.Fragment>
                                                         );
@@ -6923,6 +6950,12 @@ export default function Treatment() {
                                                     )}
                                                     {!investigationsLoading && !investigationsError && filteredInvestigations.map((opt, index) => {
                                                         const checked = selectedInvestigations.includes(opt.value);
+                                                        // Check if investigation is already added
+                                                        const normalizedOpt = opt.label?.toLowerCase().trim() || '';
+                                                        const isAdded = investigationRows.some(row => 
+                                                            row.investigation?.toLowerCase().trim() === normalizedOpt
+                                                        );
+                                                        
                                                         const isFirstUnselected = !checked && index > 0 && selectedInvestigations.includes(filteredInvestigations[index - 1].value);
                                                         return (
                                                             <React.Fragment key={opt.value}>
@@ -6941,20 +6974,23 @@ export default function Treatment() {
                                                                         alignItems: 'center',
                                                                         gap: '4px',
                                                                         padding: '4px 2px',
-                                                                        cursor: 'pointer',
+                                                                        cursor: isAdded ? 'not-allowed' : 'pointer',
                                                                         fontSize: '12px',
                                                                         border: 'none',
-                                                                        backgroundColor: 'transparent',
+                                                                        backgroundColor: isAdded ? '#f5f5f5' : 'transparent',
                                                                         borderRadius: '3px',
                                                                         fontWeight: 400,
-                                                                        color: '#333',
-                                                                        minWidth: 0
+                                                                        color: isAdded ? '#999' : '#333',
+                                                                        minWidth: 0,
+                                                                        opacity: isAdded ? 0.7 : 1
                                                                     }}
                                                                 >
                                                                     <input
                                                                         type="checkbox"
-                                                                        checked={checked}
+                                                                        checked={checked || isAdded}
+                                                                        disabled={isAdded}
                                                                         onChange={(e) => {
+                                                                            if (isAdded) return;
                                                                             setSelectedInvestigations(prev => {
                                                                                 if (e.target.checked) {
                                                                                     if (prev.includes(opt.value)) return prev;
@@ -6970,7 +7006,7 @@ export default function Treatment() {
                                                                         whiteSpace: 'nowrap',
                                                                         overflow: 'hidden',
                                                                         textOverflow: 'ellipsis'
-                                                                    }}>{opt.label}</span>
+                                                                    }}>{opt.label}{isAdded ? ' (Added)' : ''}</span>
                                                                 </label>
                                                             </React.Fragment>
                                                         );
