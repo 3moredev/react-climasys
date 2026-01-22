@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   Dialog,
   DialogTitle,
@@ -8,15 +8,12 @@ import {
   TextField,
   Grid,
   FormControl,
-  InputLabel,
   Select,
   MenuItem,
   Box,
   Typography,
   IconButton,
-  Alert,
   InputAdornment,
-  Checkbox,
   FormControlLabel,
   Switch,
   CircularProgress,
@@ -30,6 +27,7 @@ import { patientService, QuickRegistrationRequest } from '../services/patientSer
 import { appointmentService, AppointmentRequest } from '../services/appointmentService'
 import AddReferralPopup, { ReferralData } from '../components/AddReferralPopup'
 import GlobalSnackbar from '../components/GlobalSnackbar'
+import { searchAreas } from '../services/referenceService'
 
 interface AddPatientPageProps {
   open: boolean
@@ -42,7 +40,6 @@ interface AddPatientPageProps {
 }
 
 export default function AddPatientPage({ open, onClose, onSave, doctorId, clinicId, patientId, readOnly = false }: AddPatientPageProps) {
-  console.log('AddPatientPage rendered with props:', { open, patientId, readOnly, doctorId, clinicId });
 
   const [formData, setFormData] = useState({
     lastName: '',
@@ -74,7 +71,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
   const [genderOptions, setGenderOptions] = useState<{ id: string; name: string }[]>([{ id: 'F', name: 'Female' }, { id: 'M', name: 'Male' }])
   const [occupationOptions, setOccupationOptions] = useState<{ id: string; name: string }[]>([])
   const [maritalStatusOptions, setMaritalStatusOptions] = useState<{ id: string; name: string }[]>([])
-  const [areaOptions, setAreaOptions] = useState<{ id: string; name: string; cityId?: string; stateId?: string }[]>([])
+  const [areaOptions, setAreaOptions] = useState<{ id: string; name: string; cityId?: string | undefined; stateId?: string | undefined }[]>([])
   const [areaInput, setAreaInput] = useState('')
   const [areaLoading, setAreaLoading] = useState(false)
   const [areaOpen, setAreaOpen] = useState(false)
@@ -85,14 +82,12 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
   const [cityOpen, setCityOpen] = useState(false)
   const [stateOptions, setStateOptions] = useState<{ id: string; name: string }[]>([])
   const [stateInput, setStateInput] = useState('')
-  const [stateLoading, setStateLoading] = useState(false)
   const [stateOpen, setStateOpen] = useState(false)
   const [selectedStateId, setSelectedStateId] = useState<string | null>(null)
   const [selectedCityId, setSelectedCityId] = useState<string | null>(null)
   const [referByOptions, setReferByOptions] = useState<{ id: string; name: string }[]>([])
   const [snackbarOpen, setSnackbarOpen] = useState(false)
   const [snackbarMessage, setSnackbarMessage] = useState('')
-  const dobInputRef = useRef<HTMLInputElement>(null)
 
   // Store doctorId and clinicId from props
   const [currentDoctorId, setCurrentDoctorId] = useState<string>('')
@@ -105,27 +100,15 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
   const [isSearchingReferral, setIsSearchingReferral] = useState(false)
   const [selectedDoctor, setSelectedDoctor] = useState<any>(null)
 
-  // State to manage DoB input focus for placeholder visibility
-  const [dobFocused, setDobFocused] = useState(false)
-
   // Update doctorId and clinicId when props change
   useEffect(() => {
     if (doctorId) {
       setCurrentDoctorId(doctorId)
-      console.log('=== DOCTOR ID RECEIVED ===')
-      console.log('Doctor ID from props:', doctorId)
     }
     if (clinicId) {
       setCurrentClinicId(clinicId)
-      console.log('=== CLINIC ID RECEIVED ===')
-      console.log('Clinic ID from props:', clinicId)
     }
   }, [doctorId, clinicId])
-
-  // Log when open prop changes
-  useEffect(() => {
-    console.log('AddPatientPage - open prop changed:', open, 'patientId:', patientId, 'readOnly:', readOnly);
-  }, [open, patientId, readOnly]);
 
   // Fetch patient data when patientId is provided
   useEffect(() => {
@@ -133,20 +116,15 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
       const fetchPatientData = async () => {
         try {
           setLoading(true)
-          console.log('📥 Fetching patient data for ID:', patientId)
-          // The backend accepts both id (number) and folder_no (string) formats
-          const patient: any = await patientService.getPatient(patientId)
-          console.log('📦 Patient data received:', patient)
 
-          // Convert date_of_birth to dayjs object for DateField
+          const patient: any = await patientService.getPatient(patientId)
+
           let dobDate = null
           if (patient.date_of_birth) {
             try {
               const parsedDate = dayjs(patient.date_of_birth)
               if (parsedDate.isValid()) {
-                // DateField component expects dayjs object, not Date object
                 dobDate = patient.date_of_birth as any // Keep as dayjs object
-                console.log('📅 Parsed DOB:', parsedDate.format('DD/MM/YYYY'), 'from:', patient.date_of_birth)
               } else {
                 console.warn('⚠️ Invalid date format:', patient.date_of_birth)
               }
@@ -224,7 +202,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                   cityId: areaDetails.cityId,
                   stateId: areaDetails.stateId
                 }
-                console.log('✅ Found area via getAreaById:', matchingArea.name)
               }
             } catch (e) {
               console.warn('getAreaById failed, falling back to search:', e)
@@ -241,7 +218,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                   return areaIdNum === patient.area_id || areaIdNum === parseInt(String(patient.area_id))
                 })
                 if (matchingArea) {
-                  console.log(`✅ Found area with term "${term}":`, matchingArea.name)
                   break
                 }
               } catch (e) {
@@ -281,7 +257,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     const areaDetails = await getAreaDetails(areaName, 1)
                     if (areaDetails?.stateName) {
                       stateNameFromArea = areaDetails.stateName
-                      console.log(`✅ Got stateName from area details for loaded patient:`, stateNameFromArea)
                     }
                   } catch (e) {
                     console.warn('Could not get area details for stateName:', e)
@@ -302,7 +277,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         return matches
                       }) || null
                       if (matchingCity) {
-                        console.log(`✅ Found city for loaded area (cityId: ${areaCityId}):`, matchingCity.name)
                         break
                       }
                     } catch (e) {
@@ -328,7 +302,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                       setFormData(prev => ({ ...prev, state: stateNameFromArea }))
                       // Delay setting state ID to ensure city ID is set first (prevents race condition in useEffect)
                       setTimeout(() => setSelectedStateId(areaStateId), 100)
-                      console.log(`✅ Using stateName from area details for loaded patient (stateId: ${areaStateId}):`, stateNameFromArea)
                     } else {
                       // Fallback: try to get from getStates
                       const allStates = await getStates()
@@ -341,7 +314,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                       if (matchingState && matchingState.name && matchingState.name !== matchingState.id) {
                         setFormData(prev => ({ ...prev, state: matchingState.name }))
                         setTimeout(() => setSelectedStateId(matchingState.id), 100)
-                        console.log(`✅ Found state from getStates for loaded patient (stateId: ${areaStateId}):`, matchingState.name)
                       } else {
                         console.warn('⚠️ Could not find state name for area stateId:', areaStateId)
                         // Fallback: try to get state from city if available
@@ -356,7 +328,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                           if (cityStateMatch && cityStateMatch.name && cityStateMatch.name !== cityStateMatch.id) {
                             setFormData(prev => ({ ...prev, state: cityStateMatch.name }))
                             setTimeout(() => setSelectedStateId(cityStateMatch.id), 100)
-                            console.log(`✅ Found state from city fallback (stateId: ${cityStateId}):`, cityStateMatch.name)
                           }
                         }
                       }
@@ -378,7 +349,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     if (matchingState && matchingState.name && matchingState.name !== matchingState.id) {
                       setFormData(prev => ({ ...prev, state: matchingState.name }))
                       setTimeout(() => setSelectedStateId(matchingState.id), 100)
-                      console.log(`✅ Found state from city for loaded patient (stateId: ${cityStateId}):`, matchingState.name)
                     }
                   } catch (e) {
                     console.error('Error fetching state from city:', e)
@@ -398,7 +368,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
               // Store cityId for filtering cities
               if (areaWithCityId.cityId) {
                 setSelectedAreaCityId(areaWithCityId.cityId)
-                console.log('📋 Stored area cityId for filtering:', areaWithCityId.cityId)
               }
             }, 0)
           } else {
@@ -411,7 +380,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
 
           if (targetCityId) {
             try {
-              console.log('🔍 Resolving City Name for ID:', targetCityId, 'Existing Name:', cityName)
               const { getCitiesByState, searchCities } = await import('../services/referenceService')
               let matchingCity = null
 
@@ -430,7 +398,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     c.id === String(targetCityId) ||
                     c.name.toLowerCase() === String(targetCityId).toLowerCase()
                   )
-                  if (matchingCity) console.log('✅ Found city via state list:', matchingCity.name)
                 } catch (e) {
                   console.warn('Failed to fetch cities by state:', e)
                 }
@@ -438,7 +405,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
 
               // Strategy 2: Explicit search by ID if not found in state list
               if (!matchingCity) {
-                console.log('⚠️ City not found in state list, trying direct search by ID...')
                 try {
                   // searchCities usually takes a query string. Passing ID might work if backend supports it, 
                   // otherwise we depend on it returning something relevant for the ID string.
@@ -448,7 +414,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     c.id === targetCityId ||
                     c.id === String(targetCityId)
                   )
-                  if (matchingCity) console.log('✅ Found city via direct search:', matchingCity.name)
                 } catch (e) {
                   console.warn('Failed direct city search:', e)
                 }
@@ -463,7 +428,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                   setCityOptions([matchingCity])
                   setSelectedCityId(matchingCity.id)
                   setFormData(prev => ({ ...prev, city: matchingCity.name })) // Sync formData for Autocomplete value match
-                  console.log('📋 Set city to:', matchingCity.name)
                 }, 0)
               } else {
                 console.warn('❌ Could not resolve City Name for ID:', targetCityId)
@@ -536,14 +500,10 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
               setAreaInput(areaName)
             }
 
-            console.log('✅ Patient data mapped to form successfully')
-            console.log('📍 Area name:', areaName, 'Area input:', areaInput)
           } catch (mappingError) {
-            console.error('❌ Error mapping patient data:', mappingError)
             throw mappingError
           }
         } catch (error: any) {
-          console.error('❌ Error fetching patient data:', error)
           setSnackbarMessage(error.message || 'Failed to load patient data')
           setSnackbarOpen(true)
         } finally {
@@ -580,16 +540,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
       return String(raw).trim().charAt(0) // ensure max length 1
     })()
 
-    console.log('=== MAPPING FORM DATA TO API REQUEST ===')
-    console.log('Selected Area:', selectedArea)
-    console.log('Form Data Area:', formData.area)
-    console.log('Area Options:', areaOptions)
-    console.log('Selected City:', selectedCity)
-    console.log('Selected Gender:', selectedGender)
-    console.log('Selected Marital Status:', selectedMaritalStatus)
-    console.log('Selected Occupation:', selectedOccupation)
-    console.log('Selected Refer By:', selectedReferBy)
-
     // Derive cityId/stateId from selected area/city to match DB values
     const derivedCityId =
       selectedArea?.cityId ||
@@ -609,7 +559,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
       if (selectedArea.id.startsWith('new-')) {
         // For new areas, try to search if it exists in the database
         // This handles the case where user typed an area that might already exist
-        console.log('⚠️ New area detected, searching for existing area:', selectedArea.name)
         // Note: We'll need to search before submission, but for now log a warning
         // The actual search should happen in handleSave before calling mapFormDataToApiRequest
         areaIdValue = undefined // Will be set after search in handleSave
@@ -648,10 +597,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
       doctorEmail: formData.referralEmail || '',
       clinicId: currentClinicId
     }
-
-    console.log('=== FINAL API REQUEST ===')
-    console.log('API Request Object:', apiRequest)
-    console.log('API Request JSON:', JSON.stringify(apiRequest, null, 2))
 
     return apiRequest
   }
@@ -859,7 +804,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
               // so it doesn't disappear or become invalid.
               const nameToUse = formData.city || cityInput || ''
               if (nameToUse) {
-                console.log('⚠️ Preserving selected city not found in state list:', nameToUse)
                 cities.push({
                   id: selectedCityId,
                   name: nameToUse,
@@ -894,10 +838,8 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
     const fetchAreas = async () => {
       try {
         setAreaLoading(true)
-        console.log('🔍 Searching areas with query:', areaInput, 'cityId:', selectedCityId)
         const { searchAreas } = await import('../services/referenceService')
         const results = await searchAreas(areaInput)
-        console.log('✅ Area search results:', results)
         if (active) {
           // Map results to include cityId and stateId from API response (matching database structure)
           let mappedResults = results.map((item: any) => ({
@@ -948,7 +890,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
       // Clear options when input is empty
       if (active) {
         setAreaOptions([])
-        console.log('🧹 Cleared area options (empty input)')
       }
       return () => {
         active = false
@@ -1007,12 +948,8 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
               String(city.id) === String(areaCityId)
             return matches
           })
-          console.log('🔍 Filtering cities by area cityId:', areaCityId)
-          console.log('📊 Search term:', searchTerm, 'Total results:', allResults.length, 'Filtered:', filteredResults.length)
-          console.log('📋 Filtered cities:', filteredResults)
         } else {
           if (formData.area && formData.area.trim() !== '') {
-            console.log('ℹ️ Area present but no City ID bound yet (likely new/custom area). Showing matching cities for input.')
           } else {
             console.log('⚠️ No area selected, showing all cities')
           }
@@ -1020,7 +957,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
 
         if (active) {
           if (filteredResults.length === 0 && selectedCityId && cityInput) {
-            console.log('⚠️ Preserving selected city in fetchCities search:', cityInput)
             filteredResults.push({
               id: selectedCityId,
               name: cityInput,
@@ -1078,7 +1014,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
               }
             }
 
-            console.log('📋 Total cities found:', allResults.length)
 
             // Filter cities based on selected area's cityId
             let filteredResults = allResults
@@ -1088,13 +1023,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                   city.id?.toUpperCase() === selectedAreaCityId.toUpperCase() ||
                   String(city.id) === String(selectedAreaCityId)
                 return matches
-              })
-              console.log('🔍 Filtered cities for area (cityId:', selectedAreaCityId, '):', filteredResults)
-              console.log('📊 Filter details:', {
-                selectedAreaCityId,
-                totalCities: allResults.length,
-                filteredCount: filteredResults.length,
-                sampleCityIds: allResults.slice(0, 5).map(c => c.id)
               })
             } else if (formData.area) {
               // Try to get cityId from areaOptions
@@ -1108,17 +1036,14 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     String(city.id) === String(areaCityId)
                   return matches
                 })
-                console.log('🔍 Loaded cities for area (from options, cityId:', areaCityId, '):', filteredResults)
               } else {
                 // If no cityId, show all cities (fallback)
                 filteredResults = allResults
-                console.log('⚠️ No cityId found for area, showing all cities')
               }
             }
 
             if (active) {
               if (filteredResults.length === 0 && selectedCityId && cityInput) {
-                console.log('⚠️ Preserving selected city in loadCitiesForArea:', cityInput)
                 filteredResults.push({
                   id: selectedCityId,
                   name: cityInput,
@@ -1216,16 +1141,10 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
       const { getReferralDoctors } = await import('../services/referralService')
       const doctors = await getReferralDoctors(1) // languageId = 1
 
-      console.log('=== REFERRAL DOCTORS SEARCH DEBUG ===')
-      console.log('Search term:', cleanSearchTerm)
-      console.log('All doctors from API:', doctors)
-
       // Filter doctors by name containing the search term
       const filteredDoctors = doctors.filter(doctor =>
         doctor.doctorName.toLowerCase().includes(cleanSearchTerm.toLowerCase())
       )
-
-      console.log('Filtered doctors:', filteredDoctors)
 
       // Store the full doctor data for later use
       setReferralNameOptions(filteredDoctors.map(doctor => ({
@@ -1233,13 +1152,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
         name: doctor.doctorName,
         fullData: doctor // Store the complete doctor object
       })))
-
-      console.log('Mapped results for dropdown:', filteredDoctors.map(doctor => ({
-        id: doctor.rdId.toString(),
-        name: doctor.doctorName,
-        fullData: doctor
-      })))
-      console.log('=== END REFERRAL DOCTORS SEARCH DEBUG ===')
     } catch (error) {
       console.error('Error searching referral names:', error)
       setReferralNameOptions([])
@@ -1295,49 +1207,12 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
   }
 
   const handleSave = async () => {
-    console.log('=== FORM SUBMISSION STARTED ===')
-    console.log('Form validation result:', validateForm())
-    console.log('Current Doctor ID:', currentDoctorId)
-    console.log('Current Clinic ID:', currentClinicId)
-
     if (!validateForm()) {
-      console.log('Form validation failed, stopping submission')
       return
     }
 
-    console.log('=== FORM DATA BEFORE PROCESSING ===')
-    console.log('Raw form data:', formData)
-    console.log('Form data keys:', Object.keys(formData))
-    console.log('Form data values:', Object.values(formData))
-
-    // Log individual field values
-    console.log('=== INDIVIDUAL FIELD VALUES ===')
-    // console.log('Family Folder:', formData.familyFolder)
-    console.log('First Name:', formData.firstName)
-    console.log('Middle Name:', formData.middleName)
-    console.log('Last Name:', formData.lastName)
-    console.log('Age:', formData.age)
-    console.log('Date of Birth:', formData.dateOfBirth)
-    console.log('Gender:', formData.gender)
-    console.log('Area:', formData.area)
-    console.log('City:', formData.city)
-    console.log('State:', formData.state)
-    console.log('Marital Status:', formData.maritalStatus)
-    console.log('Occupation:', formData.occupation)
-    console.log('Address:', formData.address)
-    console.log('Mobile Number:', formData.mobileNumber)
-    console.log('Email:', formData.email)
-    console.log('Referred By:', formData.referredBy)
-    console.log('Referral Name:', formData.referralName)
-    console.log('Referral Contact:', formData.referralContact)
-    console.log('Referral Email:', formData.referralEmail)
-    console.log('Referral Address:', formData.referralAddress)
-    console.log('Add to Today\'s Appointment:', formData.addToTodaysAppointment)
-
     setLoading(true)
     try {
-      console.log('=== CALLING PATIENT REGISTRATION API ===')
-      console.log('Starting patient registration API call...')
 
       // Local variable to store the resolved area ID to avoid state update race conditions
       let resolvedAreaId: number | undefined = undefined;
@@ -1357,7 +1232,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
       }
 
       if (formData.area && (!selectedArea || selectedArea.id.startsWith('new-'))) {
-        console.log('🔍 Searching for area before submission:', formData.area)
         try {
           const { searchAreas } = await import('../services/referenceService')
           const searchResults = await searchAreas(formData.area)
@@ -1369,7 +1243,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
           )
 
           if (matchingArea) {
-            console.log('✅ Found existing area:', matchingArea)
             const parsedId = parseInt(matchingArea.id)
             if (!isNaN(parsedId)) {
               resolvedAreaId = parsedId
@@ -1389,7 +1262,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
             setSelectedAreaCityId(matchingArea.cityId || null)
           } else {
             // Area doesn't exist - create it
-            console.log('🆕 Area not found, creating new area:', formData.area)
             if (!selectedCityId || !selectedStateId) {
               setErrors(prev => ({
                 ...prev,
@@ -1412,7 +1284,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
               )
 
               if (createResult.success && createResult.areaId) {
-                console.log('✅ Area created successfully:', createResult)
 
                 const newId = createResult.areaId
                 resolvedAreaId = newId
@@ -1440,12 +1311,10 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                   const existingCityOption = cityOptions.find(c => c.id === selectedCityId)
                   if (existingCityOption && existingCityOption.name && existingCityOption.name !== selectedCityId) {
                     // We have a name, ensure it's displayed
-                    console.log(`✅ Correcting City Display: ${selectedCityId} -> ${existingCityOption.name}`)
                     handleInputChange('city', existingCityOption.name)
                     setCityInput(existingCityOption.name)
                   } else {
                     // If finding in options failed, we might need to fetch it to get the real name
-                    console.log(`⚠️ City Name not found in options for ID ${selectedCityId}, attempting fetch...`)
                     try {
                       const { searchCities } = await import('../services/referenceService')
                       // Search by ID to get the specific city details
@@ -1453,7 +1322,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                       const foundCity = cityResults.find(c => c.id === selectedCityId)
 
                       if (foundCity && foundCity.name) {
-                        console.log(`✅ Fetched City Name: ${selectedCityId} -> ${foundCity.name}`)
                         handleInputChange('city', foundCity.name)
                         setCityInput(foundCity.name)
 
@@ -1474,7 +1342,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
 
                 // Update formData.area to match exactly and force display
                 if (newArea.name) {
-                  console.log(`✅ Setting Area Input to: ${newArea.name}`)
                   handleInputChange('area', newArea.name)
                   setAreaInput(newArea.name)
                   // Force the autocomplete to close and acknowledge the value
@@ -1500,7 +1367,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                 return
               }
             } catch (createError) {
-              console.error('Error creating area:', createError)
               setErrors(prev => ({
                 ...prev,
                 area: 'Error creating area. Please try again or select an existing area.'
@@ -1512,7 +1378,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
             }
           }
         } catch (searchError) {
-          console.error('Error searching for area:', searchError)
           setErrors(prev => ({
             ...prev,
             area: 'Error searching for area. Please select an existing area from the list.'
@@ -1530,23 +1395,13 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
       // Explicitly set the areaId if we resolved it locally
       // This overrides whatever mapFormDataToApiRequest found (which might be stale due to state updates)
       if (resolvedAreaId !== undefined) {
-        console.log(`🔒 Applying resolved areaId ${resolvedAreaId} to request (overriding ${apiRequest.areaId})`)
         apiRequest.areaId = resolvedAreaId
       }
 
       // Call the patient registration API
       const response = await patientService.quickRegister(apiRequest)
-
-      console.log('=== API RESPONSE ===')
-      console.log('API Response:', response)
-
       // Check for successful registration based on backend response format
       if (response.SAVE_STATUS === 1 || response.success) {
-        console.log('=== PATIENT REGISTRATION SUCCESSFUL ===')
-        console.log('Patient ID:', response.ID)
-        console.log('Save Status:', response.SAVE_STATUS)
-        console.log('Message:', response.message)
-
         // Create patient data for callback
         const patientData = {
           ...formData,
@@ -1557,22 +1412,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
           clinicId: currentClinicId,
           apiResponse: response
         }
-
-        console.log('=== FINAL PATIENT DATA TO BE SAVED ===')
-        console.log('Complete patient data object:', patientData)
-        console.log('Patient ID:', patientData.patientId)
-        console.log('Full Name:', patientData.fullName)
-        console.log('Registration Date:', patientData.registrationDate)
-        console.log('All patient data keys:', Object.keys(patientData))
-        console.log('All patient data values:', Object.values(patientData))
-
-        // Check if we need to book an appointment for today
         if (formData.addToTodaysAppointment && response.ID) {
-          console.log('=== BOOKING APPOINTMENT FOR TODAY ===')
-          console.log('Add to Today\'s Appointments is enabled')
-          console.log('Patient ID for appointment:', response.ID)
-          console.log('Doctor ID:', currentDoctorId)
-          console.log('Clinic ID:', currentClinicId)
 
           try {
             const now = new Date();
@@ -1590,21 +1430,8 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
               reportsReceived: false, // Default value
               inPerson: true // Default to in-person appointment
             };
-
-            console.log('=== APPOINTMENT DATA ===')
-            console.log('Appointment data:', appointmentData)
-
             const appointmentResult = await appointmentService.bookAppointment(appointmentData);
-            console.log('=== APPOINTMENT BOOKING RESULT ===')
-            console.log('Appointment booking result:', appointmentResult)
 
-            if (appointmentResult.success) {
-              console.log('=== APPOINTMENT BOOKED SUCCESSFULLY ===')
-              console.log('Appointment booked for patient:', response.ID)
-            } else {
-              console.error('=== APPOINTMENT BOOKING FAILED ===')
-              console.error('Appointment booking failed:', appointmentResult.error || 'Unknown error')
-            }
           } catch (appointmentError) {
             console.error('=== ERROR BOOKING APPOINTMENT ===')
             console.error('Error booking appointment:', appointmentError)
@@ -1616,16 +1443,8 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
           console.log('Patient ID available:', !!response.ID)
         }
 
-        console.log('=== CALLING onSave CALLBACK ===')
-        console.log('onSave function exists:', !!onSave)
-        console.log('onSave function type:', typeof onSave)
-
         if (onSave) {
-          console.log('Calling onSave with patient data...')
           onSave(patientData)
-          console.log('onSave called successfully')
-        } else {
-          console.log('No onSave callback provided')
         }
 
         // Show success snackbar
@@ -1635,45 +1454,22 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
         setSnackbarMessage("Saved Successfully!");
         setSnackbarOpen(true);
 
-        console.log('=== SNACKBAR SET ===')
-        console.log('Snackbar message:', successMessage)
-        console.log('Snackbar open:', true)
-
-        // Reset form immediately but keep dialog open briefly to show snackbar
-        console.log('=== RESETTING FORM ===')
         resetForm()
-        console.log('Form reset completed')
 
-        // Close dialog after a short delay to allow snackbar to be visible
         setTimeout(() => {
-          console.log('=== CLOSING DIALOG ===')
           onClose()
-          console.log('Dialog closed')
-
-          console.log('=== FORM SUBMISSION COMPLETED SUCCESSFULLY ===')
         }, 1000) // 1 second delay to ensure snackbar is visible
       } else {
-        console.error('=== PATIENT REGISTRATION FAILED ===')
-        console.error('Save Status:', response.SAVE_STATUS)
-        console.error('Error:', response.error || response.message)
         throw new Error(response.error || response.message || 'Patient registration failed')
       }
     } catch (error) {
-      console.error('=== ERROR DURING PATIENT REGISTRATION ===')
-      console.error('Error saving patient:', error)
-      console.error('Error type:', typeof error)
-      console.error('Error message:', error instanceof Error ? error.message : 'Unknown error')
-      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace')
 
       // Show error snackbar
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       setSnackbarMessage(`Patient registration failed: ${errorMessage}`)
       setSnackbarOpen(true)
     } finally {
-      console.log('=== FINALLY BLOCK ===')
-      console.log('Setting loading to false')
       setLoading(false)
-      console.log('Loading state updated')
     }
   }
 
@@ -1737,7 +1533,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
       show={snackbarOpen}
       message={snackbarMessage}
       onClose={() => {
-        console.log('Snackbar onClose called');
         setSnackbarOpen(false);
       }}
       autoHideDuration={5000}
@@ -1834,7 +1629,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
             <Grid container spacing={3}>
               <Grid item xs={12} md={3}>
                 <Box sx={{ mb: 2 }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                     Patient ID
                   </Typography>
                   <TextField
@@ -1852,7 +1647,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
               </Grid>
               <Grid item xs={12} md={3}>
                 <Box sx={{ mb: 2 }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                     First Name <span style={{ color: 'red' }}>*</span>
                   </Typography>
                   <TextField
@@ -1868,7 +1663,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
               </Grid>
               <Grid item xs={12} md={3}>
                 <Box sx={{ mb: 2 }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                     Middle Name
                   </Typography>
                   <TextField
@@ -1882,7 +1677,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
               </Grid>
               <Grid item xs={12} md={3}>
                 <Box sx={{ mb: 2 }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                     Last Name <span style={{ color: 'red' }}>*</span>
                   </Typography>
                   <TextField
@@ -1904,7 +1699,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
             <Grid container spacing={3}>
               <Grid item xs={12} md={3}>
                 <Box sx={{ mb: 2 }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                     Mobile Number
                   </Typography>
                   <TextField
@@ -1927,7 +1722,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                 <Box sx={{ mb: 2 }}>
                   <Box sx={{ display: 'flex', gap: 1 }}>
                     <Box sx={{ width: '50% !important' }}>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                         DoB(DD-MM-YYYY) <span style={{ color: 'red' }}>*</span>
                       </Typography>
                       <TextField
@@ -2022,7 +1817,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                       />
                     </Box>
                     <Box sx={{ width: '50% !important' }}>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                         Age (Completed)
                       </Typography>
                       <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
@@ -2120,7 +1915,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
               </Grid>
               <Grid item xs={12} md={3}>
                 <Box sx={{ mb: 2 }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                     Gender <span style={{ color: 'red' }}>*</span>
                   </Typography>
                   <FormControl fullWidth error={!!errors.gender} variant="outlined">
@@ -2155,14 +1950,13 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
               </Grid>
               <Grid item xs={12} md={3}>
                 <Box sx={{ mb: 2 }}>
-                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
-                    State*
+                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
+                    State <span style={{ color: 'red' }}>*</span>
                   </Typography>
                   <Autocomplete
                     options={stateOptions}
                     popupIcon={null}
                     forcePopupIcon={false}
-                    loading={stateLoading}
                     disabled={loading || readOnly}
                     getOptionLabel={(opt) => opt.name || ''}
                     value={stateOptions.find(o => o.name === formData.state || o.id === formData.state) || null}
@@ -2267,7 +2061,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
             <Grid container spacing={3}>
               <Grid item xs={12} md={3}>
                 <Box sx={{ mb: 2 }}>
-                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                     City
                   </Typography>
                   <Autocomplete
@@ -2386,7 +2180,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
               </Grid>
               <Grid item xs={12} md={3}>
                 <Box sx={{ mb: 2 }}>
-                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                     Area <span style={{ color: 'red' }}>*</span>
                   </Typography>
                   <Autocomplete
@@ -2405,7 +2199,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     value={formData.area && areaInput === formData.area ? (areaOptions.find(o => o.name === formData.area) || formData.area) : null}
                     inputValue={areaInput || ''}
                     onInputChange={(event, newInput, reason) => {
-                      console.log('📝 Area input changed:', { newInput, reason, event: event?.type })
                       setAreaInput(newInput || '')
                       // Clear formData.area when user clears the input or when input doesn't match selected area
                       if (reason === 'clear' || !newInput) {
@@ -2424,7 +2217,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                       }
                     }}
                     onChange={(event, newValue, reason) => {
-                      console.log('✅ Area value changed:', { newValue, reason })
                       if (typeof newValue === 'string') {
                         // User typed a new area name
                         const trimmedArea = newValue.trim()
@@ -2436,7 +2228,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                           // Check if this string matches an existing option
                           const matchingOption = areaOptions.find(o => o.name.toLowerCase() === trimmedArea.toLowerCase())
                           if (matchingOption) {
-                            console.log('✅ Typed area matches existing option:', matchingOption)
                             setSelectedAreaCityId(matchingOption.cityId || null)
 
                             // Also trigger city/state fetch if needed (similar to object selection)
@@ -2507,7 +2298,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                                 const areaDetails = await getAreaDetails(newValue.name, 1)
                                 if (areaDetails?.stateName) {
                                   stateNameFromArea = areaDetails.stateName
-                                  console.log(`✅ Got stateName from area details:`, stateNameFromArea)
                                 }
                               } catch (e) {
                                 console.warn('Could not get area details for stateName:', e)
@@ -2526,9 +2316,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                                     String(city.id) === String(areaCityId)
                                   return matches
                                 }) || null
-                                if (matchingCity) {
-                                  console.log(`✅ Found city by direct cityId search (${areaCityId}):`, matchingCity.name)
-                                }
+
                               } catch (e) {
                                 console.warn(`Direct cityId search failed:`, e)
                               }
@@ -2561,9 +2349,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                                   return matches
                                 }) || null
 
-                                if (matchingCity) {
-                                  console.log(`✅ Found city from comprehensive search (cityId: ${areaCityId}):`, matchingCity.name)
-                                }
+
                               }
 
                               if (matchingCity) {
@@ -2587,7 +2373,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                                 // First, use stateName from area details if available (this comes from state_translations.state_name)
                                 if (stateNameFromArea) {
                                   handleInputChange('state', stateNameFromArea)
-                                  console.log(`✅ Using stateName from area details (stateId: ${areaStateId}):`, stateNameFromArea)
                                 } else {
                                   // Fallback: try to get from getStates
                                   const allStates = await getStates()
@@ -2599,9 +2384,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                                   })
                                   if (matchingState && matchingState.name && matchingState.name !== matchingState.id) {
                                     handleInputChange('state', matchingState.name)
-                                    console.log(`✅ Found state from getStates (stateId: ${areaStateId}):`, matchingState.name)
                                   } else {
-                                    console.warn('⚠️ Could not find state name for area stateId:', areaStateId)
                                     // Fallback: try to get state from city if available
                                     if (matchingCity?.stateId) {
                                       const cityStateId = matchingCity.stateId
@@ -2613,7 +2396,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                                       })
                                       if (cityStateMatch && cityStateMatch.name && cityStateMatch.name !== cityStateMatch.id) {
                                         handleInputChange('state', cityStateMatch.name)
-                                        console.log(`✅ Found state from city fallback (stateId: ${cityStateId}):`, cityStateMatch.name)
                                       }
                                     }
                                   }
@@ -2635,7 +2417,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                                   })
                                   if (matchingState && matchingState.name && matchingState.name !== matchingState.id) {
                                     handleInputChange('state', matchingState.name)
-                                    console.log(`✅ Found state from city (stateId: ${cityStateId}):`, matchingState.name)
                                   }
                                 } catch (e) {
                                   console.error('Error fetching state from city:', e)
@@ -2652,7 +2433,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                           }
                         }
                         fetchCityAndStateForArea()
-                        console.log('🔍 Area selected with cityId:', areaCityId, 'stateId:', areaStateId)
                       } else if (reason === 'clear') {
                         handleInputChange('area', '')
                         setAreaInput('')
@@ -2669,13 +2449,9 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     filterOptions={(options) => options}
                     open={areaOpen && areaOptions.length > 0 && !areaLoading}
                     onOpen={() => {
-                      // Always allow opening when user clicks/focuses on the field
-                      // This allows users to change the selected area
-                      console.log('🔓 Area autocomplete opened, options:', areaOptions.length)
                       setAreaOpen(true)
                     }}
-                    onClose={(event, reason) => {
-                      console.log('🔒 Area autocomplete closed:', reason)
+                    onClose={() => {
                       setAreaOpen(false)
                     }}
                     ListboxProps={{
@@ -2792,7 +2568,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
               </Grid>
               <Grid item xs={12} md={3}>
                 <Box sx={{ mb: 2 }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                     Marital Status
                   </Typography>
                   <FormControl fullWidth variant="outlined">
@@ -2829,7 +2605,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
               </Grid>
               <Grid item xs={12} md={3}>
                 <Box sx={{ mb: 2 }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                     Occupation
                   </Typography>
                   <FormControl fullWidth variant="outlined">
@@ -2872,7 +2648,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
             <Grid container spacing={3}>
               <Grid item xs={12} md={3}>
                 <Box sx={{ mb: 2 }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                     Address
                   </Typography>
                   <TextField
@@ -2886,7 +2662,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
               </Grid>
               <Grid item xs={12} md={3}>
                 <Box sx={{ mb: 2 }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                     E-Mail ID
                   </Typography>
                   <TextField
@@ -2902,7 +2678,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
               </Grid>
               <Grid item xs={12} md={3}>
                 <Box sx={{ mb: 2 }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                     Referred By
                   </Typography>
                   <FormControl fullWidth>
@@ -2939,7 +2715,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
               </Grid>
               <Grid item xs={12} md={3}>
                 <Box sx={{ mb: 2 }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                     Referral Name
                   </Typography>
                   {isDoctorReferral() ? (
@@ -3030,15 +2806,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                                   setReferralNameSearch(option.name)
                                   setReferralNameOptions([])
 
-                                  console.log('=== DOCTOR SELECTED ===')
-                                  console.log('Selected doctor data:', (option as any).fullData)
-                                  console.log('Updated form data:', {
-                                    referralName: option.name,
-                                    referralContact: (option as any).fullData?.doctorMob || '',
-                                    referralEmail: (option as any).fullData?.doctorMail || '',
-                                    referralAddress: (option as any).fullData?.doctorAddress || ''
-                                  })
-                                  console.log('=== END DOCTOR SELECTED ===')
                                 }}
                                 sx={{
                                   padding: '8px 12px',
@@ -3075,7 +2842,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
             <Grid container spacing={3}>
               <Grid item xs={12} md={3}>
                 <Box sx={{ mb: 2 }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                     Referral Contact
                   </Typography>
                   <TextField
@@ -3102,7 +2869,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
               </Grid>
               <Grid item xs={12} md={3}>
                 <Box sx={{ mb: 2 }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                     Referral Email
                   </Typography>
                   <TextField
@@ -3124,7 +2891,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
               </Grid>
               <Grid item xs={12} md={3}>
                 <Box sx={{ mb: 2 }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                     Referral Address
                   </Typography>
                   <TextField
@@ -3147,7 +2914,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                 <Grid item xs={12} md={3}>
                   <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', height: '100%' }}>
                     <Box>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                         Add to Today’s Appointments
                       </Typography>
                       <FormControlLabel
@@ -3214,8 +2981,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
       open={showReferralPopup}
       onClose={() => setShowReferralPopup(false)}
       onSave={(referralData: ReferralData) => {
-        // Handle save new referral logic here
-        console.log('New referral data:', referralData)
+        // Handle save new referral logic here        
         // Refresh referral name options after saving
         if (isDoctorReferral()) {
           handleReferralNameSearch(referralData.doctorName || '')
