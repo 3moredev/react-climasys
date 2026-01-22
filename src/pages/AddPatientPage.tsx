@@ -2447,10 +2447,23 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                             // Step 2: Fetch State using area's stateId (must match exactly from database)
                             // Priority: 1) stateName from area details (state_translations.state_name), 2) from getStates, 3) fallback to city
                             if (areaStateId) {
+                              const isOthers = (name: string) => ['OTH', 'OTHERS', 'OTHER'].includes(name.toUpperCase())
+                              const currentState = formData.state
+
+                              // Function to safely update state
+                              const safeSetState = (newState: string) => {
+                                // If current state is valid (e.g. Maharashtra) and new state is "Others", DON'T update
+                                if (currentState && !isOthers(currentState) && isOthers(newState)) {
+                                  console.log(`🛡️ Preventing state overwrite: Keeping "${currentState}" instead of "${newState}"`)
+                                  return
+                                }
+                                handleInputChange('state', newState)
+                              }
+
                               try {
-                                // First, use stateName from area details if available (this comes from state_translations.state_name)
+                                // First, use stateName from area details if available
                                 if (stateNameFromArea) {
-                                  handleInputChange('state', stateNameFromArea)
+                                  safeSetState(stateNameFromArea)
                                 } else {
                                   // Fallback: try to get from getStates
                                   const allStates = await getStates()
@@ -2461,7 +2474,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                                     return matches
                                   })
                                   if (matchingState && matchingState.name && matchingState.name !== matchingState.id) {
-                                    handleInputChange('state', matchingState.name)
+                                    safeSetState(matchingState.name)
                                   } else {
                                     // Fallback: try to get state from city if available
                                     if (matchingCity?.stateId) {
@@ -2473,7 +2486,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                                         return matches
                                       })
                                       if (cityStateMatch && cityStateMatch.name && cityStateMatch.name !== cityStateMatch.id) {
-                                        handleInputChange('state', cityStateMatch.name)
+                                        safeSetState(cityStateMatch.name)
                                       }
                                     }
                                   }
@@ -2500,14 +2513,15 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                                   console.error('Error fetching state from city:', e)
                                 }
                               } else {
-                                handleInputChange('state', 'Maharashtra')
+                                // Keep existing if valid, else default
+                                if (!formData.state) handleInputChange('state', 'Maharashtra')
                               }
                             }
                           } catch (e) {
                             console.error('Error fetching city and state for area:', e)
                             handleInputChange('city', '')
                             setCityInput('')
-                            handleInputChange('state', 'Maharashtra')
+                            if (!formData.state) handleInputChange('state', 'Maharashtra')
                           }
                         }
                         fetchCityAndStateForArea()
