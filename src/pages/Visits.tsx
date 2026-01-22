@@ -401,7 +401,7 @@ export default function Visits() {
             </Grid>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setOpenDialog(false)}>Cancel</Button>
+            <Button onClick={() => setOpenDialog(false)}>Close</Button>
             <Button type="submit" variant="contained">
               Add to Visit
             </Button>
