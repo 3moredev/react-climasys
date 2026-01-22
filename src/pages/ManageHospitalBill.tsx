@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { CalendarToday } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
+import { IconButton } from "@mui/material";
+import SearchInput from "../components/SearchInput";
 import { patientService, Patient } from "../services/patientService";
 
 export default function ManageHospitalBill() {
@@ -303,14 +305,13 @@ export default function ManageHospitalBill() {
                 </label>
                 <div className="d-flex align-items-center" style={{ gap: '8px', overflow: 'visible' }}>
                     <div className="position-relative" ref={searchRef} style={{ flex: 1, maxWidth: '500px' }}>
-                        <input
-                            type="text"
-                            placeholder="Search with Patient ID / Patient Name / IPD Number"
-                            className="form-control"
+                        <SearchInput
                             value={searchTerm}
-                            onChange={(e) => handleSearchChange(e.target.value)}
+                            onChange={(val) => handleSearchChange(val)}
+                            onClear={() => handleSearchChange("")}
+                            placeholder="Search with Patient ID / Patient Name / IPD Number"
                             ref={searchInputRef}
-                            style={{ borderWidth: "2px", height: "38px", fontFamily: "'Roboto', sans-serif", fontWeight: 500 }}
+                            inputStyle={{ borderWidth: "2px", height: "38px", fontFamily: "'Roboto', sans-serif", fontWeight: 500 }}
                         />
 
                         {showDropdown && (

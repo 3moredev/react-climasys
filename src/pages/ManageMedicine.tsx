@@ -7,6 +7,7 @@ import { doctorService, Doctor } from "../services/doctorService";
 import { useSession } from "../store/hooks/useSession";
 import GlobalSnackbar from "../components/GlobalSnackbar";
 import DeleteConfirmationDialog from "../components/DeleteConfirmationDialog";
+import SearchInput from "../components/SearchInput";
 
 // Medicine type definition
 type Medicine = {
@@ -524,20 +525,21 @@ export default function ManageMedicine() {
 
       {/* Search and Action Section */}
       <div className="search-section">
-        <div className="search-input-wrapper">
-          <input
-            type="text"
-            placeholder="Enter Short Description, Medicine Name, Priority"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            onKeyPress={(e) => {
-              if (e.key === 'Enter') {
-                handleSearch();
-              }
-            }}
-          />
-          <Search className="search-icon" style={{ fontSize: '20px' }} />
-        </div>
+        <SearchInput
+          value={searchTerm}
+          onChange={setSearchTerm}
+          onClear={() => {
+            setSearchTerm('');
+            setCurrentPage(1);
+          }}
+          placeholder="Enter Short Description, Medicine Name, Priority"
+          onKeyPress={(e) => {
+            if (e.key === 'Enter') {
+              handleSearch();
+            }
+          }}
+          className="search-input-wrapper"
+        />
 
         <button className="btn-primary-custom" onClick={handleAddNew}>
           <label>Add New Medicine</label>

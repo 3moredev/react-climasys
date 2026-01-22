@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
-import { Edit, Close } from "@mui/icons-material";
+import { Edit } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
+import SearchInput from "../components/SearchInput";
 import AdmissionCardDialog from "../components/AdmissionCardDialog";
 import { patientService, Patient } from "../services/patientService";
 import { admissionService, AdmissionCardDTO, AdmissionCardsRequest, SearchAdmissionCardsRequest } from "../services/admissionService";
@@ -43,17 +44,17 @@ export default function ManageAdmissionCard() {
 
     // Dynamic data from API
     const [admittedPatients, setAdmittedPatients] = useState<AdmissionCard[]>([]);
-    
+
     // Pagination state
     const [currentPage, setCurrentPage] = useState<number>(1);
     const [pageSize, setPageSize] = useState<number>(10);
-    
+
     // Selected admission card for first table (from search)
     const [selectedAdmissionCard, setSelectedAdmissionCard] = useState<AdmissionCard | null>(null);
-    
+
     // Selected patient from search
     const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
-    
+
     // Enable "New Admission Card" button only when patient is selected but not in admitted list
     const [enableNewAdmissionCard, setEnableNewAdmissionCard] = useState<boolean>(false);
 
@@ -234,16 +235,16 @@ export default function ManageAdmissionCard() {
         setSearchTerm(patientFullName);
         setSearchResults([]);
         setShowDropdown(false);
-        
+
         // Store selected patient
         setSelectedPatient(patient);
-        
+
         // Don't enable/disable button here - wait for Search button click
         // Clear any previous admission card selection
         setSelectedAdmissionCard(null);
         setEnableNewAdmissionCard(false);
         setSearchPerformed(false); // Enable search button when patient is selected
-        
+
         console.log("Selected patient:", patient);
     };
 
@@ -272,7 +273,7 @@ export default function ManageAdmissionCard() {
             };
 
             const response = await admissionService.searchAdmissionCards(searchParams);
-            
+
             console.log('Search Admission Cards API Response:', response);
 
             if (response.success && response.data && response.data.length > 0) {
@@ -300,17 +301,17 @@ export default function ManageAdmissionCard() {
             } else {
                 // No results found from search API
                 setSelectedAdmissionCard(null);
-                
+
                 // Check if selected patient exists in the List of Admitted Patients
                 if (selectedPatient) {
                     const patientFullName = `${selectedPatient.first_name} ${selectedPatient.middle_name || ''} ${selectedPatient.last_name}`.replace(/\s+/g, ' ').trim().toLowerCase();
                     const isInAdmittedList = admittedPatients.some(card => {
                         const cardName = card.patientName.trim().toLowerCase();
-                        return cardName === patientFullName || 
-                               cardName.includes(patientFullName) ||
-                               patientFullName.includes(cardName);
+                        return cardName === patientFullName ||
+                            cardName.includes(patientFullName) ||
+                            patientFullName.includes(cardName);
                     });
-                    
+
                     // Enable button only if patient is NOT in the admitted list
                     setEnableNewAdmissionCard(!isInAdmittedList);
                     console.log("Patient in admitted list:", isInAdmittedList);
@@ -351,39 +352,39 @@ export default function ManageAdmissionCard() {
         setShowEmptyTable(false);
     };
 
-// Helper function to convert any date string to dd-mmm-yy
-const formatDateToDDMMMYY = (dateString: string): string => {
-    if (!dateString) return "";
+    // Helper function to convert any date string to dd-mmm-yy
+    const formatDateToDDMMMYY = (dateString: string): string => {
+        if (!dateString) return "";
 
-    // If already in dd-mmm-yy format
-    if (/^\d{2}-[A-Za-z]{3}-\d{2}$/.test(dateString)) {
-        return dateString.toUpperCase();
-    }
+        // If already in dd-mmm-yy format
+        if (/^\d{2}-[A-Za-z]{3}-\d{2}$/.test(dateString)) {
+            return dateString.toUpperCase();
+        }
 
-    // If in yyyy-mm-dd format
-    if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
-        const date = new Date(dateString);
-        if (!isNaN(date.getTime())) {
-            const day = String(date.getDate()).padStart(2, '0');
+        // If in yyyy-mm-dd format
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+            const date = new Date(dateString);
+            if (!isNaN(date.getTime())) {
+                const day = String(date.getDate()).padStart(2, '0');
+                const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                const month = months[date.getMonth()];
+                const year = String(date.getFullYear()).slice(-2);
+                return `${day}-${month}-${year}`;
+            }
+        }
+
+        // ⭐ NEW: Handle ISO string yyyy-mm-ddTHH:mm:ss.sssZ
+        const isoDate = new Date(dateString);
+        if (!isNaN(isoDate.getTime())) {
+            const day = String(isoDate.getDate()).padStart(2, '0');
             const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            const month = months[date.getMonth()];
-            const year = String(date.getFullYear()).slice(-2);
+            const month = months[isoDate.getMonth()];
+            const year = String(isoDate.getFullYear()).slice(-2);
             return `${day}-${month}-${year}`;
         }
-    }
 
-    // ⭐ NEW: Handle ISO string yyyy-mm-ddTHH:mm:ss.sssZ
-    const isoDate = new Date(dateString);
-    if (!isNaN(isoDate.getTime())) {
-        const day = String(isoDate.getDate()).padStart(2, '0');
-        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        const month = months[isoDate.getMonth()];
-        const year = String(isoDate.getFullYear()).slice(-2);
-        return `${day}-${month}-${year}`;
-    }
-
-    return dateString;
-};
+        return dateString;
+    };
 
     const handleEdit = async (patient: AdmissionCard) => {
         if (!patient.patientId) {
@@ -396,7 +397,7 @@ const formatDateToDDMMMYY = (dateString: string): string => {
 
         try {
             setLoadingAdmissionData(true);
-            
+
             // Fetch patient details to get gender_id and age_given
             let patientDetails: Patient | null = null;
             try {
@@ -407,22 +408,22 @@ const formatDateToDDMMMYY = (dateString: string): string => {
                 console.warn('Could not fetch patient details:', patientError);
                 setEditingPatientDetails(null);
             }
-            
+
             // Fetch full admission data by patient ID
             const response = await admissionService.getAdmissionDataByPatientId(patient.patientId);
-            
+
             console.log('Admission Data by Patient ID Response:', response);
-            
+
             if (response.success && response.data && response.data.length > 0) {
                 // Get the first (most recent) admission record
                 const admissionData = response.data[0];
-                
+
                 // Map API response fields to dialog format
                 // Split admission_time if it exists (format might be "HH:MM" or "HH:MM AM/PM")
                 let timeOfAdmissionHH = "";
                 let timeOfAdmissionMM = "";
                 let timeOfAdmissionAMPM = "AM";
-                
+
                 if (admissionData.admission_time) {
                     const timeStr = String(admissionData.admission_time);
                     // Handle different time formats
@@ -439,7 +440,7 @@ const formatDateToDDMMMYY = (dateString: string): string => {
                         }
                     }
                 }
-                
+
                 // Merge admission data with existing patient card data
                 // Format dates from yyyy-mm-dd to dd-mmm-yy for display
                 const mergedAdmissionData = {
@@ -470,13 +471,13 @@ const formatDateToDDMMMYY = (dateString: string): string => {
                     lastAdvanceDate: formatDateToDDMMMYY(admissionData.last_advance_date || ""),
                     dateOfDischarge: formatDateToDDMMMYY(patient.dischargeDate || admissionData.discharge_date || ""),
                 };
-                console.log("Date formated",formatDateToDDMMMYY(admissionData.admission_date));
+                console.log("Date formated", formatDateToDDMMMYY(admissionData.admission_date));
                 // Update the patient object with merged data
                 const updatedPatient: AdmissionCard = {
                     ...patient,
                     // Keep existing fields but allow API data to override if needed
                 };
-                
+
                 setEditingPatient(updatedPatient);
                 setFullAdmissionData(mergedAdmissionData);
                 setShowAdmissionCardDialog(true);
@@ -549,10 +550,10 @@ const formatDateToDDMMMYY = (dateString: string): string => {
             };
 
             const response = await admissionService.getAdmissionCards(params);
-            
+
             // Console log the response as requested
             console.log('Admission Cards API Response:', response);
-            
+
             if (response.success && response.data) {
                 // Map the API response to AdmissionCard format with sr numbers
                 const mappedCards: AdmissionCard[] = response.data.map((card: AdmissionCardDTO, index: number) => ({
@@ -568,7 +569,7 @@ const formatDateToDDMMMYY = (dateString: string): string => {
                     company: card.company || '--',
                     advance: card.advanceRs || 0.00
                 }));
-                
+
                 setAdmittedPatients(mappedCards);
             } else {
                 console.error('Failed to fetch admission cards:', response.error);
@@ -742,9 +743,9 @@ const formatDateToDDMMMYY = (dateString: string): string => {
 
             {/* Page Title */}
             <div className="mb-4">
-                <h2 style={{ 
-                    fontWeight: 'bold', 
-                    fontSize: '1.5rem', 
+                <h2 style={{
+                    fontWeight: 'bold',
+                    fontSize: '1.5rem',
                     color: '#212121',
                     marginBottom: '0'
                 }}>
@@ -755,14 +756,13 @@ const formatDateToDDMMMYY = (dateString: string): string => {
             {/* Search and Action Section */}
             <div className="d-flex mb-3 align-items-center" style={{ gap: '8px', flexWrap: 'wrap', overflow: 'visible' }}>
                 <div className="position-relative" ref={searchRef}>
-                    <input
-                        type="text"
-                        placeholder="Search by Patient ID/Name/ContactNumber"
-                        className="form-control"
+                    <SearchInput
                         value={searchTerm}
-                        onChange={(e) => handleSearchChange(e.target.value)}
+                        onChange={(val) => handleSearchChange(val)}
+                        onClear={() => handleSearchChange("")}
+                        placeholder="Search by Patient ID/Name/ContactNumber"
                         ref={searchInputRef}
-                        style={{ borderWidth: "2px", height: "38px", fontFamily: "'Roboto', sans-serif", fontWeight: 500, minWidth: "300px", width: "400px" }}
+                        inputStyle={{ borderWidth: "2px", height: "38px", fontFamily: "'Roboto', sans-serif", fontWeight: 500, minWidth: "300px", width: "400px" }}
                     />
 
                     {/* Search Dropdown */}
@@ -985,9 +985,9 @@ const formatDateToDDMMMYY = (dateString: string): string => {
 
             {/* List of Admitted Patients Section */}
             <div className="mt-4">
-                <h5 style={{ 
-                    fontWeight: '600', 
-                    fontSize: '1.1rem', 
+                <h5 style={{
+                    fontWeight: '600',
+                    fontSize: '1.1rem',
                     color: '#212121',
                     marginBottom: '16px'
                 }}>
@@ -1144,13 +1144,13 @@ const formatDateToDDMMMYY = (dateString: string): string => {
                     name: editingPatient.patientName,
                     id: editingPatient.patientId, // Patient ID from admission card API response
                     gender: editingPatientDetails?.gender_id?.toString() || undefined, // Gender ID as string from fetched patient details
-                    age: editingPatientDetails?.age_given || undefined // Age from fetched patient details
+                    age: editingPatientDetails?.age_given ? parseInt(editingPatientDetails.age_given.toString(), 10) : undefined // Age from fetched patient details
                 } : selectedPatient ? {
                     // When creating new, use selected patient data
                     name: `${selectedPatient.first_name} ${selectedPatient.middle_name || ''} ${selectedPatient.last_name}`.replace(/\s+/g, ' ').trim(),
                     id: selectedPatient.id.toString(),
                     gender: selectedPatient.gender_id.toString(),
-                    age: selectedPatient.age_given
+                    age: selectedPatient.age_given ? parseInt(selectedPatient.age_given.toString(), 10) : undefined
                 } : undefined}
                 disabled={!!editingPatient}
                 admissionData={editingPatient ? (fullAdmissionData || {

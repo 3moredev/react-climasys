@@ -7,6 +7,7 @@ import DeleteConfirmationDialog from '../components/DeleteConfirmationDialog'
 import prescriptionCategoryService, {
   PrescriptionCategory as PrescriptionCategoryApiModel,
 } from '../services/prescriptionCategoryService'
+import SearchInput from '../components/SearchInput'
 
 type CategoryRow = {
   id: string
@@ -556,19 +557,20 @@ export default function PrescriptionCategory() {
 
       {/* Search Section */}
       <div className="search-section">
-        <div className="search-input-wrapper">
-          <input
-            type="text"
-            value={searchDraft}
-            onChange={(event) => {
-              const value = event.target.value
-              setSearchDraft(value)
-              setSearchQuery(value)
-            }}
-            placeholder="Enter Category / Category Description"
-          />
-          <Search className="search-icon" style={{ fontSize: '20px' }} />
-        </div>
+        <SearchInput
+          value={searchDraft}
+          onChange={(value) => {
+            setSearchDraft(value)
+            setSearchQuery(value)
+          }}
+          onClear={() => {
+            setSearchDraft('')
+            setSearchQuery('')
+            setCurrentPage(1)
+          }}
+          placeholder="Enter Category / Category Description"
+          className="search-input-wrapper"
+        />
         <button className="btn-icon" onClick={handleRefresh} title="Refresh">
           <Refresh style={{ fontSize: '20px' }} />
         </button>

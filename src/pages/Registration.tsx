@@ -3,6 +3,7 @@ import { Box, Typography, Paper, TextField, Button, Alert, Grid, FormControl, In
 import { PersonAdd, Person, Phone, Email, LocationOn } from '@mui/icons-material'
 import { useSelector } from 'react-redux'
 import { RootState } from '../store'
+import ClearableTextField from '../components/ClearableTextField'
 
 export default function RegistrationPage() {
   const { user } = useSelector((state: RootState) => state.auth)
@@ -111,12 +112,12 @@ export default function RegistrationPage() {
         <Box component="form" onSubmit={submit}>
           <Grid container spacing={3}>
             <Grid item xs={12} sm={6}>
-              <TextField
+              <ClearableTextField
                 fullWidth
                 label="First Name"
                 placeholder="Enter first name"
                 value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
+                onChange={setFirstName}
                 required
                 InputProps={{
                   startAdornment: <Person sx={{ mr: 1, color: '#3a6f9f' }} />
@@ -126,12 +127,12 @@ export default function RegistrationPage() {
             </Grid>
 
             <Grid item xs={12} sm={6}>
-              <TextField
+              <ClearableTextField
                 fullWidth
                 label="Last Name"
                 placeholder="Enter last name"
                 value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
+                onChange={setLastName}
                 required
                 InputProps={{
                   startAdornment: <Person sx={{ mr: 1, color: '#3a6f9f' }} />
@@ -141,12 +142,12 @@ export default function RegistrationPage() {
             </Grid>
 
             <Grid item xs={12} sm={6}>
-              <TextField
+              <ClearableTextField
                 fullWidth
                 label="Mobile Number"
                 placeholder="Enter mobile number"
                 value={mobile}
-                onChange={(e) => setMobile(e.target.value)}
+                onChange={setMobile}
                 required
                 type="tel"
                 InputProps={{
@@ -157,12 +158,12 @@ export default function RegistrationPage() {
             </Grid>
 
             <Grid item xs={12} sm={6}>
-              <TextField
+              <ClearableTextField
                 fullWidth
                 label="Email Address"
                 placeholder="Enter email address"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={setEmail}
                 type="email"
                 InputProps={{
                   startAdornment: <Email sx={{ mr: 1, color: '#3a6f9f' }} />

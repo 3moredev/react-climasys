@@ -84,6 +84,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
     const [success, setSuccess] = useState<string | null>(null);
     const [snackbarOpen, setSnackbarOpen] = useState(false);
     const [snackbarMessage, setSnackbarMessage] = useState('');
+    const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>('success');
 
 
     // New states for referral name search and popup
@@ -1098,11 +1099,55 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const newFiles = Array.from(e.target.files || []);
-        setFormData(prev => {
-            const existingFiles = prev.attachments || [];
-            const combinedFiles = [...existingFiles, ...newFiles];
-            return { ...prev, attachments: combinedFiles.slice(0, 3) };
+        if (newFiles.length === 0) return;
+
+        const maxFiles = 3;
+        const maxSizeMB = 150;
+        const maxSizeBytes = maxSizeMB * 1024 * 1024;
+        const allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'pdf', 'xls', 'xlsx', 'doc', 'docx'];
+
+        const currentTotalCount = (formData.attachments?.length || 0) + (existingDocuments?.length || 0);
+
+        // Check file extensions first
+        const invalidFiles = newFiles.filter(file => {
+            const ext = file.name.split('.').pop()?.toLowerCase();
+            return !ext || !allowedExtensions.includes(ext);
         });
+
+        if (invalidFiles.length > 0) {
+            setSnackbarSeverity('error');
+            setSnackbarMessage(`Invalid file format. Allowed: Image, PDF, Excel, DOC.`);
+            setSnackbarOpen(true);
+            if (e.target) e.target.value = '';
+            return;
+        }
+
+        if (currentTotalCount + newFiles.length > maxFiles) {
+            setSnackbarSeverity('error');
+            setSnackbarMessage(`Total files (uploaded + existing) cannot exceed ${maxFiles}.`);
+            setSnackbarOpen(true);
+            if (e.target) e.target.value = '';
+            return;
+        }
+
+        const attachedSize = (formData.attachments || []).reduce((sum, f) => sum + f.size, 0);
+        const existingSize = (existingDocuments || []).reduce((sum, doc) => sum + (doc.fileSize || 0), 0);
+        const newFilesSize = newFiles.reduce((sum, f) => sum + f.size, 0);
+
+        if (attachedSize + existingSize + newFilesSize > maxSizeBytes) {
+            setSnackbarSeverity('error');
+            setSnackbarMessage(`Total file size exceeds the ${maxSizeMB}MB limit.`);
+            setSnackbarOpen(true);
+            if (e.target) e.target.value = '';
+            return;
+        }
+
+        setFormData(prev => ({
+            ...prev,
+            attachments: [...(prev.attachments || []), ...newFiles]
+        }));
+
+        if (e.target) e.target.value = '';
     };
 
     const removeFile = (indexToRemove: number) => {
@@ -3063,6 +3108,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                         id="fileInput"
                                         type="file"
                                         multiple
+                                        accept=".jpg,.jpeg,.png,.gif,.pdf,.xls,.xlsx,.doc,.docx"
                                         onChange={handleFileChange}
                                         style={{ display: 'none' }}
                                     />
@@ -3188,6 +3234,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                                                 stack: error instanceof Error ? error.stack : 'No stack trace',
                                                                                 response: error.response || 'No response object'
                                                                             });
+                                                                            setSnackbarSeverity('error');
                                                                             setSnackbarMessage(`Error deleting document: ${error instanceof Error ? error.message : 'Unknown error'}`);
                                                                             setSnackbarOpen(true);
                                                                         } finally {
@@ -3462,7 +3509,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                 sx={{
                     zIndex: 99999, // Ensure snackbar appears above everything
                     '& .MuiSnackbarContent-root': {
-                        backgroundColor: '#4caf50',
+                        backgroundColor: snackbarSeverity === 'error' ? '#d32f2f' : '#4caf50',
                         color: 'white',
                         fontWeight: 'bold'
                     }
