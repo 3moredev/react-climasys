@@ -127,8 +127,7 @@ export const diagnosisService = {
           item.diagnosis_description ||
           item.id ||
           `diagnosis_${idx}`;
-        const label =
-          item.diagnosis_description ||
+        const label =          
           item.short_description ||
           value;
 
