@@ -4098,27 +4098,24 @@ export default function AppointmentTable() {
             {/* Search + Filter */}
             <div className="d-flex mb-3 align-items-center" style={{ gap: '8px', overflow: 'visible' }}>
                 <div className="position-relative" ref={searchRef}>
-                    <input
-                        type="text"
-                        placeholder="Search by Patient ID/Name/ContactNumber"
-                        className="form-control"
+                    <SearchInput
                         value={searchTerm}
-                        onChange={(e) => handleSearchChange(e.target.value)}
+                        onChange={(val) => handleSearchChange(val)}
+                        onClear={() => {
+                            handleSearchChange('');
+                            searchInputRef.current?.focus();
+                        }}
+                        placeholder="Search by Patient ID/Name/ContactNumber"
                         ref={searchInputRef}
-                        style={{ borderWidth: "2px", height: "38px", fontFamily: "'Roboto', sans-serif", fontWeight: 500, minWidth: "300px", width: "400px", paddingRight: "40px" }}
+                        inputStyle={{
+                            borderWidth: "2px",
+                            height: "38px",
+                            fontFamily: "'Roboto', sans-serif",
+                            fontWeight: 500,
+                            minWidth: "300px",
+                            width: "400px"
+                        }}
                     />
-                    {searchTerm && (
-                        <button
-                            className="btn btn-link position-absolute top-50 translate-middle-y text-decoration-none text-muted"
-                            style={{ right: '10px', zIndex: 10, padding: 0, width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                            onClick={() => {
-                                handleSearchChange('');
-                                searchInputRef.current?.focus();
-                            }}
-                        >
-                            <i className="fas fa-times"></i>
-                        </button>
-                    )}
 
                     {/* Search Dropdown */}
                     {showDropdown && searchMenuPosition && (
