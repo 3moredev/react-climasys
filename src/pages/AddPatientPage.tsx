@@ -807,9 +807,34 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
         const { getCitiesByState } = await import('../services/referenceService')
         const cities = await getCitiesByState(selectedStateId)
         if (!cancelled) {
+          // Normalization logic: Deduplicate and filter out IDs/codes
+          const normalizeCities = (rawResults: any[]) => {
+            const cityMap = new Map<string, { id: string; name: string; stateId?: string }>()
+            rawResults.forEach(city => {
+              const key = String(city.id).trim().toUpperCase()
+              const existing = cityMap.get(key)
+              const isCurrentNameValid = city.name && String(city.name).trim().toUpperCase() !== String(city.id).trim().toUpperCase()
+              const isExistingNameValid = existing && existing.name && String(existing.name).trim().toUpperCase() !== String(existing.id).trim().toUpperCase()
+
+              if (!existing || (!isExistingNameValid && isCurrentNameValid)) {
+                cityMap.set(key, city)
+              }
+            })
+            return Array.from(cityMap.values()).filter(c => {
+              if (!c.name || !c.id) return false
+              const n = c.name.trim()
+              const i = c.id.trim()
+              const nameIsId = n.toUpperCase() === i.toUpperCase()
+              const isShortCode = n.length <= 3 && n === n.toUpperCase() && /[A-Z]/.test(n)
+              return !nameIsId && !isShortCode
+            })
+          }
+
+          let processedCities = normalizeCities(cities)
+
           // If formData.city exists, try to match it
           if (formData.city) {
-            const matchingCity = cities.find(c => c.name === formData.city || c.id === formData.city)
+            const matchingCity = processedCities.find(c => c.name === formData.city || c.id === formData.city)
             if (matchingCity) {
               setCityInput(matchingCity.name)
               setSelectedCityId(matchingCity.id)
@@ -819,7 +844,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
               // so it doesn't disappear or become invalid.
               const nameToUse = formData.city || cityInput || ''
               if (nameToUse) {
-                cities.push({
+                processedCities.push({
                   id: selectedCityId,
                   name: nameToUse,
                   stateId: selectedStateId || undefined
@@ -829,7 +854,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
               }
             }
           }
-          setCityOptions(cities)
+          setCityOptions(processedCities)
         }
       } catch (e) {
         console.error('Failed to load cities for state', e)
@@ -954,38 +979,30 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
         // Search cities
         let rawResults = await searchCities(searchTerm)
 
-        // Deduplicate and prioritize real names over IDs
-        const cityMap = new Map<string, { id: string; name: string; stateId?: string }>()
-        rawResults.forEach(city => {
-          // Normalize key to uppercase/trim to prevent case duplicates
-          const key = String(city.id).trim().toUpperCase()
-          const existing = cityMap.get(key)
+        // Deduplicate and filter using common logic
+        const normalizeCities = (rawResults: any[]) => {
+          const cityMap = new Map<string, { id: string; name: string; stateId?: string }>()
+          rawResults.forEach(city => {
+            const key = String(city.id).trim().toUpperCase()
+            const existing = cityMap.get(key)
+            const isCurrentNameValid = city.name && String(city.name).trim().toUpperCase() !== String(city.id).trim().toUpperCase()
+            const isExistingNameValid = existing && existing.name && String(existing.name).trim().toUpperCase() !== String(existing.id).trim().toUpperCase()
 
-          const isCurrentNameValid = city.name && String(city.name).trim().toUpperCase() !== String(city.id).trim().toUpperCase()
-          const isExistingNameValid = existing && existing.name && String(existing.name).trim().toUpperCase() !== String(existing.id).trim().toUpperCase()
-
-          if (!existing) {
-            cityMap.set(key, city)
-          } else {
-            // Update if current has a valid name and existing does NOT
-            if (!isExistingNameValid && isCurrentNameValid) {
+            if (!existing || (!isExistingNameValid && isCurrentNameValid)) {
               cityMap.set(key, city)
             }
-          }
-        })
-        let allResults = Array.from(cityMap.values())
-          // Final filter: Remove any Remaining entries where Name == ID (case-insensitive)
-          // AND remove heuristic codes: 3 letters or less, all uppercase (e.g. "AHE", "MAH")
-          .filter(c => {
+          })
+          return Array.from(cityMap.values()).filter(c => {
             if (!c.name || !c.id) return false
             const n = c.name.trim()
             const i = c.id.trim()
             const nameIsId = n.toUpperCase() === i.toUpperCase()
             const isShortCode = n.length <= 3 && n === n.toUpperCase() && /[A-Z]/.test(n)
-
-            // Remove if it matches ID or looks like a short code
             return !nameIsId && !isShortCode
           })
+        }
+
+        let allResults = normalizeCities(rawResults)
 
         // CRITICAL FIX: If API returns no results for a full name search (e.g. "Solapur"),
         // but it existed in our options list (from previous partial search "Sol"),
@@ -1085,6 +1102,31 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
               }
             }
 
+
+            // Normalize and deduplicate combining all results
+            const normalizeCities = (rawResults: any[]) => {
+              const cityMap = new Map<string, { id: string; name: string; stateId?: string }>()
+              rawResults.forEach(city => {
+                const key = String(city.id).trim().toUpperCase()
+                const existing = cityMap.get(key)
+                const isCurrentNameValid = city.name && String(city.name).trim().toUpperCase() !== String(city.id).trim().toUpperCase()
+                const isExistingNameValid = existing && existing.name && String(existing.name).trim().toUpperCase() !== String(existing.id).trim().toUpperCase()
+
+                if (!existing || (!isExistingNameValid && isCurrentNameValid)) {
+                  cityMap.set(key, city)
+                }
+              })
+              return Array.from(cityMap.values()).filter(c => {
+                if (!c.name || !c.id) return false
+                const n = c.name.trim()
+                const i = c.id.trim()
+                const nameIsId = n.toUpperCase() === i.toUpperCase()
+                const isShortCode = n.length <= 3 && n === n.toUpperCase() && /[A-Z]/.test(n)
+                return !nameIsId && !isShortCode
+              })
+            }
+
+            const allResults = normalizeCities(Array.from(cityMap.values()))
 
             // Filter cities based on selected area's cityId
             let filteredResults = allResults
@@ -2134,7 +2176,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
               <Grid item xs={12} md={3}>
                 <Box sx={{ mb: 2 }}>
                   <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
-                    City
+                    City <span style={{ color: 'red' }}>*</span>
                   </Typography>
                   <Autocomplete
                     options={cityOptions.filter(opt => opt && typeof opt === 'object' && opt.name)}
