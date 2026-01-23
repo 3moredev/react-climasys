@@ -2025,10 +2025,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                   </Typography>
                   <Autocomplete
                     options={stateOptions}
-                    popupIcon={null}
-                    forcePopupIcon={false}
-                    forcePopupIcon={false}
-                    disabled={true}
+                    disabled={loading || readOnly}
                     getOptionLabel={(opt) => opt.name || ''}
                     value={stateOptions.find(o => o.name === formData.state || o.id === formData.state) || null}
                     inputValue={stateInput}
@@ -2118,6 +2115,10 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         error={!!errors.state}
                         helperText={errors.state}
                         disabled={loading || readOnly}
+                        inputProps={{
+                          ...params.inputProps,
+                          readOnly: true
+                        }}
                       />
                     )}
                   />
