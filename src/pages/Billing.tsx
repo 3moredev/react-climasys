@@ -4311,7 +4311,7 @@ export default function Treatment() {
                                 {/* Billed (disabled) */}
                                 <div>
                                     <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                        Billed (Rs)
+                                        Billed (Rs) <span style={{ color: 'red' }}>*</span>
                                     </label>
                                     <div style={{ position: 'relative' }}>
                                         <input
