@@ -5811,8 +5811,8 @@ export default function Treatment() {
                                                         // Using the same logic as the add handler: check value and diagnosis name
                                                         const normalizedValue = opt.value?.toLowerCase().trim() || '';
                                                         const normalizedLabel = opt.label?.toLowerCase().trim() || '';
-                                                        
-                                                        const isAdded = diagnosisRows.some(row => 
+
+                                                        const isAdded = diagnosisRows.some(row =>
                                                             (row.value && row.value.toLowerCase().trim() === normalizedValue) ||
                                                             (row.diagnosis && row.diagnosis.toLowerCase().trim() === normalizedLabel)
                                                         );
@@ -6116,7 +6116,7 @@ export default function Treatment() {
                                                         const checked = selectedMedicines.includes(opt.value);
                                                         // Check if medicine is already added using short_description mathing the helper logic
                                                         const shortDesc = opt.short_description?.toLowerCase().trim() || '';
-                                                        const isAdded = medicineRows.some(row => 
+                                                        const isAdded = medicineRows.some(row =>
                                                             row.short_description?.toLowerCase().trim() === shortDesc
                                                         );
 
@@ -6952,10 +6952,10 @@ export default function Treatment() {
                                                         const checked = selectedInvestigations.includes(opt.value);
                                                         // Check if investigation is already added
                                                         const normalizedOpt = opt.label?.toLowerCase().trim() || '';
-                                                        const isAdded = investigationRows.some(row => 
+                                                        const isAdded = investigationRows.some(row =>
                                                             row.investigation?.toLowerCase().trim() === normalizedOpt
                                                         );
-                                                        
+
                                                         const isFirstUnselected = !checked && index > 0 && selectedInvestigations.includes(filteredInvestigations[index - 1].value);
                                                         return (
                                                             <React.Fragment key={opt.value}>
@@ -7288,7 +7288,7 @@ export default function Treatment() {
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
                                     <div>
                                         <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                            Billed (Rs)
+                                            Billed (Rs) <span style={{ color: 'red' }}>*</span>
                                         </label>
                                         <div style={{ position: 'relative' }}>
                                             <input
