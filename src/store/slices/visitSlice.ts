@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit'
-import axios from 'axios'
+import api from '../../services/api'
 
 interface Visit {
   visitId: string
@@ -37,7 +37,7 @@ export const getTodaysVisits = createAsyncThunk(
   'visits/getTodays',
   async (params: { doctorId: string; shiftId: string; clinicId: string; roleId: string }, { rejectWithValue }) => {
     try {
-      const response = await axios.get('/api/visits/today', { params })
+      const response = await api.get('/api/visits/today', { params })
       return response.data
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.error || 'Failed to get today\'s visits')
@@ -49,7 +49,7 @@ export const addToVisit = createAsyncThunk(
   'visits/add',
   async (visitData: any, { rejectWithValue }) => {
     try {
-      const response = await axios.post('/api/visits', visitData)
+      const response = await api.post('/api/visits', visitData)
       return response.data
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.error || 'Failed to add to visit')
@@ -61,7 +61,7 @@ export const getVisitDetails = createAsyncThunk(
   'visits/getDetails',
   async (visitId: string, { rejectWithValue }) => {
     try {
-      const response = await axios.get(`/api/visits/${visitId}/details`)
+      const response = await api.get(`/api/visits/${visitId}/details`)
       return response.data
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.error || 'Failed to get visit details')
@@ -73,7 +73,7 @@ export const saveVisitDetails = createAsyncThunk(
   'visits/saveDetails',
   async ({ visitId, visitData }: { visitId: string; visitData: any }, { rejectWithValue }) => {
     try {
-      const response = await axios.post(`/api/visits/${visitId}/save`, visitData)
+      const response = await api.post(`/api/visits/${visitId}/save`, visitData)
       return response.data
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.error || 'Failed to save visit details')

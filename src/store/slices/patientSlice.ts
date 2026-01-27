@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit'
-import axios from 'axios'
+import api from '../../services/api'
 
 interface Patient {
   patientId: string
@@ -37,7 +37,7 @@ export const searchPatients = createAsyncThunk(
   'patients/search',
   async (params: { query: string; status?: string; page?: number; size?: number; clinicId?: string }, { rejectWithValue }) => {
     try {
-      const response = await axios.get('/api/patients/search', { params })
+      const response = await api.get('/api/patients/search', { params })
       return response.data
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.error || 'Search failed')
@@ -49,7 +49,7 @@ export const getPatient = createAsyncThunk(
   'patients/get',
   async (patientId: string, { rejectWithValue }) => {
     try {
-      const response = await axios.get(`/api/patients/${patientId}`)
+      const response = await api.get(`/api/patients/${patientId}`)
       return response.data
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.error || 'Failed to get patient')
@@ -61,7 +61,7 @@ export const createPatient = createAsyncThunk(
   'patients/create',
   async (patientData: any, { rejectWithValue }) => {
     try {
-      const response = await axios.post('/api/patients', patientData)
+      const response = await api.post('/api/patients', patientData)
       return response.data
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.error || 'Failed to create patient')
@@ -73,7 +73,7 @@ export const updatePatient = createAsyncThunk(
   'patients/update',
   async ({ patientId, patientData }: { patientId: string; patientData: any }, { rejectWithValue }) => {
     try {
-      const response = await axios.put(`/api/patients/${patientId}`, patientData)
+      const response = await api.put(`/api/patients/${patientId}`, patientData)
       return response.data
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.error || 'Failed to update patient')

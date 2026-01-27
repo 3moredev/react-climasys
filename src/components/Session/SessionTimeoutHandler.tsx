@@ -174,31 +174,25 @@ export default function SessionTimeoutHandler({
       {/* Session Expired Dialog */}
       <Dialog 
         open={isSessionExpired} 
-        onClose={() => {}} // Prevent closing
-        maxWidth="sm"
-        fullWidth
+        onClose={() => {}}        
         disableEscapeKeyDown
+        maxWidth={'xs'}        
       >
-        <DialogTitle>
-          <Box display="flex" alignItems="center" gap={1}>
-            <WarningIcon color="error" />
-            <Typography variant="h6">Session Expired</Typography>
+        <DialogTitle className='mb-0'>
+          <Box display="flex" alignItems="center" justifyContent='center' gap={1}>            
+            <Typography variant="h5" className='mb-0' color={'error'}>Session Expired</Typography>
           </Box>
         </DialogTitle>
-        <DialogContent>
-          <Typography variant="body1" gutterBottom>
-            {sessionMessages.expired}
-          </Typography>
+        <DialogContent className='d-flex justify-content-center'>
           <Typography variant="body2" color="text.secondary">
-            You will be redirected to the login page.
+            No active session.
           </Typography>
         </DialogContent>
-        <DialogActions>
+        <DialogActions className='justify-content-center mb-3'>
           <Button 
             onClick={() => navigate('/login', { replace: true })} 
             variant="contained" 
-            color="primary"
-            fullWidth
+            color="primary"            
           >
             {sessionActions.login}
           </Button>

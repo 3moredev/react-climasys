@@ -2026,8 +2026,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                   <Autocomplete
                     options={stateOptions}
                     popupIcon={null}
-                    forcePopupIcon={false}
-                    forcePopupIcon={false}
+                    forcePopupIcon={false}                    
                     disabled={true}
                     getOptionLabel={(opt) => opt.name || ''}
                     value={stateOptions.find(o => o.name === formData.state || o.id === formData.state) || null}
