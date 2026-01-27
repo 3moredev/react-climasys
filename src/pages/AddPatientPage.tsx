@@ -2114,7 +2114,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         setSelectedStateId(null)
                       }
                     }}
-                    filterOptions={(options) => options}
                     open={stateOpen}
                     onOpen={() => {
                       setStateOpen(true)
@@ -2165,10 +2164,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         error={!!errors.state}
                         helperText={errors.state}
                         disabled={loading || readOnly}
-                        inputProps={{
-                          ...params.inputProps,
-                          readOnly: true
-                        }}
                       />
                     )}
                   />
