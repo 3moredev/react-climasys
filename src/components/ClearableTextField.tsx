@@ -13,6 +13,7 @@ const ClearableTextField: React.FC<ClearableTextFieldProps> = ({
     onChange,
     onClear,
     InputProps,
+    disabled,
     ...otherProps
 }) => {
     const handleClear = () => {
@@ -22,16 +23,19 @@ const ClearableTextField: React.FC<ClearableTextFieldProps> = ({
         }
     };
 
+    const isReadOnly = disabled || !!InputProps?.readOnly;
+
     return (
         <TextField
             {...otherProps}
+            disabled={disabled}
             value={value}
             onChange={(e) => onChange(e.target.value)}
             InputProps={{
                 ...InputProps,
                 endAdornment: (
                     <React.Fragment>
-                        {value && (
+                        {value && !isReadOnly && (
                             <InputAdornment position="end">
                                 <IconButton
                                     onClick={handleClear}
