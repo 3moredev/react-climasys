@@ -249,11 +249,9 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
             } else {
                 userFriendlyMessage = errorMessage;
 
+                // Show error in snackbar and keep popup open
                 if (onError) {
-                    onClose();
-                    setTimeout(() => {
-                        onError(userFriendlyMessage);
-                    }, 100);
+                    onError(userFriendlyMessage);
                 } else {
                     showSnackbar(userFriendlyMessage, 'error');
                 }

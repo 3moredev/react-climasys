@@ -72,6 +72,7 @@ export default function Patients() {
   const [openDialog, setOpenDialog] = useState(false)
   const [selectedPatient, setSelectedPatient] = useState<any>(null)
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list')
+  const [dialogError, setDialogError] = useState<string | null>(null)
 
   const { control, handleSubmit, reset, formState: { errors } } = useForm<PatientFormData>({
     defaultValues: {
@@ -109,7 +110,7 @@ export default function Patients() {
     const { user } = useSelector((state: RootState) => state.auth)
 
     if (!user?.doctorId || !user?.clinicId) {
-      alert('Please login to create patients')
+      setDialogError('Please login to create patients')
       return
     }
 
@@ -131,10 +132,18 @@ export default function Patients() {
       clinicId: user.clinicId
     }
 
-    dispatch(createPatient(patientData))
-    setOpenDialog(false)
-    reset()
-    handleSearch() // Refresh the list
+    try {
+      setDialogError(null)
+      await dispatch(createPatient(patientData)).unwrap()
+
+      // Only close on success
+      setOpenDialog(false)
+      reset()
+      handleSearch() // Refresh the list
+    } catch (error: any) {
+      // Show error and keep dialog open
+      setDialogError(error.message || 'Failed to create patient. Please try again.')
+    }
   }
 
   const handleViewPatient = async (patientId: string) => {
@@ -400,10 +409,15 @@ export default function Patients() {
       )}
 
       {/* Add Patient Dialog */}
-      <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="md" fullWidth>
+      <Dialog open={openDialog} onClose={() => { setOpenDialog(false); setDialogError(null); }} maxWidth="md" fullWidth>
         <DialogTitle>Add New Patient</DialogTitle>
         <form onSubmit={handleSubmit(handleCreatePatient)}>
           <DialogContent>
+            {dialogError && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {dialogError}
+              </Alert>
+            )}
             <Grid container spacing={2}>
               <Grid item xs={12} sm={6}>
                 <Controller
@@ -529,7 +543,7 @@ export default function Patients() {
             </Grid>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setOpenDialog(false)}>Cancel</Button>
+            <Button onClick={() => { setOpenDialog(false); setDialogError(null); }}>Close</Button>
             <Button type="submit" variant="contained">
               Add Patient
             </Button>

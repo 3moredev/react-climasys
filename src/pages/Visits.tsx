@@ -111,6 +111,7 @@ export default function Visits() {
   const [openVisitDialog, setOpenVisitDialog] = useState(false)
   const [selectedVisit, setSelectedVisit] = useState<any>(null)
   const [activeStep, setActiveStep] = useState(0)
+  const [dialogError, setDialogError] = useState<string | null>(null)
 
   const { control: visitControl, handleSubmit: handleVisitSubmit, reset: resetVisit } = useForm<VisitFormData>({
     defaultValues: {
@@ -151,17 +152,26 @@ export default function Visits() {
   }, [dispatch, user])
 
   const handleAddToVisit = async (data: VisitFormData) => {
-    dispatch(addToVisit(data))
-    setOpenDialog(false)
-    resetVisit()
-    // Refresh today's visits
-    if (user?.clinicId) {
-      dispatch(getTodaysVisits({
-        doctorId: user.userId || 'DR-00001',
-        shiftId: '1',
-        clinicId: user.clinicId,
-        roleId: user.role,
-      }))
+    try {
+      setDialogError(null)
+      await dispatch(addToVisit(data)).unwrap()
+
+      // Only close on success
+      setOpenDialog(false)
+      resetVisit()
+
+      // Refresh today's visits
+      if (user?.clinicId) {
+        dispatch(getTodaysVisits({
+          doctorId: user.userId || 'DR-00001',
+          shiftId: '1',
+          clinicId: user.clinicId,
+          roleId: user.role,
+        }))
+      }
+    } catch (error: any) {
+      // Show error and keep dialog open
+      setDialogError(error.message || 'Failed to add patient to visit. Please try again.')
     }
   }
 
@@ -289,10 +299,15 @@ export default function Visits() {
       </Card>
 
       {/* Add to Visit Dialog */}
-      <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="md" fullWidth>
+      <Dialog open={openDialog} onClose={() => { setOpenDialog(false); setDialogError(null); }} maxWidth="md" fullWidth>
         <DialogTitle>Add Patient to Visit</DialogTitle>
         <form onSubmit={handleVisitSubmit(handleAddToVisit)}>
           <DialogContent>
+            {dialogError && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {dialogError}
+              </Alert>
+            )}
             <Grid container spacing={2}>
               <Grid item xs={12} sm={6}>
                 <Controller
@@ -401,7 +416,7 @@ export default function Visits() {
             </Grid>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setOpenDialog(false)}>Cancel</Button>
+            <Button onClick={() => { setOpenDialog(false); setDialogError(null); }}>Close</Button>
             <Button type="submit" variant="contained">
               Add to Visit
             </Button>

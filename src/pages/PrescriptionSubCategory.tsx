@@ -640,7 +640,7 @@ export default function PrescriptionSubCategory() {
             {editingId ? 'Update SubCategory' : 'Add SubCategory'}
           </button>
           <button className="btn-secondary" onClick={resetForm}>
-            Cancel
+            Close
           </button>
         </div>
       </div>

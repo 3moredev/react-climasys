@@ -88,7 +88,7 @@ const DeleteConfirmationDialog: React.FC<DeleteConfirmationDialogProps> = ({
                         }
                     }}
                 >
-                    Cancel
+                    Close
                 </Button>
                 <Button
                     onClick={onConfirm}

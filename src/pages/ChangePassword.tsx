@@ -383,7 +383,7 @@ const ChangePasswordPage = () => {
                                     height: '34px'
                                 }}
                             >
-                                Cancel
+                                Close
                             </Button>
                         </Box>
                     </Box>
