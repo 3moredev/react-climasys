@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Close, Add, Delete } from '@mui/icons-material';
-import { Snackbar } from '@mui/material';
+import { Snackbar, Alert } from '@mui/material';
 import { visitService, ComprehensiveVisitDataRequest } from '../services/visitService';
 import { complaintService, ComplaintOption } from '../services/complaintService';
 import { DocumentService, DocumentUploadRequest } from '../services/documentService';
@@ -1254,6 +1254,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
             setIsLoading(true);
             setError(null);
             setSuccess(null);
+            setSnackbarSeverity('success'); // Reset to success by default
 
             // Fetch session data for dynamic values
             let sessionData = null;
@@ -1464,6 +1465,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
             console.log('Success status:', result.success);
             console.log('Response data:', result);
 
+            let hasUploadError = false;
             if (result.success) {
                 console.log('=== VISIT DETAILS SAVED SUCCESSFULLY ===');
 
@@ -1485,7 +1487,9 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                         const failedUploads = documentResults.filter(result => !result.success);
                         if (failedUploads.length > 0) {
                             console.warn('Some documents failed to upload:', failedUploads);
-                            setSnackbarMessage(`Visit details saved successfully! ${failedUploads.length} document(s) failed to upload.`);
+                            hasUploadError = true;
+                            setSnackbarSeverity('error');
+                            setSnackbarMessage('Visit details saved successfully, but documents failed to upload');
                         } else {
                             setSnackbarMessage('Visit details and documents saved successfully!');
                         }
@@ -1503,7 +1507,9 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                         setFormData(prev => ({ ...prev, attachments: [] }));
                     } catch (documentError) {
                         console.error('Error uploading documents:', documentError);
-                        setSnackbarMessage('Visit details saved successfully, but documents failed to upload.');
+                        hasUploadError = true;
+                        setSnackbarSeverity('error');
+                        setSnackbarMessage('Visit details saved successfully, but documents failed to upload');
                     }
                 } else {
                     setSnackbarMessage('Visit details saved successfully!');
@@ -1537,11 +1543,13 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                 setError(null);
                 setSuccess(null);
 
-                // Close modal after showing snackbar
-                setTimeout(() => {
-                    console.log('=== CLOSING MODAL AFTER SUCCESS ===');
-                    if (onClose) onClose();
-                }, 2000); // 2 second delay like AddPatientPage
+                // Close modal after showing snackbar if there was no upload error
+                if (!hasUploadError) {
+                    setTimeout(() => {
+                        console.log('=== CLOSING MODAL AFTER SUCCESS ===');
+                        if (onClose) onClose();
+                    }, 2000); // 2 second delay like AddPatientPage
+                }
             } else {
                 console.error('=== VISIT DETAILS SAVE FAILED ===');
                 console.error('Error:', result.error || 'Failed to save visit details');
@@ -3499,22 +3507,33 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
             {/* Success Snackbar - Always rendered outside modal */}
             <Snackbar
                 open={snackbarOpen}
-                autoHideDuration={2000}
+                autoHideDuration={4000} // Increased duration to 4 seconds for readability
                 onClose={() => {
                     console.log('=== SNACKBAR ONCLOSE TRIGGERED ===');
                     setSnackbarOpen(false);
                 }}
-                message={snackbarMessage}
                 anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-                sx={{
-                    zIndex: 99999, // Ensure snackbar appears above everything
-                    '& .MuiSnackbarContent-root': {
-                        backgroundColor: snackbarSeverity === 'error' ? '#d32f2f' : '#4caf50',
+                sx={{ zIndex: 99999 }}
+            >
+                <Alert
+                    onClose={() => setSnackbarOpen(false)}
+                    severity={snackbarSeverity}
+                    variant="filled"
+                    sx={{
+                        width: '100%',
+                        fontWeight: 'bold',
+                        fontSize: '1rem',
+                        backgroundColor: snackbarSeverity === 'error' ? '#d32f2f' : '#2e7d32',
                         color: 'white',
-                        fontWeight: 'bold'
-                    }
-                }}
-            />
+                        '& .MuiAlert-icon': {
+                            fontSize: '24px',
+                            color: 'white'
+                        }
+                    }}
+                >
+                    {snackbarMessage}
+                </Alert>
+            </Snackbar>
 
             {/* Add New Referral Popup */}
             <AddReferralPopup

@@ -1004,6 +1004,14 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
 
         let allResults = normalizeCities(rawResults)
 
+        // Filter by selected state if available
+        if (selectedStateId) {
+          allResults = allResults.filter(city =>
+            city.stateId === selectedStateId ||
+            String(city.stateId) === String(selectedStateId)
+          )
+        }
+
         // CRITICAL FIX: If API returns no results for a full name search (e.g. "Solapur"),
         // but it existed in our options list (from previous partial search "Sol"),
         // we should preserve it. The backend search might fail for exact full matches due to case/trimming issues.
