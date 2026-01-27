@@ -34,12 +34,12 @@ export const sessionService = {
   async getSessionInfo(): Promise<{ success: boolean; data: SessionInfo | null; error: string | null }> {
     try {
       const response = await api.get<SessionInfo>('/auth/session/info')
-      
+
       // Save session ID for persistence
       if (response.data?.sessionId) {
         sessionPersistence.saveSessionId(response.data.sessionId)
       }
-      
+
       return {
         success: true,
         data: response.data,
@@ -118,18 +118,7 @@ export const sessionService = {
     }
   },
 
-  /**
-   * Validate current session
-   */
-  async validateSession(): Promise<SessionValidation> {
-    try {
-      const response = await api.get<SessionValidation>('/auth/session/validate')
-      return response.data
-    } catch (error) {
-      console.error('Session validation error:', error)
-      return { valid: false, expired: true, sessionId: null }
-    }
-  },
+
 
   /**
    * Logout user
@@ -137,12 +126,12 @@ export const sessionService = {
   async logout(): Promise<boolean> {
     try {
       const response = await api.post('/auth/session/logout')
-      
+
       // Clear session persistence data on successful logout
       if (response.status === 200) {
         sessionPersistence.clearAll()
       }
-      
+
       return response.status === 200
     } catch (error) {
       console.error('Logout error:', error)
@@ -165,21 +154,5 @@ export const sessionService = {
     }
   },
 
-  /**
-   * Keep session alive by updating last accessed time on server
-   * This prevents server session timeout during user activity
-   */
-  async keepSessionAlive(): Promise<boolean> {
-    try {
-      const response = await api.post('/auth/session/keepalive')
-      return response.status === 200
-    } catch (error: any) {
-      // Silently handle errors - don't spam console if session is already expired
-      // Only log if it's not a 401 (unauthorized) error
-      if (error.response?.status !== 401) {
-        console.debug('Session keepalive error:', error.message)
-      }
-      return false
-    }
-  }
+
 }

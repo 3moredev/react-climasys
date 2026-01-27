@@ -1,4 +1,4 @@
-import axios from 'axios'
+import api from './api'
 
 export interface DashboardStats {
   totalPatients: number
@@ -54,7 +54,7 @@ export const dashboardService = {
    */
   async getDashboardStats(params: DashboardParams): Promise<DashboardStats> {
     try {
-      const response = await axios.get('/api/reports/dashboard', {
+      const response = await api.get('/api/reports/dashboard', {
         params: {
           clinicId: params.clinicId,
           doctorId: params.doctorId,

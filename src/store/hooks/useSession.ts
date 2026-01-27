@@ -11,9 +11,9 @@ export const useSession = () => {
     try {
       setIsLoading(true)
       setError(null)
-      
+
       const result = await sessionService.getSessionInfo()
-      
+
       if (result.success && result.data) {
         setSessionData(result.data)
         setIsValid(true)
@@ -33,28 +33,7 @@ export const useSession = () => {
     }
   }, [])
 
-  const validateSession = useCallback(async () => {
-    try {
-      const validation = await sessionService.validateSession()
-      const isValidSession = validation.valid && !validation.expired
-      setIsValid(isValidSession)
-      
-      // If session is invalid, just update state - don't clear localStorage
-      // Let AuthGuard handle the cleanup and redirect
-      if (!isValidSession) {
-        setSessionData(null)
-        setError('Session expired')
-      }
-      
-      return isValidSession
-    } catch (error) {
-      console.error('Session validation error:', error)
-      setIsValid(false)
-      setSessionData(null)
-      setError('Session validation failed')
-      return false
-    }
-  }, [])
+
 
   const logout = useCallback(async () => {
     try {
@@ -81,17 +60,7 @@ export const useSession = () => {
   }, [fetchSessionInfo])
 
   // Auto-validate session every 5 minutes to reduce conflicts
-  useEffect(() => {
-    if (isValid) {
-      const interval = setInterval(() => {
-        // Only validate if we're not already in an error state
-        if (!error) {
-          validateSession()
-        }
-      }, 5 * 60 * 1000)
-      return () => clearInterval(interval)
-    }
-  }, [isValid, validateSession, error])
+
 
   return {
     // Session data
@@ -105,15 +74,15 @@ export const useSession = () => {
     clinicName: sessionData?.clinicName,
     userId: sessionData?.userId,
     languageId: sessionData?.languageId,
-    
+
     // Session state
     isLoading,
     error,
     isValid,
-    
+
     // Session methods
     refreshSession,
-    validateSession,
+
     logout,
   }
 }
