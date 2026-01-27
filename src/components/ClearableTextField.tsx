@@ -31,27 +31,35 @@ const ClearableTextField: React.FC<ClearableTextFieldProps> = ({
             disabled={disabled}
             value={value}
             onChange={(e) => onChange(e.target.value)}
+            sx={{
+                '& .MuiInputBase-root': {
+                    paddingRight: '6px !important',
+                },
+                '& .MuiInputBase-input': {
+                    border: 'none !important',
+                    boxShadow: 'none !important',
+                },
+                ...otherProps.sx
+            }}
             InputProps={{
                 ...InputProps,
                 endAdornment: (
                     <React.Fragment>
                         {value && !isReadOnly && (
-                            <InputAdornment position="end">
-                                <IconButton
-                                    onClick={handleClear}
-                                    edge="end"
-                                    size="small"
-                                    sx={{
-                                        padding: '4px',
-                                        '&:hover': {
-                                            backgroundColor: 'rgba(0, 0, 0, 0.04)'
-                                        }
-                                    }}
-                                    aria-label="clear"
-                                >
-                                    <Close style={{ fontSize: '18px', color: '#666' }} />
-                                </IconButton>
-                            </InputAdornment>
+                            <Close
+                                onClick={handleClear}
+                                style={{
+                                    fontSize: '18px',
+                                    color: '#757575',
+                                    cursor: 'pointer',
+                                    marginLeft: '4px',
+                                    marginRight: '2px',
+                                    background: 'none',
+                                    border: 'none',
+                                    boxShadow: 'none',
+                                    display: 'block'
+                                }}
+                            />
                         )}
                         {InputProps?.endAdornment}
                     </React.Fragment>

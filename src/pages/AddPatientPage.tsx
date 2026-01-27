@@ -1684,11 +1684,12 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         Age (Completed)
                       </Typography>
                       <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
-                        <ClearableTextField
+                        <TextField
                           sx={{ width: '55% !important', mb: 0 }}
                           placeholder="NN"
                           value={formData.age}
-                          onChange={(val) => {
+                          onChange={(e) => {
+                            const val = e.target.value
                             // Allow only numbers
                             if (!/^\d*$/.test(val)) return
 
@@ -1699,7 +1700,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
 
                             if (val && !isNaN(numVal)) {
                               // Calculate DOB backwards from today
-                              // If Years => subtract years, if Months => subtract months
                               const unitToSubtract = currentUnit === 'Months' ? 'month' : 'year'
                               const newDobDate = dayjs().subtract(numVal, unitToSubtract)
                               formattedDob = newDobDate.format('YYYY-MM-DD')
@@ -2540,8 +2540,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     placeholder="Address"
                     value={formData.address}
                     onChange={(value) => handleInputChange('address', value)}
-                    multiline
-                    rows={2}
                     disabled={loading || readOnly}
                   />
                 </Box>
@@ -2780,14 +2778,12 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                   <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                     Referral Address
                   </Typography>
-                  <ClearableTextField
+                  <TextField
                     fullWidth
                     placeholder="Referral Address"
                     value={formData.referralAddress}
-                    onChange={(value) => handleInputChange('referralAddress', value)}
+                    onChange={(e) => handleInputChange('referralAddress', e.target.value)}
                     disabled={loading || readOnly || selectedDoctor !== null || isSelfReferral}
-                    multiline
-                    rows={2}
                     sx={{
                       '& .MuiInputBase-input': {
                         backgroundColor: selectedDoctor !== null ? '#f5f5f5' : 'white',
