@@ -6,7 +6,7 @@ import { labService, LabTestApiResponse } from "../services/labService";
 import { labParameterService, LabTestAndParameterRequest } from "../services/labParameterService";
 import { doctorService, Doctor } from "../services/doctorService";
 import { useSession } from "../store/hooks/useSession";
-import AddTestLabPopup, { TestLabData } from "../components/AddTestLabPopup";
+import AddTestLabPopup, { TestLabData } from "../components/AddLabTestPopup";
 import GlobalSnackbar from "../components/GlobalSnackbar";
 import DeleteConfirmationDialog from "../components/DeleteConfirmationDialog";
 import SearchInput from "../components/SearchInput";

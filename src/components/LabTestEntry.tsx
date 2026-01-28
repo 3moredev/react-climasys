@@ -71,6 +71,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
     const [snackbarOpen, setSnackbarOpen] = useState(false);
     const [snackbarMessage, setSnackbarMessage] = useState('');
     const [resultErrors, setResultErrors] = useState<Set<string>>(new Set());
+    const [dropdownError, setDropdownError] = useState<string | null>(null);
 
     // Dynamic Lab Test selector states (options now include parameters for each test)
     type LabTestParameter = { id: string; name: string };
@@ -531,47 +532,12 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
         return new Date().toISOString().slice(0, 10);
     };
 
-    // Format date as dd-MM-yyyy 00:00:00 for visit_date payload
-    const toDdMmYyyyMidnight = (input?: string): string => {
-        try {
-            let d: Date | null = null;
-            if (input) {
-                const direct = new Date(input);
-                if (!isNaN(direct.getTime())) d = direct;
-            }
-            if (!d && input) {
-                const m = input.match(/^(\d{1,2})-(\d{1,2}|[A-Za-z]{3})-(\d{2,4})$/);
-                if (m) {
-                    const day = parseInt(m[1], 10);
-                    const monToken = m[2];
-                    let year = parseInt(m[3], 10);
-                    if (year < 100) year = 2000 + year;
-                    const month = /^(\d{1,2})$/.test(monToken)
-                        ? Math.max(0, Math.min(11, parseInt(monToken, 10) - 1))
-                        : ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'].indexOf(monToken.toLowerCase());
-                    if (month >= 0) d = new Date(year, month, day);
-                }
-            }
-            if (!d) d = new Date();
-            const dd = String(d.getDate()).padStart(2, '0');
-            const mm = String(d.getMonth() + 1).padStart(2, '0');
-            const yyyy = String(d.getFullYear());
-            return `${yyyy}-${mm}-${dd} 00:00:00`;
-        } catch {
-            const now = new Date();
-            const dd = String(now.getDate()).padStart(2, '0');
-            const mm = String(now.getMonth() + 1).padStart(2, '0');
-            const yyyy = String(now.getFullYear());
-            return `${yyyy}-${mm}-${dd} 00:00:00`;
-        }
-    };
-
     const handleAddResult = () => {
         if (selectedLabTests.length === 0) {
-            setSnackbarMessage('Please select at least one lab test');
-            setSnackbarOpen(true);
+            setDropdownError('Please select at least one lab test');
             return;
         }
+        setDropdownError(null);
         // Derive from selected checkbox values; each option may include parameters
         const selectedRows = labTestsOptions.filter((o: LabTestOption) => selectedLabTests.includes(o.value));
         const timestamp = Date.now();
@@ -606,8 +572,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
         });
 
         if (resultsToAdd.length === 0) {
-            setSnackbarMessage('Selected lab tests are already added');
-            setSnackbarOpen(true);
+            setDropdownError('Selected lab tests are already added');
             return;
         }
 
@@ -680,7 +645,9 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
             }
 
             if (labTestResults.length === 0) {
-                throw new Error('Please add at least one lab test result');
+                setDropdownError('Please add at least one lab test result');
+                setIsLoading(false);
+                return;
             }
 
             // Validate lab test result values only
@@ -783,9 +750,14 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
             const errorMessage = err instanceof Error ? err.message : 'An error occurred';
             setError(errorMessage);
 
-            // Show snackbar immediately for errors
-            setSnackbarMessage(errorMessage);
-            setSnackbarOpen(true);
+            // Show snackbar ONLY for submission errors (not validation) if needed,
+            // but usually inline errors are enough.
+            // If the error is generic (not field specific), we might still want a snackbar.
+            // For now, let's assume validation errors are handled by state and only show snackbar for API failures if not successfully handled by specific field errors.
+            if (!errorMessage.includes('required') && !errorMessage.includes('Future dates')) {
+                setSnackbarMessage(errorMessage);
+                setSnackbarOpen(true);
+            }
         } finally {
             setIsLoading(false);
         }
@@ -806,6 +778,9 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
         setLabTestSearch('');
         setIsLabTestsOpen(false);
         lastFetchParamsRef.current = null;
+        setDropdownError(null);
+        setResultErrors(new Set());
+        setErrors({});
     };
 
     if (!open || !patientData) return null;
@@ -1293,6 +1268,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                                         disabled={isAdded}
                                                                         onChange={(e) => {
                                                                             if (isAdded) return;
+                                                                            setDropdownError(null); // Clear error on interaction
                                                                             setSelectedLabTests(prev => {
                                                                                 if (e.target.checked) {
                                                                                     if (prev.includes(opt.value)) return prev;
@@ -1345,6 +1321,15 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                             Add
                                         </button>
                                     </div>
+                                    {dropdownError && (
+                                        <p style={{
+                                            color: '#d32f2f',
+                                            fontSize: '0.75rem',
+                                            margin: '2px 14px 0 0',
+                                        }}>
+                                            {dropdownError}
+                                        </p>
+                                    )}
                                 </div>
                                 {/* Enter Results Section */}
                                 {labTestResults.length > 0 && (
