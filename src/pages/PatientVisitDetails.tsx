@@ -1198,8 +1198,19 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
 
             console.log('Filtered doctors:', filteredDoctors);
 
+            // Deduplicate results by name (case-insensitive)
+            const uniqueDoctorsMap = new Map();
+            filteredDoctors.forEach(doctor => {
+                const nameLower = doctor.doctorName.toLowerCase().trim();
+                if (!uniqueDoctorsMap.has(nameLower)) {
+                    uniqueDoctorsMap.set(nameLower, doctor);
+                }
+            });
+
+            const uniqueDoctors = Array.from(uniqueDoctorsMap.values());
+
             // Store the full doctor data for later use
-            setReferralNameOptions(filteredDoctors.map(doctor => ({
+            setReferralNameOptions(uniqueDoctors.map(doctor => ({
                 id: doctor.rdId.toString(),
                 name: doctor.doctorName,
                 fullData: doctor // Store the complete doctor object
@@ -1222,6 +1233,11 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
     // Check if current referral by is a doctor (specifically referId "D")
     const isDoctorReferral = () => {
         return formData.referralBy === 'D';
+    };
+
+    // Check if "Self" is selected in Referred By
+    const isSelfReferral = () => {
+        return formData.referralBy === 'Self' || formData.referralBy === 'S' || referByOptions.find(opt => opt.id === formData.referralBy)?.name === 'Self';
     };
 
     // Normalize a variety of input date formats to ISO yyyy-MM-dd for backend
@@ -1927,42 +1943,76 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                         <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', fontWeight: 700, color: '#333' }}>
                                             Referral Name
                                         </label>
-                                        {isDoctorReferral() ? (
+                                        {!isSelfReferral() ? (
                                             // Show regular text field if referral name exists (data was patched/loaded)
                                             // Show search field with add button only if no referral name exists yet
                                             (formData.referralName && formData.referralName.trim() !== '') || selectedDoctor !== null ? (
-                                                <input
-                                                    type="text"
-                                                    placeholder="Referral Name"
-                                                    value={formData.referralName}
-                                                    onChange={(e) => handleInputChange('referralName', e.target.value)}
-                                                    disabled={readOnly || selectedDoctor !== null}
-                                                    style={{
-                                                        width: '100%',
-                                                        height: '32px',
-                                                        padding: '4px 8px',
-                                                        border: '2px solid #B7B7B7',
-                                                        borderRadius: '6px',
-                                                        fontSize: '0.9rem',
-                                                        fontFamily: "'Roboto', sans-serif",
-                                                        fontWeight: '500',
-                                                        backgroundColor: (readOnly || selectedDoctor !== null) ? '#f5f5f5' : 'white',
-                                                        outline: 'none',
-                                                        transition: 'border-color 0.2s',
-                                                        cursor: selectedDoctor !== null ? 'not-allowed' : 'text'
-                                                    }}
-                                                    onFocus={(e) => {
-                                                        if (selectedDoctor === null) {
+                                                <div style={{ position: 'relative' }}>
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Referral Name"
+                                                        value={formData.referralName}
+                                                        onChange={(e) => handleInputChange('referralName', e.target.value)}
+                                                        disabled={false}
+                                                        style={{
+                                                            width: '100%',
+                                                            height: '32px',
+                                                            padding: '4px 8px',
+                                                            border: '2px solid #B7B7B7',
+                                                            borderRadius: '6px',
+                                                            fontSize: '0.9rem',
+                                                            fontFamily: "'Roboto', sans-serif",
+                                                            fontWeight: '500',
+                                                            backgroundColor: 'white',
+                                                            outline: 'none',
+                                                            transition: 'border-color 0.2s',
+                                                            cursor: 'text'
+                                                        }}
+                                                        onFocus={(e) => {
                                                             e.target.style.borderColor = '#1E88E5';
                                                             e.target.style.boxShadow = 'none';
-                                                        }
-                                                    }}
-                                                    onBlur={(e) => {
-                                                        if (selectedDoctor === null) {
+                                                        }}
+                                                        onBlur={(e) => {
                                                             e.target.style.borderColor = '#B7B7B7';
-                                                        }
-                                                    }}
-                                                />
+                                                        }}
+                                                    />
+                                                    {isDoctorReferral() && (
+                                                        <button
+                                                            type="button"
+                                                            className="referral-add-icon"
+                                                            onClick={() => setShowReferralPopup(true)}
+                                                            disabled={false}
+                                                            title="Add New Referral Doctor"
+                                                            style={{
+                                                                position: 'absolute',
+                                                                right: '4px',
+                                                                top: '50%',
+                                                                transform: 'translateY(-50%)',
+                                                                backgroundColor: '#1976d2',
+                                                                border: 'none',
+                                                                cursor: 'pointer',
+                                                                padding: '2px',
+                                                                borderRadius: '3px',
+                                                                color: 'white',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                width: '16px',
+                                                                opacity: 1,
+                                                                height: '20px',
+                                                                transition: 'background-color 0.2s'
+                                                            }}
+                                                            onMouseEnter={(e) => {
+                                                                e.currentTarget.style.backgroundColor = '#1565c0';
+                                                            }}
+                                                            onMouseLeave={(e) => {
+                                                                e.currentTarget.style.backgroundColor = '#1976d2';
+                                                            }}
+                                                        >
+                                                            <Add style={{ fontSize: '12px' }} />
+                                                        </button>
+                                                    )}
+                                                </div>
                                             ) : (
                                                 <div style={{ position: 'relative' }}>
                                                     <input
@@ -1970,7 +2020,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                         placeholder="Search Doctor Name"
                                                         value={referralNameSearch}
                                                         onChange={(e) => handleReferralNameSearch(e.target.value)}
-                                                        disabled={readOnly}
+                                                        disabled={false}
                                                         style={{
                                                             width: '100%',
                                                             height: '32px',
@@ -1981,61 +2031,55 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                             fontSize: '0.9rem',
                                                             fontFamily: "'Roboto', sans-serif",
                                                             fontWeight: '500',
-                                                            backgroundColor: readOnly ? '#f5f5f5' : 'white',
+                                                            backgroundColor: 'white',
                                                             outline: 'none',
                                                             transition: 'border-color 0.2s',
-                                                            cursor: readOnly ? 'not-allowed' : 'text'
+                                                            cursor: 'text'
                                                         }}
                                                         onFocus={(e) => {
-                                                            if (!readOnly) {
-                                                                e.target.style.borderColor = '#1E88E5';
-                                                                e.target.style.boxShadow = 'none';
-                                                            }
+                                                            e.target.style.borderColor = '#1E88E5';
+                                                            e.target.style.boxShadow = 'none';
                                                         }}
                                                         onBlur={(e) => {
-                                                            if (!readOnly) {
-                                                                e.target.style.borderColor = '#B7B7B7';
-                                                            }
+                                                            e.target.style.borderColor = '#B7B7B7';
                                                         }}
                                                     />
-                                                    <button
-                                                        type="button"
-                                                        className="referral-add-icon"
-                                                        onClick={() => !readOnly && setShowReferralPopup(true)}
-                                                        disabled={readOnly}
-                                                        title="Add New Referral Doctor"
-                                                        style={{
-                                                            position: 'absolute',
-                                                            right: '4px',
-                                                            top: '50%',
-                                                            transform: 'translateY(-50%)',
-                                                            backgroundColor: readOnly ? '#9e9e9e' : '#1976d2',
-                                                            border: 'none',
-                                                            cursor: readOnly ? 'not-allowed' : 'pointer',
-                                                            padding: '2px',
-                                                            borderRadius: '3px',
-                                                            color: 'white',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                            width: '16px',
-                                                            opacity: readOnly ? 0.6 : 1,
-                                                            height: '20px',
-                                                            transition: 'background-color 0.2s'
-                                                        }}
-                                                        onMouseEnter={(e) => {
-                                                            if (!readOnly) {
+                                                    {isDoctorReferral() && (
+                                                        <button
+                                                            type="button"
+                                                            className="referral-add-icon"
+                                                            onClick={() => setShowReferralPopup(true)}
+                                                            disabled={false}
+                                                            title="Add New Referral Doctor"
+                                                            style={{
+                                                                position: 'absolute',
+                                                                right: '4px',
+                                                                top: '50%',
+                                                                transform: 'translateY(-50%)',
+                                                                backgroundColor: '#1976d2',
+                                                                border: 'none',
+                                                                cursor: 'pointer',
+                                                                padding: '2px',
+                                                                borderRadius: '3px',
+                                                                color: 'white',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                width: '16px',
+                                                                opacity: 1,
+                                                                height: '20px',
+                                                                transition: 'background-color 0.2s'
+                                                            }}
+                                                            onMouseEnter={(e) => {
                                                                 e.currentTarget.style.backgroundColor = '#1565c0';
-                                                            }
-                                                        }}
-                                                        onMouseLeave={(e) => {
-                                                            if (!readOnly) {
+                                                            }}
+                                                            onMouseLeave={(e) => {
                                                                 e.currentTarget.style.backgroundColor = '#1976d2';
-                                                            }
-                                                        }}
-                                                    >
-                                                        <Add style={{ fontSize: '12px' }} />
-                                                    </button>
+                                                            }}
+                                                        >
+                                                            <Add style={{ fontSize: '12px' }} />
+                                                        </button>
+                                                    )}
 
                                                     {/* Search Results Dropdown */}
                                                     {referralNameOptions.length > 0 && (
@@ -3485,26 +3529,24 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                             </button>
                             <button
                                 onClick={handleSubmit}
-                                disabled={readOnly || isLoading}
+                                disabled={isLoading}
                                 style={{
-                                    padding: '10px 20px',
-                                    backgroundColor: (readOnly || isLoading) ? '#9e9e9e' : '#1976d2',
+                                    backgroundColor: isLoading ? '#9e9e9e' : '#1976d2',
                                     color: 'white',
                                     border: 'none',
+                                    padding: '8px 20px',
                                     borderRadius: '4px',
-                                    cursor: (readOnly || isLoading) ? 'not-allowed' : 'pointer',
-                                    fontSize: '14px',
-                                    fontWeight: '500',
-                                    transition: 'background-color 0.2s',
-                                    opacity: (readOnly || isLoading) ? 0.6 : 1
+                                    cursor: isLoading ? 'not-allowed' : 'pointer',
+                                    fontWeight: 'bold',
+                                    opacity: isLoading ? 0.6 : 1
                                 }}
                                 onMouseEnter={(e) => {
-                                    if (!readOnly && !isLoading) {
+                                    if (!isLoading) {
                                         e.currentTarget.style.backgroundColor = '#1565c0';
                                     }
                                 }}
                                 onMouseLeave={(e) => {
-                                    if (!readOnly && !isLoading) {
+                                    if (!isLoading) {
                                         e.currentTarget.style.backgroundColor = '#1976d2';
                                     }
                                 }}
@@ -3513,7 +3555,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                             </button>
                         </div>
                     </div>
-                </div>
+                </div >
             )}
 
             {/* Success Snackbar - Always rendered outside modal */}
@@ -3552,10 +3594,20 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                 open={showReferralPopup}
                 onClose={() => setShowReferralPopup(false)}
                 onSave={(referralData: ReferralData) => {
-                    // Handle save new referral logic here
-                    console.log('New referral data:', referralData);
-                    // Refresh referral name options after saving
-                    if (isDoctorReferral()) {
+                    // Update form data with the new doctor info
+                    setFormData(prev => ({
+                        ...prev,
+                        referralName: referralData.doctorName || '',
+                        referralContact: referralData.doctorMob || '',
+                        referralEmail: referralData.doctorMail || '',
+                        referralAddress: referralData.doctorAddress || ''
+                    }));
+                    setReferralNameSearch(referralData.doctorName || '');
+                    setSelectedDoctor(referralData as any);
+                    setShowReferralPopup(false);
+
+                    // Also refresh options if needed
+                    if (!isSelfReferral()) {
                         handleReferralNameSearch(referralData.doctorName || '');
                     }
                 }}
@@ -3563,19 +3615,21 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
             />
 
             {/* Quick Registration Modal - appears on top of Patient Visit Details window */}
-            {showQuickRegistration && patientData?.patientId && (
-                <AddPatientPage
-                    open={showQuickRegistration}
-                    onClose={() => {
-                        setShowQuickRegistration(false);
-                        setSessionDataForQuickReg(null);
-                    }}
-                    patientId={String(patientData.patientId)}
-                    readOnly={true}
-                    doctorId={(patientData as any)?.doctorId || sessionDataForQuickReg?.doctorId}
-                    clinicId={(patientData as any)?.clinicId || sessionDataForQuickReg?.clinicId}
-                />
-            )}
+            {
+                showQuickRegistration && patientData?.patientId && (
+                    <AddPatientPage
+                        open={showQuickRegistration}
+                        onClose={() => {
+                            setShowQuickRegistration(false);
+                            setSessionDataForQuickReg(null);
+                        }}
+                        patientId={String(patientData.patientId)}
+                        readOnly={true}
+                        doctorId={(patientData as any)?.doctorId || sessionDataForQuickReg?.doctorId}
+                        clinicId={(patientData as any)?.clinicId || sessionDataForQuickReg?.clinicId}
+                    />
+                )
+            }
         </>
     );
 };
