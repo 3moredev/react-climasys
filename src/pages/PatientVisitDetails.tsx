@@ -1134,9 +1134,17 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
         const existingSize = (existingDocuments || []).reduce((sum, doc) => sum + (doc.fileSize || 0), 0);
         const newFilesSize = newFiles.reduce((sum, f) => sum + f.size, 0);
 
+        console.log('=== ATTACHMENT SIZE VALIDATION ===');
+        console.log('Current selection size (bytes):', attachedSize);
+        console.log('Existing documents size (bytes):', existingSize);
+        console.log('New files picking (bytes):', newFilesSize);
+        console.log('Total intended size (bytes):', attachedSize + existingSize + newFilesSize);
+        console.log('Limit (bytes):', maxSizeBytes);
+
         if (attachedSize + existingSize + newFilesSize > maxSizeBytes) {
+            console.error('TOTAL SIZE EXCEEDED: Limit is 150MB');
             setSnackbarSeverity('error');
-            setSnackbarMessage(`Total file size exceeds the ${maxSizeMB}MB limit.`);
+            setSnackbarMessage(`Total file size (including existing) exceeds the ${maxSizeMB}MB limit.`);
             setSnackbarOpen(true);
             if (e.target) e.target.value = '';
             return;
