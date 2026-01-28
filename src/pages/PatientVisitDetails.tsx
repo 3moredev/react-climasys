@@ -691,6 +691,9 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                     } else {
                         // For non-doctor referrals, use maybeSet to avoid overwriting user input
                         maybeSet('referralName', normalized.referralName);
+                        maybeSet('referralContact', normalized.referralContact);
+                        maybeSet('referralEmail', normalized.referralEmail);
+                        maybeSet('referralAddress', normalized.referralAddress);
                     }
                     maybeSet('pulse', normalized.pulse);
                     maybeSet('height', normalized.height);
