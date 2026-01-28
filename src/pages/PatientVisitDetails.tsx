@@ -3168,7 +3168,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                             }}>
                                                                 <span style={{ marginRight: '5px' }}>📄</span>
                                                                 <span style={{ maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                                    {doc.documentName || `Document ${index + 1}`}
+                                                                    {(doc.documentName ? doc.documentName.split('/').pop() : null) || `Document ${index + 1}`}
                                                                 </span>
                                                                 {doc.fileSize && (
                                                                     <span style={{
@@ -3222,7 +3222,8 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                                                     console.log('Document deleted successfully from backend');
                                                                                     // Remove document from existing documents list
                                                                                     setExistingDocuments(prev => prev.filter((_, i) => i !== index));
-                                                                                    setSnackbarMessage(`Document "${doc.documentName}" deleted successfully!`);
+                                                                                    const fileNameOnly = doc.documentName.split('/').pop() || doc.documentName;
+                                                                                    setSnackbarMessage(`Document "${fileNameOnly}" deleted successfully!`);
                                                                                     setSnackbarOpen(true);
                                                                                 } else {
                                                                                     console.error('Failed to delete document from backend:', result.error);
