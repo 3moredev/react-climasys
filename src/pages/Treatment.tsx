@@ -19,7 +19,7 @@ import AddDiagnosisPopup from "../components/AddDiagnosisPopup";
 import AddMedicinePopup from "../components/AddMedicinePopup";
 import AddPrescriptionPopup, { PrescriptionData } from "../components/AddPrescriptionPopup";
 import AddBillingPopup from "../components/AddBillingPopup";
-import AddTestLabPopup, { TestLabData } from "../components/AddTestLabPopup";
+import AddTestLabPopup, { TestLabData } from "../components/AddLabTestPopup";
 import LabTestEntry from "../components/LabTestEntry";
 import InstructionGroupsPopup, { InstructionGroup } from "../components/InstructionGroupsPopup";
 import { patientService } from "../services/patientService";

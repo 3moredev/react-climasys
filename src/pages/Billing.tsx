@@ -17,7 +17,7 @@ import AddComplaintPopup from "../components/AddComplaintPopup";
 import AddDiagnosisPopup from "../components/AddDiagnosisPopup";
 import AddMedicinePopup, { MedicineData } from "../components/AddMedicinePopup";
 import AddPrescriptionPopup, { PrescriptionData } from "../components/AddPrescriptionPopup";
-import AddTestLabPopup, { TestLabData } from "../components/AddTestLabPopup";
+import AddTestLabPopup, { TestLabData } from "../components/AddLabTestPopup";
 import PastServicesPopup from "../components/PastServicesPopup";
 import { DocumentService } from "../services/documentService";
 import { SaveReceiptPayload } from "../services/receiptService";

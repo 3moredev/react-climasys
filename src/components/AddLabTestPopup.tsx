@@ -58,10 +58,12 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
         labTestName: string;
         priority: string;
         parameterName: string;
+        parameters: string;
     }>({
         labTestName: '',
         priority: '',
-        parameterName: ''
+        parameterName: '',
+        parameters: ''
     });
 
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
@@ -81,7 +83,7 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
                 parameterId: (param as any).parameterId
             })) || []
         });
-        setErrors({ labTestName: '', priority: '', parameterName: '' });
+        setErrors({ labTestName: '', priority: '', parameterName: '', parameters: '' });
     }, [open, editData]);
 
     const handleInputChange = (field: keyof TestLabData, value: string) => {
@@ -94,8 +96,9 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
         if (field === 'priority' && errors.priority) {
             setErrors(prev => ({ ...prev, priority: '' }));
         }
-        if (field === 'parameterName' && errors.parameterName) {
-            setErrors(prev => ({ ...prev, parameterName: '' }));
+        if (field === 'parameterName') {
+            if (errors.parameterName) setErrors(prev => ({ ...prev, parameterName: '' }));
+            if (errors.parameters) setErrors(prev => ({ ...prev, parameters: '' }));
         }
     };
 
@@ -107,12 +110,12 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
         const name = testLabData.parameterName.trim();
 
         if (!name) {
-            showSnackbar('Please enter a parameter name', 'error');
+            setErrors(prev => ({ ...prev, parameterName: 'Please enter a parameter name' }));
             return;
         }
 
         if (testLabData.labTestRows.some(row => row.parameterName.trim().toLowerCase() === name.toLowerCase())) {
-            showSnackbar('This parameter already exists in the list', 'error');
+            setErrors(prev => ({ ...prev, parameterName: 'This parameter already exists in the list' }));
             return;
         }
 
@@ -121,6 +124,8 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
             labTestRows: [...prev.labTestRows, { id: `param_${Date.now()}`, parameterName: name, comment: '' }],
             parameterName: ''
         }));
+        // Clear parameter error after successful add
+        setErrors(prev => ({ ...prev, parameterName: '', parameters: '' }));
     };
 
     const handleRemoveParameter = (id: string) => {
@@ -129,7 +134,7 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
 
     const handleSave = async () => {
         let hasError = false;
-        const newErrors = { labTestName: '', priority: '', parameterName: '' };
+        const newErrors: any = { labTestName: '', priority: '', parameterName: '', parameters: '' };
 
         if (!testLabData.labTestName.trim()) {
             newErrors.labTestName = 'Lab Test Name is required';
@@ -138,6 +143,11 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
 
         if (!testLabData.priority.trim()) {
             newErrors.priority = 'Priority is required';
+            hasError = true;
+        }
+
+        if (testLabData.labTestRows.length === 0) {
+            newErrors.parameters = 'Please add at least one parameter';
             hasError = true;
         }
 
@@ -169,7 +179,7 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
     };
 
     const handleClose = () => {
-        setErrors({ labTestName: '', priority: '', parameterName: '' });
+        setErrors({ labTestName: '', priority: '', parameterName: '', parameters: '' });
         onClose();
     };
 
@@ -180,7 +190,7 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
             parameterName: '',
             labTestRows: []
         });
-        setErrors({ labTestName: '', priority: '', parameterName: '' });
+        setErrors({ labTestName: '', priority: '', parameterName: '', parameters: '' });
     };
 
     if (!open) return null;
@@ -257,7 +267,7 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
                                 <Grid container spacing={1} alignItems="flex-end">
                                     <Grid item xs>
                                         <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }} className="mb-0">
-                                            Parameter Name <span style={{ color: 'red' }}>*</span> 
+                                            Parameter Name <span style={{ color: 'red' }}>*</span>
                                         </Typography>
                                         <TextField
                                             fullWidth
@@ -271,6 +281,8 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
                                                     handleAddParameter();
                                                 }
                                             }}
+                                            error={!!errors.parameterName || !!errors.parameters}
+                                            helperText={errors.parameterName || errors.parameters}
                                         />
                                     </Grid>
                                     <Grid item>
@@ -308,7 +320,7 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
                                             padding: '8px 12px',
                                             textAlign: 'left',
                                             fontWeight: 'bold',
-                                            fontSize: '14px',                                            
+                                            fontSize: '14px',
                                             border: '1px solid #dee2e6'
                                         }}>Sr.</th>
                                         <th style={{
@@ -317,7 +329,7 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
                                             padding: '8px 12px',
                                             textAlign: 'left',
                                             fontWeight: 'bold',
-                                            fontSize: '14px',                                            
+                                            fontSize: '14px',
                                             border: '1px solid #dee2e6'
                                         }}>Parameter Name</th>
                                         <th style={{
@@ -326,7 +338,7 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
                                             padding: '8px 12px',
                                             textAlign: 'center',
                                             fontWeight: 'bold',
-                                            fontSize: '14px',                                            
+                                            fontSize: '14px',
                                             border: '1px solid #dee2e6'
                                         }} className='text-center'>Action</th>
                                     </tr>
@@ -338,19 +350,19 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
                                                 <td style={{
                                                     padding: '8px 12px',
                                                     border: '1px solid #dee2e6',
-                                                    fontSize: '13px',                                                    
+                                                    fontSize: '13px',
                                                     backgroundColor: index % 2 === 0 ? '#f8f9fa' : '#ffffff'
                                                 }}>{index + 1}</td>
                                                 <td style={{
                                                     padding: '8px 12px',
                                                     border: '1px solid #dee2e6',
-                                                    fontSize: '13px',                                                    
+                                                    fontSize: '13px',
                                                     backgroundColor: index % 2 === 0 ? '#f8f9fa' : '#ffffff'
                                                 }}>{row.parameterName}</td>
                                                 <td style={{
                                                     padding: '8px 12px',
                                                     border: '1px solid #dee2e6',
-                                                    fontSize: '13px',                                                    
+                                                    fontSize: '13px',
                                                     backgroundColor: index % 2 === 0 ? '#f8f9fa' : '#ffffff',
                                                     textAlign: 'center'
                                                 }}>
@@ -393,6 +405,7 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
                                     )}
                                 </tbody>
                             </table>
+
                         </Grid>
                     </Grid>
                 </DialogContent>
