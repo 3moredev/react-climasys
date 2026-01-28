@@ -13,6 +13,7 @@ const ClearableTextField: React.FC<ClearableTextFieldProps> = ({
     onChange,
     onClear,
     InputProps,
+    disabled,
     ...otherProps
 }) => {
     const handleClear = () => {
@@ -22,32 +23,48 @@ const ClearableTextField: React.FC<ClearableTextFieldProps> = ({
         }
     };
 
+    const isReadOnly = disabled || !!InputProps?.readOnly;
+
     return (
         <TextField
             {...otherProps}
+            disabled={disabled}
             value={value}
             onChange={(e) => onChange(e.target.value)}
+            sx={{
+                '& .MuiInputBase-root': {
+                    paddingRight: '6px !important',
+                    backgroundColor: isReadOnly ? '#f5f5f5 !important' : 'inherit',
+                    cursor: isReadOnly ? 'not-allowed !important' : 'inherit',
+                },
+                ...(otherProps.sx || {}), // Apply external styles first
+                '& .MuiInputBase-input': {
+                    border: 'none !important',
+                    boxShadow: 'none !important',
+                    backgroundColor: isReadOnly ? '#f5f5f5 !important' : 'inherit',
+                    cursor: isReadOnly ? 'not-allowed !important' : 'inherit',
+                    ...(typeof otherProps.sx === 'object' && (otherProps.sx as any)?.['& .MuiInputBase-input'] ? (otherProps.sx as any)['& .MuiInputBase-input'] : {})
+                }
+            }}
             InputProps={{
                 ...InputProps,
                 endAdornment: (
                     <React.Fragment>
-                        {value && (
-                            <InputAdornment position="end">
-                                <IconButton
-                                    onClick={handleClear}
-                                    edge="end"
-                                    size="small"
-                                    sx={{
-                                        padding: '4px',
-                                        '&:hover': {
-                                            backgroundColor: 'rgba(0, 0, 0, 0.04)'
-                                        }
-                                    }}
-                                    aria-label="clear"
-                                >
-                                    <Close style={{ fontSize: '18px', color: '#666' }} />
-                                </IconButton>
-                            </InputAdornment>
+                        {value && !isReadOnly && (
+                            <Close
+                                onClick={handleClear}
+                                style={{
+                                    fontSize: '18px',
+                                    color: '#757575',
+                                    cursor: 'pointer',
+                                    marginLeft: '4px',
+                                    marginRight: '2px',
+                                    background: 'none',
+                                    border: 'none',
+                                    boxShadow: 'none',
+                                    display: 'block'
+                                }}
+                            />
                         )}
                         {InputProps?.endAdornment}
                     </React.Fragment>

@@ -937,256 +937,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
     }
   }, [areaInput, selectedCityId])
 
-  useEffect(() => {
-    let active = true
-
-    // Get the area's cityId - check selectedAreaCityId first, then areaOptions, then formData.area
-    const getAreaCityId = (): string | null => {
-      if (selectedAreaCityId) {
-        return selectedAreaCityId
-      }
-      if (formData.area && areaOptions.length > 0) {
-        const selectedArea = areaOptions.find(a => a.name === formData.area)
-        if (selectedArea?.cityId) {
-          // Store it for future use
-          setSelectedAreaCityId(selectedArea.cityId)
-          return selectedArea.cityId
-        }
-      }
-      return null
-    }
-
-    const fetchCities = async () => {
-      try {
-        setCityLoading(true)
-        const { searchCities } = await import('../services/referenceService')
-
-        // Get area's cityId
-        const areaCityId = getAreaCityId()
-
-        // If there's input, search with that input
-        // If no input but area is selected, use a broad search to get cities
-        const searchTerm = cityInput && cityInput.trim().length > 0
-          ? cityInput.trim()
-          : (areaCityId ? 'a' : '') // Use 'a' to get cities if area is selected but no input
-
-        if (!searchTerm && !areaCityId) {
-          // No search term and no area selected - clear options
-          if (active) setCityOptions([])
-          return
-        }
-
-        // Search cities
-        let rawResults = await searchCities(searchTerm)
-
-        // Deduplicate and filter using common logic
-        const normalizeCities = (rawResults: any[]) => {
-          const cityMap = new Map<string, { id: string; name: string; stateId?: string }>()
-          rawResults.forEach(city => {
-            const key = String(city.id).trim().toUpperCase()
-            const existing = cityMap.get(key)
-            const isCurrentNameValid = city.name && String(city.name).trim().toUpperCase() !== String(city.id).trim().toUpperCase()
-            const isExistingNameValid = existing && existing.name && String(existing.name).trim().toUpperCase() !== String(existing.id).trim().toUpperCase()
-
-            if (!existing || (!isExistingNameValid && isCurrentNameValid)) {
-              cityMap.set(key, city)
-            }
-          })
-          return Array.from(cityMap.values()).filter(c => {
-            if (!c.name || !c.id) return false
-            const n = c.name.trim()
-            const i = c.id.trim()
-            const nameIsId = n.toUpperCase() === i.toUpperCase()
-            const isShortCode = n.length <= 3 && n === n.toUpperCase() && /[A-Z]/.test(n)
-            return !nameIsId && !isShortCode
-          })
-        }
-
-        let allResults = normalizeCities(rawResults)
-
-        // CRITICAL FIX: If API returns no results for a full name search (e.g. "Solapur"),
-        // but it existed in our options list (from previous partial search "Sol"),
-        // we should preserve it. The backend search might fail for exact full matches due to case/trimming issues.
-        // We check if any EXISTING option matches the current input (case-insensitive).
-        if (allResults.length === 0 && searchTerm && searchTerm.length > 2) {
-          const existingMatch = cityOptions && cityOptions.find(c =>
-            c.name.toLowerCase() === searchTerm.toLowerCase()
-          )
-          if (existingMatch) {
-            console.log('✅ Preserving existing city option for full match:', existingMatch.name)
-            allResults = [existingMatch]
-          }
-        }
-
-        // Always filter by area's cityId if an area is selected
-        let filteredResults = allResults
-        if (areaCityId) {
-          filteredResults = allResults.filter(city => {
-            const matches = city.id === areaCityId ||
-              city.id?.toUpperCase() === areaCityId.toUpperCase() ||
-              String(city.id) === String(areaCityId)
-            return matches
-          })
-        } else {
-          if (formData.area && formData.area.trim() !== '') {
-          } else {
-            console.log('⚠️ No area selected, showing all cities')
-          }
-        }
-
-        if (active) {
-          if (filteredResults.length === 0 && selectedCityId && cityInput) {
-            filteredResults.push({
-              id: selectedCityId,
-              name: cityInput,
-              // stateId is tricky here, but we can try to get it if available
-              stateId: undefined
-            })
-          }
-          setCityOptions(filteredResults)
-        }
-      } catch (e) {
-        console.error('Failed to search cities', e)
-        if (active) setCityOptions([])
-      } finally {
-        if (active) setCityLoading(false)
-      }
-    }
-
-    // Search if there's input OR if area is selected (to load related cities)
-    if (cityInput && cityInput.trim().length > 0) {
-      // Debounce user input
-      const handle = setTimeout(() => {
-        fetchCities()
-      }, 300)
-
-      return () => {
-        active = false
-        clearTimeout(handle)
-      }
-    } else if (selectedAreaCityId || (formData.area && areaOptions.length > 0)) {
-      // If area is selected but no city input, load cities for that area
-      // Try multiple search terms to get more cities, then filter by area's cityId
-      const handle = setTimeout(() => {
-        const loadCitiesForArea = async () => {
-          try {
-            setCityLoading(true)
-            const { searchCities } = await import('../services/referenceService')
-            // Try multiple common search terms to get more cities
-            const searchTerms = ['a', 'e', 'i', 'o', 'u', 'p', 'm', 'd']
-            // Search with multiple terms and combine results
-            const cityMap = new Map<string, { id: string; name: string; stateId?: string }>()
-
-            for (const term of searchTerms) {
-              try {
-                const results = await searchCities(term)
-                results.forEach(city => {
-                  // Normalize key to uppercase/trim to prevent case duplicates
-                  const key = String(city.id).trim().toUpperCase()
-                  const existing = cityMap.get(key)
-
-                  const isCurrentNameValid = city.name && String(city.name).trim().toUpperCase() !== String(city.id).trim().toUpperCase()
-                  const isExistingNameValid = existing && existing.name && String(existing.name).trim().toUpperCase() !== String(existing.id).trim().toUpperCase()
-
-                  if (!existing) {
-                    cityMap.set(key, city)
-                  } else {
-                    // Update if current has a valid name and existing does NOT
-                    if (!isExistingNameValid && isCurrentNameValid) {
-                      cityMap.set(key, city)
-                    }
-                  }
-                })
-              } catch (e) {
-                console.warn(`Failed to search cities with term "${term}":`, e)
-              }
-            }
-
-
-            // Normalize and deduplicate combining all results
-            const normalizeCities = (rawResults: any[]) => {
-              const cityMap = new Map<string, { id: string; name: string; stateId?: string }>()
-              rawResults.forEach(city => {
-                const key = String(city.id).trim().toUpperCase()
-                const existing = cityMap.get(key)
-                const isCurrentNameValid = city.name && String(city.name).trim().toUpperCase() !== String(city.id).trim().toUpperCase()
-                const isExistingNameValid = existing && existing.name && String(existing.name).trim().toUpperCase() !== String(existing.id).trim().toUpperCase()
-
-                if (!existing || (!isExistingNameValid && isCurrentNameValid)) {
-                  cityMap.set(key, city)
-                }
-              })
-              return Array.from(cityMap.values()).filter(c => {
-                if (!c.name || !c.id) return false
-                const n = c.name.trim()
-                const i = c.id.trim()
-                const nameIsId = n.toUpperCase() === i.toUpperCase()
-                const isShortCode = n.length <= 3 && n === n.toUpperCase() && /[A-Z]/.test(n)
-                return !nameIsId && !isShortCode
-              })
-            }
-
-            const allResults = normalizeCities(Array.from(cityMap.values()))
-
-            // Filter cities based on selected area's cityId
-            let filteredResults = allResults
-            if (selectedAreaCityId) {
-              filteredResults = allResults.filter(city => {
-                const matches = city.id === selectedAreaCityId ||
-                  city.id?.toUpperCase() === selectedAreaCityId.toUpperCase() ||
-                  String(city.id) === String(selectedAreaCityId)
-                return matches
-              })
-            } else if (formData.area) {
-              // Try to get cityId from areaOptions
-              const selectedArea = areaOptions.find(a => a.name === formData.area)
-              const areaCityId = selectedArea?.cityId
-              if (areaCityId) {
-                setSelectedAreaCityId(areaCityId)
-                filteredResults = allResults.filter(city => {
-                  const matches = city.id === areaCityId ||
-                    city.id?.toUpperCase() === areaCityId.toUpperCase() ||
-                    String(city.id) === String(areaCityId)
-                  return matches
-                })
-              } else {
-                // If no cityId, show all cities (fallback)
-                filteredResults = allResults
-              }
-            }
-
-            if (active) {
-              if (filteredResults.length === 0 && selectedCityId && cityInput) {
-                filteredResults.push({
-                  id: selectedCityId,
-                  name: cityInput,
-                  stateId: undefined
-                })
-              }
-              setCityOptions(filteredResults)
-            }
-          } catch (e) {
-            console.error('Failed to load cities for area', e)
-            if (active) setCityOptions([])
-          } finally {
-            if (active) setCityLoading(false)
-          }
-        }
-        loadCitiesForArea()
-      }, 300)
-
-      return () => {
-        active = false
-        clearTimeout(handle)
-      }
-    } else {
-      // Clear options when input is empty and no area selected
-      if (active) setCityOptions([])
-      return () => {
-        active = false
-      }
-    }
-  }, [cityInput, selectedAreaCityId, formData.area, areaOptions])
 
   // Helper function to handle numeric-only input with max 10 digits
   const handleNumericInput = (value: string): string => {
@@ -1934,11 +1684,12 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         Age (Completed)
                       </Typography>
                       <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
-                        <ClearableTextField
+                        <TextField
                           sx={{ width: '55% !important', mb: 0 }}
                           placeholder="NN"
                           value={formData.age}
-                          onChange={(val) => {
+                          onChange={(e) => {
+                            const val = e.target.value
                             // Allow only numbers
                             if (!/^\d*$/.test(val)) return
 
@@ -1949,7 +1700,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
 
                             if (val && !isNaN(numVal)) {
                               // Calculate DOB backwards from today
-                              // If Years => subtract years, if Months => subtract months
                               const unitToSubtract = currentUnit === 'Months' ? 'month' : 'year'
                               const newDobDate = dayjs().subtract(numVal, unitToSubtract)
                               formattedDob = newDobDate.format('YYYY-MM-DD')
@@ -2071,6 +1821,8 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     getOptionLabel={(opt) => opt.name || ''}
                     value={stateOptions.find(o => o.name === formData.state || o.id === formData.state) || null}
                     inputValue={stateInput}
+                    popupIcon={null}
+                    forcePopupIcon={false}
                     onInputChange={(_, newInput, reason) => {
                       setStateInput(newInput)
                       if (reason === 'clear' || !newInput) {
@@ -2106,7 +1858,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         setSelectedStateId(null)
                       }
                     }}
-                    filterOptions={(options) => options}
                     open={stateOpen}
                     onOpen={() => {
                       setStateOpen(true)
@@ -2157,9 +1908,13 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         error={!!errors.state}
                         helperText={errors.state}
                         disabled={loading || readOnly}
-                        inputProps={{
-                          ...params.inputProps,
-                          readOnly: true
+                        InputProps={{
+                          ...params.InputProps,
+                          endAdornment: (
+                            <InputAdornment position="end" sx={{ pr: 1 }}>
+                              <Search sx={{ color: '#666' }} />
+                            </InputAdornment>
+                          )
                         }}
                       />
                     )}
@@ -2179,7 +1934,12 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     City <span style={{ color: 'red' }}>*</span>
                   </Typography>
                   <Autocomplete
-                    options={cityOptions.filter(opt => opt && typeof opt === 'object' && opt.name)}
+                    options={cityOptions.filter(opt =>
+                      opt &&
+                      typeof opt === 'object' &&
+                      opt.name &&
+                      (!selectedAreaCityId || String(opt.id) === String(selectedAreaCityId))
+                    )}
                     popupIcon={null}
                     forcePopupIcon={false}
                     loading={cityLoading}
@@ -2235,7 +1995,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         setSelectedAreaCityId(null)
                       }
                     }}
-                    filterOptions={(options) => options}
                     open={cityOpen}
                     onOpen={() => {
                       if (selectedStateId) {
@@ -2791,8 +2550,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     placeholder="Address"
                     value={formData.address}
                     onChange={(value) => handleInputChange('address', value)}
-                    multiline
-                    rows={2}
                     disabled={loading || readOnly}
                   />
                 </Box>
@@ -2865,12 +2622,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         value={formData.referralName}
                         onChange={(value) => handleInputChange('referralName', value)}
                         disabled={loading || readOnly || selectedDoctor !== null || isSelfReferral}
-                        sx={{
-                          '& .MuiInputBase-input': {
-                            backgroundColor: selectedDoctor !== null ? '#f5f5f5' : 'white',
-                            cursor: selectedDoctor !== null ? 'not-allowed' : 'text'
-                          }
-                        }}
                       />
                     ) : (
                       <Box sx={{ position: 'relative' }}>
@@ -2995,12 +2746,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                       inputMode: 'numeric',
                       pattern: '[0-9]*'
                     }}
-                    sx={{
-                      '& .MuiInputBase-input': {
-                        backgroundColor: selectedDoctor !== null ? '#f5f5f5' : 'white',
-                        cursor: selectedDoctor !== null ? 'not-allowed' : 'text'
-                      }
-                    }}
                   />
                 </Box>
               </Grid>
@@ -3017,12 +2762,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     disabled={loading || readOnly || selectedDoctor !== null || isSelfReferral}
                     error={!!errors.referralEmail}
                     helperText={errors.referralEmail}
-                    sx={{
-                      '& .MuiInputBase-input': {
-                        backgroundColor: selectedDoctor !== null ? '#f5f5f5' : 'white',
-                        cursor: selectedDoctor !== null ? 'not-allowed' : 'text'
-                      }
-                    }}
                   />
                 </Box>
               </Grid>
@@ -3037,14 +2776,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     value={formData.referralAddress}
                     onChange={(value) => handleInputChange('referralAddress', value)}
                     disabled={loading || readOnly || selectedDoctor !== null || isSelfReferral}
-                    multiline
-                    rows={2}
-                    sx={{
-                      '& .MuiInputBase-input': {
-                        backgroundColor: selectedDoctor !== null ? '#f5f5f5' : 'white',
-                        cursor: selectedDoctor !== null ? 'not-allowed' : 'text'
-                      }
-                    }}
                   />
                 </Box>
               </Grid>
