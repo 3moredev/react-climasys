@@ -34,12 +34,17 @@ const ClearableTextField: React.FC<ClearableTextFieldProps> = ({
             sx={{
                 '& .MuiInputBase-root': {
                     paddingRight: '6px !important',
+                    backgroundColor: isReadOnly ? '#f5f5f5 !important' : 'inherit',
+                    cursor: isReadOnly ? 'not-allowed !important' : 'inherit',
                 },
+                ...(otherProps.sx || {}), // Apply external styles first
                 '& .MuiInputBase-input': {
                     border: 'none !important',
                     boxShadow: 'none !important',
-                },
-                ...otherProps.sx
+                    backgroundColor: isReadOnly ? '#f5f5f5 !important' : 'inherit',
+                    cursor: isReadOnly ? 'not-allowed !important' : 'inherit',
+                    ...(typeof otherProps.sx === 'object' && (otherProps.sx as any)?.['& .MuiInputBase-input'] ? (otherProps.sx as any)['& .MuiInputBase-input'] : {})
+                }
             }}
             InputProps={{
                 ...InputProps,

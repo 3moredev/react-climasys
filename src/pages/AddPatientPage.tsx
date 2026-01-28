@@ -1821,6 +1821,8 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     getOptionLabel={(opt) => opt.name || ''}
                     value={stateOptions.find(o => o.name === formData.state || o.id === formData.state) || null}
                     inputValue={stateInput}
+                    popupIcon={null}
+                    forcePopupIcon={false}
                     onInputChange={(_, newInput, reason) => {
                       setStateInput(newInput)
                       if (reason === 'clear' || !newInput) {
@@ -1906,6 +1908,14 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         error={!!errors.state}
                         helperText={errors.state}
                         disabled={loading || readOnly}
+                        InputProps={{
+                          ...params.InputProps,
+                          endAdornment: (
+                            <InputAdornment position="end" sx={{ pr: 1 }}>
+                              <Search sx={{ color: '#666' }} />
+                            </InputAdornment>
+                          )
+                        }}
                       />
                     )}
                   />
@@ -2612,12 +2622,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         value={formData.referralName}
                         onChange={(value) => handleInputChange('referralName', value)}
                         disabled={loading || readOnly || selectedDoctor !== null || isSelfReferral}
-                        sx={{
-                          '& .MuiInputBase-input': {
-                            backgroundColor: selectedDoctor !== null ? '#f5f5f5' : 'white',
-                            cursor: selectedDoctor !== null ? 'not-allowed' : 'text'
-                          }
-                        }}
                       />
                     ) : (
                       <Box sx={{ position: 'relative' }}>
@@ -2742,12 +2746,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                       inputMode: 'numeric',
                       pattern: '[0-9]*'
                     }}
-                    sx={{
-                      '& .MuiInputBase-input': {
-                        backgroundColor: selectedDoctor !== null ? '#f5f5f5' : 'white',
-                        cursor: selectedDoctor !== null ? 'not-allowed' : 'text'
-                      }
-                    }}
                   />
                 </Box>
               </Grid>
@@ -2764,12 +2762,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     disabled={loading || readOnly || selectedDoctor !== null || isSelfReferral}
                     error={!!errors.referralEmail}
                     helperText={errors.referralEmail}
-                    sx={{
-                      '& .MuiInputBase-input': {
-                        backgroundColor: selectedDoctor !== null ? '#f5f5f5' : 'white',
-                        cursor: selectedDoctor !== null ? 'not-allowed' : 'text'
-                      }
-                    }}
                   />
                 </Box>
               </Grid>
@@ -2778,18 +2770,12 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                   <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                     Referral Address
                   </Typography>
-                  <TextField
+                  <ClearableTextField
                     fullWidth
                     placeholder="Referral Address"
                     value={formData.referralAddress}
-                    onChange={(e) => handleInputChange('referralAddress', e.target.value)}
+                    onChange={(value) => handleInputChange('referralAddress', value)}
                     disabled={loading || readOnly || selectedDoctor !== null || isSelfReferral}
-                    sx={{
-                      '& .MuiInputBase-input': {
-                        backgroundColor: selectedDoctor !== null ? '#f5f5f5' : 'white',
-                        cursor: selectedDoctor !== null ? 'not-allowed' : 'text'
-                      }
-                    }}
                   />
                 </Box>
               </Grid>
