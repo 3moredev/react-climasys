@@ -2817,7 +2817,21 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                   <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                     Referral Name
                   </Typography>
-                  {!isSelfReferral ? (
+                  {!!patientId ? (
+                    // Edit Mode: Restore original simple text field
+                    <ClearableTextField
+                      fullWidth
+                      placeholder="Referral Name"
+                      value={formData.referralName}
+                      onChange={(value) => handleInputChange('referralName', value)}
+                      disabled={loading || isSelfReferral || !!patientId}
+                      sx={{
+                        '& .MuiInputBase-root.Mui-disabled': {
+                          backgroundColor: '#f5f5f5 !important'
+                        }
+                      }}
+                    />
+                  ) : !isSelfReferral ? (
                     formData.referredBy === 'D' ? (
                       <Autocomplete
                         freeSolo
