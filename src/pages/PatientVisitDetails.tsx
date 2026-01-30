@@ -1,6 +1,12 @@
 import React, { useState } from 'react';
-import { Close, Add, Delete } from '@mui/icons-material';
-import { Snackbar, Alert } from '@mui/material';
+import { Close, Add, Delete, CloudUpload, AttachFile } from '@mui/icons-material';
+import {
+    Snackbar, Alert, Dialog, DialogTitle, DialogContent,
+    DialogActions, Grid, Box, Typography, TextField, Button,
+    IconButton, Checkbox, FormControlLabel, MenuItem, Autocomplete,
+    Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
+    InputAdornment, List, ListItem, ListItemText, ListItemIcon, Divider
+} from '@mui/material';
 import { visitService, ComprehensiveVisitDataRequest } from '../services/visitService';
 import { complaintService, ComplaintOption } from '../services/complaintService';
 import { DocumentService, DocumentUploadRequest } from '../services/documentService';
@@ -44,10 +50,6 @@ interface PatientVisitDetailsProps {
 }
 
 const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose, patientData, onVisitDetailsSubmitted, readOnly = false }) => {
-    // Debug: Log readOnly prop
-    React.useEffect(() => {
-        console.log('PatientVisitDetails - readOnly prop:', readOnly);
-    }, [readOnly]);
 
     const [formData, setFormData] = useState({
         referralBy: 'Self',
@@ -84,7 +86,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
     const [success, setSuccess] = useState<string | null>(null);
     const [snackbarOpen, setSnackbarOpen] = useState(false);
     const [snackbarMessage, setSnackbarMessage] = useState('');
-    const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>('success');
+    const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error' | 'warning'>('success');
 
 
     // New states for referral name search and popup
@@ -108,6 +110,8 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
     const [sessionDataForQuickReg, setSessionDataForQuickReg] = useState<any>(null);
     const [currentClinicId, setCurrentClinicId] = useState<string>('');
     const [allDoctors, setAllDoctors] = useState<any[]>([]);
+    const [fileValidationMessage, setFileValidationMessage] = useState<string | null>(null);
+    const [validationErrors, setValidationErrors] = useState<{ [key: string]: string | null }>({});
 
     const filteredComplaints = React.useMemo(() => {
         const term = complaintSearch.trim().toLowerCase();
@@ -137,9 +141,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
     const [isUploadingDocuments, setIsUploadingDocuments] = useState(false);
     const [documentUploadResults, setDocumentUploadResults] = useState<any[]>([]);
     const [existingDocuments, setExistingDocuments] = useState<any[]>([]);
-    const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
     const [deletingDocumentId, setDeletingDocumentId] = useState<number | null>(null);
-    // Hold complaints coming from API until options are loaded
     const [initialComplaintsFromApi, setInitialComplaintsFromApi] = useState<string | null>(null);
 
     const handleAddComplaints = () => {
@@ -180,14 +182,6 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
         setDocumentUploadResults([]);
 
         try {
-            console.log('=== UPLOADING DOCUMENTS ===');
-            console.log('Files to upload:', files.map(f => f.name));
-            console.log('Patient ID:', patientId);
-            console.log('Doctor ID:', doctorId);
-            console.log('Clinic ID:', clinicId);
-            console.log('Visit No:', patientVisitNo);
-
-            // Use the new backend API method for multiple file upload
             const result = await DocumentService.uploadMultipleDocumentsToBackend(
                 files,
                 patientId,
@@ -197,8 +191,6 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                 'recep', // You may want to get this from auth context
                 new Date().toISOString().slice(0, 19).replace('T', ' ')
             );
-
-            console.log('Document upload result:', result);
 
             // Handle the response based on the backend API structure
             if (result.success) {
@@ -224,7 +216,6 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                 return errorResults;
             }
         } catch (error) {
-            console.error('Error uploading documents:', error);
             // Create error results for each file
             const errorResults = files.map(file => ({
                 success: false,
@@ -243,53 +234,18 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
     const loadExistingDocuments = async (patientId: string, visitNo: number) => {
         if (!patientId || !visitNo) return;
 
-        setIsLoadingDocuments(true);
         try {
-            console.log('=== LOADING EXISTING DOCUMENTS ===');
-            console.log('Patient ID:', patientId);
-            console.log('Visit No:', visitNo);
 
             const result = await DocumentService.getDocumentsByVisit(patientId, visitNo);
-            console.log('Existing documents result:', result);
 
             if (result.success && result.documents) {
                 setExistingDocuments(result.documents);
-                console.log('Loaded existing documents:', result.documents);
             } else {
-                console.log('No existing documents found or error:', result.error);
                 setExistingDocuments([]);
             }
         } catch (error) {
             console.error('Error loading existing documents:', error);
             setExistingDocuments([]);
-        } finally {
-            setIsLoadingDocuments(false);
-        }
-    };
-
-    // Test function to debug document deletion
-    const testDocumentDeletion = async (documentId: number) => {
-        console.log('=== TESTING DOCUMENT DELETION ===');
-        console.log('Testing with document ID:', documentId);
-
-        try {
-            // Test the API call directly
-            const response = await fetch(`http://localhost:8080/api/patient-documents/treatment/${documentId}/with-file?userId=recep`, {
-                method: 'DELETE',
-                credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json',
-                }
-            });
-
-            console.log('Test response status:', response.status);
-            const responseData = await response.json();
-            console.log('Test response data:', responseData);
-
-            return responseData;
-        } catch (error) {
-            console.error('Test deletion error:', error);
-            throw error;
         }
     };
 
@@ -503,22 +459,51 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
         const raw = initialComplaintsFromApi.trim();
         if (!raw) return;
 
-        // Support both '*' and ',' delimiters
-        const parts = raw.split(/\*|,/).map(s => s.trim()).filter(Boolean);
+        // Parse format like: "ComplaintName (Duration/Comment), AnotherComplaint (Comment), ThirdComplaint"
+        // Regex to split by comma but ignore commas inside parentheses
+        const parts = raw.split(/,(?![^(]*\))/).map(s => s.trim()).filter(Boolean);
         if (parts.length === 0) return;
 
         const foundValues: string[] = [];
         const foundRows: ComplaintRow[] = [];
         const seen = new Set<string>();
-        parts.forEach(token => {
+
+        parts.forEach(fullString => {
+            // Extract Name and optional Comment
+            // Match "Name (Comment)" or just "Name"
+            const match = fullString.match(/^(.*?)(?:\s*\((.*)\))?$/);
+            if (!match) return;
+
+            const namePart = match[1].trim();
+            const commentPart = match[2] ? match[2].trim() : '';
+
             // Try to match by value first, then by label (case-insensitive)
-            const byValue = complaintsOptions.find(o => (o.value || '').toLowerCase() === token.toLowerCase());
-            const byLabel = byValue ? undefined : complaintsOptions.find(o => (o.label || '').toLowerCase() === token.toLowerCase());
-            const match = byValue || byLabel;
-            if (match && !seen.has(match.value)) {
-                seen.add(match.value);
-                foundValues.push(match.value);
-                foundRows.push({ id: `${match.value}`, value: match.value, label: match.label, comment: '' });
+            const byValue = complaintsOptions.find(o => (o.value || '').toLowerCase() === namePart.toLowerCase());
+            const byLabel = byValue ? undefined : complaintsOptions.find(o => (o.label || '').toLowerCase() === namePart.toLowerCase());
+            const matchedOption = byValue || byLabel;
+
+            if (matchedOption && !seen.has(matchedOption.value)) {
+                seen.add(matchedOption.value);
+                foundValues.push(matchedOption.value);
+                foundRows.push({
+                    id: `${matchedOption.value}`,
+                    value: matchedOption.value,
+                    label: matchedOption.label,
+                    comment: commentPart
+                });
+            } else if (!matchedOption && namePart) {
+                // Use name as value if not found in options (fallback)
+                // This handles cases where complaint might not be in current doctor's list
+                if (!seen.has(namePart)) {
+                    seen.add(namePart);
+                    foundValues.push(namePart);
+                    foundRows.push({
+                        id: `${namePart}`,
+                        value: namePart,
+                        label: namePart,
+                        comment: commentPart
+                    });
+                }
             }
         });
 
@@ -536,10 +521,6 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                 try {
                     const { getReferralDoctors } = await import('../services/referralService');
                     const doctors = await getReferralDoctors(1); // languageId = 1
-
-                    console.log('=== LOADING REFERRAL DOCTORS ON MOUNT ===');
-                    console.log('All referral doctors:', doctors);
-                    console.log('=== END LOADING REFERRAL DOCTORS ON MOUNT ===');
                 } catch (e) {
                     console.error('Failed to load referral doctors', e);
                 }
@@ -559,10 +540,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                 if (!open || !patientData?.patientId) return;
 
                 setIsLoadingAppointmentDetails(true);
-                setError(null); // Clear any previous errors
-                console.log('=== LOADING APPOINTMENT DETAILS ===');
-                console.log('Patient data:', patientData);
-
+                setError(null); // Clear any previous errors            
                 // Use actual appointment data instead of hardcoded values
                 // Try to get session data as fallback
                 let sessionData = null;
@@ -584,23 +562,16 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                     languageId: 1
                 };
 
-                console.log('Appointment params:', appointmentParams);
-
                 const result: any = await visitService.getAppointmentDetails(appointmentParams);
                 if (cancelled) return;
 
-                console.log('=== APPOINTMENT DETAILS RESPONSE ===');
-                console.log('Full response:', result);
-
                 if (!result || !result.found || !result.mainData || result.mainData.length === 0) {
-                    console.log('No appointment details found, using empty form');
                     setIsLoadingAppointmentDetails(false);
                     return;
                 }
 
                 // Use the first item from mainData array as requested
                 const appointmentData = result.mainData[0];
-                console.log('Using appointment data (first item):', appointmentData);
 
                 // Capture complaints string (supports both keys)
                 const complaintsFromApi: string = (appointmentData.currentComplaints || appointmentData.currentComplaint || '') as string;
@@ -630,20 +601,6 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                     followUpFlag: appointmentData.followUpFlag ?? undefined,
                     followUpType: appointmentData.followUp ?? undefined
                 } as any;
-
-                console.log('Normalized appointment data:', normalized);
-                console.log('=== REFERRAL FIELDS DEBUG ===');
-                console.log('Raw appointmentData.referralContact:', appointmentData.referralContact);
-                console.log('Raw appointmentData.doctorMobile:', appointmentData.doctorMobile);
-                console.log('Raw appointmentData.referralEmail:', appointmentData.referralEmail);
-                console.log('Raw appointmentData.doctorEmail:', appointmentData.doctorEmail);
-                console.log('Raw appointmentData.referralAddress:', appointmentData.referralAddress);
-                console.log('Raw appointmentData.doctorAddress:', appointmentData.doctorAddress);
-                console.log('Normalized referralContact:', normalized.referralContact);
-                console.log('Normalized referralEmail:', normalized.referralEmail);
-                console.log('Normalized referralAddress:', normalized.referralAddress);
-                console.log('Normalized referralName:', normalized.referralName);
-                console.log('=== END REFERRAL FIELDS DEBUG ===');
 
                 // Patch form fields with appointment data
                 setFormData(prev => {
@@ -713,7 +670,6 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                         patched.bmi = (weightNum / ((heightNum / 100) * (heightNum / 100))).toFixed(1);
                     }
 
-                    console.log('Updated form data with appointment details:', patched);
                     return patched;
                 });
 
@@ -724,11 +680,8 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                     // Don't set followUp here - it will be set based on last visit existence
                     // Only set followUpType if it's provided, but it will be overridden by last visit check
                     if (normalized.followUpType && typeof normalized.followUpType === 'string') next.followUpType = normalized.followUpType;
-                    console.log('Updated visit type:', next);
                     return next;
                 });
-
-                console.log('=== APPOINTMENT DETAILS LOADED SUCCESSFULLY ===');
 
                 // Load existing documents for this patient visit using the correct visit number
                 if (patientData?.patientId) {
@@ -737,9 +690,6 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                 }
 
             } catch (e) {
-                console.error('Failed to load appointment details:', e);
-                // Fall back to loading last visit details if appointment details fail
-                console.log('Falling back to last visit details...');
                 try {
                     if (!cancelled && patientData?.patientId) {
                         const pid = String(patientData.patientId);
@@ -864,7 +814,6 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
             // These fields should come from the last visit, not the current appointment
             try {
                 if (!cancelled && patientData?.patientId) {
-                    console.log('=== LOADING PREVIOUS VISIT DATA FOR PLAN AND COMPLAINT ===');
                     const pid = String(patientData.patientId);
                     let lastVisitResult: any = null;
                     try {
@@ -874,7 +823,6 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                         if (lastVisitError?.response?.status === 404 ||
                             lastVisitError?.message?.includes('not found') ||
                             lastVisitError?.message?.includes('Last visit details not found')) {
-                            console.log('No last visit found (404 or not found error)');
                             lastVisitResult = null;
                         } else {
                             // Re-throw other errors
@@ -905,20 +853,6 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                         );
 
                         if (hasValidLastVisit) {
-                            console.log('=== PREVIOUS VISIT DATA DEBUG ===');
-                            console.log('Full lastVisitResult:', JSON.stringify(lastVisitResult, null, 2));
-                            console.log('Extracted lastVisitPayload:', lastVisitPayload);
-                            console.log('All keys in lastVisitPayload:', Object.keys(lastVisitPayload));
-
-                            // Log all possible plan-related fields
-                            console.log('plan:', lastVisitPayload.plan);
-                            console.log('previousVisitPlan:', lastVisitPayload.previousVisitPlan);
-                            console.log('treatmentPlan:', (lastVisitPayload as any).treatmentPlan);
-                            console.log('instructions:', (lastVisitPayload as any).instructions);
-                            console.log('advice:', (lastVisitPayload as any).advice);
-                            console.log('followUp:', lastVisitPayload.followUp);
-                            console.log('followUpComment:', (lastVisitPayload as any).followUpComment);
-
                             // Extract plan from previous visit - check multiple possible field names
                             const previousPlan = lastVisitPayload.plan
                                 || lastVisitPayload.previousVisitPlan
@@ -936,13 +870,6 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                 || lastVisitPayload.chiefComplaint
                                 || '';
 
-                            console.log('Previous Visit Plan (extracted):', previousPlan);
-                            console.log('Previous Visit Plan (stringified):', previousPlan ? String(previousPlan).trim() : '(empty)');
-                            console.log('Previous Chief Complaint:', previousComplaint);
-                            console.log('=== END PREVIOUS VISIT DATA DEBUG ===');
-
-                            // Update only these two fields from previous visit
-                            // Only update if we found a non-empty value
                             const planValue = previousPlan ? String(previousPlan).trim() : '';
                             const complaintValue = previousComplaint ? String(previousComplaint).trim() : '';
 
@@ -952,8 +879,6 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     ...(planValue && { previousVisitPlan: planValue }),
                                     ...(complaintValue && { chiefComplaint: complaintValue })
                                 };
-                                console.log('Updating form data - previousVisitPlan:', planValue || '(keeping existing)');
-                                console.log('Updating form data - chiefComplaint:', complaintValue || '(keeping existing)');
                                 return updated;
                             });
 
@@ -1062,6 +987,56 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
 
     const handleInputChange = (field: string, value: string) => {
         setFormData(prev => {
+            // Check for character limit
+            // Check for character limit
+            if (['visitComments', 'pastSurgicalHistory', 'currentMedicines'].includes(field)) {
+                if (value.length > 999) {
+                    setValidationErrors(prevErrors => ({
+                        ...prevErrors,
+                        [field]: 'Max character limit of 999 reached'
+                    }));
+                    return { ...prev, [field]: value.slice(0, 999) };
+                } else {
+                    // Clear error if below limit
+                    setValidationErrors(prevErrors => {
+                        if (prevErrors[field]) {
+                            const newErrors = { ...prevErrors };
+                            delete newErrors[field];
+                            return newErrors;
+                        }
+                        return prevErrors;
+                    });
+                }
+            }
+
+            // Referral Contact Validation (10 digits)
+            if (field === 'referralContact') {
+                const isValid = /^\d{10}$/.test(value);
+                if (value && !isValid) {
+                    setValidationErrors(prev => ({ ...prev, referralContact: 'Mobile number must be 10 digits' }));
+                } else {
+                    setValidationErrors(prev => {
+                        const newErrors = { ...prev };
+                        delete newErrors.referralContact;
+                        return newErrors;
+                    });
+                }
+            }
+
+            // Referral Email Validation
+            if (field === 'referralEmail') {
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (value && !emailRegex.test(value)) {
+                    setValidationErrors(prev => ({ ...prev, referralEmail: 'Invalid email address' }));
+                } else {
+                    setValidationErrors(prev => {
+                        const newErrors = { ...prev };
+                        delete newErrors.referralEmail;
+                        return newErrors;
+                    });
+                }
+            }
+
             const newData = { ...prev, [field]: value };
 
             // Calculate BMI when height or weight changes
@@ -1101,13 +1076,14 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
     };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setFileValidationMessage(null);
         const newFiles = Array.from(e.target.files || []);
         if (newFiles.length === 0) return;
 
         const maxFiles = 3;
         const maxSizeMB = 150;
         const maxSizeBytes = maxSizeMB * 1024 * 1024;
-        const allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'pdf', 'xls', 'xlsx', 'doc', 'docx'];
+        const allowedExtensions = ['jpg', 'jpeg', 'png', 'pdf', 'xls', 'xlsx', 'doc', 'docx'];
 
         const currentTotalCount = (formData.attachments?.length || 0) + (existingDocuments?.length || 0);
 
@@ -1118,17 +1094,37 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
         });
 
         if (invalidFiles.length > 0) {
-            setSnackbarSeverity('error');
-            setSnackbarMessage(`Invalid file format. Allowed: Image, PDF, Excel, DOC.`);
-            setSnackbarOpen(true);
+            setFileValidationMessage(`Invalid file format. Allowed: .jpg, .jpeg, .png, .pdf, .xls, .xlsx, .doc, .docx`);
             if (e.target) e.target.value = '';
             return;
         }
 
         if (currentTotalCount + newFiles.length > maxFiles) {
-            setSnackbarSeverity('error');
-            setSnackbarMessage(`Total files (uploaded + existing) cannot exceed ${maxFiles}.`);
-            setSnackbarOpen(true);
+            setFileValidationMessage(`Total files (uploaded + existing) cannot exceed ${maxFiles}.`);
+            if (e.target) e.target.value = '';
+            return;
+        }
+
+        // Check for duplicate names (case-insensitive) - check against BOTH pending attachments and existing documents
+        const existingNames = new Set<string>();
+
+        // Add names from pending attachments
+        (formData.attachments || []).forEach(f => existingNames.add(f.name.toLowerCase()));
+
+        // Add names from existing documents (need to handle partial paths if present)
+        (existingDocuments || []).forEach(doc => {
+            const name = doc.documentName || doc.name || '';
+            // Extract filename from path if needed (e.g. "path/to/file.pdf" -> "file.pdf")
+            const cleanName = name.split('/').pop()?.split('\\').pop() || name;
+            existingNames.add(cleanName.toLowerCase());
+        });
+
+        // Check if any new file conflicts
+        const duplicateFiles = newFiles.filter(file => existingNames.has(file.name.toLowerCase()));
+
+        if (duplicateFiles.length > 0) {
+            const duplicateNames = duplicateFiles.map(f => f.name).join(', ');
+            setFileValidationMessage(`Duplicate file(s) detected: ${duplicateNames}. Please rename or remove existing files.`);
             if (e.target) e.target.value = '';
             return;
         }
@@ -1137,18 +1133,8 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
         const existingSize = (existingDocuments || []).reduce((sum, doc) => sum + (doc.fileSize || 0), 0);
         const newFilesSize = newFiles.reduce((sum, f) => sum + f.size, 0);
 
-        console.log('=== ATTACHMENT SIZE VALIDATION ===');
-        console.log('Current selection size (bytes):', attachedSize);
-        console.log('Existing documents size (bytes):', existingSize);
-        console.log('New files picking (bytes):', newFilesSize);
-        console.log('Total intended size (bytes):', attachedSize + existingSize + newFilesSize);
-        console.log('Limit (bytes):', maxSizeBytes);
-
         if (attachedSize + existingSize + newFilesSize > maxSizeBytes) {
-            console.error('TOTAL SIZE EXCEEDED: Limit is 150MB');
-            setSnackbarSeverity('error');
-            setSnackbarMessage(`Total file size (including existing) exceeds the ${maxSizeMB}MB limit.`);
-            setSnackbarOpen(true);
+            setFileValidationMessage(`Total file size (including existing) exceeds the ${maxSizeMB}MB limit.`);
             if (e.target) e.target.value = '';
             return;
         }
@@ -1160,15 +1146,6 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
 
         if (e.target) e.target.value = '';
     };
-
-    const removeFile = (indexToRemove: number) => {
-        setFormData(prev => ({
-            ...prev,
-            attachments: prev.attachments.filter((_, index) => index !== indexToRemove)
-        }));
-    };
-
-
 
     // Search referral names when typing
     const handleReferralNameSearch = async (searchTerm: string) => {
@@ -1187,16 +1164,10 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
             const { getReferralDoctors } = await import('../services/referralService');
             const doctors = await getReferralDoctors(1); // languageId = 1
 
-            console.log('=== REFERRAL DOCTORS SEARCH DEBUG ===');
-            console.log('Search term:', cleanSearchTerm);
-            console.log('All doctors from API:', doctors);
-
             // Filter doctors by name containing the search term
             const filteredDoctors = doctors.filter(doctor =>
                 doctor.doctorName.toLowerCase().includes(cleanSearchTerm.toLowerCase())
             );
-
-            console.log('Filtered doctors:', filteredDoctors);
 
             // Store the full doctor data for later use
             setReferralNameOptions(filteredDoctors.map(doctor => ({
@@ -1204,13 +1175,6 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                 name: doctor.doctorName,
                 fullData: doctor // Store the complete doctor object
             })));
-
-            console.log('Mapped results for dropdown:', filteredDoctors.map(doctor => ({
-                id: doctor.rdId.toString(),
-                name: doctor.doctorName,
-                fullData: doctor
-            })));
-            console.log('=== END REFERRAL DOCTORS SEARCH DEBUG ===');
         } catch (error) {
             console.error('Error searching referral names:', error);
             setReferralNameOptions([]);
@@ -1224,65 +1188,53 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
         return formData.referralBy === 'D';
     };
 
-    // Normalize a variety of input date formats to ISO yyyy-MM-dd for backend
-    const toYyyyMmDd = (input?: string): string => {
-        try {
-            if (!input) return new Date().toISOString().slice(0, 10);
-            // Try native parsing first
-            const direct = new Date(input);
-            if (!isNaN(direct.getTime())) return direct.toISOString().slice(0, 10);
-            // Match common patterns: dd-MM-yyyy, dd-MMM-yy, dd-MMM-yyyy
-            const m = input.match(/^(\d{1,2})-(\d{1,2}|[A-Za-z]{3})-(\d{2,4})$/);
-            if (m) {
-                const day = parseInt(m[1], 10);
-                const monToken = m[2];
-                let year = parseInt(m[3], 10);
-                if (year < 100) year = 2000 + year; // two-digit year → 20xx
-                const month = /^(\d{1,2})$/.test(monToken)
-                    ? Math.max(0, Math.min(11, parseInt(monToken, 10) - 1))
-                    : ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'].indexOf(monToken.toLowerCase());
-                if (month >= 0) {
-                    const dt = new Date(Date.UTC(year, month, day));
-                    return dt.toISOString().slice(0, 10);
-                }
-            }
-        } catch { }
-        return new Date().toISOString().slice(0, 10);
+    const handleDownloadDocument = async (docId: number, originalName: string) => {
+        try {            
+            const { blob, filename } = await DocumentService.downloadDocumentFile(docId);
+
+            // Create a URL for the blob
+            const url = window.URL.createObjectURL(blob);
+
+            // Create a temporary anchor element
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename || originalName; // Use server filename or fallback
+
+            // Append to body, click, and remove
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            // Clean up the URL object
+            window.URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error("Error downloading document", error);
+            setSnackbarMessage(`Error downloading document: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            setSnackbarSeverity('error');
+            setSnackbarOpen(true);
+        }
     };
 
     const handleSubmit = async () => {
         try {
-            console.log('=== VISIT DETAILS FORM SUBMISSION STARTED ===');
-            console.log('Form data:', formData);
-            console.log('Visit type:', visitType);
-            console.log('Patient data:', patientData);
-            console.log('Original visitDate from patientData:', patientData?.visitDate);
-            // Use today's date instead of patientData visitDate to avoid creating records with future dates
             const todayDate = new Date();
-            const todayDateString = todayDate.toISOString().slice(0, 10) + 'T' + todayDate.toTimeString().slice(0, 8);
-            console.log('Using today\'s date for visitDate:', todayDateString);
 
             setIsLoading(true);
             setError(null);
             setSuccess(null);
-            setSnackbarSeverity('success'); // Reset to success by default
+            setSnackbarSeverity('success');
 
-            // Fetch session data for dynamic values
             let sessionData = null;
             try {
                 const sessionResult = await sessionService.getSessionInfo();
                 if (sessionResult.success) {
                     sessionData = sessionResult.data;
-                    console.log('Session data loaded:', sessionData);
                 }
             } catch (sessionError) {
                 console.warn('Could not load session data:', sessionError);
             }
-
-            // Validate required fields are present
             const doctorId = (patientData as any)?.doctorId || sessionData?.doctorId;
             const clinicId = (patientData as any)?.clinicId || sessionData?.clinicId;
-            // sessionData type may not declare shiftId, so access it via any
             const shiftId = (patientData as any)?.shiftId || (sessionData as any)?.shiftId;
             const userId = sessionData?.userId;
 
@@ -1299,34 +1251,22 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                 throw new Error('User ID is required but not found in session data');
             }
 
-            // Validate patient visit number
             const patientVisitNo = (patientData as any)?.visitNumber;
             if (!patientVisitNo) {
                 throw new Error('Patient Visit Number is required but not found in appointment data');
             }
 
-            console.log('=== VALIDATION PASSED ===');
-            console.log('Doctor ID:', doctorId);
-            console.log('Clinic ID:', clinicId);
-            console.log('Shift ID:', shiftId);
-            console.log('User ID:', userId);
-            console.log('Patient Visit No:', patientVisitNo);
-
-            // Map form data to API request format
             const visitData: ComprehensiveVisitDataRequest = {
-                // Required fields - using validated values
                 patientId: patientData?.patientId?.toString() || '',
-                doctorId: String(doctorId), // Use validated doctor ID
-                clinicId: String(clinicId), // Use validated clinic ID
-                shiftId: String(shiftId), // Use validated shift ID
-                // Use today's date instead of patientData visitDate to avoid creating records with future dates
+                doctorId: String(doctorId),
+                clinicId: String(clinicId),
+                shiftId: String(shiftId),
                 visitDate: (() => {
                     const now = new Date();
                     return now.toISOString().slice(0, 10) + 'T' + now.toTimeString().slice(0, 8);
                 })(),
-                patientVisitNo: String(patientVisitNo), // Use validated visit number
+                patientVisitNo: String(patientVisitNo),
 
-                // Referral information
                 referBy: (formData.referralBy === 'Self')
                     ? (referByOptions.find(o => o.name.toLowerCase() === 'self')?.id || 'Self')
                     : formData.referralBy,
@@ -1335,7 +1275,6 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                 referralEmail: formData.referralBy === 'Self' ? '' : formData.referralEmail,
                 referralAddress: formData.referralBy === 'Self' ? '' : formData.referralAddress,
 
-                // Vital signs
                 pulse: parseFloat(formData.pulse) || 0,
                 heightInCms: parseFloat(formData.height) || 0,
                 weightInKgs: parseFloat(formData.weight) || 0,
@@ -1343,14 +1282,12 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                 sugar: formData.sugar,
                 tft: formData.tft,
 
-                // Medical history
                 pastSurgicalHistory: formData.pastSurgicalHistory,
                 previousVisitPlan: formData.previousVisitPlan,
                 chiefComplaint: formData.chiefComplaint,
                 visitComments: formData.visitComments,
                 currentMedicines: formData.currentMedicines,
 
-                // Medical conditions (set to false by default - you may want to add UI for these)
                 hypertension: false,
                 diabetes: false,
                 cholestrol: false,
@@ -1361,11 +1298,10 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                 tobaco: false,
                 alchohol: false,
 
-                // Additional fields
                 habitDetails: '',
                 allergyDetails: '',
                 observation: '',
-                inPerson: inPersonChecked, // Set based on status (false for ON CALL, true for WAITING/WITH DOCTOR)
+                inPerson: inPersonChecked,
                 symptomComment: '',
                 reason: '',
                 impression: '',
@@ -1375,10 +1311,16 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                 attendedById: 0,
                 followUp: visitType.followUpType,
                 followUpFlag: visitType.followUp,
-                currentComplaint: selectedComplaints.join(','),
+                currentComplaint: complaintsRows.map(row => {
+                    const cleanLabel = row.label.trim();
+                    const cleanComment = row.comment.trim();
+                    if (cleanComment) {
+                        return `${cleanLabel} (${cleanComment})`;
+                    }
+                    return cleanLabel;
+                }).join(', '),
                 visitCommentsField: formData.visitComments,
 
-                // Clinical fields
                 tpr: '',
                 importantFindings: '',
                 additionalComments: '',
@@ -1386,8 +1328,6 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                 odeama: '',
                 pallor: '',
                 gc: '',
-
-                // Gynecological fields
                 fmp: '',
                 prmc: '',
                 pamc: '',
@@ -1401,7 +1341,6 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                 edd: new Date().toISOString().slice(0, 19),
                 followUpType: '',
 
-                // Financial fields
                 feesToCollect: 0,
                 feesPaid: 0,
                 discount: 0,
@@ -1412,44 +1351,6 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                 userId: String(userId), // Use validated user ID as string
                 isSubmitPatientVisitDetails: true
             };
-
-            console.log('=== SUBMITTING VISIT DATA TO API ===');
-            console.log('=== CURRENT FORM DATA (ENTERED BY USER) ===');
-            console.log('Form Data - Height:', formData.height);
-            console.log('Form Data - Weight:', formData.weight);
-            console.log('Form Data - BP:', formData.bp);
-            console.log('Form Data - Sugar:', formData.sugar);
-            console.log('Form Data - TFT:', formData.tft);
-            console.log('Form Data - Pulse:', formData.pulse);
-            console.log('Form Data - Past Surgical History:', formData.pastSurgicalHistory);
-            console.log('Form Data - Visit Comments:', formData.visitComments);
-            console.log('Form Data - Current Medicines:', formData.currentMedicines);
-            console.log('Form Data - Previous Visit Plan (read-only):', formData.previousVisitPlan);
-            console.log('Form Data - Chief Complaint (read-only):', formData.chiefComplaint);
-            console.log('=== DATA BEING SENT TO API ===');
-            console.log('API - Height (Cm):', visitData.heightInCms, '(from formData.height:', formData.height, ')');
-            console.log('API - Weight (Kg):', visitData.weightInKgs, '(from formData.weight:', formData.weight, ')');
-            console.log('API - BP:', visitData.bloodPressure, '(from formData.bp:', formData.bp, ')');
-            console.log('API - Sugar:', visitData.sugar, '(from formData.sugar:', formData.sugar, ')');
-            console.log('API - TFT:', visitData.tft, '(from formData.tft:', formData.tft, ')');
-            console.log('API - Pulse:', visitData.pulse, '(from formData.pulse:', formData.pulse, ')');
-            console.log('API - Past Surgical History:', visitData.pastSurgicalHistory);
-            console.log('API - Visit Comments:', visitData.visitComments);
-            console.log('API - Current Medicines:', visitData.currentMedicines);
-            console.log('API - Previous Visit Plan (should not be saved):', visitData.previousVisitPlan);
-            console.log('API - Chief Complaint (should not be saved):', visitData.chiefComplaint);
-            console.log('=== VALIDATION PARAMETERS ===');
-            console.log('Patient ID:', visitData.patientId);
-            console.log('Doctor ID:', visitData.doctorId);
-            console.log('Clinic ID:', visitData.clinicId);
-            console.log('Shift ID:', visitData.shiftId);
-            console.log('Status ID:', visitData.statusId);
-            console.log('Visit Date:', visitData.visitDate);
-            console.log('Patient Visit No:', visitData.patientVisitNo);
-            console.log('User ID:', visitData.userId);
-            console.log('Discount:', visitData.discount);
-            console.log('=== FULL VISIT DATA JSON ===');
-            console.log(JSON.stringify(visitData, null, 2));
 
             // Check for null/undefined values that might cause validation errors
             const nullFields = [];
@@ -1464,26 +1365,17 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
             if (!visitData.userId) nullFields.push('userId');
 
             if (nullFields.length > 0) {
-                console.error('=== NULL/UNDEFINED FIELDS DETECTED ===');
-                console.error('Fields with null/undefined values:', nullFields);
                 throw new Error(`Required fields are missing: ${nullFields.join(', ')}`);
             }
 
             const result = await visitService.saveComprehensiveVisitData(visitData);
 
-            console.log('=== API RESPONSE ===');
-            console.log('API Response:', result);
-            console.log('Success status:', result.success);
-            console.log('Response data:', result);
-
             let hasUploadError = false;
             if (result.success) {
-                console.log('=== VISIT DETAILS SAVED SUCCESSFULLY ===');
 
                 // Upload documents if any are attached
                 if (formData.attachments && formData.attachments.length > 0) {
                     try {
-                        console.log('=== UPLOADING ATTACHED DOCUMENTS ===');
                         const documentResults = await handleDocumentUpload(
                             formData.attachments,
                             patientData?.patientId?.toString() || '',
@@ -1492,12 +1384,9 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                             Number(patientVisitNo) // Use validated visit number
                         );
 
-                        console.log('Document upload results:', documentResults);
-
                         // Check if all documents uploaded successfully
                         const failedUploads = documentResults.filter(result => !result.success);
                         if (failedUploads.length > 0) {
-                            console.warn('Some documents failed to upload:', failedUploads);
                             hasUploadError = true;
                             setSnackbarSeverity('error');
                             setSnackbarMessage('Visit details saved successfully, but documents failed to upload');
@@ -1517,7 +1406,6 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                         // Clear selected attachments after successful upload to avoid duplicates
                         setFormData(prev => ({ ...prev, attachments: [] }));
                     } catch (documentError) {
-                        console.error('Error uploading documents:', documentError);
                         hasUploadError = true;
                         setSnackbarSeverity('error');
                         setSnackbarMessage('Visit details saved successfully, but documents failed to upload');
@@ -1527,10 +1415,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                 }
 
                 // Show success snackbar
-                console.log('=== SETTING SNACKBAR STATE ===');
-                console.log('Setting snackbar open to true');
                 setSnackbarOpen(true);
-                console.log('Snackbar state set - open:', true);
 
                 // Notify parent component that visit details were submitted
                 if (onVisitDetailsSubmitted) {
@@ -1545,7 +1430,6 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                         const vDate = String(patientData.visitDate).split('T')[0];
                         const lsKey = `onehealth_visit_submitted_${pid}_${vDate}`;
                         localStorage.setItem(lsKey, 'true');
-                        console.log(`Saved visit submission state to localStorage: ${lsKey} = true`);
                     }
                 } catch (e) {
                     console.error('Failed to save visit submission state to localStorage', e);
@@ -1557,27 +1441,17 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                 // Close modal after showing snackbar if there was no upload error
                 if (!hasUploadError) {
                     setTimeout(() => {
-                        console.log('=== CLOSING MODAL AFTER SUCCESS ===');
                         if (onClose) onClose();
                     }, 2000); // 2 second delay like AddPatientPage
                 }
             } else {
-                console.error('=== VISIT DETAILS SAVE FAILED ===');
                 console.error('Error:', result.error || 'Failed to save visit details');
                 setError(result.error || 'Failed to save visit details');
             }
         } catch (err: any) {
-            console.error('=== ERROR DURING VISIT DETAILS SAVE ===');
-            console.error('Error saving visit data:', err);
-            console.error('Error type:', typeof err);
-            console.error('Error message:', err instanceof Error ? err.message : 'Unknown error');
-            console.error('Error stack:', err instanceof Error ? err.stack : 'No stack trace');
             setError(err.message || 'An error occurred while saving visit details');
         } finally {
-            console.log('=== FINALLY BLOCK ===');
-            console.log('Setting loading to false');
             setIsLoading(false);
-            console.log('Loading state updated');
         }
     };
 
@@ -1603,6 +1477,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
             selectedComplaint: '',
             attachments: []
         });
+        setValidationErrors({})
         // Reset inPerson based on current status
         const status = String(patientData?.status || '').trim().toUpperCase();
         const normalizedStatus = status === 'ON CALL' ? 'CONSULT ON CALL' : status;
@@ -1627,1075 +1502,570 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
         setIsUploadingDocuments(false);
         setDocumentUploadResults([]);
         setExistingDocuments([]);
-        setIsLoadingDocuments(false);
         setDeletingDocumentId(null);
-
     };
 
     return (
         <>
-            <style>
-                {`
-                @keyframes spin {
-                    0% { transform: rotate(0deg); }
-                    100% { transform: rotate(360deg); }
-                }
-            `}
-            </style>
-            {open && (
-                <div
-                    style={{
-                        position: 'fixed',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        zIndex: 10000,
-                    }}
-                >
-                    <div
-                        style={{
-                            backgroundColor: 'white',
-                            borderRadius: '8px',
-                            maxWidth: '1400px',
-                            width: '98%',
-                            maxHeight: '95vh',
-                            overflow: 'auto',
-                            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
-                            display: 'flex',
-                            flexDirection: 'column',
-                        }}
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        {/* Header Section */}
-                        <div style={{
-                            background: 'white',
-                            padding: '15px 20px',
-                            borderTopLeftRadius: '8px',
-                            borderTopRightRadius: '8px',
-                            fontFamily: "'Roboto', sans-serif",
-                            color: '#212121',
-                            fontSize: '0.9rem'
-                        }}>
-                            {/* Title and Close Button Row */}
-                            <div style={{
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                marginBottom: '10px'
-                            }}>
-                                <h3 style={{ margin: 0, color: '#000000', fontSize: '20px', fontWeight: 'bold' }}>
-                                    Patient Visit Details
-                                </h3>
-                                {onClose && (
-                                    <button
-                                        onClick={onClose}
-                                        style={{
-                                            background: 'none',
-                                            border: 'none',
-                                            cursor: 'pointer',
-                                            padding: '5px',
-                                            borderRadius: '8px',
-                                            color: '#fff',
-                                            backgroundColor: '#1976d2',
-                                            width: '36px',
-                                            height: '36px',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            transition: 'background-color 0.2s'
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            e.currentTarget.style.backgroundColor = '#1565c0';
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            e.currentTarget.style.backgroundColor = '#1976d2';
-                                        }}
-                                    >
-                                        <Close fontSize="small" />
-                                    </button>
-                                )}
-                            </div>
+            <Dialog open={open} onClose={onClose} maxWidth="xl" fullWidth>
+                <DialogTitle sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 1 }} className='mb-0'>
+                    <Box display="flex" justifyContent="space-between" alignItems="center">
+                        <Typography variant="h6" fontWeight="bold" className='mb-0'>Patient Visit Details</Typography>
+                        {onClose && (
+                            <IconButton
+                                onClick={onClose}
+                                size="small"
+                                sx={{
+                                    backgroundColor: '#1976d2',
+                                    color: 'white',
+                                    '&:hover': { backgroundColor: '#1565c0' }
+                                }}
+                            >
+                                <Close fontSize="small" />
+                            </IconButton>
+                        )}
+                    </Box>
 
-                            {/* Patient Info, Doctor Info and Visit Type Row */}
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
-                                <PatientNameDisplay
-                                    patientData={{
-                                        ...patientData,
-                                        gender: (patientData as any).gender_description || (patientData as any).gender
-                                    }}
-                                    onClick={() => {
-                                        if (patientData?.patientId) {
-                                            setShowQuickRegistration(true);
-                                        }
-                                    }}
-                                    style={{
-                                        color: '#2e7d32',
-                                        fontSize: '14px',
-                                        fontWeight: '500',
-                                        cursor: patientData?.patientId ? 'pointer' : 'default',
-                                        textDecoration: patientData?.patientId ? 'underline' : 'none'
-                                    }}
-                                    title={patientData?.patientId ? 'Click to view patient details' : ''}
+                    <Box display="flex" alignItems="center" justifyContent="space-between" flexWrap="wrap">
+                        <PatientNameDisplay
+                            patientData={{
+                                ...patientData,
+                                gender: (patientData as any).gender_description || (patientData as any).gender
+                            }}
+                            onClick={() => {
+                                if (patientData?.patientId) {
+                                    setShowQuickRegistration(true);
+                                }
+                            }}
+                            style={{
+                                color: '#2e7d32',
+                                fontSize: '14px',
+                                fontWeight: '500',
+                                cursor: patientData?.patientId ? 'pointer' : 'default',
+                                textDecoration: patientData?.patientId ? 'underline' : 'none'
+                            }}
+                            title={patientData?.patientId ? 'Click to view patient details' : ''}
+                        />
+
+                        <Box display="flex" alignItems="center" gap={2} flexWrap="wrap">
+                            <Typography sx={{ color: '#1565c0', fontSize: '14px' }}>{doctorDisplayName}</Typography>
+                            <Box display="flex" alignItems="center" gap={1}>
+                                <FormControlLabel
+                                    control={<Checkbox checked={inPersonChecked} disabled size="small" sx={{ p: 0.5 }} />}
+                                    label={<Typography fontSize="12px" className='text-black'>In-Person</Typography>}
+                                    sx={{ mr: 0, ml: 0 }}
                                 />
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
-                                    <div style={{ color: '#1565c0', fontSize: '14px' }}>
-                                        {doctorDisplayName}
-                                    </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                        <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', whiteSpace: 'nowrap' }}>
-                                            <span>In-Person:</span>
-                                            <input
-                                                type="checkbox"
-                                                checked={inPersonChecked}
-                                                disabled={true}
-                                                readOnly
-                                            />
-                                        </label>
-                                        <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', whiteSpace: 'nowrap' }}>
-                                            <span>Follow-up:</span>
-                                            <input
-                                                type="checkbox"
-                                                checked={visitType.followUp}
-                                                onChange={(e) => setVisitType(prev => ({ ...prev, followUp: e.target.checked }))}
-                                                disabled={readOnly}
-                                            />
-                                        </label>
-                                        <span style={{ fontSize: '12px' }}>
-                                            Follow-Up Type: {visitType.followUpType}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                                <FormControlLabel
+                                    control={
+                                        <Checkbox
+                                            checked={visitType.followUp}
+                                            onChange={(e) => setVisitType(prev => ({ ...prev, followUp: e.target.checked }))}
+                                            disabled={true}
+                                            size="small"
+                                            sx={{ p: 0.5 }}
+                                        />
+                                    }
+                                    label={<Typography fontSize="12px" className='text-black'>Follow-up</Typography>}
+                                    sx={{ mr: 0, ml: 0 }}
+                                />
+                            </Box>
+                        </Box>
+                    </Box>
+                </DialogTitle>
+                <DialogContent dividers sx={{ p: 2 }}>
+                    {/* Error/Success Messages */}
+                    {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+                    {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
 
-                        {/* Main Content */}
-                        <div style={{ padding: '20px', flex: 1, overflow: 'auto', fontFamily: "'Roboto', sans-serif", color: '#212121', fontSize: '0.9rem' }}>
-                            {/* Error/Success Messages */}
-                            {error && (
-                                <div style={{
-                                    backgroundColor: '#ffebee',
-                                    color: '#c62828',
-                                    padding: '10px 15px',
-                                    borderRadius: '4px',
-                                    marginBottom: '15px',
-                                    border: '1px solid #ffcdd2',
-                                    fontSize: '14px'
-                                }}>
-                                    {error}
-                                </div>
-                            )}
-                            {success && (
-                                <div style={{
-                                    backgroundColor: '#e8f5e8',
-                                    color: '#2e7d32',
-                                    padding: '10px 15px',
-                                    borderRadius: '4px',
-                                    marginBottom: '15px',
-                                    border: '1px solid #c8e6c9',
-                                    fontSize: '14px'
-                                }}>
-                                    {success}
-                                </div>
-                            )}
-                            {/* Loading Appointment Details */}
-                            {/* {isLoadingAppointmentDetails && (
-                        <div style={{
-                            backgroundColor: '#e3f2fd',
-                            color: '#1976d2',
-                            padding: '10px 15px',
-                            borderRadius: '4px',
-                            marginBottom: '15px',
-                            border: '1px solid #bbdefb',
-                            fontSize: '14px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '10px'
-                        }}>
-                            <div style={{
-                                width: '16px',
-                                height: '16px',
-                                border: '2px solid #1976d2',
-                                borderTop: '2px solid transparent',
-                                borderRadius: '50%',
-                                animation: 'spin 1s linear infinite'
-                            }}></div>
-                            Loading appointment details...
-                        </div>
-                    )} */}
+                    {/* Document Upload Loading */}
+                    {isUploadingDocuments && (
+                        <Alert severity="warning" icon={false} sx={{ mb: 2 }}>
+                            Uploading documents... ({formData.attachments.length} file(s))
+                        </Alert>
+                    )}
 
-                            {/* Document Upload Loading */}
-                            {isUploadingDocuments && (
-                                <div style={{
-                                    backgroundColor: '#fff3e0',
-                                    color: '#f57c00',
-                                    padding: '10px 15px',
-                                    borderRadius: '4px',
-                                    marginBottom: '15px',
-                                    border: '1px solid #ffcc02',
-                                    fontSize: '14px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '10px'
-                                }}>
-                                    <div style={{
-                                        width: '16px',
-                                        height: '16px',
-                                        border: '2px solid #f57c00',
-                                        borderTop: '2px solid transparent',
-                                        borderRadius: '50%',
-                                        animation: 'spin 1s linear infinite'
-                                    }}></div>
-                                    Uploading documents... ({formData.attachments.length} file(s))
-                                </div>
-                            )}
+                    {/* Document Upload Results */}
+                    {documentUploadResults.length > 0 && (
+                        <Box sx={{ bgcolor: '#f3e5f5', color: '#7b1fa2', p: 1, borderRadius: 1, mb: 2, fontSize: '14px', border: '1px solid #ce93d8' }}>
+                            <Typography fontWeight="bold" fontSize="inherit" className='text-black'>Document Upload Results:</Typography>
+                            {documentUploadResults.map((result, index) => (
+                                <Box key={index} sx={{ fontSize: '12px', color: result.success ? '#2e7d32' : '#d32f2f' }}>
+                                    {result.success ? '✓' : '✗'} {result.documentName || `Document ${index + 1}`}:
+                                    {result.success ? ' Uploaded successfully' : ` Failed - ${result.error || 'Unknown error'}`}
+                                </Box>
+                            ))}
+                        </Box>
+                    )}
 
-                            {/* Document Upload Results */}
-                            {documentUploadResults.length > 0 && (
-                                <div style={{
-                                    backgroundColor: '#f3e5f5',
-                                    color: '#7b1fa2',
-                                    padding: '10px 15px',
-                                    borderRadius: '4px',
-                                    marginBottom: '15px',
-                                    border: '1px solid #ce93d8',
-                                    fontSize: '14px'
-                                }}>
-                                    <div style={{ fontWeight: 'bold', marginBottom: '5px' }}>Document Upload Results:</div>
-                                    {documentUploadResults.map((result, index) => (
-                                        <div key={index} style={{
-                                            fontSize: '12px',
-                                            marginBottom: '2px',
-                                            color: result.success ? '#2e7d32' : '#d32f2f'
-                                        }}>
-                                            {result.success ? '✓' : '✗'} {result.documentName || `Document ${index + 1}`}:
-                                            {result.success ? ' Uploaded successfully' : ` Failed - ${result.error || 'Unknown error'}`}
-                                        </div>
+                    {/* Referral Information */}
+                    <Grid container spacing={2} sx={{ mb: 2 }}>
+                        <Grid item xs={12} sm={6} md={2}>
+                            <Box sx={{ mb: 2 }}>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
+                                    Referred By
+                                </Typography>
+                                <TextField
+                                    select
+                                    fullWidth
+                                    size="small"
+                                    value={formData.referralBy}
+                                    onChange={(e) => handleInputChange('referralBy', e.target.value)}
+                                    disabled={readOnly}
+                                    variant="outlined"
+                                >
+                                    <MenuItem value="Self">Self</MenuItem>
+                                    {referByOptions.map(opt => (
+                                        <MenuItem key={opt.id} value={opt.id}>{opt.name}</MenuItem>
                                     ))}
-                                </div>
-                            )}
-
-                            {/* Referral Information */}
-                            <div style={{ marginBottom: '10px' }}>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr 1fr', gap: '10px' }}>
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', fontWeight: 700, color: '#333' }}>
-                                            Referred By
-                                        </label>
-                                        <select
-                                            value={formData.referralBy}
-                                            onChange={(e) => handleInputChange('referralBy', e.target.value)}
-                                            disabled={readOnly}
-                                            style={{
-                                                width: '100%',
-                                                height: '32px',
-                                                padding: '4px 8px',
-                                                border: '2px solid #B7B7B7',
-                                                borderRadius: '6px',
-                                                fontSize: '0.9rem',
-                                                fontFamily: "'Roboto', sans-serif",
-                                                fontWeight: '500',
-                                                backgroundColor: readOnly ? '#f5f5f5' : 'white',
-                                                outline: 'none',
-                                                transition: 'border-color 0.2s',
-                                                cursor: readOnly ? 'not-allowed' : 'default'
-                                            }}
-                                            onFocus={(e) => {
-                                                if (!readOnly) {
-                                                    e.target.style.borderColor = '#1E88E5';
-                                                    e.target.style.boxShadow = 'none';
-                                                }
-                                            }}
-                                            onBlur={(e) => {
-                                                if (!readOnly) {
-                                                    e.target.style.borderColor = '#B7B7B7';
-                                                }
-                                            }}
-                                        >
-                                            {/* Removed placeholder option to avoid reverting selection */}
-                                            <option value="Self">Self</option>
-                                            {referByOptions.map(opt => (
-                                                <option key={opt.id} value={opt.id}>{opt.name}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', fontWeight: 700, color: '#333' }}>
+                                </TextField>
+                            </Box>
+                        </Grid>
+                        <Grid item xs={12} sm={6} md={2}>
+                            {isDoctorReferral() ? (
+                                (formData.referralName && formData.referralName.trim() !== '') || selectedDoctor !== null ? (
+                                    <Box sx={{ mb: 2 }}>
+                                        <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                                             Referral Name
-                                        </label>
-                                        {isDoctorReferral() ? (
-                                            // Show regular text field if referral name exists (data was patched/loaded)
-                                            // Show search field with add button only if no referral name exists yet
-                                            (formData.referralName && formData.referralName.trim() !== '') || selectedDoctor !== null ? (
-                                                <input
-                                                    type="text"
-                                                    placeholder="Referral Name"
-                                                    value={formData.referralName}
-                                                    onChange={(e) => handleInputChange('referralName', e.target.value)}
-                                                    disabled={readOnly || selectedDoctor !== null}
-                                                    style={{
-                                                        width: '100%',
-                                                        height: '32px',
-                                                        padding: '4px 8px',
-                                                        border: '2px solid #B7B7B7',
-                                                        borderRadius: '6px',
-                                                        fontSize: '0.9rem',
-                                                        fontFamily: "'Roboto', sans-serif",
-                                                        fontWeight: '500',
-                                                        backgroundColor: (readOnly || selectedDoctor !== null) ? '#f5f5f5' : 'white',
-                                                        outline: 'none',
-                                                        transition: 'border-color 0.2s',
-                                                        cursor: selectedDoctor !== null ? 'not-allowed' : 'text'
-                                                    }}
-                                                    onFocus={(e) => {
-                                                        if (selectedDoctor === null) {
-                                                            e.target.style.borderColor = '#1E88E5';
-                                                            e.target.style.boxShadow = 'none';
-                                                        }
-                                                    }}
-                                                    onBlur={(e) => {
-                                                        if (selectedDoctor === null) {
-                                                            e.target.style.borderColor = '#B7B7B7';
-                                                        }
-                                                    }}
-                                                />
-                                            ) : (
-                                                <div style={{ position: 'relative' }}>
-                                                    <input
-                                                        type="text"
-                                                        placeholder="Search Doctor Name"
-                                                        value={referralNameSearch}
-                                                        onChange={(e) => handleReferralNameSearch(e.target.value)}
-                                                        disabled={readOnly}
-                                                        style={{
-                                                            width: '100%',
-                                                            height: '32px',
-                                                            padding: '4px 8px',
-                                                            paddingRight: '40px',
-                                                            border: '2px solid #B7B7B7',
-                                                            borderRadius: '6px',
-                                                            fontSize: '0.9rem',
-                                                            fontFamily: "'Roboto', sans-serif",
-                                                            fontWeight: '500',
-                                                            backgroundColor: readOnly ? '#f5f5f5' : 'white',
-                                                            outline: 'none',
-                                                            transition: 'border-color 0.2s',
-                                                            cursor: readOnly ? 'not-allowed' : 'text'
-                                                        }}
-                                                        onFocus={(e) => {
-                                                            if (!readOnly) {
-                                                                e.target.style.borderColor = '#1E88E5';
-                                                                e.target.style.boxShadow = 'none';
-                                                            }
-                                                        }}
-                                                        onBlur={(e) => {
-                                                            if (!readOnly) {
-                                                                e.target.style.borderColor = '#B7B7B7';
-                                                            }
-                                                        }}
-                                                    />
-                                                    <button
-                                                        type="button"
-                                                        className="referral-add-icon"
+                                        </Typography>
+                                        <TextField
+                                            fullWidth
+                                            size="small"
+                                            value={formData.referralName}
+                                            onChange={(e) => handleInputChange('referralName', e.target.value)}
+                                            disabled={readOnly || selectedDoctor !== null}
+                                            variant="outlined"
+                                        />
+                                    </Box>
+                                ) : (
+                                    <Box position="relative" sx={{ mb: 2 }}>
+                                        <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
+                                            Search Doctor Name
+                                        </Typography>
+                                        <TextField
+                                            fullWidth
+                                            size="small"
+                                            placeholder="Search Doctor Name"
+                                            value={referralNameSearch}
+                                            onChange={(e) => handleReferralNameSearch(e.target.value)}
+                                            disabled={readOnly}
+                                            variant="outlined"
+                                            InputProps={{
+                                                endAdornment: (
+                                                    <IconButton
+                                                        size="small"
                                                         onClick={() => !readOnly && setShowReferralPopup(true)}
                                                         disabled={readOnly}
                                                         title="Add New Referral Doctor"
-                                                        style={{
-                                                            position: 'absolute',
-                                                            right: '4px',
-                                                            top: '50%',
-                                                            transform: 'translateY(-50%)',
+                                                        sx={{
                                                             backgroundColor: readOnly ? '#9e9e9e' : '#1976d2',
-                                                            border: 'none',
-                                                            cursor: readOnly ? 'not-allowed' : 'pointer',
-                                                            padding: '2px',
-                                                            borderRadius: '3px',
                                                             color: 'white',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                            width: '16px',
-                                                            opacity: readOnly ? 0.6 : 1,
-                                                            height: '20px',
-                                                            transition: 'background-color 0.2s'
-                                                        }}
-                                                        onMouseEnter={(e) => {
-                                                            if (!readOnly) {
-                                                                e.currentTarget.style.backgroundColor = '#1565c0';
-                                                            }
-                                                        }}
-                                                        onMouseLeave={(e) => {
-                                                            if (!readOnly) {
-                                                                e.currentTarget.style.backgroundColor = '#1976d2';
+                                                            width: 24,
+                                                            height: 24,
+                                                            padding: 0,
+                                                            '&:hover': {
+                                                                backgroundColor: readOnly ? '#9e9e9e' : '#1565c0',
                                                             }
                                                         }}
                                                     >
-                                                        <Add style={{ fontSize: '12px' }} />
-                                                    </button>
-
-                                                    {/* Search Results Dropdown */}
-                                                    {referralNameOptions.length > 0 && (
-                                                        <div style={{
-                                                            position: 'absolute',
-                                                            top: '100%',
-                                                            left: 0,
-                                                            right: 0,
-                                                            backgroundColor: 'white',
-                                                            border: '1px solid #B7B7B7',
-                                                            borderRadius: '6px',
-                                                            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                                                            zIndex: 1000,
-                                                            maxHeight: '200px',
-                                                            overflowY: 'auto'
-                                                        }}>
-                                                            {referralNameOptions.map((option) => (
-                                                                <div
-                                                                    key={option.id}
-                                                                    onClick={() => {
-                                                                        // Store the selected doctor data
-                                                                        setSelectedDoctor((option as any).fullData);
-
-                                                                        // Update form data with doctor information
-                                                                        setFormData(prev => ({
-                                                                            ...prev,
-                                                                            referralName: option.name,
-                                                                            referralContact: (option as any).fullData?.doctorMob || '',
-                                                                            referralEmail: (option as any).fullData?.doctorMail || '',
-                                                                            referralAddress: (option as any).fullData?.doctorAddress || ''
-                                                                        }));
-
-                                                                        setReferralNameSearch(option.name);
-                                                                        setReferralNameOptions([]);
-
-                                                                        console.log('=== DOCTOR SELECTED ===');
-                                                                        console.log('Selected doctor data:', (option as any).fullData);
-                                                                        console.log('Updated form data:', {
-                                                                            referralName: option.name,
-                                                                            referralContact: (option as any).fullData?.doctorMob || '',
-                                                                            referralEmail: (option as any).fullData?.doctorMail || '',
-                                                                            referralAddress: (option as any).fullData?.doctorAddress || ''
-                                                                        });
-                                                                        console.log('=== END DOCTOR SELECTED ===');
-                                                                    }}
-                                                                    style={{
-                                                                        padding: '8px 12px',
-                                                                        cursor: 'pointer',
-                                                                        fontSize: '0.9rem',
-                                                                        borderBottom: '1px solid #f0f0f0',
-                                                                        transition: 'background-color 0.2s'
-                                                                    }}
-                                                                    onMouseEnter={(e) => {
-                                                                        e.currentTarget.style.backgroundColor = '#f5f5f5';
-                                                                    }}
-                                                                    onMouseLeave={(e) => {
-                                                                        e.currentTarget.style.backgroundColor = 'white';
-                                                                    }}
-                                                                >
-                                                                    {option.name}
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            )
-                                        ) : (
-                                            <input
-                                                type="text"
-                                                placeholder="Referral Name"
-                                                value={formData.referralName}
-                                                onChange={(e) => handleInputChange('referralName', e.target.value)}
-                                                disabled={readOnly}
-                                                style={{
-                                                    width: '100%',
-                                                    height: '32px',
-                                                    padding: '4px 8px',
-                                                    border: '2px solid #B7B7B7',
-                                                    borderRadius: '6px',
-                                                    fontSize: '0.9rem',
-                                                    fontFamily: "'Roboto', sans-serif",
-                                                    fontWeight: '500',
-                                                    backgroundColor: readOnly ? '#f5f5f5' : 'white',
-                                                    outline: 'none',
-                                                    transition: 'border-color 0.2s',
-                                                    cursor: readOnly ? 'not-allowed' : 'text'
-                                                }}
-                                                onFocus={(e) => {
-                                                    if (!readOnly) {
-                                                        e.target.style.borderColor = '#1E88E5';
-                                                        e.target.style.boxShadow = 'none';
-                                                    }
-                                                }}
-                                                onBlur={(e) => {
-                                                    if (!readOnly) {
-                                                        e.target.style.borderColor = '#B7B7B7';
-                                                    }
-                                                }}
-                                            />
+                                                        <Add sx={{ fontSize: 16 }} />
+                                                    </IconButton>
+                                                )
+                                            }}
+                                        />
+                                        {/* Search Results Dropdown */}
+                                        {referralNameOptions.length > 0 && (
+                                            <Box sx={{
+                                                position: 'absolute',
+                                                top: '100%',
+                                                left: 0,
+                                                right: 0,
+                                                backgroundColor: 'white',
+                                                border: '1px solid #B7B7B7',
+                                                borderRadius: '6px',
+                                                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                                                zIndex: 1000,
+                                                maxHeight: '200px',
+                                                overflowY: 'auto'
+                                            }}>
+                                                {referralNameOptions.map((option) => (
+                                                    <Box
+                                                        key={option.id}
+                                                        onClick={() => {
+                                                            setSelectedDoctor((option as any).fullData);
+                                                            setFormData(prev => ({
+                                                                ...prev,
+                                                                referralName: option.name,
+                                                                referralContact: (option as any).fullData?.doctorMob || '',
+                                                                referralEmail: (option as any).fullData?.doctorMail || '',
+                                                                referralAddress: (option as any).fullData?.doctorAddress || ''
+                                                            }));
+                                                            setReferralNameSearch(option.name);
+                                                            setReferralNameOptions([]);
+                                                        }}
+                                                        sx={{
+                                                            padding: '8px 12px',
+                                                            cursor: 'pointer',
+                                                            fontSize: '0.9rem',
+                                                            borderBottom: '1px solid #f0f0f0',
+                                                            '&:hover': { backgroundColor: '#f5f5f5' }
+                                                        }}
+                                                    >
+                                                        {option.name}
+                                                    </Box>
+                                                ))}
+                                            </Box>
                                         )}
-                                    </div>
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', fontWeight: 700, color: '#333' }}>
-                                            Referral Contact
-                                        </label>
-                                        <input
-                                            type="text"
-                                            placeholder="Contact"
-                                            value={formData.referralContact}
-                                            onChange={(e) => handleInputChange('referralContact', e.target.value)}
-                                            disabled={readOnly || selectedDoctor !== null}
-                                            style={{
-                                                width: '100%',
-                                                height: '32px',
-                                                padding: '4px 8px',
-                                                border: '2px solid #B7B7B7',
-                                                borderRadius: '6px',
-                                                fontSize: '0.9rem',
-                                                fontFamily: "'Roboto', sans-serif",
-                                                fontWeight: '500',
-                                                backgroundColor: (readOnly || selectedDoctor !== null) ? '#f5f5f5' : 'white',
-                                                outline: 'none',
-                                                transition: 'border-color 0.2s',
-                                                cursor: selectedDoctor !== null ? 'not-allowed' : 'text'
-                                            }}
-                                            onFocus={(e) => {
-                                                if (selectedDoctor === null) {
-                                                    e.target.style.borderColor = '#1E88E5';
-                                                    e.target.style.boxShadow = 'none';
-                                                }
-                                            }}
-                                            onBlur={(e) => {
-                                                e.target.style.borderColor = '#B7B7B7';
-                                            }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', fontWeight: 700, color: '#333' }}>
-                                            Referral Email
-                                        </label>
-                                        <input
-                                            type="email"
-                                            placeholder="Email"
-                                            value={formData.referralEmail}
-                                            onChange={(e) => handleInputChange('referralEmail', e.target.value)}
-                                            disabled={readOnly || selectedDoctor !== null}
-                                            style={{
-                                                width: '100%',
-                                                height: '32px',
-                                                padding: '4px 8px',
-                                                border: '2px solid #B7B7B7',
-                                                borderRadius: '6px',
-                                                fontSize: '0.9rem',
-                                                fontFamily: "'Roboto', sans-serif",
-                                                fontWeight: '500',
-                                                backgroundColor: (readOnly || selectedDoctor !== null) ? '#f5f5f5' : 'white',
-                                                outline: 'none',
-                                                transition: 'border-color 0.2s',
-                                                cursor: selectedDoctor !== null ? 'not-allowed' : 'text'
-                                            }}
-                                            onFocus={(e) => {
-                                                if (selectedDoctor === null) {
-                                                    e.target.style.borderColor = '#1E88E5';
-                                                    e.target.style.boxShadow = 'none';
-                                                }
-                                            }}
-                                            onBlur={(e) => {
-                                                e.target.style.borderColor = '#B7B7B7';
-                                            }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', fontWeight: 700, color: '#333' }}>
-                                            Referral Address
-                                        </label>
-                                        <input
-                                            type="text"
-                                            placeholder="Address"
-                                            maxLength={150}
-                                            value={formData.referralAddress}
-                                            onChange={(e) => handleInputChange('referralAddress', e.target.value)}
-                                            disabled={readOnly || selectedDoctor !== null}
-                                            style={{
-                                                width: '100%',
-                                                height: '32px',
-                                                padding: '4px 8px',
-                                                border: '2px solid #B7B7B7',
-                                                borderRadius: '6px',
-                                                fontSize: '0.9rem',
-                                                fontFamily: "'Roboto', sans-serif",
-                                                fontWeight: '500',
-                                                backgroundColor: (readOnly || selectedDoctor !== null) ? '#f5f5f5' : 'white',
-                                                outline: 'none',
-                                                transition: 'border-color 0.2s',
-                                                cursor: selectedDoctor !== null ? 'not-allowed' : 'text'
-                                            }}
-                                            onFocus={(e) => {
-                                                if (selectedDoctor === null) {
-                                                    e.target.style.borderColor = '#1E88E5';
-                                                    e.target.style.boxShadow = 'none';
-                                                }
-                                            }}
-                                            onBlur={(e) => {
-                                                e.target.style.borderColor = '#B7B7B7';
-                                            }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', fontWeight: 700, color: '#333' }}>
-                                            Pulse (/min)
-                                        </label>
-                                        <input
-                                            type="number"
-                                            placeholder="Pulse"
-                                            value={formData.pulse}
-                                            onChange={(e) => {
-                                                const value = e.target.value;
-                                                // Allow empty string or non-negative numbers
-                                                if (value === '' || (!isNaN(parseFloat(value)) && parseFloat(value) >= 0)) {
-                                                    handleInputChange('pulse', value);
-                                                }
-                                            }}
-                                            onKeyDown={(e) => {
-                                                // Prevent minus key from being entered
-                                                if (e.key === '-' || e.key === 'e' || e.key === 'E' || e.key === '+') {
+                                    </Box>
+                                )
+                            ) : (
+                                <Box sx={{ mb: 2 }}>
+                                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
+                                        Referral Name
+                                    </Typography>
+                                    <TextField
+                                        fullWidth
+                                        size="small"
+                                        value={formData.referralName}
+                                        onChange={(e) => handleInputChange('referralName', e.target.value)}
+                                        disabled={readOnly}
+                                        variant="outlined"
+                                        placeholder='Referral Name'
+                                    />
+                                </Box>
+                            )}
+                        </Grid>
+                        <Grid item xs={12} sm={6} md={2}>
+                            <Box sx={{ mb: 2 }}>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
+                                    Referral Contact
+                                </Typography>
+                                <TextField
+                                    fullWidth
+                                    size="small"
+                                    value={formData.referralContact}
+                                    onChange={(e) => handleInputChange('referralContact', e.target.value)}
+                                    disabled={readOnly || selectedDoctor !== null}
+                                    variant="outlined"
+                                    placeholder='Referral Contact'
+                                    error={!!validationErrors.referralContact}
+                                    helperText={validationErrors.referralContact}
+                                />
+                            </Box>
+                        </Grid>
+                        <Grid item xs={12} sm={6} md={2}>
+                            <Box sx={{ mb: 2 }}>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
+                                    Referral Email
+                                </Typography>
+                                <TextField
+                                    fullWidth
+                                    size="small"
+                                    type="email"
+                                    value={formData.referralEmail}
+                                    onChange={(e) => handleInputChange('referralEmail', e.target.value)}
+                                    disabled={readOnly || selectedDoctor !== null}
+                                    variant="outlined"
+                                    placeholder='Referral Email'
+                                    error={!!validationErrors.referralEmail}
+                                    helperText={validationErrors.referralEmail}
+                                />
+                            </Box>
+                        </Grid>
+                        <Grid item xs={12} sm={6} md={2}>
+                            <Box sx={{ mb: 2 }}>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
+                                    Referral Address
+                                </Typography>
+                                <TextField
+                                    fullWidth
+                                    size="small"
+                                    value={formData.referralAddress}
+                                    onChange={(e) => handleInputChange('referralAddress', e.target.value)}
+                                    disabled={readOnly || selectedDoctor !== null}
+                                    variant="outlined"
+                                    inputProps={{ maxLength: 150 }}
+                                    placeholder='Referral Address'
+                                />
+                            </Box>
+                        </Grid>
+                        <Grid item xs={12} sm={6} md={2}>
+                            <Box sx={{ mb: 2 }}>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
+                                    Pulse (/min)
+                                </Typography>
+                                <TextField
+                                    fullWidth
+                                    size="small"
+                                    type="number"
+                                    value={formData.pulse}
+                                    placeholder='Pulse'
+                                    onChange={(e) => {
+                                        const value = e.target.value;
+                                        if (value === '' || (!isNaN(parseFloat(value)) && parseFloat(value) >= 0)) {
+                                            handleInputChange('pulse', value);
+                                        }
+                                    }}
+                                    onKeyDown={(e) => {
+                                        if (e.key === '-' || e.key === 'e' || e.key === 'E' || e.key === '+') {
+                                            e.preventDefault();
+                                        }
+                                    }}
+                                    onBlur={(e) => {
+                                        const numValue = parseFloat(e.target.value);
+                                        if (isNaN(numValue) || numValue < 0) {
+                                            handleInputChange('pulse', '');
+                                        }
+                                    }}
+                                    disabled={readOnly}
+                                    variant="outlined"
+                                    inputProps={{ min: "0", step: "1" }}
+                                />
+                            </Box>
+                        </Grid>
+                    </Grid>
+
+                    {/* Vital Signs */}
+                    <Box sx={{ mb: 2 }}>
+                        <Grid container spacing={2}>
+                            <Grid item xs={12} sm={6} md={2}>
+                                <Box sx={{ mb: 2 }}>
+                                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
+                                        Height (Cm)
+                                    </Typography>
+                                    <TextField
+                                        fullWidth
+                                        size="small"
+                                        type="number"
+                                        value={formData.height}
+                                        onChange={(e) => {
+                                            const value = e.target.value;
+                                            if (value === '' || (!isNaN(parseFloat(value)) && parseFloat(value) >= 0)) {
+                                                handleInputChange('height', value);
+                                            }
+                                        }}
+                                        onKeyDown={(e) => {
+                                            if (e.key === '-' || e.key === 'e' || e.key === 'E' || e.key === '+') {
+                                                e.preventDefault();
+                                            }
+                                        }}
+                                        onBlur={(e) => {
+                                            const numValue = parseFloat(e.target.value);
+                                            if (isNaN(numValue) || numValue < 0) {
+                                                handleInputChange('height', '');
+                                            }
+                                        }}
+                                        disabled={readOnly}
+                                        variant="outlined"
+                                        inputProps={{ min: "0", step: "0.1" }}
+                                        placeholder='Height'
+                                    />
+                                </Box>
+                            </Grid>
+                            <Grid item xs={12} sm={6} md={2}>
+                                <Box sx={{ mb: 2 }}>
+                                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
+                                        Weight (Kg)
+                                    </Typography>
+                                    <TextField
+                                        fullWidth
+                                        size="small"
+                                        type="number"
+                                        value={formData.weight}
+                                        placeholder='Weight'
+                                        onChange={(e) => {
+                                            const value = e.target.value;
+                                            // Regex: Max 3 digits integer, optional dot, optional 1 digit decimal
+                                            if (value === '' || (/^\d{0,3}(\.\d{0,1})?$/.test(value))) {
+                                                handleInputChange('weight', value);
+                                            }
+                                        }}
+                                        onKeyDown={(e) => {
+                                            if (e.key === '-' || e.key === 'e' || e.key === 'E' || e.key === '+') {
+                                                e.preventDefault();
+                                            }
+                                        }}
+                                        onBlur={(e) => {
+                                            const numValue = parseFloat(e.target.value);
+                                            if (isNaN(numValue) || numValue < 0) {
+                                                handleInputChange('weight', '');
+                                            }
+                                        }}
+                                        disabled={readOnly}
+                                        variant="outlined"
+                                        inputProps={{ min: "0", step: "0.1" }}
+                                    />
+                                </Box>
+                            </Grid>
+                            <Grid item xs={12} sm={6} md={2}>
+                                <Box sx={{ mb: 2 }}>
+                                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
+                                        BMI
+                                    </Typography>
+                                    <TextField
+                                        fullWidth
+                                        size="small"
+                                        type="number"
+                                        value={formData.bmi}
+                                        disabled={true} // BMI is always calculated
+                                        variant="outlined"
+                                        sx={{ backgroundColor: '#f5f5f5' }}
+                                        placeholder='BMI'
+                                    />
+                                </Box>
+                            </Grid>
+                            <Grid item xs={12} sm={6} md={2}>
+                                <Box sx={{ mb: 2 }}>
+                                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
+                                        BP
+                                    </Typography>
+                                    <TextField
+                                        fullWidth
+                                        size="small"
+                                        value={formData.bp}
+                                        onChange={(e) => {
+                                            const value = e.target.value;
+                                            if (value === '') {
+                                                handleInputChange('bp', value);
+                                                return;
+                                            }
+                                            if (value.trim().startsWith('-')) return;
+                                            const parts = value.split(/[\/\-]/);
+                                            const hasNegative = parts.some(part => {
+                                                const trimmed = part.trim();
+                                                return trimmed.startsWith('-') || (trimmed !== '' && !isNaN(parseFloat(trimmed)) && parseFloat(trimmed) < 0);
+                                            });
+                                            if (!hasNegative) {
+                                                handleInputChange('bp', value);
+                                            }
+                                        }}
+                                        onKeyDown={(e) => {
+                                            if (e.key === '-') {
+                                                const input = e.currentTarget as HTMLInputElement;
+                                                const cursorPos = input.selectionStart || 0;
+                                                if (cursorPos === 0 || (input.value.length === 0)) {
                                                     e.preventDefault();
                                                 }
-                                            }}
-                                            min="0"
-                                            step="1"
-                                            disabled={readOnly}
-                                            style={{
-                                                width: '100%',
-                                                height: '32px',
-                                                padding: '4px 8px',
-                                                border: '2px solid #B7B7B7',
-                                                borderRadius: '6px',
-                                                fontSize: '0.9rem',
-                                                fontFamily: "'Roboto', sans-serif",
-                                                fontWeight: '500',
-                                                backgroundColor: readOnly ? '#f5f5f5' : 'white',
-                                                outline: 'none',
-                                                transition: 'border-color 0.2s',
-                                                cursor: readOnly ? 'not-allowed' : 'text'
-                                            }}
-                                            onFocus={(e) => {
-                                                if (!readOnly) {
-                                                    e.target.style.borderColor = '#1E88E5';
-                                                    e.target.style.boxShadow = 'none';
-                                                }
-                                            }}
-                                            onBlur={(e) => {
-                                                if (!readOnly) {
-                                                    e.target.style.borderColor = '#B7B7B7';
-                                                }
-                                                // Ensure value is not negative on blur
-                                                const numValue = parseFloat(e.target.value);
-                                                if (isNaN(numValue) || numValue < 0) {
-                                                    handleInputChange('pulse', '');
-                                                }
-                                            }}
-                                        />
-                                    </div>
-
-                                </div>
-                            </div>
-
-                            {/* Vital Signs */}
-                            <div style={{ marginBottom: '10px' }}>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr 1fr', gap: '10px' }}>
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', fontWeight: 700, color: '#333' }}>
-                                            Height (Cm)
-                                        </label>
-                                        <input
-                                            type="number"
-                                            placeholder="Height"
-                                            value={formData.height}
-                                            onChange={(e) => {
-                                                const value = e.target.value;
-                                                // Allow empty string or non-negative numbers
-                                                if (value === '' || (!isNaN(parseFloat(value)) && parseFloat(value) >= 0)) {
-                                                    handleInputChange('height', value);
-                                                }
-                                            }}
-                                            onKeyDown={(e) => {
-                                                // Prevent minus key from being entered
-                                                if (e.key === '-' || e.key === 'e' || e.key === 'E' || e.key === '+') {
-                                                    e.preventDefault();
-                                                }
-                                            }}
-                                            min="0"
-                                            step="0.1"
-                                            disabled={readOnly}
-                                            style={{
-                                                width: '100%',
-                                                height: '32px',
-                                                padding: '4px 8px',
-                                                border: '2px solid #B7B7B7',
-                                                borderRadius: '6px',
-                                                fontSize: '0.9rem',
-                                                fontFamily: "'Roboto', sans-serif",
-                                                fontWeight: '500',
-                                                backgroundColor: readOnly ? '#f5f5f5' : 'white',
-                                                outline: 'none',
-                                                transition: 'border-color 0.2s',
-                                                cursor: readOnly ? 'not-allowed' : 'text'
-                                            }}
-                                            onFocus={(e) => {
-                                                if (!readOnly) {
-                                                    e.target.style.borderColor = '#1E88E5';
-                                                    e.target.style.boxShadow = 'none';
-                                                }
-                                            }}
-                                            onBlur={(e) => {
-                                                if (!readOnly) {
-                                                    e.target.style.borderColor = '#B7B7B7';
-                                                }
-                                                // Ensure value is not negative on blur
-                                                const numValue = parseFloat(e.target.value);
-                                                if (isNaN(numValue) || numValue < 0) {
-                                                    handleInputChange('height', '');
-                                                }
-                                            }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', fontWeight: 700, color: '#333' }}>
-                                            Weight (Kg)
-                                        </label>
-                                        <input
-                                            type="number"
-                                            placeholder="Weight"
-                                            value={formData.weight}
-                                            onChange={(e) => {
-                                                const value = e.target.value;
-                                                // Allow empty string or non-negative numbers
-                                                if (value === '' || (!isNaN(parseFloat(value)) && parseFloat(value) >= 0)) {
-                                                    handleInputChange('weight', value);
-                                                }
-                                            }}
-                                            onKeyDown={(e) => {
-                                                // Prevent minus key from being entered
-                                                if (e.key === '-' || e.key === 'e' || e.key === 'E' || e.key === '+') {
-                                                    e.preventDefault();
-                                                }
-                                            }}
-                                            min="0"
-                                            step="0.1"
-                                            disabled={readOnly}
-                                            style={{
-                                                width: '100%',
-                                                height: '32px',
-                                                padding: '4px 8px',
-                                                border: '2px solid #B7B7B7',
-                                                borderRadius: '6px',
-                                                fontSize: '0.9rem',
-                                                fontFamily: "'Roboto', sans-serif",
-                                                fontWeight: '500',
-                                                backgroundColor: readOnly ? '#f5f5f5' : 'white',
-                                                outline: 'none',
-                                                transition: 'border-color 0.2s',
-                                                cursor: readOnly ? 'not-allowed' : 'text'
-                                            }}
-                                            onFocus={(e) => {
-                                                if (!readOnly) {
-                                                    e.target.style.borderColor = '#1E88E5';
-                                                    e.target.style.boxShadow = 'none';
-                                                }
-                                            }}
-                                            onBlur={(e) => {
-                                                if (!readOnly) {
-                                                    e.target.style.borderColor = '#B7B7B7';
-                                                }
-                                                // Ensure value is not negative on blur
-                                                const numValue = parseFloat(e.target.value);
-                                                if (isNaN(numValue) || numValue < 0) {
-                                                    handleInputChange('weight', '');
-                                                }
-                                            }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', fontWeight: 700, color: '#333' }}>
-                                            BMI
-                                        </label>
-                                        <input
-                                            type="number"
-                                            placeholder="BMI"
-                                            value={formData.bmi}
-                                            disabled={readOnly || true}
-                                            style={{
-                                                width: '100%',
-                                                height: '32px',
-                                                padding: '4px 8px',
-                                                border: '2px solid #B7B7B7',
-                                                borderRadius: '6px',
-                                                fontSize: '0.9rem',
-                                                fontFamily: "'Roboto', sans-serif",
-                                                fontWeight: '500',
-                                                backgroundColor: '#f5f5f5',
-                                                outline: 'none',
-                                                transition: 'border-color 0.2s'
-                                            }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', fontWeight: 700, color: '#333' }}>
-                                            BP
-                                        </label>
-                                        <input
-                                            type="text"
-                                            placeholder="BP"
-                                            value={formData.bp}
-                                            onChange={(e) => {
-                                                const value = e.target.value;
-                                                // Allow empty string
-                                                if (value === '') {
-                                                    handleInputChange('bp', value);
-                                                    return;
-                                                }
-                                                // Check if value starts with minus sign (negative number)
-                                                if (value.trim().startsWith('-')) {
-                                                    return; // Reject negative values
-                                                }
-                                                // Check for negative numbers in formats like "120/-80" or "-120/80"
-                                                // Split by common separators and check each part
-                                                const parts = value.split(/[\/\-]/);
-                                                const hasNegative = parts.some(part => {
-                                                    const trimmed = part.trim();
-                                                    return trimmed.startsWith('-') || (trimmed !== '' && !isNaN(parseFloat(trimmed)) && parseFloat(trimmed) < 0);
-                                                });
-                                                if (!hasNegative) {
-                                                    handleInputChange('bp', value);
-                                                }
-                                            }}
-                                            onKeyDown={(e) => {
-                                                // Prevent minus key if it would create a negative number
-                                                if (e.key === '-') {
-                                                    const input = e.currentTarget as HTMLInputElement;
-                                                    const cursorPos = input.selectionStart || 0;
-                                                    // Allow minus only if it's in the middle (like "120-80" format)
-                                                    // But prevent if it's at the start or would create a negative number
-                                                    if (cursorPos === 0 || (input.value.length === 0)) {
-                                                        e.preventDefault();
-                                                    }
-                                                }
-                                            }}
-                                            disabled={readOnly}
-                                            style={{
-                                                width: '100%',
-                                                height: '32px',
-                                                padding: '4px 8px',
-                                                border: '2px solid #B7B7B7',
-                                                borderRadius: '6px',
-                                                fontSize: '0.9rem',
-                                                fontFamily: "'Roboto', sans-serif",
-                                                fontWeight: '500',
-                                                backgroundColor: readOnly ? '#f5f5f5' : 'white',
-                                                outline: 'none',
-                                                transition: 'border-color 0.2s',
-                                                cursor: readOnly ? 'not-allowed' : 'text'
-                                            }}
-                                            onFocus={(e) => {
-                                                if (!readOnly) {
-                                                    e.target.style.borderColor = '#1E88E5';
-                                                    e.target.style.boxShadow = 'none';
-                                                }
-                                            }}
-                                            onBlur={(e) => {
-                                                if (!readOnly) {
-                                                    e.target.style.borderColor = '#B7B7B7';
-                                                }
-                                                // Clean up any negative values on blur
-                                                const value = e.target.value;
-                                                if (value.trim().startsWith('-')) {
-                                                    handleInputChange('bp', '');
-                                                } else {
-                                                    // Check for negative numbers in the value
-                                                    const parts = value.split(/[\/\-]/);
-                                                    const hasNegative = parts.some(part => {
-                                                        const trimmed = part.trim();
-                                                        return trimmed.startsWith('-') || (trimmed !== '' && !isNaN(parseFloat(trimmed)) && parseFloat(trimmed) < 0);
-                                                    });
-                                                    if (hasNegative) {
-                                                        handleInputChange('bp', '');
-                                                    }
-                                                }
-                                            }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', fontWeight: 700, color: '#333' }}>
-                                            Sugar
-                                        </label>
-                                        <input
-                                            type="text"
-                                            placeholder="Sugar"
-                                            value={formData.sugar}
-                                            onChange={(e) => handleInputChange('sugar', e.target.value)}
-                                            disabled={readOnly}
-                                            style={{
-                                                width: '100%',
-                                                height: '32px',
-                                                padding: '4px 8px',
-                                                border: '2px solid #B7B7B7',
-                                                borderRadius: '6px',
-                                                fontSize: '0.9rem',
-                                                fontFamily: "'Roboto', sans-serif",
-                                                fontWeight: '500',
-                                                backgroundColor: readOnly ? '#f5f5f5' : 'white',
-                                                outline: 'none',
-                                                transition: 'border-color 0.2s',
-                                                cursor: readOnly ? 'not-allowed' : 'text'
-                                            }}
-                                            onFocus={(e) => {
-                                                if (!readOnly) {
-                                                    e.target.style.borderColor = '#1E88E5';
-                                                    e.target.style.boxShadow = 'none';
-                                                }
-                                            }}
-                                            onBlur={(e) => {
-                                                if (!readOnly) {
-                                                    e.target.style.borderColor = '#B7B7B7';
-                                                }
-                                            }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', fontWeight: 700, color: '#333' }}>
-                                            TFT
-                                        </label>
-                                        <input
-                                            type="text"
-                                            placeholder="TFT"
-                                            value={formData.tft}
-                                            onChange={(e) => handleInputChange('tft', e.target.value)}
-                                            disabled={readOnly}
-                                            style={{
-                                                width: '100%',
-                                                height: '32px',
-                                                padding: '4px 8px',
-                                                border: '2px solid #B7B7B7',
-                                                borderRadius: '6px',
-                                                fontSize: '0.9rem',
-                                                fontFamily: "'Roboto', sans-serif",
-                                                fontWeight: '500',
-                                                backgroundColor: readOnly ? '#f5f5f5' : 'white',
-                                                outline: 'none',
-                                                transition: 'border-color 0.2s',
-                                                cursor: readOnly ? 'not-allowed' : 'text'
-                                            }}
-                                            onFocus={(e) => {
-                                                if (!readOnly) {
-                                                    e.target.style.borderColor = '#1E88E5';
-                                                    e.target.style.boxShadow = 'none';
-                                                }
-                                            }}
-                                            onBlur={(e) => {
-                                                if (!readOnly) {
-                                                    e.target.style.borderColor = '#B7B7B7';
-                                                }
-                                            }}
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* History and Plans */}
-                            <div style={{ marginBottom: '10px' }}>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', fontWeight: 700, color: '#333' }}>
-                                            Past Surgical History
-                                        </label>
-                                        <textarea
-                                            value={formData.pastSurgicalHistory}
-                                            onChange={(e) => handleInputChange('pastSurgicalHistory', e.target.value)}
-                                            disabled={readOnly}
-                                            rows={2}
-                                            style={{
-                                                width: '100%',
-                                                padding: '4px 8px',
-                                                border: '2px solid #B7B7B7',
-                                                borderRadius: '6px',
-                                                fontSize: '0.9rem',
-                                                fontFamily: "'Roboto', sans-serif",
-                                                fontWeight: '500',
-                                                backgroundColor: readOnly ? '#f5f5f5' : 'white',
-                                                outline: 'none',
-                                                resize: 'vertical',
-                                                transition: 'border-color 0.2s',
-                                                cursor: readOnly ? 'not-allowed' : 'text'
-                                            }}
-                                            onFocus={(e) => {
-                                                if (!readOnly) {
-                                                    e.target.style.borderColor = '#1E88E5';
-                                                    e.target.style.boxShadow = 'none';
-                                                }
-                                            }}
-                                            onBlur={(e) => {
-                                                if (!readOnly) {
-                                                    e.target.style.borderColor = '#B7B7B7';
-                                                }
-                                            }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', fontWeight: 700, color: '#333' }}>
-                                            Previous Visit Plan
-                                        </label>
-                                        <textarea
-                                            value={formData.previousVisitPlan}
-                                            disabled={readOnly || true}
-                                            rows={2}
-                                            style={{
-                                                width: '100%',
-                                                padding: '4px 8px',
-                                                border: '2px solid #B7B7B7',
-                                                borderRadius: '6px',
-                                                fontSize: '0.9rem',
-                                                fontFamily: "'Roboto', sans-serif",
-                                                fontWeight: '500',
-                                                backgroundColor: '#f5f5f5',
-                                                outline: 'none',
-                                                resize: 'none',
-                                                transition: 'border-color 0.2s'
-                                            }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', fontWeight: 700, color: '#333' }}>
-                                            Chief complaint entered by patient
-                                        </label>
-                                        <textarea
-                                            value={formData.chiefComplaint}
-                                            disabled={readOnly || true}
-                                            rows={2}
-                                            style={{
-                                                width: '100%',
-                                                padding: '4px 8px',
-                                                border: '2px solid #B7B7B7',
-                                                borderRadius: '6px',
-                                                fontSize: '0.9rem',
-                                                fontFamily: "'Roboto', sans-serif",
-                                                fontWeight: '500',
-                                                backgroundColor: '#f5f5f5',
-                                                outline: 'none',
-                                                resize: 'none',
-                                                transition: 'border-color 0.2s'
-                                            }}
-                                        />
-                                    </div>
-                                </div>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginTop: '10px' }}>
-                                    <div style={{ position: 'relative' }}>
-                                        <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', fontWeight: 700, color: '#333' }}>
-                                            Select Complaints
-                                        </label>
-                                        <div style={{ display: 'flex', gap: '10px', alignItems: 'end' }}>
+                                            }
+                                        }}
+                                        disabled={readOnly}
+                                        variant="outlined"
+                                        placeholder='BP'
+                                    />
+                                </Box>
+                            </Grid>
+                            <Grid item xs={12} sm={6} md={2}>
+                                <Box sx={{ mb: 2 }}>
+                                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
+                                        Sugar
+                                    </Typography>
+                                    <TextField
+                                        fullWidth
+                                        size="small"
+                                        type="number"
+                                        value={formData.sugar}
+                                        onChange={(e) => handleInputChange('sugar', e.target.value)}
+                                        disabled={readOnly}
+                                        variant="outlined"
+                                        placeholder='Sugar'
+                                    />
+                                </Box>
+                            </Grid>
+                            <Grid item xs={12} sm={6} md={2}>
+                                <Box sx={{ mb: 2 }}>
+                                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
+                                        TFT
+                                    </Typography>
+                                    <TextField
+                                        fullWidth
+                                        size="small"
+                                        type="number"
+                                        value={formData.tft}
+                                        onChange={(e) => handleInputChange('tft', e.target.value)}
+                                        disabled={readOnly}
+                                        variant="outlined"
+                                        placeholder='TFT'
+                                    />
+                                </Box>
+                            </Grid>
+                        </Grid>
+                    </Box>
+                    <Box sx={{ mb: 2 }}>
+                        <Grid container spacing={2} sx={{ mb: 2 }}>
+                            <Grid item xs={12} md={4}>
+                                <Box sx={{ mb: 2 }}>
+                                    <Typography variant="subtitle2" fontWeight="bold" className='mb-0'>
+                                        Past Surgical History
+                                    </Typography>
+                                    <textarea
+                                        rows={2}
+                                        value={formData.pastSurgicalHistory}
+                                        onChange={(e) => handleInputChange('pastSurgicalHistory', e.target.value)}
+                                        disabled={readOnly}
+                                        id='textarea-autosize'
+                                        style={{
+                                            border: validationErrors.pastSurgicalHistory ? '1px solid #d32f2f' : '1px solid #b7b7b7',
+                                            borderRadius: '8px',
+                                            padding: '8px',
+                                            resize: 'vertical'
+                                        }}
+                                    />
+                                    {validationErrors.pastSurgicalHistory && (
+                                        <Typography variant="caption" color="error" sx={{ mt: 0.5, display: 'block' }}>
+                                            {validationErrors.pastSurgicalHistory}
+                                        </Typography>
+                                    )}
+                                </Box>
+                            </Grid>
+                            <Grid item xs={12} md={4}>
+                                <Box sx={{ mb: 2 }}>
+                                    <Typography variant="subtitle2" fontWeight="bold" className='mb-0'>
+                                        Previous Visit Plan
+                                    </Typography>
+                                    <textarea
+                                        rows={2}
+                                        value={formData.previousVisitPlan}
+                                        disabled={true}
+                                        id='textarea-autosize'
+                                        style={{
+                                            border: '1px solid #b7b7b7',
+                                            borderRadius: '8px',
+                                            padding: '8px',
+                                            resize: 'vertical'
+                                        }}
+                                    />
+                                </Box>
+                            </Grid>
+                            <Grid item xs={12} md={4}>
+                                <Box sx={{ mb: 2 }}>
+                                    <Typography variant="subtitle2" fontWeight="bold" className='mb-0'>
+                                        Chief complaint entered by patient
+                                    </Typography>
+                                    <textarea
+                                        rows={2}
+                                        value={formData.chiefComplaint}
+                                        disabled={true}
+                                        id='textarea-autosize'
+                                        style={{
+                                            border: '1px solid #b7b7b7',
+                                            borderRadius: '8px',
+                                            padding: '8px',
+                                            resize: 'vertical'
+                                        }}
+                                    />
+                                </Box>
+                            </Grid>
+                        </Grid>
+                    </Box>
+                    {/* Visit Comments and Medicines */}
+                    <Grid container spacing={2} sx={{ mb: 0 }}>
+                        <Grid item xs={12} md={4}>
+                            <Box sx={{ mb: 2 }}>
+                                <Grid container spacing={2} alignItems="center">
+                                    <Grid item xs>
+                                        <Box sx={{ mb: 2 }}>
+                                            <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
+                                                Select Complaints
+                                            </Typography>
                                             <div ref={complaintsRef} style={{ position: 'relative', flex: 1 }}>
                                                 <div
                                                     onClick={() => !readOnly && setIsComplaintsOpen(prev => !prev)}
@@ -2703,10 +2073,10 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                         display: 'flex',
                                                         alignItems: 'center',
                                                         justifyContent: 'space-between',
-                                                        height: '32px',
+                                                        height: '40px',
                                                         padding: '4px 8px',
                                                         border: '2px solid #B7B7B7',
-                                                        borderRadius: '6px',
+                                                        borderRadius: '8px',
                                                         fontSize: '12px',
                                                         fontFamily: "'Roboto', sans-serif",
                                                         fontWeight: 500,
@@ -2836,7 +2206,8 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                                             style={{
                                                                                 display: 'flex',
                                                                                 alignItems: 'center',
-                                                                                gap: '4px',
+                                                                                flexWrap: 'nowrap',
+                                                                                width: '100%',
                                                                                 padding: '4px 2px',
                                                                                 cursor: readOnly ? 'not-allowed' : 'pointer',
                                                                                 fontSize: '12px',
@@ -2848,6 +2219,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                                                 pointerEvents: readOnly ? 'none' : 'auto'
                                                                             }}
                                                                         >
+                                                                            <div style={{ width: '8.33%', flexShrink: 0 }}></div>
                                                                             <input
                                                                                 type="checkbox"
                                                                                 checked={checked}
@@ -2863,9 +2235,21 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                                                     });
                                                                                 }}
                                                                                 disabled={readOnly}
-                                                                                style={{ margin: 0 }}
+                                                                                style={{ margin: 0, width: '16.66%', flexShrink: 0 }}
                                                                             />
-                                                                            <span title={opt.label} style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{opt.label}</span>
+                                                                            <span
+                                                                                title={opt.label}
+                                                                                style={{
+                                                                                    whiteSpace: 'nowrap',
+                                                                                    overflow: 'hidden',
+                                                                                    textOverflow: 'ellipsis',
+                                                                                    width: '66.66%',
+                                                                                    flexGrow: 1,
+                                                                                    marginLeft: '8px'
+                                                                                }}
+                                                                            >
+                                                                                {opt.label}
+                                                                            </span>
                                                                         </label>
                                                                     </React.Fragment>
                                                                 );
@@ -2874,647 +2258,395 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                     </div>
                                                 )}
                                             </div>
-                                            <button
-                                                style={{
-                                                    padding: '0 10px',
-                                                    backgroundColor: readOnly ? '#9e9e9e' : '#1976d2',
-                                                    color: 'white',
-                                                    border: 'none',
-                                                    borderRadius: '6px',
-                                                    cursor: readOnly ? 'not-allowed' : 'pointer',
-                                                    fontSize: '12px',
-                                                    fontWeight: '500',
-                                                    height: '32px',
-                                                    transition: 'background-color 0.2s',
-                                                    opacity: readOnly ? 0.6 : 1
-                                                }}
-                                                onMouseEnter={(e) => {
-                                                    if (!readOnly) {
-                                                        e.currentTarget.style.backgroundColor = '#1565c0';
-                                                    }
-                                                }}
-                                                onMouseLeave={(e) => {
-                                                    if (!readOnly) {
-                                                        e.currentTarget.style.backgroundColor = '#1976d2';
-                                                    }
-                                                }}
-                                                onClick={handleAddComplaints}
-                                                disabled={readOnly}
-                                            >
-                                                Add
-                                            </button>
-                                        </div>
-
-                                        {/* Complaints table overlay (absolute) */}
-                                        {complaintsRows.length > 0 && (
-                                            <div
-                                                style={{
-                                                    position: 'absolute',
-                                                    top: '80px', // add extra gap below the select/add row
-                                                    left: 0,
-                                                    right: 0,
-                                                    backgroundColor: 'white',
-                                                    border: '1px solid #B7B7B7',
-                                                    borderRadius: '6px',
-                                                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                                                    zIndex: 900, // keep below complaints dropdown (which uses 1000)
-                                                }}
-                                            >
-                                                <div style={{ width: '100%', overflow: 'hidden' }}>
-                                                    {/* Header */}
-                                                    <div style={{ display: 'grid', gridTemplateColumns: '60px 1.5fr 1.5fr 80px', background: '#1565c0', color: 'white', fontWeight: 600, fontSize: '12px' }}>
-                                                        <div style={{ padding: '8px 10px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Sr.</div>
-                                                        <div style={{ padding: '8px 10px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Complaint Description</div>
-                                                        <div style={{ padding: '8px 10px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Duration / Comment</div>
-                                                        <div style={{ padding: '8px 10px' }}>Action</div>
-                                                    </div>
-                                                    {/* Rows */}
-                                                    {complaintsRows.map((row, idx) => (
-                                                        <div key={row.value} style={{ display: 'grid', gridTemplateColumns: '60px 1.5fr 1.5fr 80px', background: idx % 2 === 0 ? '#f7fbff' : 'white', fontSize: '12px', alignItems: 'center' }}>
-                                                            <div style={{ padding: '8px 10px', borderTop: '1px solid #e0e0e0', borderRight: '1px solid #e0e0e0' }}>{idx + 1}</div>
-                                                            <div style={{ padding: '8px 10px', borderTop: '1px solid #e0e0e0', borderRight: '1px solid #e0e0e0' }}>{row.label}</div>
-                                                            <div style={{ padding: '0', borderTop: '1px solid #e0e0e0', borderRight: '1px solid #e0e0e0' }}>
-                                                                <input
-                                                                    type="text"
-                                                                    value={row.comment}
-                                                                    placeholder="Enter duration/comment"
-                                                                    onChange={(e) => handleComplaintCommentChange(row.value, e.target.value)}
-                                                                    disabled={readOnly}
-                                                                    className="duration-comment-input"
-                                                                    style={{
-                                                                        width: '100%',
-                                                                        height: '100%',
-                                                                        padding: '8px 10px',
-                                                                        border: 'none !important',
-                                                                        borderWidth: '0 !important',
-                                                                        borderStyle: 'none !important',
-                                                                        borderColor: 'transparent !important',
-                                                                        borderRadius: '0 !important',
-                                                                        outline: 'none',
-                                                                        background: 'transparent',
-                                                                        boxShadow: 'none !important'
-                                                                    }}
-                                                                />
-                                                            </div>
-                                                            <div style={{ padding: '8px 10px', borderTop: '1px solid #e0e0e0' }}>
-                                                                <div
-                                                                    onClick={() => !readOnly && handleRemoveComplaint(row.value)}
-                                                                    title="Remove"
-                                                                    style={{
-                                                                        display: 'inline-flex',
-                                                                        alignItems: 'center',
-                                                                        justifyContent: 'center',
-                                                                        width: '24px',
-                                                                        height: '24px',
-                                                                        cursor: readOnly ? 'not-allowed' : 'pointer',
-                                                                        color: readOnly ? '#9e9e9e' : '#000000',
-                                                                        backgroundColor: 'transparent',
-                                                                        opacity: readOnly ? 0.6 : 1,
-                                                                        pointerEvents: readOnly ? 'none' : 'auto'
-                                                                    }}
-                                                                    onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.color = '#EF5350'; }}
-                                                                    onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.color = '#000000'; }}
-                                                                >
-                                                                    <Delete fontSize="small" />
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', fontWeight: 700, color: '#333' }}>
-                                            Visit Comments
-                                        </label>
-                                        <textarea
-                                            value={formData.visitComments}
-                                            onChange={(e) => handleInputChange('visitComments', e.target.value)}
+                                        </Box>
+                                    </Grid>
+                                    <Grid item>
+                                        <Button
+                                            variant="contained"
+                                            onClick={handleAddComplaints}
                                             disabled={readOnly}
-                                            rows={2}
-                                            style={{
-                                                width: '100%',
-                                                padding: '4px 8px',
-                                                border: '2px solid #B7B7B7',
-                                                borderRadius: '6px',
-                                                fontSize: '0.9rem',
-                                                fontFamily: "'Roboto', sans-serif",
-                                                fontWeight: '500',
-                                                backgroundColor: readOnly ? '#f5f5f5' : 'white',
-                                                outline: 'none',
-                                                resize: 'vertical',
-                                                transition: 'border-color 0.2s',
-                                                cursor: readOnly ? 'not-allowed' : 'text'
-                                            }}
-                                            onFocus={(e) => {
-                                                if (!readOnly) {
-                                                    e.target.style.borderColor = '#1E88E5';
-                                                    e.target.style.boxShadow = 'none';
-                                                }
-                                            }}
-                                            onBlur={(e) => {
-                                                if (!readOnly) {
-                                                    e.target.style.borderColor = '#B7B7B7';
-                                                }
-                                            }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', fontWeight: 700, color: '#333' }}>
-                                            Current Medicines
-                                        </label>
-                                        <textarea
-                                            value={formData.currentMedicines}
-                                            onChange={(e) => handleInputChange('currentMedicines', e.target.value)}
-                                            disabled={readOnly}
-                                            rows={2}
-                                            style={{
-                                                width: '100%',
-                                                padding: '4px 8px',
-                                                border: '2px solid #B7B7B7',
-                                                borderRadius: '6px',
-                                                fontSize: '0.9rem',
-                                                fontFamily: "'Roboto', sans-serif",
-                                                fontWeight: '500',
-                                                backgroundColor: readOnly ? '#f5f5f5' : 'white',
-                                                outline: 'none',
-                                                resize: 'vertical',
-                                                transition: 'border-color 0.2s',
-                                                cursor: readOnly ? 'not-allowed' : 'text'
-                                            }}
-                                            onFocus={(e) => {
-                                                if (!readOnly) {
-                                                    e.target.style.borderColor = '#1E88E5';
-                                                    e.target.style.boxShadow = 'none';
-                                                }
-                                            }}
-                                            onBlur={(e) => {
-                                                if (!readOnly) {
-                                                    e.target.style.borderColor = '#B7B7B7';
-                                                }
-                                            }}
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Attachments Row */}
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginTop: '10px' }}>
-                                <div>
-                                    {/* Empty first column */}
-                                </div>
-                                <div>
-                                    <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', fontWeight: 700, color: '#333' }}>
-                                        Attachments (Max 3 , Size 150Mb)
-                                    </label>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-                                        <button
-                                            type="button"
-                                            onClick={() => !readOnly && document.getElementById('fileInput')?.click()}
-                                            disabled={readOnly}
-                                            style={{
-                                                padding: '8px 16px',
-                                                backgroundColor: readOnly ? '#9e9e9e' : '#1976d2',
-                                                color: 'white',
-                                                border: 'none',
-                                                borderRadius: '6px',
-                                                cursor: readOnly ? 'not-allowed' : 'pointer',
-                                                fontSize: '12px',
-                                                fontWeight: '500',
-                                                transition: 'background-color 0.2s',
-                                                opacity: readOnly ? 0.6 : 1
-                                            }}
-                                            onMouseEnter={(e) => {
-                                                if (!readOnly) {
-                                                    e.currentTarget.style.backgroundColor = '#1565c0';
-                                                }
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                if (!readOnly) {
-                                                    e.currentTarget.style.backgroundColor = '#1976d2';
-                                                }
-                                            }}
+                                            sx={{ height: 40 }}
                                         >
-                                            Choose Files
-                                        </button>
-                                        <span style={{ fontSize: '12px', color: '#666' }}>
-                                            Files uploaded: {formData.attachments.length + existingDocuments.length}
-                                            {(() => {
-                                                const newFilesSize = formData.attachments.reduce((sum, file) => sum + file.size, 0);
-                                                const existingFilesSize = existingDocuments.reduce((sum, doc) => sum + (doc.fileSize || 0), 0);
-                                                const totalSize = newFilesSize + existingFilesSize;
+                                            Add
+                                        </Button>
+                                    </Grid>
+                                </Grid>
 
-                                                if (totalSize > 0) {
-                                                    const units = ['B', 'KB', 'MB', 'GB'];
-                                                    let size = totalSize;
-                                                    let unitIndex = 0;
-                                                    while (size >= 1024 && unitIndex < units.length - 1) {
-                                                        size /= 1024;
-                                                        unitIndex++;
-                                                    }
-                                                    return (
-                                                        <span style={{ marginLeft: '5px', fontWeight: '500' }}>
-                                                            (Total size: {`${size.toFixed(1)} ${units[unitIndex]}`})
-                                                        </span>
-                                                    );
-                                                }
-                                                return null;
-                                            })()}
-                                        </span>
-                                    </div>
-                                    <input
-                                        id="fileInput"
-                                        type="file"
-                                        multiple
-                                        accept=".jpg,.jpeg,.png,.gif,.pdf,.xls,.xlsx,.doc,.docx"
-                                        onChange={handleFileChange}
-                                        style={{ display: 'none' }}
-                                    />
-                                    <div style={{ marginTop: '5px', fontSize: '12px', color: '#666' }}>
-                                        {/* Show loading indicator for existing documents */}
-                                        {/* {isLoadingDocuments && (
-                                    <div style={{ 
-                                        display: 'flex', 
-                                        alignItems: 'center', 
-                                        gap: '5px', 
-                                        color: '#2e7d32',
-                                        marginBottom: '5px'
-                                    }}>
-                                        <div style={{
-                                            width: '12px',
-                                            height: '12px',
-                                            border: '2px solid #2e7d32',
-                                            borderTop: '2px solid transparent',
-                                            borderRadius: '50%',
-                                            animation: 'spin 1s linear infinite'
-                                        }}></div>
-                                        Loading existing documents...
-                                    </div>
-                                )} */}
+                            </Box>
+                        </Grid>
+                        <Grid item xs={12} md={4}>
+                            <Box sx={{ mb: 2 }}>
+                                <Typography variant="subtitle2" fontWeight="bold" className='mb-0'>
+                                    Visit Comments
+                                </Typography>
+                                <textarea
+                                    rows={2}
+                                    value={formData.visitComments}
+                                    onChange={(e) => handleInputChange('visitComments', e.target.value)}
+                                    disabled={readOnly}
+                                    id='textarea-autosize'
+                                    style={{
+                                        border: validationErrors.visitComments ? '1px solid #d32f2f' : '1px solid #b7b7b7',
+                                        borderRadius: '8px',
+                                        padding: '8px',
+                                        resize: 'vertical'
+                                    }}
+                                />
+                                {validationErrors.visitComments && (
+                                    <Typography variant="caption" color="error" sx={{ mt: 0.5, display: 'block' }}>
+                                        {validationErrors.visitComments}
+                                    </Typography>
+                                )}
+                            </Box>
+                        </Grid>
+                        <Grid item xs={12} md={4}>
+                            <Box sx={{ mb: 2 }}>
+                                <Typography variant="subtitle2" fontWeight="bold" className='mb-0'>
+                                    Current Medicines
+                                </Typography>
+                                <textarea
+                                    rows={2}
+                                    value={formData.currentMedicines}
+                                    onChange={(e) => handleInputChange('currentMedicines', e.target.value)}
+                                    disabled={readOnly}
+                                    id='textarea-autosize'
+                                    style={{
+                                        border: validationErrors.currentMedicines ? '1px solid #d32f2f' : '1px solid #b7b7b7',
+                                        borderRadius: '8px',
+                                        padding: '8px',
+                                        resize: 'vertical'
+                                    }}
+                                />
+                                {validationErrors.currentMedicines && (
+                                    <Typography variant="caption" color="error" sx={{ mt: 0.5, display: 'block' }}>
+                                        {validationErrors.currentMedicines}
+                                    </Typography>
+                                )}
+                            </Box>
+                        </Grid>
+                    </Grid>
 
-                                        {/* Show existing documents */}
-                                        {existingDocuments.length > 0 && (
-                                            <div style={{ marginBottom: '5px' }}>
-                                                {/* Debug Test Button - Can be removed if not needed */}
-                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', alignItems: 'center' }}>
-                                                    {existingDocuments.map((doc, index) => {
-                                                        // Debug logging can be removed if not needed
-
-                                                        // Try different possible field names for document ID
-                                                        const docId = doc.documentId || doc.id || doc.document_id || doc.documentID;
-
-                                                        return (
-                                                            <span key={`existing-${index}`} style={{
-                                                                display: 'inline-flex',
+                    <Grid container spacing={2} sx={{ mb: 2 }}>
+                        <Grid item xs={12} md={4} className='pt-0'>
+                            {complaintsRows.length > 0 && (
+                                <div style={{
+                                    border: '1px solid #ddd',
+                                    borderRadius: '4px',
+                                    overflow: 'hidden'
+                                }}>
+                                    <table style={{ width: '100%', tableLayout: 'fixed' }}>
+                                        <thead>
+                                            <tr style={{ backgroundColor: '#1976d2' }}>
+                                                <th style={{
+                                                    padding: '12px !important',
+                                                    textAlign: 'left',
+                                                    borderBottom: '1px solid #ddd',
+                                                    fontWeight: '100 !important',
+                                                    color: 'white',
+                                                    width: '10%',
+                                                    fontSize: '12px'
+                                                }}>
+                                                    Sr.
+                                                </th>
+                                                <th style={{
+                                                    padding: '12px !important',
+                                                    textAlign: 'left',
+                                                    borderBottom: '1px solid #ddd',
+                                                    fontWeight: '100 !important',
+                                                    color: 'white',
+                                                    width: '30%',
+                                                    fontSize: '12px'
+                                                }}>
+                                                    Complaint Description
+                                                </th>
+                                                <th style={{
+                                                    padding: '12px !important',
+                                                    textAlign: 'left',
+                                                    borderBottom: '1px solid #ddd',
+                                                    fontWeight: '100 !important',
+                                                    color: 'white',
+                                                    width: '40%',
+                                                    fontSize: '12px'
+                                                }}>
+                                                    Duration / Comment
+                                                </th>
+                                                <th style={{
+                                                    padding: '12px !important',
+                                                    borderBottom: '1px solid #ddd',
+                                                    fontWeight: '100 !important',
+                                                    color: 'white',
+                                                    width: '20%',
+                                                    fontSize: '12px'
+                                                }} className='text-center'>
+                                                    Action
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {complaintsRows.map((row, idx) => (
+                                                <tr key={row.id}>
+                                                    <td style={{
+                                                        padding: '12px',
+                                                        borderBottom: '1px solid #eee',
+                                                        color: 'black',
+                                                        height: '38px',
+                                                        fontSize: '12px'
+                                                    }}>
+                                                        {idx + 1}
+                                                    </td>
+                                                    <td style={{
+                                                        padding: '12px',
+                                                        borderBottom: '1px solid #eee',
+                                                        color: 'black',
+                                                        height: '38px',
+                                                        fontSize: '12px'
+                                                    }}>
+                                                        {row.label}
+                                                    </td>
+                                                    <td style={{ padding: '12px' }}>
+                                                        <TextField
+                                                            fullWidth
+                                                            size="small"
+                                                            value={row.comment}
+                                                            onChange={(e) => handleComplaintCommentChange(row.value, e.target.value)}
+                                                            disabled={readOnly}
+                                                            placeholder="Enter Duration/Comment"
+                                                            variant="outlined"
+                                                            InputProps={{ disableUnderline: true }}
+                                                        />
+                                                    </td>
+                                                    <td style={{
+                                                        padding: '12px',
+                                                        borderBottom: '1px solid #eee',
+                                                        textAlign: 'center',
+                                                        height: '38px'
+                                                    }}>
+                                                        <button
+                                                            onClick={() => !readOnly && handleRemoveComplaint(row.value)}
+                                                            style={{
+                                                                background: 'none',
+                                                                border: 'none',
+                                                                cursor: 'pointer',
+                                                                color: '#f44336',
+                                                                padding: '6px',
+                                                                borderRadius: '4px',
+                                                                display: 'flex',
                                                                 alignItems: 'center',
-                                                                padding: '4px 8px',
-                                                                backgroundColor: '#e8f5e8',
-                                                                borderRadius: '6px',
-                                                                border: '1px solid #c8e6c9',
-                                                                fontSize: '12px',
-                                                                fontFamily: "'Roboto', sans-serif",
-                                                                fontWeight: '500',
-                                                                color: '#2e7d32'
-                                                            }}>
-                                                                <span style={{ marginRight: '5px' }}>📄</span>
-                                                                <span style={{ maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                                    {(doc.documentName ? doc.documentName.split('/').pop() : null) || `Document ${index + 1}`}
-                                                                </span>
-                                                                {doc.fileSize && (
-                                                                    <span style={{
-                                                                        marginRight: '5px',
-                                                                        fontSize: '11px',
-                                                                        color: '#2e7d32',
-                                                                        fontWeight: '400'
-                                                                    }}>
-                                                                        ({(() => {
-                                                                            const size = doc.fileSize;
-                                                                            if (size === 0) return '0 B';
-                                                                            const units = ['B', 'KB', 'MB', 'GB'];
-                                                                            let fileSize = size;
-                                                                            let unitIndex = 0;
-                                                                            while (fileSize >= 1024 && unitIndex < units.length - 1) {
-                                                                                fileSize /= 1024;
-                                                                                unitIndex++;
-                                                                            }
-                                                                            return `${fileSize.toFixed(1)} ${units[unitIndex]}`;
-                                                                        })()})
-                                                                    </span>
-                                                                )}
-                                                                <span
-                                                                    onClick={async () => {
-                                                                        if (readOnly || deletingDocumentId === docId) return; // Prevent multiple clicks and disable in readOnly
-
-                                                                        try {
-                                                                            // Call backend API to delete the document
-                                                                            if (docId) {
-                                                                                setDeletingDocumentId(docId);
-                                                                                console.log('=== DELETING DOCUMENT FROM BACKEND ===');
-                                                                                console.log('Document ID:', docId);
-                                                                                console.log('Document name:', doc.documentName);
-                                                                                console.log('Full document object:', doc);
-
-                                                                                // Try the DocumentService first
-                                                                                let result;
-                                                                                try {
-                                                                                    result = await DocumentService.deleteDocumentWithPhysicalFile(
-                                                                                        docId,
-                                                                                        'recep' // You may want to get this from auth context
-                                                                                    );
-                                                                                    console.log('Delete API response:', result);
-                                                                                } catch (serviceError) {
-                                                                                    console.warn('DocumentService failed, trying direct API call:', serviceError);
-                                                                                    // Fallback to direct API call
-                                                                                    result = await testDocumentDeletion(docId);
-                                                                                }
-
-                                                                                if (result.success) {
-                                                                                    console.log('Document deleted successfully from backend');
-                                                                                    // Remove document from existing documents list
-                                                                                    setExistingDocuments(prev => prev.filter((_, i) => i !== index));
-                                                                                    const fileNameOnly = doc.documentName.split('/').pop() || doc.documentName;
-                                                                                    setSnackbarMessage(`Document "${fileNameOnly}" deleted successfully!`);
-                                                                                    setSnackbarOpen(true);
-                                                                                } else {
-                                                                                    console.error('Failed to delete document from backend:', result.error);
-                                                                                    setSnackbarMessage(`Failed to delete document: ${result.error || 'Unknown error'}`);
-                                                                                    setSnackbarOpen(true);
-                                                                                }
-                                                                            } else {
-                                                                                console.warn('No document ID found, removing from UI only');
-                                                                                console.log('Document object without ID:', doc);
-                                                                                // Remove document from existing documents list (fallback)
-                                                                                setExistingDocuments(prev => prev.filter((_, i) => i !== index));
-                                                                            }
-                                                                        } catch (error: any) {
-                                                                            console.error('Error deleting document:', error);
-                                                                            console.error('Error details:', {
-                                                                                message: error instanceof Error ? error.message : 'Unknown error',
-                                                                                stack: error instanceof Error ? error.stack : 'No stack trace',
-                                                                                response: error.response || 'No response object'
-                                                                            });
-                                                                            setSnackbarSeverity('error');
-                                                                            setSnackbarMessage(`Error deleting document: ${error instanceof Error ? error.message : 'Unknown error'}`);
-                                                                            setSnackbarOpen(true);
-                                                                        } finally {
-                                                                            setDeletingDocumentId(null);
-                                                                        }
-                                                                    }}
-                                                                    style={{
-                                                                        color: (readOnly || deletingDocumentId === docId) ? '#9e9e9e' : '#d32f2f',
-                                                                        cursor: (readOnly || deletingDocumentId === docId) ? 'not-allowed' : 'pointer',
-                                                                        fontSize: '14px',
-                                                                        padding: '0',
-                                                                        marginLeft: '5px',
-                                                                        fontWeight: 'bold',
-                                                                        display: 'flex',
-                                                                        alignItems: 'center',
-                                                                        justifyContent: 'center',
-                                                                        width: '16px',
-                                                                        height: '16px',
-                                                                        borderRadius: '50%',
-                                                                        backgroundColor: (readOnly || deletingDocumentId === docId) ? 'rgba(158, 158, 158, 0.1)' : 'rgba(211, 47, 47, 0.1)',
-                                                                        transition: 'background-color 0.2s',
-                                                                        opacity: (readOnly || deletingDocumentId === docId) ? 0.6 : 1,
-                                                                        pointerEvents: readOnly ? 'none' : 'auto'
-                                                                    }}
-                                                                    onMouseEnter={(e) => {
-                                                                        if (!readOnly && deletingDocumentId !== docId) {
-                                                                            e.currentTarget.style.backgroundColor = 'rgba(211, 47, 47, 0.2)';
-                                                                        }
-                                                                    }}
-                                                                    onMouseLeave={(e) => {
-                                                                        if (!readOnly && deletingDocumentId !== docId) {
-                                                                            e.currentTarget.style.backgroundColor = 'rgba(211, 47, 47, 0.1)';
-                                                                        }
-                                                                    }}
-                                                                    title={readOnly ? "Read-only mode" : (deletingDocumentId === docId ? "Deleting..." : "Remove document")}
-                                                                >
-                                                                    ×
-                                                                </span>
-                                                            </span>
-                                                        );
-                                                    })}
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {/* Show uploaded files */}
-                                        {formData.attachments.length > 0 && (
-                                            <div>
-                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', alignItems: 'center' }}>
-                                                    {formData.attachments.map((file, index) => (
-                                                        <span key={index} style={{
-                                                            display: 'inline-flex',
-                                                            alignItems: 'center',
-                                                            padding: '4px 8px',
-                                                            backgroundColor: 'white',
-                                                            borderRadius: '6px',
-                                                            border: '1px solid #B7B7B7',
-                                                            fontSize: '12px',
-                                                            fontFamily: "'Roboto', sans-serif",
-                                                            fontWeight: '500'
-                                                        }}>
-                                                            <span style={{ marginRight: '5px', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                                {file.name}
-                                                            </span>
-                                                            <span style={{
-                                                                marginRight: '5px',
-                                                                fontSize: '11px',
-                                                                color: '#666',
-                                                                fontWeight: '400'
-                                                            }}>
-                                                                ({(() => {
-                                                                    const size = file.size;
-                                                                    if (size === 0) return '0 B';
-                                                                    const units = ['B', 'KB', 'MB', 'GB'];
-                                                                    let fileSize = size;
-                                                                    let unitIndex = 0;
-                                                                    while (fileSize >= 1024 && unitIndex < units.length - 1) {
-                                                                        fileSize /= 1024;
-                                                                        unitIndex++;
-                                                                    }
-                                                                    return `${fileSize.toFixed(1)} ${units[unitIndex]}`;
-                                                                })()})
-                                                            </span>
-                                                            <span
-                                                                onClick={() => !readOnly && removeFile(index)}
-                                                                style={{
-                                                                    color: readOnly ? '#9e9e9e' : 'black',
-                                                                    cursor: readOnly ? 'not-allowed' : 'pointer',
-                                                                    fontSize: '14px',
-                                                                    padding: '0',
-                                                                    marginLeft: '5px',
-                                                                    fontWeight: 'bold',
-                                                                    opacity: readOnly ? 0.5 : 1,
-                                                                    pointerEvents: readOnly ? 'none' : 'auto'
-                                                                }}
-                                                                title={readOnly ? "Read-only mode" : "Remove file"}
-                                                            >
-                                                                ×
-                                                            </span>
-                                                        </span>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
-
-                                    </div>
+                                                                justifyContent: 'center'
+                                                            }}
+                                                            onMouseEnter={(e) => {
+                                                                e.currentTarget.style.backgroundColor = '#ffebee';
+                                                            }}
+                                                            onMouseLeave={(e) => {
+                                                                e.currentTarget.style.backgroundColor = 'transparent';
+                                                            }}
+                                                        >
+                                                            <Delete fontSize="small" style={{ color: 'black' }} />
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
                                 </div>
-                                <div>
-                                    {/* Empty third column */}
-                                </div>
-                            </div>
+                            )}
+                        </Grid>
+                        <Grid item xs={12} md={8} className='pt-0'>
 
-                        </div>
+                            {/* Attachments */}
+                            <Box sx={{ mt: 3, mb: 2 }}>
+                                <Typography variant="subtitle2" fontWeight="bold" gutterBottom className='mb-0'>
+                                    Attachments (Max 3 , Size 150Mb)
+                                </Typography>
 
-                        {/* Attachments */}
-                        <style>{`
-                    .attachmentInput{ border: none !important; }
-                    .referral-add-icon {
-                        padding: 8px 15px !important;
-                        outline: none !important;
-                        box-shadow: none !important;
-                        border: none !important;
-                        margin: 0 !important;
-                        transform: translateY(-50%) !important;
-                        position: absolute !important;
-                        top: 50% !important;
-                        right: 4px !important;
-                        left: auto !important;
-                        bottom: auto !important;
-                    }
-                    .referral-add-icon:focus,
-                    .referral-add-icon:active,
-                    .referral-add-icon:hover {
-                        outline: none !important;
-                        box-shadow: none !important;
-                        border: none !important;
-                        margin: 0 !important;
-                        transform: translateY(-50%) !important;
-                        position: absolute !important;
-                        top: 50% !important;
-                        right: 4px !important;
-                        left: auto !important;
-                        bottom: auto !important;
-                    }
-                    input[type="checkbox"] {
-                        width: auto !important;
-                    }
-                    /* Hide number input spinners */
-                    input[type="number"]::-webkit-inner-spin-button,
-                    input[type="number"]::-webkit-outer-spin-button {
-                        -webkit-appearance: none;
-                        margin: 0;
-                    }
-                    input[type="number"] {
-                        -moz-appearance: textfield;
-                    }
+                                <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 2, mb: 2 }}>
+                                    <Button
+                                        component="label"
+                                        variant="contained"
+                                        disabled={readOnly || (formData.attachments.length + existingDocuments.length >= 3)}
+                                        sx={{ textTransform: 'none' }}
+                                    >
+                                        Choose Files
+                                        <input
+                                            type="file"
+                                            hidden
+                                            multiple
+                                            accept=".jpg,.jpeg,.png,.pdf,.xls,.xlsx,.doc,.docx"
+                                            onChange={handleFileChange}
+                                        />
+                                    </Button>
+
+                                    <Typography variant="body2" color="textSecondary">
+                                        Files uploaded: {formData.attachments.length + existingDocuments.length}
+                                        {(() => {
+                                            const newFilesSize = formData.attachments.reduce((sum, file) => sum + file.size, 0);
+                                            const existingFilesSize = existingDocuments.reduce((sum, doc) => sum + (doc.fileSize || 0), 0);
+                                            const totalSize = newFilesSize + existingFilesSize;
+
+                                            if (totalSize > 0) {
+                                                const units = ['B', 'KB', 'MB', 'GB'];
+                                                let size = totalSize;
+                                                let unitIndex = 0;
+                                                while (size >= 1024 && unitIndex < units.length - 1) {
+                                                    size /= 1024;
+                                                    unitIndex++;
+                                                }
+                                                return ` (Total size: ${size.toFixed(1)} ${units[unitIndex]})`;
+                                            }
+                                            return '';
+                                        })()}
+                                    </Typography>
+                                </Box>
+                                {fileValidationMessage && (
+                                    <Typography variant="body2" color="error" sx={{ display: 'block', mt: 1 }}>
+                                        {fileValidationMessage}
+                                    </Typography>
+                                )}
+
+                                {/* File List */}
+                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                                    {/* Existing Documents */}
+                                    {existingDocuments.map((doc, index) => {
+                                        const docId = doc.documentId || doc.id || (doc as any).document_id || (doc as any).documentID;
+                                        const isDeleting = deletingDocumentId === docId;
+                                        const originalName = (doc.documentName ? doc.documentName.split('/').pop() : null) || `Document ${index + 1}`;
+                                        const displayName = originalName.length > 20 ? originalName.substring(0, 20) + '...' : originalName;
+                                        const fileSize = doc.fileSize ? (doc.fileSize > 1024 * 1024 ? ` (${(doc.fileSize / (1024 * 1024)).toFixed(1)} MB)` : ` (${(doc.fileSize / 1024).toFixed(1)} KB)`) : '';
+
+                                        return (
+                                            <Box key={`existing-${index}`} sx={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                bgcolor: '#e8f5e8',
+                                                border: '1px solid darkgray',
+                                                borderRadius: 8,
+                                                pl: 1, pr: 0.5, py: 0.5
+                                            }}>
+                                                <Typography
+                                                    variant="caption"
+                                                    sx={{
+                                                        color: '#2e7d32',
+                                                        mr: 0.5,
+                                                        fontWeight: 500,
+                                                        cursor: 'pointer',
+                                                        textDecoration: 'underline',
+                                                        '&:hover': {
+                                                            color: '#1b5e20'
+                                                        }
+                                                    }}
+                                                    title={`Click to download ${originalName}`}
+                                                    onClick={() => !isDeleting && handleDownloadDocument(docId, originalName)}
+                                                >
+                                                    {displayName}{fileSize}
+                                                </Typography>
+                                                <span
+                                                    onClick={async () => {
+                                                        if (readOnly || isDeleting) return;
+                                                        setDeletingDocumentId(docId);
+                                                        try {
+                                                            await DocumentService.deleteDocument(docId);
+                                                            setExistingDocuments(prev => prev.filter(d => (d.documentId || d.id || (d as any).document_id || (d as any).documentID) !== docId));
+                                                            setSnackbarMessage("Document deleted successfully");
+                                                            setSnackbarSeverity('success');
+                                                            setSnackbarOpen(true);
+                                                        } catch (error) {
+                                                            console.error("Error deleting document", error);
+                                                            setSnackbarMessage(`Error deleting document: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                                                            setSnackbarSeverity('error');
+                                                            setSnackbarOpen(true);
+                                                        } finally {
+                                                            setDeletingDocumentId(null);
+                                                        }
+                                                    }}
+                                                    style={{
+                                                        marginLeft: '4px',
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        cursor: (readOnly || isDeleting) ? 'default' : 'pointer',
+                                                        color: isDeleting ? 'rgba(0, 0, 0, 0.38)' : '#d32f2f'
+                                                    }}
+                                                    className='py-2 pe-2'
+                                                >
+                                                    <Close fontSize="small" sx={{ fontSize: '16px' }} />
+                                                </span>
+                                            </Box>
+                                        );
+                                    })}
+
+                                    {/* New Attachments */}
+                                    {formData.attachments.map((file, index) => {
+                                        const displayName = file.name.length > 20 ? file.name.substring(0, 20) + '...' : file.name;
+                                        const fileSize = file.size > 1024 * 1024 ? ` (${(file.size / (1024 * 1024)).toFixed(1)} MB)` : ` (${(file.size / 1024).toFixed(1)} KB)`;
+                                        return (
+                                            <Box key={`new-${index}`} sx={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                bgcolor: '#fff',
+                                                border: '1px solid darkgray',
+                                                borderRadius: 8,
+                                                pl: 1, pr: 0.5, py: 0
+                                            }}>
+                                                <Typography variant="caption" sx={{ mr: 0.5, fontWeight: 500 }} title={file.name}>
+                                                    {displayName}{fileSize}
+                                                </Typography>
+                                                <span
+                                                    onClick={() => {
+                                                        if (!readOnly) {
+                                                            const newAttachments = [...formData.attachments];
+                                                            newAttachments.splice(index, 1);
+                                                            handleInputChange('attachments', newAttachments);
+                                                        }
+                                                    }}
+                                                    style={{
+                                                        marginLeft: '4px',
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        cursor: readOnly ? 'default' : 'pointer',
+                                                        color: 'rgba(0, 0, 0, 0.54)'
+                                                    }}
+                                                    onMouseEnter={(e) => {
+                                                        if (!readOnly) e.currentTarget.style.color = '#d32f2f';
+                                                    }}
+                                                    onMouseLeave={(e) => {
+                                                        if (!readOnly) e.currentTarget.style.color = 'rgba(0, 0, 0, 0.54)';
+                                                    }}
+                                                    className='py-2 pe-2'
+                                                >
+                                                    <Close fontSize="small" sx={{ fontSize: '16px' }} />
+                                                </span>
+                                            </Box>
+                                        )
+                                    })}
+                                </Box>
+                            </Box>
+                        </Grid>
+                    </Grid>
+                </DialogContent>
+
+                <DialogActions sx={{ px: 3, py: 2, borderTop: '1px solid #e0e0e0' }}>
+                    <Button onClick={onClose} disabled={readOnly} color="primary" variant="contained">
+                        Close
+                    </Button>
+                    <Button onClick={handleReset} disabled={readOnly} color="primary" variant="contained">
+                        Reset
+                    </Button>
+                    <Button
+                        onClick={handleSubmit}
+                        disabled={readOnly || isLoading}
+                        variant="contained"
+                        color="primary"
+                        startIcon={isLoading ? <Box component="span" sx={{ width: 16, height: 16, border: '2px solid white', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} /> : null}
+                    >
+                        {isLoading ? 'Saving...' : 'Submit'}
+                    </Button>
+                </DialogActions>
+                <style>{`
                     @keyframes spin {
                         0% { transform: rotate(0deg); }
                         100% { transform: rotate(360deg); }
                     }
                 `}</style>
-
-                        {/* Footer */}
-                        <div style={{
-                            background: 'transparent',
-                            padding: '0 20px 14px',
-                            borderBottomLeftRadius: '8px',
-                            borderBottomRightRadius: '8px',
-                            display: 'flex',
-                            justifyContent: 'flex-end',
-                            gap: '8px'
-                        }}>
-                            <button
-                                onClick={onClose}
-                                disabled={readOnly}
-                                style={{
-                                    padding: '10px 20px',
-                                    backgroundColor: readOnly ? '#9e9e9e' : '#1976d2',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '4px',
-                                    cursor: readOnly ? 'not-allowed' : 'pointer',
-                                    fontSize: '14px',
-                                    fontWeight: '500',
-                                    transition: 'background-color 0.2s',
-                                    opacity: readOnly ? 0.6 : 1
-                                }}
-                                onMouseEnter={(e) => {
-                                    if (!readOnly) {
-                                        e.currentTarget.style.backgroundColor = '#1565c0';
-                                    }
-                                }}
-                                onMouseLeave={(e) => {
-                                    if (!readOnly) {
-                                        e.currentTarget.style.backgroundColor = '#1976d2';
-                                    }
-                                }}
-                            >
-                                Close
-                            </button>
-                            <button
-                                onClick={handleReset}
-                                disabled={readOnly}
-                                style={{
-                                    padding: '10px 20px',
-                                    backgroundColor: readOnly ? '#9e9e9e' : '#1976d2',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '4px',
-                                    cursor: readOnly ? 'not-allowed' : 'pointer',
-                                    fontSize: '14px',
-                                    fontWeight: '500',
-                                    transition: 'background-color 0.2s',
-                                    opacity: readOnly ? 0.6 : 1
-                                }}
-                                onMouseEnter={(e) => {
-                                    if (!readOnly) {
-                                        e.currentTarget.style.backgroundColor = '#1565c0';
-                                    }
-                                }}
-                                onMouseLeave={(e) => {
-                                    if (!readOnly) {
-                                        e.currentTarget.style.backgroundColor = '#1976d2';
-                                    }
-                                }}
-                            >
-                                Reset
-                            </button>
-                            <button
-                                onClick={handleSubmit}
-                                disabled={readOnly || isLoading}
-                                style={{
-                                    padding: '10px 20px',
-                                    backgroundColor: (readOnly || isLoading) ? '#9e9e9e' : '#1976d2',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '4px',
-                                    cursor: (readOnly || isLoading) ? 'not-allowed' : 'pointer',
-                                    fontSize: '14px',
-                                    fontWeight: '500',
-                                    transition: 'background-color 0.2s',
-                                    opacity: (readOnly || isLoading) ? 0.6 : 1
-                                }}
-                                onMouseEnter={(e) => {
-                                    if (!readOnly && !isLoading) {
-                                        e.currentTarget.style.backgroundColor = '#1565c0';
-                                    }
-                                }}
-                                onMouseLeave={(e) => {
-                                    if (!readOnly && !isLoading) {
-                                        e.currentTarget.style.backgroundColor = '#1976d2';
-                                    }
-                                }}
-                            >
-                                {isLoading ? 'Saving...' : 'Submit'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            </Dialog>
 
             {/* Success Snackbar - Always rendered outside modal */}
             <Snackbar
@@ -3552,9 +2684,6 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                 open={showReferralPopup}
                 onClose={() => setShowReferralPopup(false)}
                 onSave={(referralData: ReferralData) => {
-                    // Handle save new referral logic here
-                    console.log('New referral data:', referralData);
-                    // Refresh referral name options after saving
                     if (isDoctorReferral()) {
                         handleReferralNameSearch(referralData.doctorName || '');
                     }
@@ -3563,24 +2692,23 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
             />
 
             {/* Quick Registration Modal - appears on top of Patient Visit Details window */}
-            {showQuickRegistration && patientData?.patientId && (
-                <AddPatientPage
-                    open={showQuickRegistration}
-                    onClose={() => {
-                        setShowQuickRegistration(false);
-                        setSessionDataForQuickReg(null);
-                    }}
-                    patientId={String(patientData.patientId)}
-                    readOnly={true}
-                    doctorId={(patientData as any)?.doctorId || sessionDataForQuickReg?.doctorId}
-                    clinicId={(patientData as any)?.clinicId || sessionDataForQuickReg?.clinicId}
-                />
-            )}
+            {
+                showQuickRegistration && patientData?.patientId && (
+                    <AddPatientPage
+                        open={showQuickRegistration}
+                        onClose={() => {
+                            setShowQuickRegistration(false);
+                            setSessionDataForQuickReg(null);
+                        }}
+                        patientId={String(patientData.patientId)}
+                        readOnly={true}
+                        doctorId={(patientData as any)?.doctorId || sessionDataForQuickReg?.doctorId}
+                        clinicId={(patientData as any)?.clinicId || sessionDataForQuickReg?.clinicId}
+                    />
+                )
+            }
         </>
     );
 };
 
 export default PatientVisitDetails;
-
-// Page wrapper to render via route and accept patientData through location.state
-// (Standalone page wrapper removed as per revert request)

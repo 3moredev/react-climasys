@@ -100,6 +100,10 @@ const AppTheme = createTheme({
                         borderWidth: '2px',
                         borderColor: '#1E88E5',
                         borderRadius: '8px'
+                    },
+                    '& .MuiDialogContent-root .MuiDialogContent-dividers': {
+                        borderTop: 'none !important',
+                        borderBottom: 'none !important'
                     }
                 }
             }

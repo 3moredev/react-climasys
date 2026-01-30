@@ -160,7 +160,7 @@ export class DocumentService {
    */
   static async downloadDocumentFile(documentId: number): Promise<{ blob: Blob; filename?: string }>{
     try {
-      const response = await api.get(`/patient-documents/treatment/download/${documentId}` as string, {
+      const response = await api.get(`/patient-documents/treatment/stream/${documentId}` as string, {
         responseType: 'blob'
       });
       const headers: any = response.headers || {};
