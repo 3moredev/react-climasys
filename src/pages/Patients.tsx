@@ -45,6 +45,8 @@ import { useSelector, useDispatch } from 'react-redux'
 import { RootState } from '../store'
 import { searchPatients, getPatient, createPatient, clearSearchResults } from '../store/slices/patientSlice'
 import { useForm, Controller } from 'react-hook-form'
+import { validateAddressInput, validateNameInput, validateEmailInput } from '../utils/validationUtils'
+
 
 interface PatientFormData {
   firstName: string
@@ -431,6 +433,12 @@ export default function Patients() {
                       label="First Name"
                       error={!!errors.firstName}
                       helperText={errors.firstName?.message}
+                      onChange={(e) => {
+                        const { allowed } = validateNameInput(e.target.value, 50, 'First name');
+                        if (allowed) {
+                          field.onChange(e);
+                        }
+                      }}
                     />
                   )}
                 />
@@ -447,6 +455,12 @@ export default function Patients() {
                       label="Last Name"
                       error={!!errors.lastName}
                       helperText={errors.lastName?.message}
+                      onChange={(e) => {
+                        const { allowed } = validateNameInput(e.target.value, 50, 'Last name');
+                        if (allowed) {
+                          field.onChange(e);
+                        }
+                      }}
                     />
                   )}
                 />
@@ -456,7 +470,17 @@ export default function Patients() {
                   name="middleName"
                   control={control}
                   render={({ field }) => (
-                    <TextField {...field} fullWidth label="Middle Name" />
+                    <TextField
+                      {...field}
+                      fullWidth
+                      label="Middle Name"
+                      onChange={(e) => {
+                        const { allowed } = validateNameInput(e.target.value, 50, 'Middle name');
+                        if (allowed) {
+                          field.onChange(e);
+                        }
+                      }}
+                    />
                   )}
                 />
               </Grid>
@@ -527,7 +551,18 @@ export default function Patients() {
                   name="email"
                   control={control}
                   render={({ field }) => (
-                    <TextField {...field} fullWidth label="Email" type="email" />
+                    <TextField
+                      {...field}
+                      fullWidth
+                      label="Email"
+                      type="email"
+                      onChange={(e) => {
+                        const { allowed } = validateEmailInput(e.target.value, 50);
+                        if (allowed) {
+                          field.onChange(e);
+                        }
+                      }}
+                    />
                   )}
                 />
               </Grid>
@@ -536,7 +571,19 @@ export default function Patients() {
                   name="address"
                   control={control}
                   render={({ field }) => (
-                    <TextField {...field} fullWidth label="Address" multiline rows={2} />
+                    <TextField
+                      {...field}
+                      fullWidth
+                      label="Address"
+                      multiline
+                      rows={2}
+                      onChange={(e) => {
+                        const { allowed } = validateAddressInput(e.target.value, 150);
+                        if (allowed) {
+                          field.onChange(e);
+                        }
+                      }}
+                    />
                   )}
                 />
               </Grid>

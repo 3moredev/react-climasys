@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import PatientNameDisplay from './PatientNameDisplay';
 import { Close, Add, Delete } from '@mui/icons-material';
-import { TextField, InputAdornment, Grid, Box, Typography, DialogContent } from '@mui/material';
+import { TextField, InputAdornment, Grid, Box, Typography, DialogContent, FormHelperText } from '@mui/material';
+import { validateAddressInput, validateNameInput } from '../utils/validationUtils';
 import dayjs from 'dayjs';
 import { patientService } from '../services/patientService';
 import { SessionInfo } from '../services/sessionService';
@@ -460,6 +461,60 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
     }, [isLabTestsOpen]);
 
     const handleInputChange = (field: string, value: string) => {
+        // Validate lab name (max 50 chars, alphanumeric)
+        if (field === 'labName') {
+            const { allowed, error } = validateNameInput(value, 50, 'Lab Name');
+            if (allowed) {
+                setFormData(prev => ({ ...prev, [field]: value }));
+                if (error) setErrors(prev => ({ ...prev, labName: error }));
+                else setErrors(prev => {
+                    const next = { ...prev };
+                    delete next.labName;
+                    return next;
+                });
+            } else if (error) {
+                setErrors(prev => ({ ...prev, labName: error }));
+            }
+            return;
+        }
+
+        // Validate doctor name (max 50 chars)
+        if (field === 'labDoctorName') {
+            // Allow alphanumeric, spaces, dots
+            const alphaValue = value.replace(/[^a-zA-Z\s.]/g, '');
+            const { allowed, error } = validateNameInput(alphaValue, 50, 'Doctor Name');
+
+            if (allowed) {
+                setFormData(prev => ({ ...prev, [field]: alphaValue }));
+                if (error) setErrors(prev => ({ ...prev, labDoctorName: error }));
+                else setErrors(prev => {
+                    const next = { ...prev };
+                    delete next.labDoctorName;
+                    return next;
+                });
+            } else if (error) {
+                setErrors(prev => ({ ...prev, labDoctorName: error }));
+            }
+            return;
+        }
+
+        // Validate comment (max 150 chars)
+        if (field === 'comment') {
+            const { allowed, error } = validateDescriptionInput(value, 150, 'Comment');
+            if (allowed) {
+                setFormData(prev => ({ ...prev, [field]: value }));
+                if (error) setErrors(prev => ({ ...prev, comment: error }));
+                else setErrors(prev => {
+                    const next = { ...prev };
+                    delete next.comment;
+                    return next;
+                });
+            } else if (error) {
+                setErrors(prev => ({ ...prev, comment: error }));
+            }
+            return;
+        }
+
         setFormData(prev => ({
             ...prev,
             [field]: value
@@ -1019,9 +1074,10 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                         placeholder="Lab Name"
                                                         value={formData.labName}
                                                         onChange={(e) => {
-                                                            handleInputChange('labName', e.target.value);
-                                                            if (e.target.value) {
-                                                                setErrors(prev => ({ ...prev, labName: '' }));
+                                                            const { allowed, error } = validateNameInput(e.target.value, 50, 'Lab Name');
+                                                            if (allowed) {
+                                                                handleInputChange('labName', e.target.value);
+                                                                setErrors(prev => ({ ...prev, labName: error }));
                                                             }
                                                         }}
                                                         error={!!errors.labName}
@@ -1047,9 +1103,10 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                             const val = e.target.value;
                                                             // Allow only alphabets and spaces
                                                             if (/^[a-zA-Z\s]*$/.test(val)) {
-                                                                handleInputChange('labDoctorName', val);
-                                                                if (val) {
-                                                                    setErrors(prev => ({ ...prev, labDoctorName: '' }));
+                                                                const { allowed, error } = validateNameInput(val, 50, 'Doctor Name');
+                                                                if (allowed) {
+                                                                    handleInputChange('labDoctorName', val);
+                                                                    setErrors(prev => ({ ...prev, labDoctorName: error }));
                                                                 }
                                                             }
                                                         }}
@@ -1106,17 +1163,31 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                             <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
                                                 Comment
                                             </Typography>
-                                            <textarea
-                                                value={formData.comment}
-                                                onChange={(e) => handleInputChange('comment', e.target.value)}
-                                                placeholder="Comment"
+                                            <TextField
+                                                fullWidth
+                                                multiline
                                                 rows={3}
-                                                id='textarea-autosize'
-                                                style={{
-                                                    border: '1px solid #b7b7b7',
-                                                    borderRadius: '8px',
-                                                    padding: '8px',
-                                                    resize: 'vertical'
+                                                placeholder="Comment"
+                                                value={formData.comment}
+                                                onChange={(e) => {
+                                                    const { allowed, error } = validateAddressInput(e.target.value, 150, 'Comment');
+                                                    if (allowed) {
+                                                        handleInputChange('comment', e.target.value);
+                                                        setErrors(prev => ({ ...prev, comment: error }));
+                                                    }
+                                                }}
+                                                error={!!errors.comment}
+                                                helperText={errors.comment}
+                                                variant="outlined"
+                                                sx={{
+                                                    '& .MuiOutlinedInput-root': {
+                                                        borderRadius: '8px',
+                                                        padding: '12px', // Add explicit padding to the container
+                                                        alignItems: 'flex-start' // Ensure text starts at top
+                                                    },
+                                                    '& .MuiInputBase-input': {
+                                                        padding: '0px !important' // Remove default input padding if container has it, or adjust as needed
+                                                    }
                                                 }}
                                             />
                                         </Box>

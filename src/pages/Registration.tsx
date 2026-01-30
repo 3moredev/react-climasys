@@ -4,6 +4,7 @@ import { PersonAdd, Person, Phone, Email, LocationOn } from '@mui/icons-material
 import { useSelector } from 'react-redux'
 import { RootState } from '../store'
 import ClearableTextField from '../components/ClearableTextField'
+import { validateNameInput, validateEmailInput } from '../utils/validationUtils'
 
 export default function RegistrationPage() {
   const { user } = useSelector((state: RootState) => state.auth)
@@ -117,7 +118,12 @@ export default function RegistrationPage() {
                 label="First Name"
                 placeholder="Enter first name"
                 value={firstName}
-                onChange={setFirstName}
+                onChange={(value) => {
+                  const { allowed } = validateNameInput(value, 50, 'First name');
+                  if (allowed) {
+                    setFirstName(value);
+                  }
+                }}
                 required
                 InputProps={{
                   startAdornment: <Person sx={{ mr: 1, color: '#3a6f9f' }} />
@@ -132,7 +138,12 @@ export default function RegistrationPage() {
                 label="Last Name"
                 placeholder="Enter last name"
                 value={lastName}
-                onChange={setLastName}
+                onChange={(value) => {
+                  const { allowed } = validateNameInput(value, 50, 'Last name');
+                  if (allowed) {
+                    setLastName(value);
+                  }
+                }}
                 required
                 InputProps={{
                   startAdornment: <Person sx={{ mr: 1, color: '#3a6f9f' }} />
@@ -163,7 +174,12 @@ export default function RegistrationPage() {
                 label="Email Address"
                 placeholder="Enter email address"
                 value={email}
-                onChange={setEmail}
+                onChange={(value) => {
+                  const { allowed } = validateEmailInput(value, 50);
+                  if (allowed) {
+                    setEmail(value);
+                  }
+                }}
                 type="email"
                 InputProps={{
                   startAdornment: <Email sx={{ mr: 1, color: '#3a6f9f' }} />

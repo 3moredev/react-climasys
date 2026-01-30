@@ -327,9 +327,13 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                                     variant="outlined"
                                     size="small"
                                     value={shortDescription}
-                                    onChange={(e) => handleInputChange(setShortDescription, 'shortDescription', e.target.value)}
+                                    onChange={(e) => {
+                                        const val = e.target.value.toUpperCase();
+                                        if (val.length > 50) return;
+                                        handleInputChange(setShortDescription, 'shortDescription', val);
+                                    }}
                                     error={!!errors.shortDescription}
-                                    helperText={errors.shortDescription}
+                                    helperText={errors.shortDescription || (shortDescription.length === 50 ? 'Short Description cannot exceed 50 characters' : '')}
                                 />
                             </Box>
 
@@ -343,9 +347,13 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                                     variant="outlined"
                                     size="small"
                                     value={medicineName}
-                                    onChange={(e) => handleInputChange(setMedicineName, 'medicineName', e.target.value)}
+                                    onChange={(e) => {
+                                        const val = e.target.value.toUpperCase();
+                                        if (val.length > 50) return;
+                                        handleInputChange(setMedicineName, 'medicineName', val);
+                                    }}
                                     error={!!errors.medicineName}
-                                    helperText={errors.medicineName}
+                                    helperText={errors.medicineName || (medicineName.length === 50 ? 'Medicine Name cannot exceed 50 characters' : '')}
                                 />
                             </Box>
 
@@ -359,8 +367,13 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                                     variant="outlined"
                                     size="small"
                                     value={priority}
-                                    onChange={(e) => handleNumericChange(setPriority, e.target.value)}
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        if (val.length > 50) return;
+                                        handleNumericChange(setPriority, val);
+                                    }}
                                     inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
+                                    helperText={priority.length >= 50 ? 'Priority cannot exceed 50 characters' : ''}
                                 />
                             </Box>
 
@@ -446,7 +459,12 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                                     variant="outlined"
                                     size="small"
                                     value={instruction}
-                                    onChange={(e) => setInstruction(e.target.value)}
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        if (val.length > 150) return;
+                                        setInstruction(val);
+                                    }}
+                                    helperText={instruction.length === 150 ? 'Instruction cannot exceed 150 characters' : ''}
                                 />
                             </Box>
 

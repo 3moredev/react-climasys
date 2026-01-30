@@ -87,14 +87,30 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
     }, [open, editData]);
 
     const handleInputChange = (field: keyof TestLabData, value: string) => {
+        // Validation for Lab Test Name
+        if (field === 'labTestName') {
+            // Allow alphanumeric, spaces, dashes, dots, brackets
+            // Max 50 chars
+            const regex = /^[a-zA-Z0-9\s.\-\(\)]*$/;
+            if (!regex.test(value)) return; // Strict character check
+            if (value.length > 50) return; // Strict length check
+
+            setTestLabData(prev => ({ ...prev, [field]: value }));
+            if (errors.labTestName) setErrors(prev => ({ ...prev, labTestName: '' }));
+            if (value.length === 50) {
+                setErrors(prev => ({ ...prev, labTestName: 'Lab Test Name cannot exceed 50 characters' }));
+            }
+            return;
+        }
+
         setTestLabData(prev => ({ ...prev, [field]: value }));
 
         // Clear error when user types
-        if (field === 'labTestName' && errors.labTestName) {
-            setErrors(prev => ({ ...prev, labTestName: '' }));
-        }
-        if (field === 'priority' && errors.priority) {
-            setErrors(prev => ({ ...prev, priority: '' }));
+        if (field === 'priority') {
+            if (value.length > 50) return;
+            if (errors.priority) {
+                setErrors(prev => ({ ...prev, priority: '' }));
+            }
         }
         if (field === 'parameterName') {
             if (errors.parameterName) setErrors(prev => ({ ...prev, parameterName: '' }));
@@ -258,7 +274,7 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
                                     onChange={(e) => handleInputChange('priority', e.target.value)}
                                     inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
                                     error={!!errors.priority}
-                                    helperText={errors.priority}
+                                    helperText={errors.priority || (testLabData.priority.length === 50 ? 'Priority cannot exceed 50 characters' : '')}
                                 />
                             </Box>
                         </Grid>
@@ -275,14 +291,23 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
                                             variant="outlined"
                                             size="small"
                                             value={testLabData.parameterName}
-                                            onChange={(e) => handleInputChange('parameterName', e.target.value)}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                // Validate Parameter Name: Max 50 chars, limited special chars
+                                                if (val.length > 50) return;
+                                                // Allow alphanumeric, spaces, common symbols
+                                                const regex = /^[a-zA-Z0-9\s.\-\(\)\/]*$/;
+                                                if (!regex.test(val)) return;
+
+                                                handleInputChange('parameterName', val);
+                                            }}
                                             onKeyPress={(e) => {
                                                 if (e.key === 'Enter') {
                                                     handleAddParameter();
                                                 }
                                             }}
                                             error={!!errors.parameterName || !!errors.parameters}
-                                            helperText={errors.parameterName || errors.parameters}
+                                            helperText={errors.parameterName || errors.parameters || (testLabData.parameterName.length === 50 ? 'Parameter Name cannot exceed 50 characters' : '')}
                                         />
                                     </Grid>
                                     <Grid item>
