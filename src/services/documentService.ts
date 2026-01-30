@@ -54,7 +54,7 @@ export interface UpdateDocumentRequest {
 
 // Document service class
 export class DocumentService {
-  
+
   /**
    * Upload a document for patient treatment
    * @param request Document upload request
@@ -92,19 +92,19 @@ export class DocumentService {
   ): Promise<any> {
     try {
       const formData = new FormData();
-      
+
       // Add files to FormData
       files.forEach(file => {
         formData.append('files', file);
       });
-      
+
       // Add other required parameters
       formData.append('patientId', patientId);
       formData.append('doctorId', doctorId);
       formData.append('clinicId', clinicId);
       formData.append('createdByName', createdByName);
       formData.append('patientVisitNo', patientVisitNo.toString());
-      
+
       // Add visit date if provided
       if (visitDate) {
         formData.append('visitDate', visitDate);
@@ -114,8 +114,9 @@ export class DocumentService {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
+        timeout: 600000, // 10 minutes for large file uploads
       });
-      
+
       return response.data;
     } catch (error: any) {
       console.error('Error uploading multiple documents:', error);
@@ -158,7 +159,7 @@ export class DocumentService {
    * Download a document file by documentId
    * Returns blob and best-effort filename from Content-Disposition
    */
-  static async downloadDocumentFile(documentId: number): Promise<{ blob: Blob; filename?: string }>{
+  static async downloadDocumentFile(documentId: number): Promise<{ blob: Blob; filename?: string }> {
     try {
       const response = await api.get(`/patient-documents/treatment/stream/${documentId}` as string, {
         responseType: 'blob'
@@ -221,13 +222,13 @@ export class DocumentService {
       console.log('Document ID:', documentId);
       console.log('User ID:', userId);
       console.log('API URL:', `/patient-documents/treatment/${documentId}/with-file?userId=${userId}`);
-      
+
       const response = await api.delete(`/patient-documents/treatment/${documentId}/with-file?userId=${userId}`);
-      
+
       console.log('=== DELETE API RESPONSE ===');
       console.log('Response status:', response.status);
       console.log('Response data:', response.data);
-      
+
       return response.data;
     } catch (error: any) {
       console.error('=== DELETE API ERROR ===');
@@ -269,7 +270,7 @@ export class DocumentService {
         patientVisitNo,
         visitDate
       };
-      
+
       return await this.uploadDocument(request);
     });
 
