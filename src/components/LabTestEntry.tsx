@@ -788,7 +788,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
             handleReset();
             const successMsg = submitResponse?.message || 'Lab test entry submitted successfully!';
             setSuccess(successMsg);
-            setSnackbarMessage('Lab added successfully');
+            setSnackbarMessage('Lab details saved successfully!');
             setSnackbarOpen(true);
 
             // Notify parent of success
