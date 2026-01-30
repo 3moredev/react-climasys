@@ -2,38 +2,110 @@
  * Utility functions for input validation across the application.
  */
 
+import { getFieldConfig } from './fieldValidationConfig';
+
 export interface ValidationResult {
     allowed: boolean;
     error: string;
 }
 
 /**
- * Validates address input length.
- * Usage:
- * const { allowed, error } = validateAddressInput(newValue, 150);
- * if (allowed) {
- *     setValue(newValue);
- *     setError(error);
- * }
+ * Validates input based on field configuration.
+ * Automatically looks up max length from field configuration.
  * 
+ * @param fieldName The field name (e.g., 'firstName', 'doctorAddress')
  * @param value The new input value to validate
- * @param maxLength The maximum allowed characters (default: 150)
- * @param fieldName The name of the field for the error message (default: 'Address')
+ * @param customMaxLength Optional override for max length
+ * @param customFieldLabel Optional override for field label in error message
+ * @param entity Optional entity scope (e.g., 'labMaster', 'patient')
  * @returns Object containing 'allowed' boolean and 'error' message string
  */
-export const validateAddressInput = (value: string, maxLength: number = 150, fieldName: string = 'Address'): ValidationResult => {
-    // strict length check
-    if (value.length > maxLength) {
+export const validateField = (
+    fieldName: string,
+    value: any,
+    customMaxLength?: number,
+    customFieldLabel?: string,
+    entity?: any // Should be keyof typeof FIELD_CONFIG but avoid circular dependency if possible
+): ValidationResult => {
+    // Get field config
+    const config = (getFieldConfig as any)(fieldName, entity);
+    const maxLength = customMaxLength ?? config?.maxLength;
+    const fieldLabel = customFieldLabel ?? config?.fieldName ?? fieldName;
+
+    // Normalize value to string (handle null/undefined/boolean)
+    const strValue = (value !== null && value !== undefined) ? value.toString() : '';
+
+    // If no max length defined, allow all input
+    if (!maxLength) {
+        return { allowed: true, error: '' };
+    }
+
+    // Strict length check
+    if (strValue.length > maxLength) {
         return { allowed: false, error: '' };
     }
 
-    // error message check
+    // Pattern check
+    if (config?.pattern) {
+        if (!config.pattern.test(strValue)) {
+            return { allowed: false, error: 'Invalid format' };
+        }
+    } else if (config?.type === 'number') {
+        // Default number check if no pattern specified (only digits)
+        if (!/^\d*$/.test(strValue)) {
+            return { allowed: false, error: 'Only numbers are allowed' };
+        }
+    }
+
+    // Error messages accumulation (doesn't block input but shows warning)
     let error = '';
-    if (value.length === maxLength) {
-        error = `${fieldName} cannot exceed ${maxLength} characters`;
+
+    // Length warning
+    if (strValue.length === maxLength) {
+        error = `${fieldLabel} cannot exceed ${maxLength} characters`;
+    }
+
+    // Email format check
+    if (config?.type === 'email' && strValue.length > 0) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(strValue)) {
+            error = 'Invalid email format';
+        }
+    }
+
+    // Mobile number 10-digit check (specific to fields named mobileNumber or mobile1/2 if they have 10 digit limit)
+    if ((fieldName === 'mobileNumber' || fieldName === 'mobile1' || fieldName === 'mobile2') &&
+        maxLength === 10 && strValue.length > 0 && strValue.length < 10) {
+        error = 'Mobile number must be 10 digits';
     }
 
     return { allowed: true, error };
+};
+
+/**
+ * Legacy function for backward compatibility.
+ * Validates address input length.
+ * 
+ * @deprecated Use validateField instead
+ */
+export const validateAddressInput = (value: string, maxLength: number = 150, fieldName: string = 'Address'): ValidationResult => {
+    return validateField('address', value, maxLength, fieldName);
+};
+
+/**
+ * Get max length for a field from configuration
+ */
+export const getMaxLength = (fieldName: string): number | undefined => {
+    const config = getFieldConfig(fieldName);
+    return config?.maxLength;
+};
+
+/**
+ * Get field label for error messages
+ */
+export const getFieldLabel = (fieldName: string): string => {
+    const config = getFieldConfig(fieldName);
+    return config?.fieldName ?? fieldName;
 };
 
 /**
@@ -50,10 +122,12 @@ export const validateAddressInput = (value: string, maxLength: number = 150, fie
  * @param fieldName The name of the field for the error message (default: 'Name')
  * @returns Object containing 'allowed' boolean and 'error' message string
  */
-export const validateNameInput = (value: string, maxLength: number = 50, fieldName: string = 'Name'): ValidationResult => {
-    // strict length check - block input beyond maxLength
-    if (value.length > maxLength) {
-        return { allowed: false, error: `${fieldName} cannot exceed ${maxLength} characters` };
+export const validateNameInput = (value: string, maxLength?: number, fieldName: string = 'Name'): ValidationResult => {
+    const effectiveMaxLength = maxLength ?? getMaxLength('firstName') ?? 50;
+
+    // strict length check - block input beyond effectiveMaxLength
+    if (value.length > effectiveMaxLength) {
+        return { allowed: false, error: `${fieldName} cannot exceed ${effectiveMaxLength} characters` };
     }
 
     // Character restriction check: Allow alphabets, spaces, dots, hyphens, and apostrophes only. Block numbers.
@@ -63,8 +137,8 @@ export const validateNameInput = (value: string, maxLength: number = 50, fieldNa
 
     // error message check - show warning when at limit
     let error = '';
-    if (value.length === maxLength) {
-        error = `${fieldName} cannot exceed ${maxLength} characters`;
+    if (value.length === effectiveMaxLength) {
+        error = `${fieldName} cannot exceed ${effectiveMaxLength} characters`;
     }
 
     return { allowed: true, error };
@@ -85,18 +159,7 @@ export const validateNameInput = (value: string, maxLength: number = 50, fieldNa
  * @returns Object containing 'allowed' boolean and 'error' message string
  */
 export const validateEmailInput = (value: string, maxLength: number = 50, fieldName: string = 'Email'): ValidationResult => {
-    // strict length check - block input beyond maxLength
-    if (value.length > maxLength) {
-        return { allowed: false, error: `${fieldName} cannot exceed ${maxLength} characters` };
-    }
-
-    // error message check - show warning when at limit
-    let error = '';
-    if (value.length === maxLength) {
-        error = `${fieldName} cannot exceed ${maxLength} characters`;
-    }
-
-    return { allowed: true, error };
+    return validateField('email', value, maxLength, fieldName);
 };
 
 /**
@@ -109,16 +172,18 @@ export const validateEmailInput = (value: string, maxLength: number = 50, fieldN
  * @param fieldName The name of the field for the error message (default: 'Description')
  * @returns Object containing 'allowed' boolean and 'error' message string
  */
-export const validateDescriptionInput = (value: string, maxLength: number = 150, fieldName: string = 'Description'): ValidationResult => {
+export const validateDescriptionInput = (value: string, maxLength?: number, fieldName: string = 'Description'): ValidationResult => {
+    const effectiveMaxLength = maxLength ?? 150;
+
     // strict length check
-    if (value.length > maxLength) {
-        return { allowed: false, error: `${fieldName} cannot exceed ${maxLength} characters` };
+    if (value.length > effectiveMaxLength) {
+        return { allowed: false, error: `${fieldName} cannot exceed ${effectiveMaxLength} characters` };
     }
 
     // error message check
     let error = '';
-    if (value.length === maxLength) {
-        error = `${fieldName} cannot exceed ${maxLength} characters`;
+    if (value.length === effectiveMaxLength) {
+        error = `${fieldName} cannot exceed ${effectiveMaxLength} characters`;
     }
 
     return { allowed: true, error };

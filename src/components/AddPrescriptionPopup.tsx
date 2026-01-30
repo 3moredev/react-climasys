@@ -23,6 +23,7 @@ import prescriptionCategoryService, {
 import prescriptionSubCategoryService, {
     PrescriptionSubCategory as PrescriptionSubCategoryApiModel,
 } from '../services/prescriptionSubCategoryService';
+import { validateField } from '../utils/validationUtils';
 
 interface AddPrescriptionPopupProps {
     open: boolean;
@@ -79,19 +80,7 @@ const AddPrescriptionPopup: React.FC<AddPrescriptionPopupProps> = ({
     const [prescriptionData, setPrescriptionData] = useState<PrescriptionData>(createDefaultPrescription());
 
     // Validation state
-    const [errors, setErrors] = useState<{
-        categoryName: string;
-        subCategoryName: string;
-        genericName: string;
-        brandName: string;
-        priority: string;
-    }>({
-        categoryName: '',
-        subCategoryName: '',
-        genericName: '',
-        brandName: '',
-        priority: ''
-    });
+    const [errors, setErrors] = useState<Record<string, string>>({});
 
     // Snackbar state management
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
@@ -121,13 +110,7 @@ const AddPrescriptionPopup: React.FC<AddPrescriptionPopupProps> = ({
                 setPrescriptionData(createDefaultPrescription());
             }
             // Reset errors on open
-            setErrors({
-                categoryName: '',
-                subCategoryName: '',
-                genericName: '',
-                brandName: '',
-                priority: ''
-            });
+            setErrors({});
         }
     }, [open, initialData]);
 
@@ -183,6 +166,54 @@ const AddPrescriptionPopup: React.FC<AddPrescriptionPopupProps> = ({
     }, [open, doctorId, prescriptionData.categoryName]);
 
     const handleInputChange = (field: keyof PrescriptionData, value: string | boolean) => {
+        if (field === 'brandName' && typeof value === 'string') {
+            const val = value.toUpperCase();
+            const { allowed, error } = validateField('brandName', val, undefined, undefined, 'prescriptionDetails');
+            if (allowed) {
+                setPrescriptionData(prev => ({ ...prev, [field]: val }));
+                setErrors(prev => ({ ...prev, brandName: error }));
+            }
+            return;
+        }
+
+        if (field === 'genericName' && typeof value === 'string') {
+            const val = value.toUpperCase();
+            const { allowed, error } = validateField('genericName', val, undefined, undefined, 'prescriptionDetails');
+            if (allowed) {
+                setPrescriptionData(prev => ({ ...prev, [field]: val }));
+                setErrors(prev => ({ ...prev, genericName: error }));
+            }
+            return;
+        }
+
+        if (field === 'instruction' && typeof value === 'string') {
+            const val = value.toUpperCase();
+            const { allowed, error } = validateField('instruction', val, undefined, undefined, 'prescriptionDetails');
+            if (allowed) {
+                setPrescriptionData(prev => ({ ...prev, [field]: val }));
+            }
+            return;
+        }
+
+        if (field === 'marketedBy' && typeof value === 'string') {
+            const val = value.toUpperCase();
+            const { allowed, error } = validateField('marketedBy', val, undefined, undefined, 'prescriptionDetails');
+            if (allowed) {
+                setPrescriptionData(prev => ({ ...prev, [field]: val }));
+                setErrors(prev => ({ ...prev, [field]: error }));
+            }
+            return;
+        }
+
+        if (field === 'priority' && typeof value === 'string') {
+            const { allowed, error } = validateField('priority', value, undefined, undefined, 'prescriptionDetails');
+            if (allowed) {
+                setPrescriptionData(prev => ({ ...prev, [field]: value }));
+                setErrors(prev => ({ ...prev, priority: error }));
+            }
+            return;
+        }
+
         setPrescriptionData(prev => ({
             ...prev,
             [field]: value
@@ -191,9 +222,6 @@ const AddPrescriptionPopup: React.FC<AddPrescriptionPopupProps> = ({
         // Clear errors
         if (field === 'categoryName' && errors.categoryName) setErrors(prev => ({ ...prev, categoryName: '' }));
         if (field === 'subCategoryName' && errors.subCategoryName) setErrors(prev => ({ ...prev, subCategoryName: '' }));
-        if (field === 'genericName' && errors.genericName) setErrors(prev => ({ ...prev, genericName: '' }));
-        if (field === 'brandName' && errors.brandName) setErrors(prev => ({ ...prev, brandName: '' }));
-        if (field === 'priority' && errors.priority) setErrors(prev => ({ ...prev, priority: '' }));
     };
 
     // Restrict certain fields to numeric input only
@@ -443,6 +471,8 @@ const AddPrescriptionPopup: React.FC<AddPrescriptionPopupProps> = ({
                                     size="small"
                                     value={prescriptionData.marketedBy}
                                     onChange={(e) => handleInputChange('marketedBy', e.target.value)}
+                                    error={!!errors.marketedBy}
+                                    helperText={errors.marketedBy || (prescriptionData.marketedBy.length === 200 ? 'Marketed By cannot exceed 200 characters' : '')}
                                 />
                             </Box>
 
@@ -458,6 +488,7 @@ const AddPrescriptionPopup: React.FC<AddPrescriptionPopupProps> = ({
                                     size="small"
                                     value={prescriptionData.instruction}
                                     onChange={(e) => handleInputChange('instruction', e.target.value)}
+                                    helperText={prescriptionData.instruction.length === 4000 ? 'Instruction cannot exceed 4000 characters' : ''}
                                 />
                                 <Typography variant="caption" sx={{ color: '#666', fontStyle: 'italic', display: 'block', mt: 0.5 }}>
                                     भोजनानंतर / AFTER MEAL, भोजनापूर्वी / BEFORE MEAL
@@ -548,7 +579,7 @@ const AddPrescriptionPopup: React.FC<AddPrescriptionPopupProps> = ({
                             {/* Add to active list checkbox */}
                             <Box sx={{ mt: 3 }}>
                                 <FormControlLabel
-                                className='pt-3'
+                                    className='pt-3'
                                     control={
                                         <Checkbox
                                             checked={prescriptionData.addToActiveList !== undefined ? prescriptionData.addToActiveList : true}

@@ -18,6 +18,7 @@ import {
 } from '@mui/material';
 import medicineService, { MedicineMaster } from '../services/medicineService';
 import { sessionService } from '../services/sessionService';
+import { validateField } from '../utils/validationUtils';
 
 export interface MedicineData {
     shortDescription: string;
@@ -53,13 +54,8 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
     const [addToActiveList, setAddToActiveList] = useState(true);
 
     // Validation state
-    const [errors, setErrors] = useState<{
-        shortDescription: string;
-        medicineName: string;
-    }>({
-        shortDescription: '',
-        medicineName: ''
-    });
+    // Validation state
+    const [errors, setErrors] = useState<Record<string, string>>({});
 
     // Snackbar state management
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
@@ -89,25 +85,34 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
             setInstruction('');
             setAddToActiveList(true);
         }
-        setErrors({ shortDescription: '', medicineName: '' });
+        setErrors({});
     }, [open, editData]);
 
     const handleInputChange = (setter: (v: string) => void, field: string, value: string) => {
-        setter(value);
-        if (field === 'shortDescription' && errors.shortDescription) {
-            setErrors(prev => ({ ...prev, shortDescription: '' }));
-        }
-        if (field === 'medicineName' && errors.medicineName) {
-            setErrors(prev => ({ ...prev, medicineName: '' }));
+        const { allowed, error } = validateField(field, value, undefined, undefined, 'medicine');
+        if (allowed) {
+            setter(value);
+            setErrors(prev => ({ ...prev, [field]: error }));
         }
     };
+
+    // Numeric-only helper for dose/priority inputs
+    const handleNumericChange = (setter: (v: string) => void, field: string, rawValue: string) => {
+        const cleaned = rawValue.replace(/[^0-9.]/g, ''); // Allow decimal for doses
+        const { allowed, error } = validateField(field, cleaned, undefined, undefined, 'medicine');
+        if (allowed) {
+            setter(cleaned);
+        }
+        setErrors(prev => ({ ...prev, [field]: error }));
+    };
+
 
     const showSnackbar = (message: string, severity: 'success' | 'error' = 'error') => {
         setSnackbar({ open: true, message, severity });
     };
 
     const handleSubmit = async () => {
-        const newErrors = { shortDescription: '', medicineName: '' };
+        const newErrors = { shortDescription: '', medicineName: '', priority: '' };
         let hasError = false;
 
         if (!shortDescription.trim()) {
@@ -117,6 +122,11 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
 
         if (!medicineName.trim()) {
             newErrors.medicineName = 'Medicine Name is required';
+            hasError = true;
+        }
+
+        if (!priority.trim()) {
+            newErrors.priority = 'Priority is required';
             hasError = true;
         }
 
@@ -275,11 +285,6 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
         onClose();
     };
 
-    // Numeric-only helper for dose/priority inputs
-    const handleNumericChange = (setter: (v: string) => void, rawValue: string) => {
-        const cleaned = rawValue.replace(/\D/g, '');
-        setter(cleaned);
-    };
 
     if (!open) return null;
 
@@ -323,17 +328,14 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                                 </Typography>
                                 <TextField
                                     fullWidth
-                                    placeholder="Medicine Short Description"
+                                    placeholder="Short Description"
                                     variant="outlined"
                                     size="small"
                                     value={shortDescription}
-                                    onChange={(e) => {
-                                        const val = e.target.value.toUpperCase();
-                                        if (val.length > 50) return;
-                                        handleInputChange(setShortDescription, 'shortDescription', val);
-                                    }}
+                                    onChange={(e) => handleInputChange(setShortDescription, 'shortDescription', e.target.value.toUpperCase())}
+                                    disabled={!!editData}
                                     error={!!errors.shortDescription}
-                                    helperText={errors.shortDescription || (shortDescription.length === 50 ? 'Short Description cannot exceed 50 characters' : '')}
+                                    helperText={errors.shortDescription}
                                 />
                             </Box>
 
@@ -347,19 +349,15 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                                     variant="outlined"
                                     size="small"
                                     value={medicineName}
-                                    onChange={(e) => {
-                                        const val = e.target.value.toUpperCase();
-                                        if (val.length > 50) return;
-                                        handleInputChange(setMedicineName, 'medicineName', val);
-                                    }}
+                                    onChange={(e) => handleInputChange(setMedicineName, 'medicineName', e.target.value.toUpperCase())}
                                     error={!!errors.medicineName}
-                                    helperText={errors.medicineName || (medicineName.length === 50 ? 'Medicine Name cannot exceed 50 characters' : '')}
+                                    helperText={errors.medicineName}
                                 />
                             </Box>
 
                             <Box sx={{ mb: 2 }} className='mb-4'>
                                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
-                                    Priority
+                                    Priority <span style={{ color: 'red' }}>*</span>
                                 </Typography>
                                 <TextField
                                     fullWidth
@@ -367,13 +365,10 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                                     variant="outlined"
                                     size="small"
                                     value={priority}
-                                    onChange={(e) => {
-                                        const val = e.target.value;
-                                        if (val.length > 50) return;
-                                        handleNumericChange(setPriority, val);
-                                    }}
+                                    onChange={(e) => handleInputChange(setPriority, 'priority', e.target.value)}
                                     inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
-                                    helperText={priority.length >= 50 ? 'Priority cannot exceed 50 characters' : ''}
+                                    error={!!errors.priority}
+                                    helperText={errors.priority}
                                 />
                             </Box>
 
@@ -387,7 +382,7 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                                     variant="outlined"
                                     size="small"
                                     value={breakfast}
-                                    onChange={(e) => handleNumericChange(setBreakfast, e.target.value)}
+                                    onChange={(e) => handleNumericChange(setBreakfast, 'breakfast', e.target.value)}
                                 />
                             </Box>
 
@@ -417,7 +412,7 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                                     variant="outlined"
                                     size="small"
                                     value={lunch}
-                                    onChange={(e) => handleNumericChange(setLunch, e.target.value)}
+                                    onChange={(e) => handleNumericChange(setLunch, 'lunch', e.target.value)}
                                 />
                             </Box>
 
@@ -431,7 +426,7 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                                     variant="outlined"
                                     size="small"
                                     value={dinner}
-                                    onChange={(e) => handleNumericChange(setDinner, e.target.value)}
+                                    onChange={(e) => handleNumericChange(setDinner, 'dinner', e.target.value)}
                                 />
                             </Box>
 
@@ -445,7 +440,7 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                                     variant="outlined"
                                     size="small"
                                     value={days}
-                                    onChange={(e) => handleNumericChange(setDays, e.target.value)}
+                                    onChange={(e) => handleNumericChange(setDays, 'days', e.target.value)}
                                 />
                             </Box>
 
@@ -459,12 +454,8 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                                     variant="outlined"
                                     size="small"
                                     value={instruction}
-                                    onChange={(e) => {
-                                        const val = e.target.value;
-                                        if (val.length > 150) return;
-                                        setInstruction(val);
-                                    }}
-                                    helperText={instruction.length === 150 ? 'Instruction cannot exceed 150 characters' : ''}
+                                    onChange={(e) => handleInputChange(setInstruction, 'instruction', e.target.value.toUpperCase())}
+                                    helperText={instruction.length === 4000 ? 'Instruction cannot exceed 4000 characters' : ''}
                                 />
                             </Box>
 
@@ -501,7 +492,7 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                             setDays('');
                             setInstruction('');
                             setAddToActiveList(true);
-                            setErrors({ shortDescription: '', medicineName: '' });
+                            setErrors({});
                         }}
                         variant="contained"
                         sx={{

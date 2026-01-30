@@ -15,6 +15,7 @@ import {
     IconButton,
     Alert
 } from '@mui/material';
+import { validateField } from '../utils/validationUtils';
 
 export interface LabTestRow {
     id: string;
@@ -89,33 +90,42 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
     const handleInputChange = (field: keyof TestLabData, value: string) => {
         // Validation for Lab Test Name
         if (field === 'labTestName') {
-            // Allow alphanumeric, spaces, dashes, dots, brackets
-            // Max 50 chars
-            const regex = /^[a-zA-Z0-9\s.\-\(\)]*$/;
-            if (!regex.test(value)) return; // Strict character check
-            if (value.length > 50) return; // Strict length check
+            const { allowed, error } = validateField('labTestName', value, undefined, undefined, 'labMaster');
+            if (!allowed && value !== '') return; // Prevent invalid input (except empty string which is always allowed type-wise but might fail regex if regex enforces min length, but here pattern is * so empty is allowed)
+            // Wait, validateField checks regex. If pattern is /^...*$/, empty string matches.
+            // If pattern requires chars, then empty string might fail.
+            // But usually we allow clearing input.
 
-            setTestLabData(prev => ({ ...prev, [field]: value }));
-            if (errors.labTestName) setErrors(prev => ({ ...prev, labTestName: '' }));
-            if (value.length === 50) {
-                setErrors(prev => ({ ...prev, labTestName: 'Lab Test Name cannot exceed 50 characters' }));
+            if (allowed) {
+                setTestLabData(prev => ({ ...prev, [field]: value }));
+                setErrors(prev => ({ ...prev, labTestName: error }));
             }
             return;
         }
 
-        setTestLabData(prev => ({ ...prev, [field]: value }));
-
-        // Clear error when user types
-        if (field === 'priority') {
-            if (value.length > 50) return;
-            if (errors.priority) {
-                setErrors(prev => ({ ...prev, priority: '' }));
-            }
-        }
         if (field === 'parameterName') {
-            if (errors.parameterName) setErrors(prev => ({ ...prev, parameterName: '' }));
-            if (errors.parameters) setErrors(prev => ({ ...prev, parameters: '' }));
+            const { allowed, error } = validateField('parameterName', value, undefined, undefined, 'labMaster');
+            if (allowed) {
+                setTestLabData(prev => ({ ...prev, [field]: value }));
+                // Clear errors if valid (validateField might return error string if length exceeded but still allowed? No, allowed=false if max length exceeded)
+                // Actually validateField returns error if regex mismatch or length check logic?
+                // If allowed=true, it means it passed "can type" checks.
+                // But error message might be empty.
+                setErrors(prev => ({ ...prev, parameterName: error, parameters: '' }));
+            }
+            return;
         }
+        if (field === 'priority') {
+            const { allowed, error } = validateField('priority', value, undefined, undefined, 'labMaster');
+            if (allowed) {
+                setTestLabData(prev => ({ ...prev, [field]: value }));
+                setErrors(prev => ({ ...prev, priority: error }));
+            }
+            return;
+        }
+
+        // Default update for any other fields
+        setTestLabData(prev => ({ ...prev, [field]: value }));
     };
 
     const showSnackbar = (message: string, severity: 'success' | 'error' = 'error') => {
@@ -256,7 +266,7 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
                                     value={testLabData.labTestName}
                                     onChange={(e) => handleInputChange('labTestName', e.target.value)}
                                     error={!!errors.labTestName}
-                                    helperText={errors.labTestName}
+                                    helperText={errors.labTestName || (testLabData.labTestName.length === 80 ? 'Lab Test Name cannot exceed 80 characters' : '')}
                                 />
                             </Box>
                         </Grid>
@@ -274,7 +284,7 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
                                     onChange={(e) => handleInputChange('priority', e.target.value)}
                                     inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
                                     error={!!errors.priority}
-                                    helperText={errors.priority || (testLabData.priority.length === 50 ? 'Priority cannot exceed 50 characters' : '')}
+                                    helperText={errors.priority || (testLabData.priority.length === 10 ? 'Priority cannot exceed 10 characters' : '')}
                                 />
                             </Box>
                         </Grid>
@@ -291,15 +301,13 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
                                             variant="outlined"
                                             size="small"
                                             value={testLabData.parameterName}
+                                            inputProps={{ maxLength: getMaxLength('parameterName') }}
                                             onChange={(e) => {
-                                                const val = e.target.value;
-                                                // Validate Parameter Name: Max 50 chars, limited special chars
-                                                if (val.length > 50) return;
-                                                // Allow alphanumeric, spaces, common symbols
-                                                const regex = /^[a-zA-Z0-9\s.\-\(\)\/]*$/;
-                                                if (!regex.test(val)) return;
-
-                                                handleInputChange('parameterName', val);
+                                                const { allowed, error } = validateField('parameterName', e.target.value, undefined, undefined, 'labMaster');
+                                                if (allowed) {
+                                                    handleInputChange('parameterName', e.target.value);
+                                                    setErrors(prev => ({ ...prev, parameterName: error }));
+                                                }
                                             }}
                                             onKeyPress={(e) => {
                                                 if (e.key === 'Enter') {
@@ -307,7 +315,7 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
                                                 }
                                             }}
                                             error={!!errors.parameterName || !!errors.parameters}
-                                            helperText={errors.parameterName || errors.parameters || (testLabData.parameterName.length === 50 ? 'Parameter Name cannot exceed 50 characters' : '')}
+                                            helperText={errors.parameterName || errors.parameters}
                                         />
                                     </Grid>
                                     <Grid item>

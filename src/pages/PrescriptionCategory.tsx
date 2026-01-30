@@ -8,7 +8,7 @@ import prescriptionCategoryService, {
   PrescriptionCategory as PrescriptionCategoryApiModel,
 } from '../services/prescriptionCategoryService'
 import SearchInput from '../components/SearchInput'
-import { validateNameInput, validateDescriptionInput } from '../utils/validationUtils'
+import { validateField } from '../utils/validationUtils'
 
 type CategoryRow = {
   id: string
@@ -531,21 +531,22 @@ export default function PrescriptionCategory() {
             type="text"
             placeholder="Category Name"
             value={formData.categoryName}
-            maxLength={50}
+            maxLength={60}
             onChange={(event) => {
-              const { allowed, error } = validateNameInput(event.target.value, 50, 'Category Name');
+              const val = event.target.value.toUpperCase();
+              const { allowed, error } = validateField('categoryName', val, undefined, undefined, 'prescriptionCategory');
               if (allowed) {
-                setFormData((prev) => ({ ...prev, categoryName: event.target.value }));
+                setFormData((prev) => ({ ...prev, categoryName: val }));
               }
             }}
             // When editing, keep category name (short name) fixed to avoid creating a new record
             disabled={!!editingId}
             style={{
-              borderColor: formData.categoryName.length === 50 ? 'red' : undefined
+              borderColor: formData.categoryName.length === 60 ? 'red' : undefined
             }}
           />
-          {formData.categoryName.length === 50 && (
-            <span style={{ color: '#d32f2f', fontSize: '11px' }}>Category Name cannot exceed 50 characters</span>
+          {formData.categoryName.length === 60 && (
+            <span style={{ color: '#d32f2f', fontSize: '11px' }}>Category Name cannot exceed 60 characters</span>
           )}
         </div>
         <div className="form-field">
@@ -554,19 +555,20 @@ export default function PrescriptionCategory() {
             type="text"
             placeholder="Category Description"
             value={formData.description}
-            maxLength={150}
+            maxLength={300}
             onChange={(event) => {
-              const { allowed, error } = validateDescriptionInput(event.target.value, 150, 'Category Description');
+              const val = event.target.value.toUpperCase();
+              const { allowed, error } = validateField('description', val, undefined, undefined, 'prescriptionCategory');
               if (allowed) {
-                setFormData((prev) => ({ ...prev, description: event.target.value }));
+                setFormData((prev) => ({ ...prev, description: val }));
               }
             }}
             style={{
-              borderColor: formData.description.length === 150 ? 'red' : undefined
+              borderColor: formData.description.length === 300 ? 'red' : undefined
             }}
           />
-          {formData.description.length === 150 && (
-            <span style={{ color: '#d32f2f', fontSize: '11px' }}>Category Description cannot exceed 150 characters</span>
+          {formData.description.length === 300 && (
+            <span style={{ color: '#d32f2f', fontSize: '11px' }}>Category Description cannot exceed 300 characters</span>
           )}
         </div>
         <div className="form-actions">
