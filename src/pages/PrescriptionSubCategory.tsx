@@ -11,6 +11,7 @@ import prescriptionCategoryService, {
 } from '../services/prescriptionCategoryService'
 import DeleteConfirmationDialog from '../components/DeleteConfirmationDialog'
 import SearchInput from '../components/SearchInput'
+import { validateField } from '../utils/validationUtils'
 
 type SubCategoryRow = {
   id: string
@@ -631,17 +632,20 @@ export default function PrescriptionSubCategory() {
             type="text"
             placeholder="SubCategory Name"
             value={formData.subCategoryName}
-            maxLength={50}
+            maxLength={200}
             onChange={(event) => {
-              const val = event.target.value;
-              setFormData((prev) => ({ ...prev, subCategoryName: val }));
+              const val = event.target.value.toUpperCase();
+              const { allowed, error } = validateField('subCategoryName', val, undefined, undefined, 'prescriptionSubCategory');
+              if (allowed) {
+                setFormData((prev) => ({ ...prev, subCategoryName: val }));
+              }
             }}
             style={{
-              borderColor: formData.subCategoryName.length === 50 ? 'red' : undefined
+              borderColor: formData.subCategoryName.length === 200 ? 'red' : undefined
             }}
           />
-          {formData.subCategoryName.length === 50 && (
-            <span style={{ color: 'red', fontSize: '11px' }}>Max 50 chars</span>
+          {formData.subCategoryName.length === 200 && (
+            <span style={{ color: 'red', fontSize: '11px' }}>SubCategory Name cannot exceed 200 characters</span>
           )}
         </div>
         <div className="form-actions">

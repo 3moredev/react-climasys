@@ -14,7 +14,7 @@ import {
     IconButton
 } from '@mui/material';
 import { useSession } from '../store/hooks/useSession';
-import { validateNameInput, validateDescriptionInput } from '../utils/validationUtils';
+import { validateField } from '../utils/validationUtils';
 
 interface AddDiagnosisPopupProps {
     open: boolean;
@@ -39,10 +39,7 @@ const AddDiagnosisPopup: React.FC<AddDiagnosisPopupProps> = ({ open, onClose, on
     const [priority, setPriority] = useState('');
 
     // Validation state
-    const [errors, setErrors] = useState({
-        shortDescription: '',
-        diagnosisDescription: ''
-    });
+    const [errors, setErrors] = useState<Record<string, string>>({});
 
     // Snackbar state management
     const [snackbarOpen, setSnackbarOpen] = useState(false);
@@ -54,18 +51,18 @@ const AddDiagnosisPopup: React.FC<AddDiagnosisPopupProps> = ({ open, onClose, on
             setShortDescription(editData.shortDescription || '');
             setDiagnosisDescription(editData.diagnosisDescription || '');
             setPriority(editData.priority?.toString() || '');
-            setErrors({ shortDescription: '', diagnosisDescription: '' });
+            setErrors({ shortDescription: '', diagnosisDescription: '', priority: '' });
         } else {
             // Reset form when not in edit mode
             setShortDescription('');
             setDiagnosisDescription('');
             setPriority('');
-            setErrors({ shortDescription: '', diagnosisDescription: '' });
+            setErrors({});
         }
     }, [editData, open]);
 
     const handleSubmit = async () => {
-        let newErrors = { shortDescription: '', diagnosisDescription: '' };
+        let newErrors = { shortDescription: '', diagnosisDescription: '', priority: '' };
         let hasError = false;
 
         if (!shortDescription.trim()) {
@@ -75,6 +72,16 @@ const AddDiagnosisPopup: React.FC<AddDiagnosisPopupProps> = ({ open, onClose, on
 
         if (!diagnosisDescription.trim()) {
             newErrors.diagnosisDescription = 'Diagnosis Description is required';
+            hasError = true;
+        }
+
+        if (!priority.trim()) {
+            newErrors.priority = 'Priority is required';
+            hasError = true;
+        }
+
+        if (!priority.trim()) {
+            newErrors.priority = 'Priority is required';
             hasError = true;
         }
 
@@ -95,8 +102,8 @@ const AddDiagnosisPopup: React.FC<AddDiagnosisPopupProps> = ({ open, onClose, on
         const shortDescUpper = shortDescription.trim().toUpperCase();
         const diagnosisDescUpper = diagnosisDescription.trim().toUpperCase();
 
-        // Determine priority (optional; default to "9" if not provided)
-        const priorityValue = priority.trim() || '9';
+        // Determine priority (required)
+        const priorityValue = priority.trim();
 
         // Call the parent onSave callback with all form data
         const result = await onSave({
@@ -115,7 +122,7 @@ const AddDiagnosisPopup: React.FC<AddDiagnosisPopupProps> = ({ open, onClose, on
         setShortDescription('');
         setDiagnosisDescription('');
         setPriority('');
-        setErrors({ shortDescription: '', diagnosisDescription: '' });
+        setErrors({ shortDescription: '', diagnosisDescription: '', priority: '' });
 
         // Close popup - success message will be shown in parent component
         onClose();
@@ -125,7 +132,7 @@ const AddDiagnosisPopup: React.FC<AddDiagnosisPopupProps> = ({ open, onClose, on
         setShortDescription('');
         setDiagnosisDescription('');
         setPriority('');
-        setErrors({ shortDescription: '', diagnosisDescription: '' });
+        setErrors({ shortDescription: '', diagnosisDescription: '', priority: '' });
         onClose();
     };
 
@@ -133,7 +140,7 @@ const AddDiagnosisPopup: React.FC<AddDiagnosisPopupProps> = ({ open, onClose, on
         setShortDescription('');
         setDiagnosisDescription('');
         setPriority('');
-        setErrors({ shortDescription: '', diagnosisDescription: '' });
+        setErrors({});
     };
 
     return (
@@ -181,7 +188,7 @@ const AddDiagnosisPopup: React.FC<AddDiagnosisPopupProps> = ({ open, onClose, on
                                     value={shortDescription}
                                     onChange={(e) => {
                                         const val = e.target.value.toUpperCase();
-                                        const { allowed, error } = validateNameInput(val, 50, 'Short Description');
+                                        const { allowed, error } = validateField('shortDescription', val, undefined, undefined, 'diagnosis');
                                         if (allowed) {
                                             setShortDescription(val);
                                             setErrors(prev => ({ ...prev, shortDescription: error }));
@@ -206,7 +213,7 @@ const AddDiagnosisPopup: React.FC<AddDiagnosisPopupProps> = ({ open, onClose, on
                                     value={diagnosisDescription}
                                     onChange={(e) => {
                                         const val = e.target.value.toUpperCase();
-                                        const { allowed, error } = validateDescriptionInput(val, 150, 'Diagnosis Description');
+                                        const { allowed, error } = validateField('diagnosisDescription', val, undefined, undefined, 'diagnosis');
                                         if (allowed) {
                                             setDiagnosisDescription(val);
                                             setErrors(prev => ({ ...prev, diagnosisDescription: error }));
@@ -220,7 +227,7 @@ const AddDiagnosisPopup: React.FC<AddDiagnosisPopupProps> = ({ open, onClose, on
                         <Grid item xs={12}>
                             <Box sx={{ mb: 2 }}>
                                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className="mb-0">
-                                    Priority
+                                    Priority <span style={{ color: 'red' }}>*</span>
                                 </Typography>
                                 <TextField
                                     fullWidth
@@ -230,10 +237,13 @@ const AddDiagnosisPopup: React.FC<AddDiagnosisPopupProps> = ({ open, onClose, on
                                     value={priority}
                                     onChange={(e) => {
                                         const val = e.target.value;
-                                        if (val.length > 50) return;
-                                        setPriority(val);
+                                        const { allowed, error } = validateField('priority', val, undefined, undefined, 'diagnosis');
+                                        if (allowed) {
+                                            setPriority(val);
+                                            setErrors(prev => ({ ...prev, priority: error }));
+                                        }
                                     }}
-                                    helperText={priority.length === 50 ? 'Priority cannot exceed 50 characters' : ''}
+                                    helperText={errors.priority}
                                 />
                             </Box>
                         </Grid>

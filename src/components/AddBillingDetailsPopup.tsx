@@ -19,7 +19,7 @@ import {
 } from '@mui/material';
 import { billingService } from '../services/billingService';
 import { useSession } from '../store/hooks/useSession';
-import { validateDescriptionInput } from '../utils/validationUtils';
+import { validateField } from '../utils/validationUtils';
 
 export interface BillingDetailData {
   group: string;
@@ -154,18 +154,39 @@ const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
   }, [open, editData?.group, finalDoctorId]);
 
   const handleInputChange = async (field: keyof BillingDetailData, value: string | boolean) => {
-    // Validation for Default Fee: Numeric only (allows decimals), max 10 chars
+    // Validation using validateField
     if (field === 'defaultFee' && typeof value === 'string') {
-      // Allow empty string, or digits, or digits with one decimal point
-      if (!/^\d*\.?\d*$/.test(value)) return;
-      if (value.length > 10) return;
+      const { allowed, error } = validateField('defaultFee', value);
+      if (!allowed) return;
+      // We update state if allowed. error message is optional as we might not want to show error for every keystroke unless invalid (validateField returns allowed=false for mismatch)
+      // But wait, validateField returns allowed=false if regex fails.
+      // So we just return.
+      // What about errors state? We can set it if we want to show "Invalid format". 
+      // But typically we prevent typing.
+      setBillingData(prev => ({ ...prev, [field]: value }));
+      if (errors.defaultFee) setErrors(prev => ({ ...prev, defaultFee: '' }));
+      return;
     }
 
-    // Validation for Sequence No: Integer only, max 5 chars
     if (field === 'sequenceNo' && typeof value === 'string') {
-      // Allow empty string or digits only
-      if (!/^\d*$/.test(value)) return;
-      if (value.length > 5) return;
+      const { allowed, error } = validateField('sequenceNo', value);
+      if (!allowed) return;
+      setBillingData(prev => ({ ...prev, [field]: value }));
+      if (errors.sequenceNo) setErrors(prev => ({ ...prev, sequenceNo: '' }));
+      return;
+    }
+
+    if (field === 'details' && typeof value === 'string') {
+      const { allowed, error } = validateField('details', value);
+      if (allowed) {
+        setBillingData(prev => ({ ...prev, [field]: value }));
+        // We can set error for details if length reached (validateField returns error string if max length matched? No, only if exceeded but then allowed is false. Wait, my code in validationUtils returns error string if length === max)
+        // validationUtils: if (value.length === maxLength) error = ...
+        // So if allowed is true, error might be set.
+        // But if I want to prevent typing beyond max, allowed handles it.
+        // If I want to show "max length reached", I can use the error.
+      }
+      return;
     }
 
     // When group changes, fetch sub-categories and reset subGroup
@@ -205,8 +226,6 @@ const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
 
     // Clear errors
     if (field === 'group' && errors.group) setErrors(prev => ({ ...prev, group: '' }));
-    if (field === 'defaultFee' && errors.defaultFee) setErrors(prev => ({ ...prev, defaultFee: '' }));
-    if (field === 'sequenceNo' && errors.sequenceNo) setErrors(prev => ({ ...prev, sequenceNo: '' }));
     if (field === 'visitType' && errors.visitType) setErrors(prev => ({ ...prev, visitType: '' }));
   };
 
@@ -404,10 +423,7 @@ const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
                   size="small"
                   value={billingData.details}
                   onChange={(e) => {
-                    const { allowed, error } = validateDescriptionInput(e.target.value, 150, 'Details');
-                    if (allowed) {
-                      handleInputChange('details', e.target.value);
-                    }
+                    handleInputChange('details', e.target.value);
                   }}
                   helperText={billingData.details.length === 150 ? 'Details cannot exceed 150 characters' : ''}
                   FormHelperTextProps={{ style: { color: billingData.details.length === 150 ? '#d32f2f' : undefined } }}

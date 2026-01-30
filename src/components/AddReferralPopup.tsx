@@ -4,7 +4,7 @@ import { Close } from '@mui/icons-material';
 import { Snackbar, Dialog, DialogTitle, DialogContent, Grid, Box, Typography, TextField, Button, IconButton } from '@mui/material';
 import api from '../services/api';
 
-import { validateAddressInput, validateNameInput, validateEmailInput } from '../utils/validationUtils';
+import { validateField } from '../utils/validationUtils';
 
 interface AddReferralPopupProps {
     open: boolean;
@@ -70,7 +70,7 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
         // Only allow alphabets and spaces
         const alphabeticValue = value.replace(/[^a-zA-Z\s]/g, '');
 
-        const { allowed, error } = validateNameInput(alphabeticValue, 50, 'Doctor Name');
+        const { allowed, error } = validateField('doctorName', alphabeticValue);
         if (allowed) {
             handleInputChange('doctorName', alphabeticValue);
             if (alphabeticValue.trim()) {
@@ -86,14 +86,10 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
         // Only allow numbers
         const numericValue = value.replace(/\D/g, '');
 
-        // Limit to 10 digits
-        const limitedValue = numericValue.slice(0, 10);
-
-        handleInputChange('doctorMob', limitedValue);
-
-        // Clear error when user starts typing
-        if (contactError) {
-            setContactError('');
+        const { allowed, error } = validateField('doctorMob', numericValue);
+        if (allowed) {
+            handleInputChange('doctorMob', numericValue);
+            setContactError(error);
         }
     };
 
@@ -112,20 +108,15 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
     };
 
     const handleEmailChange = (value: string) => {
-        const { allowed, error } = validateEmailInput(value, 50, 'Doctor Email');
+        const { allowed, error } = validateField('doctorMail', value);
         if (allowed) {
             handleInputChange('doctorMail', value);
-            // Clear error when user starts typing
-            if (emailError) {
-                setEmailError('');
-            }
-        } else if (error) {
             setEmailError(error);
         }
     };
 
     const handleAddressChange = (value: string) => {
-        const { allowed, error } = validateAddressInput(value, 150);
+        const { allowed, error } = validateField('doctorAddress', value);
         if (allowed) {
             handleInputChange('doctorAddress', value);
             setAddressError(error);
@@ -133,7 +124,7 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
     };
 
     const handleRemarksChange = (value: string) => {
-        const { allowed, error } = validateAddressInput(value, 150, 'Remarks');
+        const { allowed, error } = validateField('remarks', value);
         if (allowed) {
             handleInputChange('remarks', value);
             setRemarksError(error);
@@ -444,7 +435,7 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
                                         onChange={(e) => handleRemarksChange(e.target.value)}
                                         error={!!remarksError}
                                         helperText={remarksError}
-                                        inputProps={{ maxLength: 150 }}
+                                        inputProps={{ maxLength: getMaxLength('remarks', 'referralDoctor') }}
                                     />
                                 </Box>
                             </Grid>
@@ -456,7 +447,7 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
                                     <textarea
                                         id='textarea-autosize'
                                         rows={2}
-                                        maxLength={150}
+                                        maxLength={getMaxLength('doctorAddress', 'referralDoctor')}
                                         placeholder="Enter Doctor Address"
                                         value={formData.doctorAddress}
                                         onChange={(e) => handleAddressChange(e.target.value)}

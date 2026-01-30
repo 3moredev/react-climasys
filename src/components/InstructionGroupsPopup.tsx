@@ -409,6 +409,7 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
                         type="text"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
+                        maxLength={getMaxLength('groupDescription') || 50}
                         placeholder="Search instruction groups"
                         style={{
                           width: '100%',

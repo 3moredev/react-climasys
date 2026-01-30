@@ -29,7 +29,7 @@ import AddReferralPopup, { ReferralData } from '../components/AddReferralPopup'
 import GlobalSnackbar from '../components/GlobalSnackbar'
 import { searchAreas } from '../services/referenceService'
 import ClearableTextField from '../components/ClearableTextField'
-import { validateAddressInput, validateNameInput, validateEmailInput } from '../utils/validationUtils'
+import { validateField, getMaxLength } from '../utils/validationUtils'
 
 interface AddPatientPageProps {
   open: boolean
@@ -955,37 +955,21 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
   }
 
   const handleInputChange = (field: string, value: any) => {
+    // Dynamic validation for text fields
+    const textFields = ['firstName', 'middleName', 'lastName', 'address', 'email',
+      'referralName', 'referralAddress', 'referralEmail', 'mobileNumber', 'referralContact'];
 
-
-    // Validate address fields BEFORE setting state
-    if (field === 'address' || field === 'referralAddress') {
-      const addressValidation = validateAddressInput(value, 150, field === 'address' ? 'Address' : 'Referral address');
-      if (!addressValidation.allowed) return;
-    }
-
-    // Validate name fields BEFORE setting state
-    if (field === 'firstName' || field === 'middleName' || field === 'lastName' || field === 'referralName') {
-      const fieldNames: Record<string, string> = {
-        firstName: 'First name',
-        middleName: 'Middle name',
-        lastName: 'Last name',
-        referralName: 'Referral Name'
-      };
-      const nameValidation = validateNameInput(value, 50, fieldNames[field]);
-      if (!nameValidation.allowed) return;
-    }
-
-    // Validate email fields BEFORE setting state
-    if (field === 'email' || field === 'referralEmail') {
-      const emailValidation = validateEmailInput(value, 50, field === 'email' ? 'Email' : 'Referral email');
-      if (!emailValidation.allowed) return;
+    if (textFields.includes(field)) {
+      const validation = validateField(field, value);
+      if (!validation.allowed) return;
     }
 
     setFormData(prev => {
       // Convert firstName, middleName, and lastName to uppercase
+      // Convert firstName, middleName, and lastName to uppercase and allow only alphabets
       let processedValue = value
       if (field === 'firstName' || field === 'middleName' || field === 'lastName') {
-        processedValue = value.toUpperCase()
+        processedValue = value.replace(/[^a-zA-Z\s]/g, '').toUpperCase()
       }
       // Handle numeric-only input for mobileNumber and referralContact
       if (field === 'mobileNumber' || field === 'referralContact') {
@@ -993,7 +977,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
       }
       // Handle alphabets-only input for referralName
       if (field === 'referralName') {
-        processedValue = value.replace(/[^a-zA-Z\s]/g, '')
+        processedValue = value.replace(/[^a-zA-Z\\s]/g, '')
         // Clear selectedDoctor when referral name is cleared
         if (!processedValue || processedValue.trim() === '') {
           setSelectedDoctor(null)
@@ -1019,15 +1003,13 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
 
       return next
     })
-    // Clear error when user starts typing
-    // Clear error when user starts typing (unless it's an address or name field reaching limit)
-    if (errors[field] && field !== 'address' && field !== 'referralAddress' && field !== 'firstName' && field !== 'middleName' && field !== 'lastName' && field !== 'referralName' && field !== 'email' && field !== 'referralEmail') {
-      setErrors(prev => ({ ...prev, [field]: '' }))
-    }
 
-    // Set or clear address limit errors
-    if (field === 'address' || field === 'referralAddress') {
-      const { error } = validateAddressInput(value, 150, field === 'address' ? 'Address' : 'Referral address');
+    // Dynamic error handling for validated fields
+    const validatedFields = ['firstName', 'middleName', 'lastName', 'address', 'email',
+      'referralName', 'referralAddress', 'referralEmail', 'mobileNumber', 'referralContact'];
+
+    if (validatedFields.includes(field)) {
+      const { error } = validateField(field, value);
       if (error) {
         setErrors(prev => ({ ...prev, [field]: error }));
       } else {
@@ -1037,40 +1019,9 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
           return newErrors;
         });
       }
-    }
-
-    // Set or clear name limit errors
-    if (field === 'firstName' || field === 'middleName' || field === 'lastName' || field === 'referralName') {
-      const fieldNames: Record<string, string> = {
-        firstName: 'First name',
-        middleName: 'Middle name',
-        lastName: 'Last name',
-        referralName: 'Referral Name'
-      };
-      const { error } = validateNameInput(value, 50, fieldNames[field]);
-      if (error) {
-        setErrors(prev => ({ ...prev, [field]: error }));
-      } else {
-        setErrors(prev => {
-          const newErrors = { ...prev };
-          delete newErrors[field];
-          return newErrors;
-        });
-      }
-    }
-
-    // Set or clear email limit errors
-    if (field === 'email' || field === 'referralEmail') {
-      const { error } = validateEmailInput(value, 50, field === 'email' ? 'Email' : 'Referral email');
-      if (error) {
-        setErrors(prev => ({ ...prev, [field]: error }));
-      } else {
-        setErrors(prev => {
-          const newErrors = { ...prev };
-          delete newErrors[field];
-          return newErrors;
-        });
-      }
+    } else if (errors[field]) {
+      // Clear error for non-validated fields when user starts typing
+      setErrors(prev => ({ ...prev, [field]: '' }));
     }
   }
 
@@ -1171,15 +1122,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
       newErrors.referralEmail = 'Please enter a valid email address'
     }
 
-    // Validate address length
-    if (formData.address && formData.address.length > 150) {
-      newErrors.address = 'Address cannot exceed 150 characters'
-    }
 
-    // Validate referral address length
-    if (formData.referralAddress && formData.referralAddress.length > 150) {
-      newErrors.referralAddress = 'Referral address cannot exceed 150 characters'
-    }
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
