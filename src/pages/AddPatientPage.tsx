@@ -23,12 +23,13 @@ import {
 import Autocomplete from '@mui/material/Autocomplete'
 import dayjs from 'dayjs'
 import { Close, Save, Person, Search, CalendarToday, Add } from '@mui/icons-material'
-import { patientService, QuickRegistrationRequest } from '../services/patientService'
+import { patientService, QuickRegistrationRequest, UpdatePatientRequest } from '../services/patientService'
 import { appointmentService, AppointmentRequest } from '../services/appointmentService'
 import AddReferralPopup, { ReferralData } from '../components/AddReferralPopup'
 import GlobalSnackbar from '../components/GlobalSnackbar'
 import { searchAreas } from '../services/referenceService'
 import ClearableTextField from '../components/ClearableTextField'
+import { validateAddressInput, validateNameInput, validateEmailInput } from '../utils/validationUtils'
 
 interface AddPatientPageProps {
   open: boolean
@@ -100,6 +101,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
   const [referralNameOptions, setReferralNameOptions] = useState<{ id: string; name: string; fullData?: any }[]>([])
   const [isSearchingReferral, setIsSearchingReferral] = useState(false)
   const [selectedDoctor, setSelectedDoctor] = useState<any>(null)
+  const [allReferralDoctors, setAllReferralDoctors] = useState<any[]>([])
 
   // Update doctorId and clinicId when props change
   useEffect(() => {
@@ -891,10 +893,16 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
 
           // Filter by selected city if city is selected
           if (selectedCityId) {
-            mappedResults = mappedResults.filter(area =>
-              area.cityId === selectedCityId ||
-              String(area.cityId) === String(selectedCityId)
-            )
+            mappedResults = mappedResults.filter(area => {
+              const cityMatch = area.cityId === selectedCityId || String(area.cityId) === String(selectedCityId)
+
+              // If state is selected, ensure area state matches (if area has a state)
+              const stateMatch = !selectedStateId || !area.stateId ||
+                area.stateId === selectedStateId ||
+                String(area.stateId) === String(selectedStateId)
+
+              return cityMatch && stateMatch
+            })
           }
 
           setAreaOptions(mappedResults)
@@ -946,7 +954,33 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
     return numericValue.length <= 10 ? numericValue : numericValue.slice(0, 10)
   }
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = (field: string, value: any) => {
+
+
+    // Validate address fields BEFORE setting state
+    if (field === 'address' || field === 'referralAddress') {
+      const addressValidation = validateAddressInput(value, 150, field === 'address' ? 'Address' : 'Referral address');
+      if (!addressValidation.allowed) return;
+    }
+
+    // Validate name fields BEFORE setting state
+    if (field === 'firstName' || field === 'middleName' || field === 'lastName' || field === 'referralName') {
+      const fieldNames: Record<string, string> = {
+        firstName: 'First name',
+        middleName: 'Middle name',
+        lastName: 'Last name',
+        referralName: 'Referral Name'
+      };
+      const nameValidation = validateNameInput(value, 50, fieldNames[field]);
+      if (!nameValidation.allowed) return;
+    }
+
+    // Validate email fields BEFORE setting state
+    if (field === 'email' || field === 'referralEmail') {
+      const emailValidation = validateEmailInput(value, 50, field === 'email' ? 'Email' : 'Referral email');
+      if (!emailValidation.allowed) return;
+    }
+
     setFormData(prev => {
       // Convert firstName, middleName, and lastName to uppercase
       let processedValue = value
@@ -960,6 +994,10 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
       // Handle alphabets-only input for referralName
       if (field === 'referralName') {
         processedValue = value.replace(/[^a-zA-Z\s]/g, '')
+        // Clear selectedDoctor when referral name is cleared
+        if (!processedValue || processedValue.trim() === '') {
+          setSelectedDoctor(null)
+        }
       }
 
       const next = { ...prev, [field]: processedValue }
@@ -982,8 +1020,57 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
       return next
     })
     // Clear error when user starts typing
-    if (errors[field]) {
+    // Clear error when user starts typing (unless it's an address or name field reaching limit)
+    if (errors[field] && field !== 'address' && field !== 'referralAddress' && field !== 'firstName' && field !== 'middleName' && field !== 'lastName' && field !== 'referralName' && field !== 'email' && field !== 'referralEmail') {
       setErrors(prev => ({ ...prev, [field]: '' }))
+    }
+
+    // Set or clear address limit errors
+    if (field === 'address' || field === 'referralAddress') {
+      const { error } = validateAddressInput(value, 150, field === 'address' ? 'Address' : 'Referral address');
+      if (error) {
+        setErrors(prev => ({ ...prev, [field]: error }));
+      } else {
+        setErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors[field];
+          return newErrors;
+        });
+      }
+    }
+
+    // Set or clear name limit errors
+    if (field === 'firstName' || field === 'middleName' || field === 'lastName' || field === 'referralName') {
+      const fieldNames: Record<string, string> = {
+        firstName: 'First name',
+        middleName: 'Middle name',
+        lastName: 'Last name',
+        referralName: 'Referral Name'
+      };
+      const { error } = validateNameInput(value, 50, fieldNames[field]);
+      if (error) {
+        setErrors(prev => ({ ...prev, [field]: error }));
+      } else {
+        setErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors[field];
+          return newErrors;
+        });
+      }
+    }
+
+    // Set or clear email limit errors
+    if (field === 'email' || field === 'referralEmail') {
+      const { error } = validateEmailInput(value, 50, field === 'email' ? 'Email' : 'Referral email');
+      if (error) {
+        setErrors(prev => ({ ...prev, [field]: error }));
+      } else {
+        setErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors[field];
+          return newErrors;
+        });
+      }
     }
   }
 
@@ -991,6 +1078,9 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
   const handleReferralNameSearch = async (searchTerm: string) => {
     // Allow only alphabets and spaces
     const cleanSearchTerm = searchTerm.replace(/[^a-zA-Z\s]/g, '')
+
+    // Strict length check for Referral Name Search
+    if (cleanSearchTerm.length > 50) return;
     setReferralNameSearch(cleanSearchTerm)
 
     if (cleanSearchTerm.length < 2) {
@@ -1000,17 +1090,33 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
 
     setIsSearchingReferral(true)
     try {
-      // Call the actual referral doctors API
-      const { getReferralDoctors } = await import('../services/referralService')
-      const doctors = await getReferralDoctors(1) // languageId = 1
+      let doctors = allReferralDoctors
+
+      // If no doctors are cached, fetch them
+      if (doctors.length === 0) {
+        const { getReferralDoctors } = await import('../services/referralService')
+        doctors = await getReferralDoctors(1) // languageId = 1
+        setAllReferralDoctors(doctors)
+      }
 
       // Filter doctors by name containing the search term
       const filteredDoctors = doctors.filter(doctor =>
         doctor.doctorName.toLowerCase().includes(cleanSearchTerm.toLowerCase())
       )
 
+      // Deduplicate results by name (case-insensitive)
+      const uniqueDoctorsMap = new Map();
+      filteredDoctors.forEach(doctor => {
+        const nameLower = doctor.doctorName.toLowerCase().trim();
+        if (!uniqueDoctorsMap.has(nameLower)) {
+          uniqueDoctorsMap.set(nameLower, doctor);
+        }
+      });
+
+      const uniqueDoctors = Array.from(uniqueDoctorsMap.values());
+
       // Store the full doctor data for later use
-      setReferralNameOptions(filteredDoctors.map(doctor => ({
+      setReferralNameOptions(uniqueDoctors.map(doctor => ({
         id: doctor.rdId.toString(),
         name: doctor.doctorName,
         fullData: doctor // Store the complete doctor object
@@ -1063,6 +1169,16 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
     // Validate referral email if provided
     if (formData.referralEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.referralEmail)) {
       newErrors.referralEmail = 'Please enter a valid email address'
+    }
+
+    // Validate address length
+    if (formData.address && formData.address.length > 150) {
+      newErrors.address = 'Address cannot exceed 150 characters'
+    }
+
+    // Validate referral address length
+    if (formData.referralAddress && formData.referralAddress.length > 150) {
+      newErrors.referralAddress = 'Referral address cannot exceed 150 characters'
     }
 
     setErrors(newErrors)
@@ -1261,69 +1377,154 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
         apiRequest.areaId = resolvedAreaId
       }
 
-      // Call the patient registration API
-      const response = await patientService.quickRegister(apiRequest)
-      // Check for successful registration based on backend response format
-      if (response.SAVE_STATUS === 1 || response.success) {
-        // Create patient data for callback
-        const patientData = {
-          ...formData,
-          patientId: response.ID || `PAT-${Date.now().toString().slice(-6)}`,
-          fullName: `${formData.firstName} ${formData.lastName}`,
-          registrationDate: new Date().toISOString().split('T')[0],
-          doctorId: currentDoctorId,
-          clinicId: currentClinicId,
-          apiResponse: response
-        }
-        if (formData.addToTodaysAppointment && response.ID) {
 
-          try {
-            const now = new Date();
-            const hh = String(now.getHours()).padStart(2, '0');
-            const mm = String(now.getMinutes()).padStart(2, '0');
-            const currentVisitTime = `${hh}:${mm}`;
+      // Check if we're in edit mode (updating existing patient) or add mode (creating new patient)
+      const isEditMode = patientId !== undefined && patientId !== null && patientId !== '';
 
-            const appointmentData: AppointmentRequest = {
-              visitDate: new Date().toISOString().split('T')[0], // Today's date in YYYY-MM-DD format
-              shiftId: 1, // Default shift ID
-              clinicId: currentClinicId || "CL-00001", // Use current clinic ID or default
-              doctorId: currentDoctorId || "DR-00010", // Use current doctor ID or default
-              patientId: response.ID, // Use the patient ID from registration response
-              visitTime: currentVisitTime, // Real-time visit time (HH:mm)
-              reportsReceived: false, // Default value
-              inPerson: true // Default to in-person appointment
+      let response: any;
+
+      if (isEditMode) {
+        // UPDATE MODE: Call updatePatient endpoint
+        console.log('=== UPDATE MODE: Updating existing patient ===');
+        console.log('Patient ID:', patientId);
+
+        // Create update request with patientId and additional fields required by backend
+        const updateRequest: UpdatePatientRequest = {
+          patientId: patientId,
+          doctorId: apiRequest.doctorId,
+          lastName: apiRequest.lastName,
+          middleName: apiRequest.middleName || '',
+          firstName: apiRequest.firstName,
+          mobile: apiRequest.mobile,
+          areaId: apiRequest.areaId,
+          cityId: apiRequest.cityId,
+          stateId: apiRequest.stateId,
+          countryId: apiRequest.countryId,
+          dob: apiRequest.dob,
+          age: apiRequest.age,
+          gender: apiRequest.gender,
+          regYear: apiRequest.regYear,
+          registrationStatus: apiRequest.registrationStatus,
+          userId: apiRequest.userId,
+          referBy: apiRequest.referBy,
+          referDoctorDetails: apiRequest.referDoctorDetails,
+          // Fix: Ensure foreign key fields are strictly valid or undefined
+          maritalStatus: apiRequest.maritalStatus && apiRequest.maritalStatus.trim() !== '' ? apiRequest.maritalStatus : undefined,
+          occupation: (apiRequest.occupation !== undefined && !isNaN(apiRequest.occupation)) ? apiRequest.occupation : undefined,
+          address: apiRequest.address,
+          patientEmail: apiRequest.patientEmail,
+          doctorAddress: apiRequest.doctorAddress,
+          doctorMobile: apiRequest.doctorMobile,
+          doctorEmail: apiRequest.doctorEmail,
+          clinicId: apiRequest.clinicId,
+          // Additional fields required by FullRegistrationRequest
+          bloodGroup: undefined,
+          emergencyContact: undefined,
+          emergencyPhone: undefined,
+          allergies: undefined,
+          medicalHistory: undefined,
+          familyHistory: undefined
+        };
+
+        console.log('=== UPDATE REQUEST PAYLOAD ===');
+        console.log(JSON.stringify(updateRequest, null, 2));
+
+        response = await patientService.updatePatient(patientId, updateRequest);
+
+        // Check for successful update
+        if (response.success && response.rowsAffected && response.rowsAffected > 0) {
+          // Show success message for update
+          setSnackbarMessage("Patient updated successfully!");
+          setSnackbarOpen(true);
+
+          if (onSave) {
+            const patientData = {
+              ...formData,
+              patientId: patientId,
+              fullName: `${formData.firstName} ${formData.lastName}`,
+              doctorId: currentDoctorId,
+              clinicId: currentClinicId,
+              apiResponse: response
             };
-            const appointmentResult = await appointmentService.bookAppointment(appointmentData);
-
-          } catch (appointmentError) {
-            console.error('=== ERROR BOOKING APPOINTMENT ===')
-            console.error('Error booking appointment:', appointmentError)
-            // Don't throw here - we still want to proceed with patient registration success
+            onSave(patientData);
           }
+
+          resetForm();
+
+          setTimeout(() => {
+            onClose();
+          }, 1000);
         } else {
-          console.log('=== SKIPPING APPOINTMENT BOOKING ===')
-          console.log('Add to Today\'s Appointments:', formData.addToTodaysAppointment)
-          console.log('Patient ID available:', !!response.ID)
+          throw new Error(response.error || response.message || 'Patient update failed');
         }
-
-        if (onSave) {
-          onSave(patientData)
-        }
-
-        // Show success snackbar
-        const successMessage = formData.addToTodaysAppointment
-          ? 'Patient added and appointment booked successfully!'
-          : 'Patient added successfully!'
-        setSnackbarMessage("Saved Successfully!");
-        setSnackbarOpen(true);
-
-        resetForm()
-
-        setTimeout(() => {
-          onClose()
-        }, 1000) // 1 second delay to ensure snackbar is visible
       } else {
-        throw new Error(response.error || response.message || 'Patient registration failed')
+        // ADD MODE: Call quickRegister endpoint
+        console.log('=== ADD MODE: Creating new patient ===');
+
+        response = await patientService.quickRegister(apiRequest);
+
+        // Check for successful registration based on backend response format
+        if (response.SAVE_STATUS === 1 || response.success) {
+          // Create patient data for callback
+          const patientData = {
+            ...formData,
+            patientId: response.ID || `PAT-${Date.now().toString().slice(-6)}`,
+            fullName: `${formData.firstName} ${formData.lastName}`,
+            registrationDate: new Date().toISOString().split('T')[0],
+            doctorId: currentDoctorId,
+            clinicId: currentClinicId,
+            apiResponse: response
+          };
+
+          // Only create appointment for NEW patients
+          if (formData.addToTodaysAppointment && response.ID) {
+            try {
+              const now = new Date();
+              const hh = String(now.getHours()).padStart(2, '0');
+              const mm = String(now.getMinutes()).padStart(2, '0');
+              const currentVisitTime = `${hh}:${mm}`;
+
+              const appointmentData: AppointmentRequest = {
+                visitDate: new Date().toISOString().split('T')[0], // Today's date in YYYY-MM-DD format
+                shiftId: 1, // Default shift ID
+                clinicId: currentClinicId || "CL-00001", // Use current clinic ID or default
+                doctorId: currentDoctorId || "DR-00010", // Use current doctor ID or default
+                patientId: response.ID, // Use the patient ID from registration response
+                visitTime: currentVisitTime, // Real-time visit time (HH:mm)
+                reportsReceived: false, // Default value
+                inPerson: true // Default to in-person appointment
+              };
+              const appointmentResult = await appointmentService.bookAppointment(appointmentData);
+            } catch (appointmentError) {
+              console.error('=== ERROR BOOKING APPOINTMENT ===');
+              console.error('Error booking appointment:', appointmentError);
+              // Don't throw here - we still want to proceed with patient registration success
+            }
+          } else {
+            console.log('=== SKIPPING APPOINTMENT BOOKING ===');
+            console.log('Add to Today\'s Appointments:', formData.addToTodaysAppointment);
+            console.log('Patient ID available:', !!response.ID);
+          }
+
+          if (onSave) {
+            onSave(patientData);
+          }
+
+          // Show success snackbar
+          const successMessage = formData.addToTodaysAppointment
+            ? 'Patient added and appointment booked successfully!'
+            : 'Patient added successfully!';
+          setSnackbarMessage("Saved Successfully!");
+          setSnackbarOpen(true);
+
+          resetForm();
+
+          setTimeout(() => {
+            onClose();
+          }, 1000); // 1 second delay to ensure snackbar is visible
+        } else {
+          throw new Error(response.error || response.message || 'Patient registration failed');
+        }
       }
     } catch (error) {
 
@@ -1534,6 +1735,8 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     placeholder="Middle Name"
                     value={formData.middleName}
                     onChange={(value) => handleInputChange('middleName', value)}
+                    error={!!errors.middleName}
+                    helperText={errors.middleName}
                     disabled={loading || readOnly}
                   />
                 </Box>
@@ -1866,6 +2069,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                       setStateOpen(false)
                     }}
                     disablePortal={false}
+                    disableClearable={true}
                     slotProps={{
                       popper: {
                         style: {
@@ -1908,12 +2112,48 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         error={!!errors.state}
                         helperText={errors.state}
                         disabled={loading || readOnly}
+                        sx={{
+                          '& .MuiInputBase-root': {
+                            backgroundColor: params.disabled ? '#f5f5f5 !important' : 'inherit'
+                          }
+                        }}
                         InputProps={{
                           ...params.InputProps,
                           endAdornment: (
-                            <InputAdornment position="end" sx={{ pr: 1 }}>
-                              <Search sx={{ color: '#666' }} />
-                            </InputAdornment>
+                            <React.Fragment>
+                              {params.InputProps.endAdornment}
+                              {stateInput && !readOnly && !patientId && (
+                                <Close
+                                  onClick={() => {
+                                    setStateInput('')
+                                    handleInputChange('state', '')
+                                    setSelectedStateId(null)
+                                    // Clear city and area too
+                                    handleInputChange('city', '')
+                                    setCityInput('')
+                                    setCityOptions([])
+                                    setSelectedCityId(null)
+                                    handleInputChange('area', '')
+                                    setAreaInput('')
+                                    setAreaOptions([])
+                                    setSelectedAreaCityId(null)
+                                  }}
+                                  style={{
+                                    fontSize: '18px',
+                                    color: '#757575',
+                                    cursor: 'pointer',
+                                    marginLeft: '4px',
+                                    marginRight: '2px',
+                                    display: 'block'
+                                  }}
+                                />
+                              )}
+                              {!readOnly && !patientId && !params.disabled && (
+                                <InputAdornment position="end" sx={{ pr: 1, backgroundColor: 'transparent' }}>
+                                  <Search sx={{ color: '#666' }} />
+                                </InputAdornment>
+                              )}
+                            </React.Fragment>
                           )
                         }}
                       />
@@ -2005,6 +2245,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                       setCityOpen(false)
                     }}
                     disablePortal={false}
+                    disableClearable={true}
                     slotProps={{
                       popper: {
                         style: {
@@ -2045,12 +2286,44 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         fullWidth
                         placeholder={selectedStateId ? "Search City" : "Select State first"}
                         disabled={loading || readOnly || !selectedStateId}
+                        sx={{
+                          '& .MuiInputBase-root': {
+                            backgroundColor: params.disabled ? '#f5f5f5 !important' : 'inherit'
+                          }
+                        }}
                         InputProps={{
                           ...params.InputProps,
                           endAdornment: (
-                            <InputAdornment position="end" sx={{ pr: 1 }}>
-                              <Search sx={{ color: '#666' }} />
-                            </InputAdornment>
+                            <React.Fragment>
+                              {params.InputProps.endAdornment}
+                              {cityInput && !readOnly && !patientId && (
+                                <Close
+                                  onClick={() => {
+                                    handleInputChange('city', '')
+                                    setCityInput('')
+                                    setSelectedCityId(null)
+                                    // Clear area too
+                                    handleInputChange('area', '')
+                                    setAreaInput('')
+                                    setAreaOptions([])
+                                    setSelectedAreaCityId(null)
+                                  }}
+                                  style={{
+                                    fontSize: '18px',
+                                    color: '#757575',
+                                    cursor: 'pointer',
+                                    marginLeft: '4px',
+                                    marginRight: '2px',
+                                    display: 'block'
+                                  }}
+                                />
+                              )}
+                              {!readOnly && !patientId && !params.disabled && (
+                                <InputAdornment position="end" sx={{ pr: 1, backgroundColor: 'transparent' }}>
+                                  <Search sx={{ color: '#666' }} />
+                                </InputAdornment>
+                              )}
+                            </React.Fragment>
                           )
                         }}
                       />
@@ -2354,6 +2627,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                       }
                     }}
                     disablePortal={false}
+                    disableClearable={true}
                     slotProps={{
                       popper: {
                         style: {
@@ -2447,12 +2721,40 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                             }
                           }
                         }}
+                        sx={{
+                          '& .MuiInputBase-root': {
+                            backgroundColor: params.disabled ? '#f5f5f5 !important' : 'inherit'
+                          }
+                        }}
                         InputProps={{
                           ...params.InputProps,
                           endAdornment: (
-                            <InputAdornment position="end" sx={{ pr: 1 }}>
-                              <Search sx={{ color: '#666' }} />
-                            </InputAdornment>
+                            <React.Fragment>
+                              {params.InputProps.endAdornment}
+                              {areaInput && !readOnly && !patientId && (
+                                <Close
+                                  onClick={() => {
+                                    handleInputChange('area', '')
+                                    setAreaInput('')
+                                    setAreaOpen(false)
+                                    setSelectedAreaCityId(null)
+                                  }}
+                                  style={{
+                                    fontSize: '18px',
+                                    color: '#757575',
+                                    cursor: 'pointer',
+                                    marginLeft: '4px',
+                                    marginRight: '2px',
+                                    display: 'block'
+                                  }}
+                                />
+                              )}
+                              {!readOnly && !patientId && !params.disabled && (
+                                <InputAdornment position="end" sx={{ pr: 1, backgroundColor: 'transparent' }}>
+                                  <Search sx={{ color: '#666' }} />
+                                </InputAdornment>
+                              )}
+                            </React.Fragment>
                           )
                         }}
                       />
@@ -2550,6 +2852,9 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     placeholder="Address"
                     value={formData.address}
                     onChange={(value) => handleInputChange('address', value)}
+                    error={!!errors.address}
+                    helperText={errors.address}
+                    inputProps={{ maxLength: 150 }}
                     disabled={loading || readOnly}
                   />
                 </Box>
@@ -2612,104 +2917,136 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                   <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                     Referral Name
                   </Typography>
-                  {isDoctorReferral() ? (
-                    // Show regular text field if referral name exists (data was patched/loaded)
-                    // Show search field with add button only if no referral name exists yet
-                    (formData.referralName && formData.referralName.trim() !== '') || selectedDoctor !== null ? (
+                  {!!patientId ? (
+                    // Edit Mode: Restore original simple text field
+                    <ClearableTextField
+                      fullWidth
+                      placeholder="Referral Name"
+                      value={formData.referralName}
+                      onChange={(value) => handleInputChange('referralName', value)}
+                      disabled={loading || isSelfReferral || !!patientId}
+                      sx={{
+                        '& .MuiInputBase-root.Mui-disabled': {
+                          backgroundColor: '#f5f5f5 !important'
+                        }
+                      }}
+                    />
+                  ) : !isSelfReferral ? (
+                    formData.referredBy === 'D' ? (
+                      <Autocomplete
+                        inputValue={referralNameSearch}
+                        freeSolo
+                        disableClearable // We'll provide our own clear button
+                        forcePopupIcon={false} // Remove the dropdown arrow
+                        options={referralNameOptions}
+                        getOptionLabel={(option) => {
+                          if (typeof option === 'string') return option
+                          return option.name
+                        }}
+                        loading={isSearchingReferral}
+                        disabled={loading || isSelfReferral || !!patientId}
+                        value={referralNameOptions.find(o => o.name === formData.referralName) || formData.referralName || null}
+                        onInputChange={(_, newValue) => {
+                          handleReferralNameSearch(newValue)
+                          handleInputChange('referralName', newValue)
+                        }}
+                        onChange={(_, newValue) => {
+                          if (newValue && typeof newValue !== 'string') {
+                            const doctor = (newValue as any).fullData
+                            setSelectedDoctor(doctor)
+                            setFormData(prev => ({
+                              ...prev,
+                              referralName: newValue.name,
+                              referralContact: doctor?.doctorMob || '',
+                              referralEmail: doctor?.doctorMail || doctor?.doctorEmail || '',
+                              referralAddress: doctor?.doctorAddress || ''
+                            }))
+                            setReferralNameSearch(newValue.name)
+                          } else if (typeof newValue === 'string') {
+                            handleInputChange('referralName', newValue)
+                            setReferralNameSearch(newValue)
+                          } else {
+                            handleInputChange('referralName', '')
+                            setReferralNameSearch('')
+                            setSelectedDoctor(null)
+                          }
+                        }}
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            fullWidth
+                            placeholder="Type Doctor Name"
+                            error={!!errors.referralName}
+                            helperText={errors.referralName}
+                            sx={{
+                              '& .MuiInputBase-root.Mui-disabled': {
+                                backgroundColor: '#f5f5f5 !important'
+                              }
+                            }}
+                            InputProps={{
+                              ...params.InputProps,
+                              endAdornment: (
+                                <InputAdornment position="end">
+                                  {isSearchingReferral && <CircularProgress color="inherit" size={20} sx={{ mr: 1 }} />}
+                                  {formData.referralName && !patientId && !formData.patientId && (
+                                    <Close
+                                      onClick={() => {
+                                        handleInputChange('referralName', '')
+                                        setReferralNameSearch('')
+                                        setSelectedDoctor(null)
+                                        setReferralNameOptions([])
+                                      }}
+                                      style={{
+                                        fontSize: '18px',
+                                        color: '#757575',
+                                        cursor: 'pointer',
+                                        marginRight: '8px'
+                                      }}
+                                    />
+                                  )}
+                                  {!patientId && (
+                                    <Tooltip title="Add New Referral Doctor" PopperProps={{ style: { zIndex: 14000 } }}>
+                                      <IconButton
+                                        size="small"
+                                        onClick={() => setShowReferralPopup(true)}
+                                        sx={{
+                                          backgroundColor: '#1976d2',
+                                          color: 'white',
+                                          '&:hover': { backgroundColor: '#1565c0' },
+                                          width: 24,
+                                          height: 24,
+                                          borderRadius: '3px'
+                                        }}
+                                      >
+                                        <Add fontSize="small" />
+                                      </IconButton>
+                                    </Tooltip>
+                                  )}
+                                </InputAdornment>
+                              )
+                            }}
+                          />
+                        )}
+                        slotProps={{
+                          popper: { style: { zIndex: 11001 } },
+                          paper: { sx: { zIndex: 11001 } }
+                        }}
+                      />
+                    ) : (
                       <ClearableTextField
                         fullWidth
                         placeholder="Referral Name"
                         value={formData.referralName}
                         onChange={(value) => handleInputChange('referralName', value)}
-                        disabled={loading || readOnly || selectedDoctor !== null || isSelfReferral}
+                        disabled={loading || isSelfReferral || !!patientId}
+                        sx={{
+                          '& .MuiInputBase-root.Mui-disabled': {
+                            backgroundColor: '#f5f5f5 !important'
+                          }
+                        }}
+                        error={!!errors.referralName}
+                        helperText={errors.referralName}
                       />
-                    ) : (
-                      <Box sx={{ position: 'relative' }}>
-                        <ClearableTextField
-                          fullWidth
-                          placeholder="Search Doctor Name"
-                          value={referralNameSearch}
-                          onChange={(value) => handleReferralNameSearch(value)}
-                          disabled={loading || readOnly}
-                          InputProps={{
-                            endAdornment: (
-                              <InputAdornment position="end">
-                                <Tooltip
-                                  title="Add New Referral Doctor"
-                                  PopperProps={{
-                                    style: { zIndex: 14000 }
-                                  }}
-                                >
-                                  <IconButton
-                                    size="small"
-                                    onClick={() => setShowReferralPopup(true)}
-                                    sx={{
-                                      backgroundColor: '#1976d2',
-                                      color: 'white',
-                                      '&:hover': { backgroundColor: '#1565c0' },
-                                      width: 24,
-                                      height: 24,
-                                      borderRadius: '3px'
-                                    }}
-                                  >
-                                    <Add fontSize="small" />
-                                  </IconButton>
-                                </Tooltip>
-                              </InputAdornment>
-                            )
-                          }}
-                        />
-
-                        {/* Search Results Dropdown */}
-                        {referralNameOptions.length > 0 && (
-                          <Box sx={{
-                            position: 'absolute',
-                            top: '100%',
-                            left: 0,
-                            right: 0,
-                            backgroundColor: 'white',
-                            border: '1px solid #B7B7B7',
-                            borderRadius: '6px',
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                            zIndex: 11001,
-                            maxHeight: '200px',
-                            overflowY: 'auto'
-                          }}>
-                            {referralNameOptions.map((option) => (
-                              <Box
-                                key={option.id}
-                                onClick={() => {
-                                  // Store the selected doctor data
-                                  setSelectedDoctor((option as any).fullData)
-
-                                  // Update form data with doctor information
-                                  setFormData(prev => ({
-                                    ...prev,
-                                    referralName: option.name,
-                                    referralContact: (option as any).fullData?.doctorMob || '',
-                                    referralEmail: (option as any).fullData?.doctorMail || '',
-                                    referralAddress: (option as any).fullData?.doctorAddress || ''
-                                  }))
-
-                                  setReferralNameSearch(option.name)
-                                  setReferralNameOptions([])
-
-                                }}
-                                sx={{
-                                  padding: '8px 12px',
-                                  cursor: 'pointer',
-                                  fontSize: '0.9rem',
-                                  borderBottom: '1px solid #f0f0f0',
-                                  transition: 'background-color 0.2s',
-                                  '&:hover': { backgroundColor: '#f5f5f5' }
-                                }}
-                              >
-                                {option.name}
-                              </Box>
-                            ))}
-                          </Box>
-                        )}
-                      </Box>
                     )
                   ) : (
                     <ClearableTextField
@@ -2717,7 +3054,14 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                       placeholder="Referral Name"
                       value={formData.referralName}
                       onChange={(value) => handleInputChange('referralName', value)}
-                      disabled={loading || readOnly || isSelfReferral}
+                      disabled={loading || isSelfReferral || !!patientId}
+                      sx={{
+                        '& .MuiInputBase-root.Mui-disabled': {
+                          backgroundColor: '#f5f5f5 !important'
+                        }
+                      }}
+                      error={!!errors.referralName}
+                      helperText={errors.referralName}
                     />
                   )}
                 </Box>
@@ -2738,7 +3082,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     placeholder="Referral Number(10 Digits)"
                     value={formData.referralContact}
                     onChange={(value) => handleInputChange('referralContact', value)}
-                    disabled={loading || readOnly || selectedDoctor !== null || isSelfReferral}
+                    disabled={loading || readOnly || (formData.referredBy === 'D' && selectedDoctor !== null) || isSelfReferral || (patientId && formData.referredBy !== 'D')}
                     error={!!errors.referralContact || (formData.referralContact.length > 0 && formData.referralContact.length !== 10)}
                     helperText={errors.referralContact || (formData.referralContact.length > 0 && formData.referralContact.length !== 10 ? 'Referral contact must be 10 digits' : '')}
                     inputProps={{
@@ -2759,7 +3103,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     placeholder="Referral Email"
                     value={formData.referralEmail}
                     onChange={(value) => handleInputChange('referralEmail', value)}
-                    disabled={loading || readOnly || selectedDoctor !== null || isSelfReferral}
+                    disabled={loading || readOnly || (formData.referredBy === 'D' && selectedDoctor !== null) || isSelfReferral || (patientId && formData.referredBy !== 'D')}
                     error={!!errors.referralEmail}
                     helperText={errors.referralEmail}
                   />
@@ -2775,7 +3119,10 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     placeholder="Referral Address"
                     value={formData.referralAddress}
                     onChange={(value) => handleInputChange('referralAddress', value)}
-                    disabled={loading || readOnly || selectedDoctor !== null || isSelfReferral}
+                    error={!!errors.referralAddress}
+                    helperText={errors.referralAddress}
+                    inputProps={{ maxLength: 150 }}
+                    disabled={loading || readOnly || (formData.referredBy === 'D' && selectedDoctor !== null) || isSelfReferral || (patientId && formData.referredBy !== 'D')}
                   />
                 </Box>
               </Grid>
@@ -2833,10 +3180,11 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
           <Button
             onClick={handleSave}
             variant="contained"
-            disabled={loading || readOnly}
+            disabled={loading || !!patientId || !!formData.patientId}
             sx={{
-              backgroundColor: '#1976d2',
-              '&:hover': { backgroundColor: '#1565c0' }
+              backgroundColor: (loading || !!patientId || !!formData.patientId) ? '#e0e0e0' : '#1976d2',
+              color: (loading || !!patientId || !!formData.patientId) ? 'rgba(0, 0, 0, 0.26)' : 'white',
+              '&:hover': { backgroundColor: (loading || !!patientId || !!formData.patientId) ? '#e0e0e0' : '#1565c0' }
             }}
           >
             Submit
@@ -2850,9 +3198,20 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
       open={showReferralPopup}
       onClose={() => setShowReferralPopup(false)}
       onSave={(referralData: ReferralData) => {
-        // Handle save new referral logic here        
-        // Refresh referral name options after saving
-        if (isDoctorReferral()) {
+        // Update form data with the new doctor info
+        setFormData(prev => ({
+          ...prev,
+          referralName: referralData.doctorName || '',
+          referralContact: referralData.doctorMob || '',
+          referralEmail: referralData.doctorMail || '',
+          referralAddress: referralData.doctorAddress || ''
+        }))
+        setReferralNameSearch(referralData.doctorName || '')
+        setSelectedDoctor(referralData as any)
+        setShowReferralPopup(false)
+
+        // Also refresh options if needed
+        if (!isSelfReferral) {
           handleReferralNameSearch(referralData.doctorName || '')
         }
       }}

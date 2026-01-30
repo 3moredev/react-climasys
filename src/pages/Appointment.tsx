@@ -4969,12 +4969,12 @@ export default function AppointmentTable() {
                                                             title={(() => {
                                                                 const statusId = mapStatusLabelToId(a.status);
                                                                 const shouldDisable = isReceptionist && statusId >= 2;
-                                                                if (shouldDisable) return "Visit Details";
+                                                                if (shouldDisable) return "Checkout";
                                                                 const isWaiting = statusId === 1;
                                                                 const isComplete = statusId === 5;
                                                                 const shouldEnable = !isReceptionist || isWaiting || isComplete;
-                                                                if (!shouldEnable) return "Visit Details";
-                                                                return a.status === 'WITH DOCTOR' ? 'Visit Details' : 'Visit Details';
+                                                                if (!shouldEnable) return "Checkout";
+                                                                return a.status === 'WITH DOCTOR' ? 'Checkout' : 'Checkout';
                                                             })()}
                                                             onClick={() => {
                                                                 const statusId = mapStatusLabelToId(a.status);

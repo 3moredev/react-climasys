@@ -1,5 +1,5 @@
 import api from './api';
-import type { 
+import type {
   AdmissionCardDTO as AdmissionServiceAdmissionCardDTO,
   AdmissionCardsRequest as AdmissionServiceAdmissionCardsRequest,
   AdmissionCardsResponse as AdmissionServiceAdmissionCardsResponse
@@ -21,7 +21,7 @@ export interface Patient {
   age_given: string;
   reports_received: boolean;
   doctor_id: string;
-  
+
 }
 
 // Search response interface
@@ -251,10 +251,10 @@ export interface CreateComplaintResponse {
 }
 
 // Update complaint request interface (same as create)
-export interface UpdateComplaintRequest extends CreateComplaintRequest {}
+export interface UpdateComplaintRequest extends CreateComplaintRequest { }
 
 // Update complaint response interface (same as create)
-export interface UpdateComplaintResponse extends CreateComplaintResponse {}
+export interface UpdateComplaintResponse extends CreateComplaintResponse { }
 
 // Quick registration request interface
 export interface QuickRegistrationRequest {
@@ -296,6 +296,52 @@ export interface QuickRegistrationResponse {
   rowsAffected?: number;
   error?: string;
 }
+
+// Update patient request interface (matches backend FullRegistrationRequest)
+export interface UpdatePatientRequest {
+  patientId: string;
+  doctorId: string;
+  lastName: string;
+  middleName?: string;
+  firstName: string;
+  mobile: string;
+  areaId?: number;
+  cityId?: string;
+  stateId?: string;
+  countryId?: string;
+  dob?: string;
+  age?: string;
+  gender: string;
+  regYear?: string;
+  registrationStatus?: string;
+  userId: string;
+  referBy?: string;
+  referDoctorDetails?: string;
+  maritalStatus?: string;
+  occupation?: number;
+  address?: string;
+  patientEmail?: string;
+  doctorAddress?: string;
+  doctorMobile?: string;
+  doctorEmail?: string;
+  clinicId: string;
+  bloodGroup?: string;
+  emergencyContact?: string;
+  emergencyPhone?: string;
+  allergies?: string;
+  medicalHistory?: string;
+  familyHistory?: string;
+}
+
+// Update patient response interface
+export interface UpdatePatientResponse {
+  success: boolean;
+  patientId?: string;
+  rowsAffected?: number;
+  message?: string;
+  error?: string;
+}
+
 
 // Visit interface for previous visit dates
 export interface PatientVisit {
@@ -400,7 +446,7 @@ export interface PreviousVisitsWithDetailsResponse {
 // Admission Card DTO interface - DEPRECATED: Use admissionService types instead
 // These are kept for backward compatibility but should be imported from admissionService
 // Re-export for backward compatibility
-export { 
+export {
   AdmissionServiceAdmissionCardDTO as AdmissionCardDTO,
   AdmissionServiceAdmissionCardsRequest as AdmissionCardsRequest,
   AdmissionServiceAdmissionCardsResponse as AdmissionCardsResponse
@@ -415,7 +461,7 @@ export const patientService = {
   async searchPatients(params: PatientSearchParams): Promise<PatientSearchResponse> {
     try {
       console.log('Searching patients with params:', params);
-      
+
       const searchParams = new URLSearchParams({
         query: params.query,
         status: params.status || 'all',
@@ -430,16 +476,16 @@ export const patientService = {
 
       const response = await api.get(`/patients/search?${searchParams.toString()}`);
       console.log('Search patients response:', response.data);
-      
+
       return response.data;
     } catch (error: any) {
       console.error('Search patients API Error:', error);
-      
+
       // Handle CORS and network errors
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
         throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
       }
-      
+
       // Handle HTTP errors
       if (error.response?.status === 400) {
         throw new Error('Invalid search request. Please check your search parameters.');
@@ -448,12 +494,12 @@ export const patientService = {
       } else if (error.response?.status === 500) {
         throw new Error('Server error occurred while searching patients.');
       }
-      
+
       // Handle backend-specific errors
       if (error.response?.data?.error) {
         throw new Error(error.response.data.error);
       }
-      
+
       throw new Error(error.response?.data?.message || 'Failed to search patients');
     }
   },
@@ -471,17 +517,17 @@ export const patientService = {
       return response.data;
     } catch (error: any) {
       console.error('Get patient API Error:', error);
-      
+
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
         throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
       }
-      
+
       if (error.response?.status === 404) {
         throw new Error('Patient not found.');
       } else if (error.response?.status === 500) {
         throw new Error('Server error occurred while fetching patient.');
       }
-      
+
       throw new Error(error.response?.data?.message || 'Failed to fetch patient');
     }
   },
@@ -513,6 +559,33 @@ export const patientService = {
   },
 
   /**
+   * Update an existing patient
+   * @param patientId - Patient ID to update
+   * @param patientData - Patient update data
+   * @returns Promise<UpdatePatientResponse>
+   */
+  async updatePatient(patientId: string, patientData: UpdatePatientRequest): Promise<UpdatePatientResponse> {
+    try {
+      console.log('Updating patient with ID:', patientId, 'data:', patientData);
+      const response = await api.put<UpdatePatientResponse>(`/patients/${patientId}`, patientData);
+      console.log('Patient update response:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error('Error updating patient:', error);
+      if (error.response?.data) {
+        return {
+          success: false,
+          error: error.response.data.error || error.response.data.message || 'Update failed'
+        };
+      }
+      return {
+        success: false,
+        error: 'Network error during update'
+      };
+    }
+  },
+
+  /**
    * Get all patients with pagination
    * @param page - Page number (default: 0)
    * @param size - Page size (default: 20)
@@ -522,7 +595,7 @@ export const patientService = {
   async getAllPatients(page: number = 0, size: number = 20, status: string = 'all', clinicId?: string): Promise<PatientSearchResponse> {
     try {
       console.log(`Fetching all patients - page: ${page}, size: ${size}, status: ${status}, clinicId: ${clinicId}`);
-      
+
       const searchParams = new URLSearchParams({
         query: '', // Empty query to get all patients
         status: status,
@@ -537,19 +610,19 @@ export const patientService = {
 
       const response = await api.get(`/patients/search?${searchParams.toString()}`);
       console.log('Get all patients response:', response.data);
-      
+
       return response.data;
     } catch (error: any) {
       console.error('Get all patients API Error:', error);
-      
+
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
         throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
       }
-      
+
       if (error.response?.status === 500) {
         throw new Error('Server error occurred while fetching patients.');
       }
-      
+
       throw new Error(error.response?.data?.message || 'Failed to fetch patients');
     }
   },
@@ -562,31 +635,31 @@ export const patientService = {
   async getPreviousVisitDates(patientId: string, queryParams?: string): Promise<PreviousVisitDatesResponse> {
     try {
       console.log(`Fetching previous visit dates for patient ID: ${patientId}${queryParams ? ` with params: ${queryParams}` : ''}`);
-      
+
       // Use the patient_id from the database, not the folder number or other identifier
       const url = queryParams ? `/patients/${patientId}/visits/dates?${queryParams}` : `/patients/${patientId}/visits/dates`;
       const response = await api.get(url);
       console.log('Get previous visit dates response:', response.data);
-      
+
       return response.data;
     } catch (error: any) {
       console.error('Get previous visit dates API Error:', error);
-      
+
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
         throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
       }
-      
+
       if (error.response?.status === 404) {
         throw new Error('Patient not found or no visits found.');
       } else if (error.response?.status === 500) {
         throw new Error('Server error occurred while fetching visit dates.');
       }
-      
+
       // Handle backend-specific errors
       if (error.response?.data?.error) {
         throw new Error(error.response.data.error);
       }
-      
+
       throw new Error(error.response?.data?.message || 'Failed to fetch previous visit dates');
     }
   },
@@ -600,10 +673,10 @@ export const patientService = {
   async getPatientPreviousVisitsWithDetails(patientId: string, todaysDate?: string): Promise<PreviousVisitsWithDetailsResponse> {
     try {
       console.log(`Fetching previous visits with details for patient ID: ${patientId}${todaysDate ? ` up to date: ${todaysDate}` : ''}`);
-      
+
       // Use current date if not provided
       const dateParam = todaysDate || new Date().toISOString().split('T')[0];
-      
+
       const searchParams = new URLSearchParams({
         patientId: patientId,
         todaysDate: dateParam
@@ -611,33 +684,33 @@ export const patientService = {
 
       const response = await api.get(`/patients/${patientId}/visits/details?${searchParams.toString()}`);
       console.log('Get patient previous visits with details response:', response.data);
-      
+
       return response.data;
     } catch (error: any) {
       console.error('Get patient previous visits with details API Error:', error);
-      
+
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
         throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
       }
-      
+
       if (error.response?.status === 404) {
         throw new Error('Patient not found or no visits found.');
       } else if (error.response?.status === 500) {
         throw new Error('Server error occurred while fetching visit details.');
       }
-      
+
       // Handle backend-specific errors
       if (error.response?.data?.error) {
         throw new Error(error.response.data.error);
       }
-      
+
       throw new Error(error.response?.data?.message || 'Failed to fetch patient previous visits with details');
     }
   },
 
 
 
-  
+
   /**
    * Get master lists required for visit-related UIs (diagnosis, complaints, meds, etc.)
    * Mirrors backend @GetMapping("/master-lists") which accepts query params.
@@ -961,7 +1034,7 @@ export const patientService = {
     try {
       const { patientId, doctorId, clinicId } = params;
       console.log('Fetching consolidated family fees:', params);
-      
+
       // Build query parameters - doctorId is optional
       const query: Record<string, string> = {
         patientId,
@@ -970,7 +1043,7 @@ export const patientService = {
       if (doctorId) {
         query.doctorId = doctorId;
       }
-      
+
       // Try common mount points
       try {
         const resp = await api.get<ConsolidatedFamilyFeesResponse>(`/fees/consolidated-family-fees`, { params: query });
@@ -1017,7 +1090,7 @@ export const patientService = {
     try {
       const { patientId, doctorId, clinicId } = params;
       console.log('Fetching fees details:', params);
-      
+
       // Build query parameters - doctorId is optional
       const query: Record<string, string> = {
         patientId,
@@ -1026,7 +1099,7 @@ export const patientService = {
       if (doctorId) {
         query.doctorId = doctorId;
       }
-      
+
       // Try common mount points
       try {
         const resp = await api.get<FeesDetailsResponse>(`/fees/details`, { params: query });
@@ -1080,7 +1153,7 @@ export const patientService = {
         console.log('Submit lab test results (/lab/master/results/submit):', resp.data);
         return resp.data;
       } catch (e1: any) {
-        if (e1?.response?.status !== 404) throw e1; 
+        if (e1?.response?.status !== 404) throw e1;
         // 2) Under /lab/results
         try {
           const resp = await api.post<LabTestResultResponse>(`/lab/master/results/submit`, request);
@@ -1137,7 +1210,7 @@ export const patientService = {
   }): Promise<any[]> {
     try {
       console.log('Fetching lab test results for visit:', params);
-      
+
       // Build query parameters
       // Note: Backend expects 'visitDateStr' as parameter name
       const queryParams = new URLSearchParams({
@@ -1385,13 +1458,13 @@ export const patientService = {
   async getAllComplaintsForDoctor(clinicId: string, doctorId?: string): Promise<ComplaintsForDoctorResponse> {
     try {
       console.log(`Getting all complaints for clinic: ${clinicId} and doctor: ${doctorId || 'all'}`);
-      
+
       // Build query parameters - doctorId is optional
       const params: Record<string, string> = {};
       if (doctorId) {
         params.doctorId = doctorId;
       }
-      
+
       // Try common mount points
       try {
         const resp = await api.get<ComplaintsForDoctorResponse>(`/complain/all/${encodeURIComponent(clinicId)}`, { params });
@@ -1414,11 +1487,11 @@ export const patientService = {
       }
     } catch (error: any) {
       console.error('Get all complaints for doctor API Error:', error);
-      
+
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
         throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
       }
-      
+
       if (error.response?.status === 400) {
         const msg = error.response?.data?.error || error.response?.data?.message || 'Invalid request parameters.';
         throw new Error(msg);
@@ -1427,11 +1500,11 @@ export const patientService = {
       } else if (error.response?.status === 500) {
         throw new Error('Server error occurred while fetching complaints.');
       }
-      
+
       if (error.response?.data?.error) {
         throw new Error(error.response.data.error);
       }
-      
+
       throw new Error(error.response?.data?.message || 'Failed to get complaints');
     }
   },
@@ -1447,10 +1520,10 @@ export const patientService = {
   async deleteComplaint(doctorId: string, clinicId: string, shortDescription: string): Promise<DeleteComplaintResponse> {
     try {
       console.log(`Deleting complaint: ${shortDescription} for doctor: ${doctorId} and clinic: ${clinicId}`);
-      
+
       // Encode the shortDescription to handle special characters
       const encodedShortDescription = encodeURIComponent(shortDescription);
-      
+
       // Try common mount points
       try {
         const resp = await api.delete<DeleteComplaintResponse>(
@@ -1479,11 +1552,11 @@ export const patientService = {
       }
     } catch (error: any) {
       console.error('Delete complaint API Error:', error);
-      
+
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
         throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
       }
-      
+
       if (error.response?.status === 400) {
         const msg = error.response?.data?.error || error.response?.data?.message || 'Invalid request parameters.';
         throw new Error(msg);
@@ -1493,11 +1566,11 @@ export const patientService = {
       } else if (error.response?.status === 500) {
         throw new Error('Server error occurred while deleting complaint.');
       }
-      
+
       if (error.response?.data?.error) {
         throw new Error(error.response.data.error);
       }
-      
+
       throw new Error(error.response?.data?.message || 'Failed to delete complaint');
     }
   },
@@ -1511,7 +1584,7 @@ export const patientService = {
   async createComplaint(complaint: CreateComplaintRequest): Promise<CreateComplaintResponse> {
     try {
       console.log('Creating new complaint:', complaint);
-      
+
       // Try common mount points
       try {
         const resp = await api.post<CreateComplaintResponse>(`/complaint-master`, complaint);
@@ -1534,11 +1607,11 @@ export const patientService = {
       }
     } catch (error: any) {
       console.error('Create complaint API Error:', error);
-      
+
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
         throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
       }
-      
+
       if (error.response?.status === 400) {
         const msg = error.response?.data?.error || error.response?.data?.message || 'Invalid request parameters.';
         throw new Error(msg);
@@ -1547,11 +1620,11 @@ export const patientService = {
       } else if (error.response?.status === 500) {
         throw new Error('Server error occurred while creating complaint.');
       }
-      
+
       if (error.response?.data?.error) {
         throw new Error(error.response.data.error);
       }
-      
+
       throw new Error(error.response?.data?.message || 'Failed to create complaint');
     }
   },
@@ -1567,10 +1640,10 @@ export const patientService = {
   async updateComplaint(complaint: UpdateComplaintRequest): Promise<UpdateComplaintResponse> {
     try {
       console.log('Updating complaint:', complaint);
-            // Try common mount points
+      // Try common mount points
       try {
         const resp = await api.put<UpdateComplaintResponse>(
-          `/complaint-master`,complaint);
+          `/complaint-master`, complaint);
         console.log('Update complaint response:', resp.data);
         return resp.data;
       } catch (e1: any) {
@@ -1592,11 +1665,11 @@ export const patientService = {
       }
     } catch (error: any) {
       console.error('Update complaint API Error:', error);
-      
+
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
         throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
       }
-      
+
       if (error.response?.status === 400) {
         const msg = error.response?.data?.error || error.response?.data?.message || 'Invalid request parameters.';
         throw new Error(msg);
@@ -1605,11 +1678,11 @@ export const patientService = {
       } else if (error.response?.status === 500) {
         throw new Error('Server error occurred while updating complaint.');
       }
-      
+
       if (error.response?.data?.error) {
         throw new Error(error.response.data.error);
       }
-      
+
       throw new Error(error.response?.data?.message || 'Failed to update complaint');
     }
   }
@@ -1620,13 +1693,13 @@ export const formatVisitDateTime = (visit: PatientVisit): string => {
   try {
     const visitDate = new Date(visit.visit_date);
     const visitTime = visit.visit_time;
-    
+
     const formattedDate = visitDate.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric'
     });
-    
+
     // Format time if available
     let formattedTime = '';
     if (visitTime && visitTime !== '00:00:00') {
@@ -1639,7 +1712,7 @@ export const formatVisitDateTime = (visit: PatientVisit): string => {
         formattedTime = ` at ${displayHours}:${minutes} ${ampm}`;
       }
     }
-    
+
     return `${formattedDate}${formattedTime}`;
   } catch (error) {
     console.error('Error formatting visit date:', error);
@@ -1656,7 +1729,7 @@ export const getVisitStatusText = (statusId: number): string => {
     4: 'Cancelled',
     5: 'No Show'
   };
-  
+
   return statusMap[statusId] || `Status ${statusId}`;
 };
 
@@ -1665,13 +1738,13 @@ export const formatDetailedVisitDateTime = (visit: PatientVisitDetails): string 
   try {
     const visitDate = new Date(visit.visit_date);
     const visitTime = visit.visit_time;
-    
+
     const formattedDate = visitDate.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric'
     });
-    
+
     // Format time if available
     let formattedTime = '';
     if (visitTime && visitTime !== '00:00:00') {
@@ -1684,7 +1757,7 @@ export const formatDetailedVisitDateTime = (visit: PatientVisitDetails): string 
         formattedTime = ` at ${displayHours}:${minutes} ${ampm}`;
       }
     }
-    
+
     return `${formattedDate}${formattedTime}`;
   } catch (error) {
     console.error('Error formatting detailed visit date:', error);
@@ -1705,18 +1778,18 @@ export const parsePLRIndicators = (plrIndicators: string): { prescription: boole
 export const getPLRIndicatorsText = (plrIndicators: string): string => {
   const indicators = parsePLRIndicators(plrIndicators);
   const parts: string[] = [];
-  
+
   if (indicators.prescription) parts.push('Prescription');
   if (indicators.lab) parts.push('Lab');
   if (indicators.radiology) parts.push('Radiology');
-  
+
   return parts.length > 0 ? parts.join(', ') : 'None';
 };
 
 // Utility function to format medical history flags
 export const formatMedicalHistory = (visit: PatientVisitDetails): string[] => {
   const history: string[] = [];
-  
+
   if (visit.hypertension) history.push('Hypertension');
   if (visit.diabetes) history.push('Diabetes');
   if (visit.cholestrol) history.push('Cholesterol');
@@ -1727,7 +1800,7 @@ export const formatMedicalHistory = (visit: PatientVisitDetails): string[] => {
   if (visit.tobaco) history.push('Tobacco');
   if (visit.alchohol) history.push('Alcohol');
   if (visit.pregnant) history.push('Pregnant');
-  
+
   return history;
 };
 

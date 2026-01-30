@@ -4,6 +4,7 @@ import { PersonAdd, Person, Phone, Email, LocationOn } from '@mui/icons-material
 import { useSelector } from 'react-redux'
 import { RootState } from '../store'
 import ClearableTextField from '../components/ClearableTextField'
+import { validateNameInput, validateEmailInput } from '../utils/validationUtils'
 
 export default function RegistrationPage() {
   const { user } = useSelector((state: RootState) => state.auth)
@@ -14,6 +15,15 @@ export default function RegistrationPage() {
   const [gender, setGender] = useState('M')
   const [message, setMessage] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [errors, setErrors] = useState<Record<string, string>>({})
+
+  // Helper function to handle numeric-only input with max 10 digits
+  const handleNumericInput = (value: string): string => {
+    // Remove all non-numeric characters
+    const numericValue = value.replace(/\D/g, '')
+    // Limit to 10 digits
+    return numericValue.length <= 10 ? numericValue : numericValue.slice(0, 10)
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -117,7 +127,15 @@ export default function RegistrationPage() {
                 label="First Name"
                 placeholder="Enter first name"
                 value={firstName}
-                onChange={setFirstName}
+                onChange={(value) => {
+                  const { allowed, error } = validateNameInput(value, 50, 'First name');
+                  if (allowed) {
+                    setFirstName(value);
+                    setErrors(prev => ({ ...prev, firstName: error }));
+                  }
+                }}
+                error={!!errors.firstName}
+                helperText={errors.firstName}
                 required
                 InputProps={{
                   startAdornment: <Person sx={{ mr: 1, color: '#3a6f9f' }} />
@@ -132,7 +150,15 @@ export default function RegistrationPage() {
                 label="Last Name"
                 placeholder="Enter last name"
                 value={lastName}
-                onChange={setLastName}
+                onChange={(value) => {
+                  const { allowed, error } = validateNameInput(value, 50, 'Last name');
+                  if (allowed) {
+                    setLastName(value);
+                    setErrors(prev => ({ ...prev, lastName: error }));
+                  }
+                }}
+                error={!!errors.lastName}
+                helperText={errors.lastName}
                 required
                 InputProps={{
                   startAdornment: <Person sx={{ mr: 1, color: '#3a6f9f' }} />
@@ -147,7 +173,22 @@ export default function RegistrationPage() {
                 label="Mobile Number"
                 placeholder="Enter mobile number"
                 value={mobile}
-                onChange={setMobile}
+                onChange={(value) => {
+                  const numericVal = handleNumericInput(value)
+                  setMobile(numericVal)
+                  // Validate length
+                  if (numericVal.length > 0 && numericVal.length !== 10) {
+                    setErrors(prev => ({ ...prev, mobile: 'Mobile number must be exactly 10 digits' }))
+                  } else {
+                    setErrors(prev => {
+                      const newErrors = { ...prev };
+                      delete newErrors.mobile;
+                      return newErrors;
+                    })
+                  }
+                }}
+                error={!!errors.mobile}
+                helperText={errors.mobile}
                 required
                 type="tel"
                 InputProps={{
@@ -163,7 +204,15 @@ export default function RegistrationPage() {
                 label="Email Address"
                 placeholder="Enter email address"
                 value={email}
-                onChange={setEmail}
+                onChange={(value) => {
+                  const { allowed, error } = validateEmailInput(value, 50);
+                  if (allowed) {
+                    setEmail(value);
+                    setErrors(prev => ({ ...prev, email: error }));
+                  }
+                }}
+                error={!!errors.email}
+                helperText={errors.email}
                 type="email"
                 InputProps={{
                   startAdornment: <Email sx={{ mr: 1, color: '#3a6f9f' }} />
@@ -207,7 +256,7 @@ export default function RegistrationPage() {
             <Button
               type="submit"
               variant="contained"
-              disabled={loading || !firstName.trim() || !lastName.trim() || !mobile.trim()}
+              disabled={loading || !firstName.trim() || !lastName.trim() || mobile.length !== 10}
               className="form-button"
               startIcon={<PersonAdd />}
               sx={{ py: 1.5, px: 4 }}

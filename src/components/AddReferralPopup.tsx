@@ -4,6 +4,8 @@ import { Close } from '@mui/icons-material';
 import { Snackbar, Dialog, DialogTitle, DialogContent, Grid, Box, Typography, TextField, Button, IconButton } from '@mui/material';
 import api from '../services/api';
 
+import { validateAddressInput, validateNameInput, validateEmailInput } from '../utils/validationUtils';
+
 interface AddReferralPopupProps {
     open: boolean;
     onClose: () => void;
@@ -39,6 +41,8 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
     // Snackbar state management
     const [snackbarOpen, setSnackbarOpen] = useState(false);
     const [snackbarMessage, setSnackbarMessage] = useState('');
+    const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>('success');
+    const [isSaving, setIsSaving] = useState(false);
 
     // Error state for contact number validation
     const [contactError, setContactError] = useState('');
@@ -48,6 +52,12 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
 
     // Error state for Doctor Name
     const [doctorNameError, setDoctorNameError] = useState('');
+
+    // Error state for Doctor Address
+    const [addressError, setAddressError] = useState('');
+
+    // Error state for Remarks
+    const [remarksError, setRemarksError] = useState('');
 
     const handleInputChange = (field: keyof ReferralData, value: string | number | boolean) => {
         setFormData(prev => ({
@@ -60,10 +70,15 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
         // Only allow alphabets and spaces
         const alphabeticValue = value.replace(/[^a-zA-Z\s]/g, '');
 
-        handleInputChange('doctorName', alphabeticValue);
-
-        if (alphabeticValue.trim()) {
-            setDoctorNameError('');
+        const { allowed, error } = validateNameInput(alphabeticValue, 50, 'Doctor Name');
+        if (allowed) {
+            handleInputChange('doctorName', alphabeticValue);
+            if (alphabeticValue.trim()) {
+                setDoctorNameError('');
+            }
+        } else if (error) {
+            // If valid characters but too long, show error
+            setDoctorNameError(error);
         }
     };
 
@@ -97,11 +112,31 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
     };
 
     const handleEmailChange = (value: string) => {
-        handleInputChange('doctorMail', value);
+        const { allowed, error } = validateEmailInput(value, 50, 'Doctor Email');
+        if (allowed) {
+            handleInputChange('doctorMail', value);
+            // Clear error when user starts typing
+            if (emailError) {
+                setEmailError('');
+            }
+        } else if (error) {
+            setEmailError(error);
+        }
+    };
 
-        // Clear error when user starts typing
-        if (emailError) {
-            setEmailError('');
+    const handleAddressChange = (value: string) => {
+        const { allowed, error } = validateAddressInput(value, 150);
+        if (allowed) {
+            handleInputChange('doctorAddress', value);
+            setAddressError(error);
+        }
+    };
+
+    const handleRemarksChange = (value: string) => {
+        const { allowed, error } = validateAddressInput(value, 150, 'Remarks');
+        if (allowed) {
+            handleInputChange('remarks', value);
+            setRemarksError(error);
         }
     };
 
@@ -123,6 +158,8 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
     };
 
     const handleSave = async () => {
+        if (isSaving) return;
+
         if (!formData.doctorName.trim()) {
             setDoctorNameError('Doctor Name is required');
             return;
@@ -130,6 +167,7 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
 
         // Validate contact number
         if (!validateContactNumber()) {
+            setSnackbarSeverity('error');
             setSnackbarMessage('Please enter a valid 10-digit contact number');
             setSnackbarOpen(true);
             return;
@@ -137,17 +175,32 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
 
         // Validate email
         if (!validateEmail()) {
+            setSnackbarSeverity('error');
             setSnackbarMessage('Please enter a valid email address');
             setSnackbarOpen(true);
             return;
         }
 
+        // Validate Address length
+        if (formData.doctorAddress.length > 150) {
+            setAddressError('Address cannot exceed 150 characters');
+            return;
+        }
+
+        // Validate Remarks length
+        if (formData.remarks.length > 150) {
+            setRemarksError('Remarks cannot exceed 150 characters');
+            return;
+        }
+
         if (!clinicId || clinicId.trim() === '') {
+            setSnackbarSeverity('error');
             setSnackbarMessage('Clinic ID is required. Please ensure you are logged in with a valid clinic.');
             setSnackbarOpen(true);
             return;
         }
 
+        setIsSaving(true);
         try {
             // Include clinicId in the payload
             const payload = {
@@ -160,6 +213,7 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
             console.log('Referral doctor saved successfully:', response.data);
 
             // Show success snackbar
+            setSnackbarSeverity('success');
             setSnackbarMessage('Referral doctor added successfully!');
             setSnackbarOpen(true);
 
@@ -181,6 +235,8 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
             setContactError('');
             setEmailError('');
             setDoctorNameError('');
+            setAddressError('');
+            setRemarksError('');
 
             // Close popup after showing success message
             setTimeout(() => {
@@ -190,10 +246,15 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
             console.error('Error saving referral doctor:', error);
             // Extract error message from API response
             const errorMessage = error?.response?.data?.error ||
+                error?.response?.data?.ErrorMessage ||
                 error?.message ||
                 'Failed to save referral doctor. Please try again.';
+
+            setSnackbarSeverity('error');
             setSnackbarMessage(errorMessage);
             setSnackbarOpen(true);
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -212,6 +273,8 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
         setContactError('');
         setEmailError('');
         setDoctorNameError('');
+        setAddressError('');
+        setRemarksError('');
         onClose();
     };
 
@@ -262,16 +325,16 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
                         <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
                             Add New Referral Doctor
                         </Typography>
-                        <IconButton                         
+                        <IconButton
                             onClick={handleClose}
                             disableRipple
                             sx={{
-                            color: '#fff',
-                            backgroundColor: '#1976d2',
-                            '&:hover': { backgroundColor: '#1565c0' },
-                            width: 36,
-                            height: 36,
-                            borderRadius: '8px'
+                                color: '#fff',
+                                backgroundColor: '#1976d2',
+                                '&:hover': { backgroundColor: '#1565c0' },
+                                width: 36,
+                                height: 36,
+                                borderRadius: '8px'
                             }}
                         >
                             <Close />
@@ -378,7 +441,10 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
                                         fullWidth
                                         placeholder="Enter Remark"
                                         value={formData.remarks}
-                                        onChange={(e) => handleInputChange('remarks', e.target.value)}
+                                        onChange={(e) => handleRemarksChange(e.target.value)}
+                                        error={!!remarksError}
+                                        helperText={remarksError}
+                                        inputProps={{ maxLength: 150 }}
                                     />
                                 </Box>
                             </Grid>
@@ -390,16 +456,24 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
                                     <textarea
                                         id='textarea-autosize'
                                         rows={2}
+                                        maxLength={150}
                                         placeholder="Enter Doctor Address"
                                         value={formData.doctorAddress}
-                                        onChange={(e) => handleInputChange('doctorAddress', e.target.value)}
+                                        onChange={(e) => handleAddressChange(e.target.value)}
                                         style={{
-                                            border: '1px solid #b7b7b7',
+                                            border: `2px solid ${addressError ? '#f44336' : '#b7b7b7'}`,
                                             borderRadius: '8px',
                                             padding: '8px',
-                                            resize: 'vertical'
+                                            resize: 'vertical',
+                                            width: '100%',
+                                            fontFamily: "'Roboto', sans-serif"
                                         }}
                                     />
+                                    {addressError && (
+                                        <Typography variant="caption" sx={{ color: '#f44336', mt: 0.5, display: 'block' }}>
+                                            {addressError}
+                                        </Typography>
+                                    )}
                                 </Box>
                             </Grid>
                         </Grid>
@@ -437,6 +511,8 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
                                 setDoctorNameError('');
                                 setContactError('');
                                 setEmailError('');
+                                setAddressError('');
+                                setRemarksError('');
                             }}
                             sx={{ borderRadius: '8px' }}
                         >
@@ -445,9 +521,10 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
                         <Button
                             variant="contained"
                             onClick={handleSave}
+                            disabled={isSaving}
                             sx={{ borderRadius: '8px' }}
                         >
-                            Submit
+                            {isSaving ? 'Submitting...' : 'Submit'}
                         </Button>
                     </Box>
                 </div>
@@ -465,7 +542,7 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
                 sx={{
                     zIndex: 13002, // Higher than popup
                     '& .MuiSnackbarContent-root': {
-                        backgroundColor: snackbarMessage.includes('successfully') ? '#4caf50' : '#f44336',
+                        backgroundColor: snackbarSeverity === 'success' ? '#4caf50' : '#f44336',
                         color: 'white',
                         fontWeight: 'bold'
                     }

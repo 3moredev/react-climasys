@@ -19,6 +19,7 @@ import {
 } from '@mui/material';
 import { billingService } from '../services/billingService';
 import { useSession } from '../store/hooks/useSession';
+import { validateDescriptionInput } from '../utils/validationUtils';
 
 export interface BillingDetailData {
   group: string;
@@ -153,6 +154,20 @@ const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
   }, [open, editData?.group, finalDoctorId]);
 
   const handleInputChange = async (field: keyof BillingDetailData, value: string | boolean) => {
+    // Validation for Default Fee: Numeric only (allows decimals), max 10 chars
+    if (field === 'defaultFee' && typeof value === 'string') {
+      // Allow empty string, or digits, or digits with one decimal point
+      if (!/^\d*\.?\d*$/.test(value)) return;
+      if (value.length > 10) return;
+    }
+
+    // Validation for Sequence No: Integer only, max 5 chars
+    if (field === 'sequenceNo' && typeof value === 'string') {
+      // Allow empty string or digits only
+      if (!/^\d*$/.test(value)) return;
+      if (value.length > 5) return;
+    }
+
     // When group changes, fetch sub-categories and reset subGroup
     if (field === 'group' && typeof value === 'string' && value.trim() && finalDoctorId) {
       setLoadingSubCategories(true);
@@ -388,7 +403,14 @@ const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
                   variant="outlined"
                   size="small"
                   value={billingData.details}
-                  onChange={(e) => handleInputChange('details', e.target.value)}
+                  onChange={(e) => {
+                    const { allowed, error } = validateDescriptionInput(e.target.value, 150, 'Details');
+                    if (allowed) {
+                      handleInputChange('details', e.target.value);
+                    }
+                  }}
+                  helperText={billingData.details.length === 150 ? 'Details cannot exceed 150 characters' : ''}
+                  FormHelperTextProps={{ style: { color: billingData.details.length === 150 ? '#d32f2f' : undefined } }}
                 />
               </Box>
 

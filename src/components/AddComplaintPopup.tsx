@@ -190,14 +190,16 @@ const AddComplaintPopup: React.FC<AddComplaintPopupProps> = ({ open, onClose, on
                                     size="small"
                                     value={shortDescription}
                                     onChange={(e) => {
-                                        setShortDescription(e.target.value);
+                                        const val = e.target.value.toUpperCase();
+                                        if (val.length > 50) return;
+                                        setShortDescription(val);
                                         if (errors.shortDescription) {
                                             setErrors(prev => ({ ...prev, shortDescription: '' }));
                                         }
                                     }}
                                     disabled={!!editData}
                                     error={!!errors.shortDescription}
-                                    helperText={errors.shortDescription}
+                                    helperText={errors.shortDescription || (shortDescription.length === 50 ? 'Short Description cannot exceed 50 characters' : '')}
                                 />
                             </Box>
                         </Grid>
@@ -213,13 +215,15 @@ const AddComplaintPopup: React.FC<AddComplaintPopupProps> = ({ open, onClose, on
                                     size="small"
                                     value={complaintDescription}
                                     onChange={(e) => {
-                                        setComplaintDescription(e.target.value);
+                                        const val = e.target.value.toUpperCase();
+                                        if (val.length > 150) return;
+                                        setComplaintDescription(val);
                                         if (errors.complaintDescription) {
                                             setErrors(prev => ({ ...prev, complaintDescription: '' }));
                                         }
                                     }}
                                     error={!!errors.complaintDescription}
-                                    helperText={errors.complaintDescription}
+                                    helperText={errors.complaintDescription || (complaintDescription.length === 150 ? 'Complaint Description cannot exceed 150 characters' : '')}
                                 />
                             </Box>
                         </Grid>
@@ -234,7 +238,12 @@ const AddComplaintPopup: React.FC<AddComplaintPopupProps> = ({ open, onClose, on
                                     variant="outlined"
                                     size="small"
                                     value={priority}
-                                    onChange={(e) => setPriority(e.target.value)}
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        if (val.length > 50) return;
+                                        setPriority(val);
+                                    }}
+                                    helperText={priority.length === 50 ? 'Priority cannot exceed 50 characters' : ''}
                                 />
                             </Box>
                         </Grid>

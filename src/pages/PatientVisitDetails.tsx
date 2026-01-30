@@ -985,7 +985,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
 
     if (!open || !patientData) return null;
 
-    const handleInputChange = (field: string, value: string) => {
+    const handleInputChange = (field: string, value: any) => {
         setFormData(prev => {
             // Check for character limit
             // Check for character limit
@@ -1189,7 +1189,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
     };
 
     const handleDownloadDocument = async (docId: number, originalName: string) => {
-        try {            
+        try {
             const { blob, filename } = await DocumentService.downloadDocumentFile(docId);
 
             // Create a URL for the blob

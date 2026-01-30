@@ -335,7 +335,7 @@ const AddProcedurePopup: React.FC<AddProcedurePopupProps> = ({ open, onClose, on
                         <Close />
                     </IconButton>
                 </DialogTitle>
-                <DialogContent>                       
+                <DialogContent>
                     <Grid container spacing={2}>
                         <Grid item xs={12}>
                             <Box sx={{ mb: 2 }}>
@@ -349,14 +349,16 @@ const AddProcedurePopup: React.FC<AddProcedurePopupProps> = ({ open, onClose, on
                                     size="small"
                                     value={procedureDescription}
                                     onChange={(e) => {
-                                        setProcedureDescription(e.target.value);
+                                        const val = e.target.value.toUpperCase();
+                                        if (val.length > 50) return;
+                                        setProcedureDescription(val);
                                         if (errors.procedureDescription) {
                                             setErrors(prev => ({ ...prev, procedureDescription: '' }));
                                         }
                                     }}
                                     disabled={loading || isEditMode}
                                     error={!!errors.procedureDescription}
-                                    helperText={errors.procedureDescription}
+                                    helperText={errors.procedureDescription || (procedureDescription.length === 50 ? 'Procedure Description cannot exceed 50 characters' : '')}
                                 />
                             </Box>
                         </Grid>
@@ -373,10 +375,12 @@ const AddProcedurePopup: React.FC<AddProcedurePopupProps> = ({ open, onClose, on
                                     value={priority}
                                     onChange={(e) => {
                                         const numericValue = e.target.value.replace(/\D/g, '');
+                                        if (numericValue.length > 50) return;
                                         setPriority(numericValue);
                                     }}
                                     disabled={loading}
                                     inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
+                                    helperText={priority.length >= 50 ? 'Priority cannot exceed 50 characters' : ''}
                                 />
                             </Box>
                         </Grid>
@@ -395,13 +399,18 @@ const AddProcedurePopup: React.FC<AddProcedurePopupProps> = ({ open, onClose, on
                                             variant="outlined"
                                             size="small"
                                             value={findingsDescription}
-                                            onChange={(e) => setFindingsDescription(e.target.value)}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                if (val.length > 150) return;
+                                                setFindingsDescription(val);
+                                            }}
                                             onKeyPress={(e) => {
                                                 if (e.key === 'Enter') {
                                                     handleAddFinding();
                                                 }
                                             }}
                                             disabled={loading}
+                                            helperText={findingsDescription.length === 150 ? 'Findings Description cannot exceed 150 characters' : ''}
                                         />
                                     </Grid>
                                     <Grid item>

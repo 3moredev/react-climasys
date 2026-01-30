@@ -4403,6 +4403,7 @@ export default function Treatment() {
     };
 
     const handleMedicineInstructionChange = (id: string, instruction: string) => {
+        if (instruction.length > 150) return;
         setMedicineRows(prev => prev.map(row =>
             row.id === id ? { ...row, instruction } : row
         ));
@@ -4447,6 +4448,7 @@ export default function Treatment() {
     };
 
     const handlePrescriptionInstructionChange = (id: string, instruction: string) => {
+        if (instruction.length > 150) return;
         setPrescriptionRows(prev => prev.map(row =>
             row.id === id ? { ...row, instruction } : row
         ));
