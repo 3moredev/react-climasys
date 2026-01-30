@@ -56,6 +56,11 @@ export const validateNameInput = (value: string, maxLength: number = 50, fieldNa
         return { allowed: false, error: `${fieldName} cannot exceed ${maxLength} characters` };
     }
 
+    // Character restriction check: Allow alphabets, spaces, dots, hyphens, and apostrophes only. Block numbers.
+    if (value.length > 0 && !/^[a-zA-Z\s\-\'.]*$/.test(value)) {
+        return { allowed: false, error: `${fieldName} can only contain alphabets` };
+    }
+
     // error message check - show warning when at limit
     let error = '';
     if (value.length === maxLength) {

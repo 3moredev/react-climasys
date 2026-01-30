@@ -893,10 +893,16 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
 
           // Filter by selected city if city is selected
           if (selectedCityId) {
-            mappedResults = mappedResults.filter(area =>
-              area.cityId === selectedCityId ||
-              String(area.cityId) === String(selectedCityId)
-            )
+            mappedResults = mappedResults.filter(area => {
+              const cityMatch = area.cityId === selectedCityId || String(area.cityId) === String(selectedCityId)
+
+              // If state is selected, ensure area state matches (if area has a state)
+              const stateMatch = !selectedStateId || !area.stateId ||
+                area.stateId === selectedStateId ||
+                String(area.stateId) === String(selectedStateId)
+
+              return cityMatch && stateMatch
+            })
           }
 
           setAreaOptions(mappedResults)
