@@ -29,6 +29,7 @@ import AddReferralPopup, { ReferralData } from '../components/AddReferralPopup'
 import GlobalSnackbar from '../components/GlobalSnackbar'
 import { searchAreas } from '../services/referenceService'
 import ClearableTextField from '../components/ClearableTextField'
+import { validateAddressInput, validateNameInput, validateEmailInput } from '../utils/validationUtils'
 
 interface AddPatientPageProps {
   open: boolean
@@ -947,7 +948,33 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
     return numericValue.length <= 10 ? numericValue : numericValue.slice(0, 10)
   }
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = (field: string, value: any) => {
+
+
+    // Validate address fields BEFORE setting state
+    if (field === 'address' || field === 'referralAddress') {
+      const addressValidation = validateAddressInput(value, 150, field === 'address' ? 'Address' : 'Referral address');
+      if (!addressValidation.allowed) return;
+    }
+
+    // Validate name fields BEFORE setting state
+    if (field === 'firstName' || field === 'middleName' || field === 'lastName' || field === 'referralName') {
+      const fieldNames: Record<string, string> = {
+        firstName: 'First name',
+        middleName: 'Middle name',
+        lastName: 'Last name',
+        referralName: 'Referral Name'
+      };
+      const nameValidation = validateNameInput(value, 50, fieldNames[field]);
+      if (!nameValidation.allowed) return;
+    }
+
+    // Validate email fields BEFORE setting state
+    if (field === 'email' || field === 'referralEmail') {
+      const emailValidation = validateEmailInput(value, 50, field === 'email' ? 'Email' : 'Referral email');
+      if (!emailValidation.allowed) return;
+    }
+
     setFormData(prev => {
       // Convert firstName, middleName, and lastName to uppercase
       let processedValue = value
@@ -987,8 +1014,57 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
       return next
     })
     // Clear error when user starts typing
-    if (errors[field]) {
+    // Clear error when user starts typing (unless it's an address or name field reaching limit)
+    if (errors[field] && field !== 'address' && field !== 'referralAddress' && field !== 'firstName' && field !== 'middleName' && field !== 'lastName' && field !== 'referralName' && field !== 'email' && field !== 'referralEmail') {
       setErrors(prev => ({ ...prev, [field]: '' }))
+    }
+
+    // Set or clear address limit errors
+    if (field === 'address' || field === 'referralAddress') {
+      const { error } = validateAddressInput(value, 150, field === 'address' ? 'Address' : 'Referral address');
+      if (error) {
+        setErrors(prev => ({ ...prev, [field]: error }));
+      } else {
+        setErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors[field];
+          return newErrors;
+        });
+      }
+    }
+
+    // Set or clear name limit errors
+    if (field === 'firstName' || field === 'middleName' || field === 'lastName' || field === 'referralName') {
+      const fieldNames: Record<string, string> = {
+        firstName: 'First name',
+        middleName: 'Middle name',
+        lastName: 'Last name',
+        referralName: 'Referral Name'
+      };
+      const { error } = validateNameInput(value, 50, fieldNames[field]);
+      if (error) {
+        setErrors(prev => ({ ...prev, [field]: error }));
+      } else {
+        setErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors[field];
+          return newErrors;
+        });
+      }
+    }
+
+    // Set or clear email limit errors
+    if (field === 'email' || field === 'referralEmail') {
+      const { error } = validateEmailInput(value, 50, field === 'email' ? 'Email' : 'Referral email');
+      if (error) {
+        setErrors(prev => ({ ...prev, [field]: error }));
+      } else {
+        setErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors[field];
+          return newErrors;
+        });
+      }
     }
   }
 
@@ -996,6 +1072,9 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
   const handleReferralNameSearch = async (searchTerm: string) => {
     // Allow only alphabets and spaces
     const cleanSearchTerm = searchTerm.replace(/[^a-zA-Z\s]/g, '')
+
+    // Strict length check for Referral Name Search
+    if (cleanSearchTerm.length > 50) return;
     setReferralNameSearch(cleanSearchTerm)
 
     if (cleanSearchTerm.length < 2) {
@@ -1084,6 +1163,16 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
     // Validate referral email if provided
     if (formData.referralEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.referralEmail)) {
       newErrors.referralEmail = 'Please enter a valid email address'
+    }
+
+    // Validate address length
+    if (formData.address && formData.address.length > 150) {
+      newErrors.address = 'Address cannot exceed 150 characters'
+    }
+
+    // Validate referral address length
+    if (formData.referralAddress && formData.referralAddress.length > 150) {
+      newErrors.referralAddress = 'Referral address cannot exceed 150 characters'
     }
 
     setErrors(newErrors)
@@ -1640,6 +1729,8 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     placeholder="Middle Name"
                     value={formData.middleName}
                     onChange={(value) => handleInputChange('middleName', value)}
+                    error={!!errors.middleName}
+                    helperText={errors.middleName}
                     disabled={loading || readOnly}
                   />
                 </Box>
@@ -2755,6 +2846,9 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     placeholder="Address"
                     value={formData.address}
                     onChange={(value) => handleInputChange('address', value)}
+                    error={!!errors.address}
+                    helperText={errors.address}
+                    inputProps={{ maxLength: 150 }}
                     disabled={loading || readOnly}
                   />
                 </Box>
@@ -2834,6 +2928,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                   ) : !isSelfReferral ? (
                     formData.referredBy === 'D' ? (
                       <Autocomplete
+                        inputValue={referralNameSearch}
                         freeSolo
                         disableClearable // We'll provide our own clear button
                         forcePopupIcon={false} // Remove the dropdown arrow
@@ -2943,6 +3038,8 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                             backgroundColor: '#f5f5f5 !important'
                           }
                         }}
+                        error={!!errors.referralName}
+                        helperText={errors.referralName}
                       />
                     )
                   ) : (
@@ -2957,6 +3054,8 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                           backgroundColor: '#f5f5f5 !important'
                         }
                       }}
+                      error={!!errors.referralName}
+                      helperText={errors.referralName}
                     />
                   )}
                 </Box>
@@ -3014,6 +3113,9 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     placeholder="Referral Address"
                     value={formData.referralAddress}
                     onChange={(value) => handleInputChange('referralAddress', value)}
+                    error={!!errors.referralAddress}
+                    helperText={errors.referralAddress}
+                    inputProps={{ maxLength: 150 }}
                     disabled={loading || readOnly || (formData.referredBy === 'D' && selectedDoctor !== null) || isSelfReferral || (patientId && formData.referredBy !== 'D')}
                   />
                 </Box>

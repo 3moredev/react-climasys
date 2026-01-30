@@ -14,6 +14,7 @@ import {
     IconButton
 } from '@mui/material';
 import { useSession } from '../store/hooks/useSession';
+import { validateNameInput, validateDescriptionInput } from '../utils/validationUtils';
 
 interface AddDiagnosisPopupProps {
     open: boolean;
@@ -179,9 +180,11 @@ const AddDiagnosisPopup: React.FC<AddDiagnosisPopupProps> = ({ open, onClose, on
                                     size="small"
                                     value={shortDescription}
                                     onChange={(e) => {
-                                        setShortDescription(e.target.value);
-                                        if (errors.shortDescription) {
-                                            setErrors(prev => ({ ...prev, shortDescription: '' }));
+                                        const val = e.target.value.toUpperCase();
+                                        const { allowed, error } = validateNameInput(val, 50, 'Short Description');
+                                        if (allowed) {
+                                            setShortDescription(val);
+                                            setErrors(prev => ({ ...prev, shortDescription: error }));
                                         }
                                     }}
                                     disabled={!!editData}
@@ -202,9 +205,11 @@ const AddDiagnosisPopup: React.FC<AddDiagnosisPopupProps> = ({ open, onClose, on
                                     size="small"
                                     value={diagnosisDescription}
                                     onChange={(e) => {
-                                        setDiagnosisDescription(e.target.value);
-                                        if (errors.diagnosisDescription) {
-                                            setErrors(prev => ({ ...prev, diagnosisDescription: '' }));
+                                        const val = e.target.value.toUpperCase();
+                                        const { allowed, error } = validateDescriptionInput(val, 150, 'Diagnosis Description');
+                                        if (allowed) {
+                                            setDiagnosisDescription(val);
+                                            setErrors(prev => ({ ...prev, diagnosisDescription: error }));
                                         }
                                     }}
                                     error={!!errors.diagnosisDescription}
@@ -223,7 +228,12 @@ const AddDiagnosisPopup: React.FC<AddDiagnosisPopupProps> = ({ open, onClose, on
                                     variant="outlined"
                                     size="small"
                                     value={priority}
-                                    onChange={(e) => setPriority(e.target.value)}
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        if (val.length > 50) return;
+                                        setPriority(val);
+                                    }}
+                                    helperText={priority.length === 50 ? 'Priority cannot exceed 50 characters' : ''}
                                 />
                             </Box>
                         </Grid>

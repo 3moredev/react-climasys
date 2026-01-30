@@ -631,8 +631,18 @@ export default function PrescriptionSubCategory() {
             type="text"
             placeholder="SubCategory Name"
             value={formData.subCategoryName}
-            onChange={(event) => setFormData((prev) => ({ ...prev, subCategoryName: event.target.value }))}
+            maxLength={50}
+            onChange={(event) => {
+              const val = event.target.value;
+              setFormData((prev) => ({ ...prev, subCategoryName: val }));
+            }}
+            style={{
+              borderColor: formData.subCategoryName.length === 50 ? 'red' : undefined
+            }}
           />
+          {formData.subCategoryName.length === 50 && (
+            <span style={{ color: 'red', fontSize: '11px' }}>Max 50 chars</span>
+          )}
         </div>
         <div className="form-actions">
           <button className="btn-primary-custom" onClick={handleAddOrUpdate}>
