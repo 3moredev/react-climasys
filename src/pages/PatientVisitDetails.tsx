@@ -1747,7 +1747,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                 (formData.referralName && formData.referralName.trim() !== '') || selectedDoctor !== null ? (
                                     <Box sx={{ mb: 2 }}>
                                         <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
-                                            Referral Name
+                                            Search Doctor Name
                                         </Typography>
                                         <TextField
                                             fullWidth
@@ -1761,92 +1761,93 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                         />
                                     </Box>
                                 ) : (
-                                    <Box position="relative" sx={{ mb: 2 }}>
+                                    <Box sx={{ mb: 2 }}>
                                         <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                                             Search Doctor Name
                                         </Typography>
-                                        <TextField
-                                            fullWidth
-                                            size="small"
-                                            placeholder="Search Doctor Name"
-                                            value={referralNameSearch}
-                                            onChange={(e) => handleReferralNameSearch(e.target.value)}
-                                            disabled={readOnly || isSelfReferral}
-                                            variant="outlined"
-                                            error={!!validationErrors.referralName}
-                                            helperText={validationErrors.referralName}
-                                            InputProps={{
-                                                endAdornment: (
-                                                    <IconButton
-                                                        size="small"
-                                                        onClick={() => !readOnly && !isSelfReferral && setShowReferralPopup(true)}
-                                                        disabled={readOnly || isSelfReferral}
-                                                        title="Add New Referral Doctor"
-                                                        sx={{
-                                                            backgroundColor: readOnly ? '#9e9e9e' : '#1976d2',
-                                                            color: 'white',
-                                                            width: 24,
-                                                            height: 24,
-                                                            padding: 0,
-                                                            '&:hover': {
-                                                                backgroundColor: readOnly ? '#9e9e9e' : '#1565c0',
-                                                            }
-                                                        }}
-                                                    >
-                                                        <Add sx={{ fontSize: 16 }} />
-                                                    </IconButton>
-                                                )
-                                            }}
-                                        />
-                                        {/* Search Results Dropdown */}
-                                        {referralNameOptions.length > 0 && (
-                                            <Box sx={{
-                                                position: 'absolute',
-                                                top: '100%',
-                                                left: 0,
-                                                right: 0,
-                                                backgroundColor: 'white',
-                                                border: '1px solid #B7B7B7',
-                                                borderRadius: '6px',
-                                                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                                                zIndex: 1000,
-                                                maxHeight: '200px',
-                                                overflowY: 'auto'
-                                            }}>
-                                                {referralNameOptions.map((option) => (
-                                                    <Box
-                                                        key={option.id}
-                                                        onClick={() => {
-                                                            setSelectedDoctor((option as any).fullData);
-                                                            setFormData(prev => ({
-                                                                ...prev,
-                                                                referralName: option.name,
-                                                                referralContact: (option as any).fullData?.doctorMob || '',
-                                                                referralEmail: (option as any).fullData?.doctorMail || '',
-                                                                referralAddress: (option as any).fullData?.doctorAddress || ''
-                                                            }));
-                                                            setReferralNameSearch(option.name);
-                                                            setReferralNameOptions([]);
-                                                        }}
-                                                        sx={{
-                                                            padding: '8px 12px',
-                                                            cursor: 'pointer',
-                                                            fontSize: '0.9rem',
-                                                            borderBottom: '1px solid #f0f0f0',
-                                                            '&:hover': { backgroundColor: '#f5f5f5' }
-                                                        }}
-                                                    >
-                                                        {option.name}
-                                                    </Box>
-                                                ))}
-                                            </Box>
-                                        )}
+                                        <Box position="relative">
+                                            <TextField
+                                                fullWidth
+                                                size="small"
+                                                placeholder="Type Doctor Name"
+                                                value={referralNameSearch}
+                                                onChange={(e) => handleReferralNameSearch(e.target.value)}
+                                                disabled={readOnly || isSelfReferral}
+                                                variant="outlined"
+                                                error={!!validationErrors.referralName}
+                                                helperText={validationErrors.referralName}
+                                                InputProps={{
+                                                    endAdornment: (
+                                                        <IconButton
+                                                            size="small"
+                                                            onClick={() => !readOnly && !isSelfReferral && setShowReferralPopup(true)}
+                                                            disabled={readOnly || isSelfReferral}
+                                                            title="Add New Referral Doctor"
+                                                            sx={{
+                                                                backgroundColor: readOnly ? '#9e9e9e' : '#1976d2',
+                                                                color: 'white',
+                                                                width: 24,
+                                                                height: 24,
+                                                                padding: 0,
+                                                                '&:hover': {
+                                                                    backgroundColor: readOnly ? '#9e9e9e' : '#1565c0',
+                                                                }
+                                                            }}
+                                                        >
+                                                            <Add sx={{ fontSize: 16 }} />
+                                                        </IconButton>
+                                                    )
+                                                }}
+                                            />
+                                            {/* Search Results Dropdown */}
+                                            {referralNameOptions.length > 0 && (
+                                                <Box sx={{
+                                                    position: 'absolute',
+                                                    top: 'calc(100% + 4px)',
+                                                    left: 0,
+                                                    right: 0,
+                                                    backgroundColor: 'white',
+                                                    borderRadius: '4px',
+                                                    boxShadow: '0px 5px 5px -3px rgba(0,0,0,0.2), 0px 8px 10px 1px rgba(0,0,0,0.14), 0px 3px 14px 2px rgba(0,0,0,0.12)',
+                                                    zIndex: 1000,
+                                                    maxHeight: '200px',
+                                                    overflowY: 'auto'
+                                                }}>
+                                                    {referralNameOptions.map((option) => (
+                                                        <Box
+                                                            key={option.id}
+                                                            onClick={() => {
+                                                                setSelectedDoctor((option as any).fullData);
+                                                                setFormData(prev => ({
+                                                                    ...prev,
+                                                                    referralName: option.name,
+                                                                    referralContact: (option as any).fullData?.doctorMob || '',
+                                                                    referralEmail: (option as any).fullData?.doctorMail || '',
+                                                                    referralAddress: (option as any).fullData?.doctorAddress || ''
+                                                                }));
+                                                                setReferralNameSearch(option.name);
+                                                                setReferralNameOptions([]);
+                                                            }}
+                                                            sx={{
+                                                                padding: '8px 12px',
+                                                                cursor: 'pointer',
+                                                                fontSize: '14px',
+                                                                borderBottom: '1px solid #f0f0f0',
+                                                                '&:hover': { backgroundColor: '#f5f5f5' }
+                                                            }}
+                                                        >
+                                                            {option.name}
+                                                        </Box>
+                                                    ))}
+                                                </Box>
+                                            )}
+                                        </Box>
                                     </Box>
                                 )
                             ) : (
                                 <Box sx={{ mb: 2 }}>
                                     <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
-                                        Referral Name
+                                        Search Doctor Name
                                     </Typography>
                                     <TextField
                                         fullWidth
@@ -1855,7 +1856,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                         onChange={(e) => handleInputChange('referralName', e.target.value)}
                                         disabled={readOnly || isSelfReferral}
                                         variant="outlined"
-                                        placeholder='Referral Name'
+                                        placeholder='Type Doctor Name'
                                         error={!!validationErrors.referralName}
                                         helperText={validationErrors.referralName}
                                     />
