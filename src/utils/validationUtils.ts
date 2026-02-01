@@ -60,6 +60,18 @@ export const validateField = (
     // Error messages accumulation (doesn't block input but shows warning)
     let error = '';
 
+    // Range check for numbers (accumulate error, don't block input to allow typing)
+    if (config?.type === 'number' && strValue.length > 0) {
+        const numValue = parseFloat(strValue);
+        if (!isNaN(numValue)) {
+            if (config.min !== undefined && numValue < config.min) {
+                error = `${fieldLabel} must be between ${config.min} and ${config.max}`;
+            } else if (config.max !== undefined && numValue > config.max) {
+                error = `${fieldLabel} must be between ${config.min} and ${config.max}`;
+            }
+        }
+    }
+
     // Length warning
     if (strValue.length === maxLength) {
         error = `${fieldLabel} cannot exceed ${maxLength} characters`;
@@ -95,8 +107,8 @@ export const validateAddressInput = (value: string, maxLength: number = 150, fie
 /**
  * Get max length for a field from configuration
  */
-export const getMaxLength = (fieldName: string): number | undefined => {
-    const config = getFieldConfig(fieldName);
+export const getMaxLength = (fieldName: string, entity?: any): number | undefined => {
+    const config = getFieldConfig(fieldName, entity);
     return config?.maxLength;
 };
 

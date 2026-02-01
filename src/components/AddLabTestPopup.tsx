@@ -15,7 +15,7 @@ import {
     IconButton,
     Alert
 } from '@mui/material';
-import { validateField } from '../utils/validationUtils';
+import { validateField, getMaxLength } from '../utils/validationUtils';
 
 export interface LabTestRow {
     id: string;
@@ -97,7 +97,7 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
             // But usually we allow clearing input.
 
             if (allowed) {
-                setTestLabData(prev => ({ ...prev, [field]: value }));
+                setTestLabData(prev => ({ ...prev, [field]: value } as any));
                 setErrors(prev => ({ ...prev, labTestName: error }));
             }
             return;
@@ -106,7 +106,7 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
         if (field === 'parameterName') {
             const { allowed, error } = validateField('parameterName', value, undefined, undefined, 'labMaster');
             if (allowed) {
-                setTestLabData(prev => ({ ...prev, [field]: value }));
+                setTestLabData(prev => ({ ...prev, [field]: value } as any));
                 // Clear errors if valid (validateField might return error string if length exceeded but still allowed? No, allowed=false if max length exceeded)
                 // Actually validateField returns error if regex mismatch or length check logic?
                 // If allowed=true, it means it passed "can type" checks.
@@ -118,14 +118,14 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
         if (field === 'priority') {
             const { allowed, error } = validateField('priority', value, undefined, undefined, 'labMaster');
             if (allowed) {
-                setTestLabData(prev => ({ ...prev, [field]: value }));
+                setTestLabData(prev => ({ ...prev, [field]: value } as any));
                 setErrors(prev => ({ ...prev, priority: error }));
             }
             return;
         }
 
         // Default update for any other fields
-        setTestLabData(prev => ({ ...prev, [field]: value }));
+        setTestLabData(prev => ({ ...prev, [field]: value } as any));
     };
 
     const showSnackbar = (message: string, severity: 'success' | 'error' = 'error') => {
@@ -301,7 +301,7 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
                                             variant="outlined"
                                             size="small"
                                             value={testLabData.parameterName}
-                                            inputProps={{ maxLength: getMaxLength('parameterName') }}
+                                            inputProps={{ maxLength: getMaxLength('parameterName', 'labMaster') }}
                                             onChange={(e) => {
                                                 const { allowed, error } = validateField('parameterName', e.target.value, undefined, undefined, 'labMaster');
                                                 if (allowed) {
