@@ -1514,11 +1514,11 @@ h1 h2 h3 h4 h5 h6 .MuiTypography-h1 .MuiTypography-h2 .MuiTypography-h3 .MuiTypo
 ;
 
 .MuiFormHelperText-root {
-  font-size: '0.75rem';
+  font-size: 0.75rem;
   line-height: 1.66;
-  font-family: "'Roboto'; sans-serif";
+  font-family: 'Roboto', sans-serif;
   margin-bottom: 0;
-  min-height: '1.25rem'
+  min-height: 1.25rem;
 }
 
 ; */

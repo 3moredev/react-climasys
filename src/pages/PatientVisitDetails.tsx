@@ -1195,6 +1195,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
         return formData.referralBy === 'D' || referByOptions.find(opt => opt.id === formData.referralBy)?.name === 'Doctor';
     };
 
+
     const validateForm = () => {
         const errors: { [key: string]: string } = {};
 
@@ -1683,6 +1684,15 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                     },
                     '& .MuiInputBase-input.Mui-disabled': {
                         WebkitTextFillColor: 'rgba(0,0,0,0.87) !important'
+                    },
+                    '& .MuiFormHelperText-root': {
+                        fontSize: '0.75rem',
+                        lineHeight: 1.66,
+                        fontFamily: "'Roboto', sans-serif",
+                        margin: '3px 0 0 0 !important',
+                        padding: '0 !important',
+                        minHeight: '1.25rem',
+                        textAlign: 'left !important'
                     }
                 }}>
                     {/* Error/Success Messages */}
@@ -1744,7 +1754,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                             size="small"
                                             value={formData.referralName}
                                             onChange={(e) => handleInputChange('referralName', e.target.value)}
-                                            disabled={readOnly || isSelfReferral || (patientData && !!patientData.patientId)}
+                                            disabled={readOnly || isSelfReferral || (isDoctorReferral() && selectedDoctor !== null)}
                                             variant="outlined"
                                             error={!!validationErrors.referralName}
                                             helperText={validationErrors.referralName}
@@ -1761,7 +1771,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                             placeholder="Search Doctor Name"
                                             value={referralNameSearch}
                                             onChange={(e) => handleReferralNameSearch(e.target.value)}
-                                            disabled={readOnly || isSelfReferral || (patientData && !!patientData.patientId)}
+                                            disabled={readOnly || isSelfReferral}
                                             variant="outlined"
                                             error={!!validationErrors.referralName}
                                             helperText={validationErrors.referralName}
@@ -1862,7 +1872,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     size="small"
                                     value={formData.referralContact}
                                     onChange={(e) => handleInputChange('referralContact', e.target.value)}
-                                    disabled={readOnly || isSelfReferral || (isDoctorReferral() && selectedDoctor !== null) || (patientData && !!patientData.patientId && !isDoctorReferral())}
+                                    disabled={readOnly || isSelfReferral || (isDoctorReferral() && selectedDoctor !== null)}
                                     variant="outlined"
                                     placeholder='Referral Contact'
                                     inputProps={{ maxLength: getFieldConfig('referralContact', 'visit')?.maxLength }}
@@ -1882,7 +1892,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     type="email"
                                     value={formData.referralEmail}
                                     onChange={(e) => handleInputChange('referralEmail', e.target.value)}
-                                    disabled={readOnly || isSelfReferral || (isDoctorReferral() && selectedDoctor !== null) || (patientData && !!patientData.patientId && !isDoctorReferral())}
+                                    disabled={readOnly || isSelfReferral || (isDoctorReferral() && selectedDoctor !== null)}
                                     variant="outlined"
                                     placeholder='Referral Email'
                                     inputProps={{ maxLength: getFieldConfig('referralEmail', 'visit')?.maxLength }}
@@ -1901,7 +1911,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     size="small"
                                     value={formData.referralAddress}
                                     onChange={(e) => handleInputChange('referralAddress', e.target.value)}
-                                    disabled={readOnly || isSelfReferral || (isDoctorReferral() && selectedDoctor !== null) || (patientData && !!patientData.patientId && !isDoctorReferral())}
+                                    disabled={readOnly || isSelfReferral || (isDoctorReferral() && selectedDoctor !== null)}
                                     variant="outlined"
                                     inputProps={{ maxLength: getFieldConfig('referralAddress', 'visit')?.maxLength }}
                                     placeholder='Referral Address'
@@ -2811,6 +2821,19 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                 open={showReferralPopup}
                 onClose={() => setShowReferralPopup(false)}
                 onSave={(referralData: ReferralData) => {
+                    // Update form data with the new doctor info
+                    setFormData(prev => ({
+                        ...prev,
+                        referralName: referralData.doctorName || '',
+                        referralContact: referralData.doctorMob || '',
+                        referralEmail: referralData.doctorMail || '',
+                        referralAddress: referralData.doctorAddress || ''
+                    }));
+                    setReferralNameSearch(referralData.doctorName || '');
+                    setSelectedDoctor(referralData as any);
+                    setShowReferralPopup(false);
+
+                    // Also refresh options if needed
                     if (isDoctorReferral()) {
                         handleReferralNameSearch(referralData.doctorName || '');
                     }
