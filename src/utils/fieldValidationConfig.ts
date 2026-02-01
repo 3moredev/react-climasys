@@ -8,6 +8,8 @@ export interface FieldConfig {
     fieldName: string;
     type?: 'text' | 'email' | 'number' | 'textarea';
     pattern?: RegExp;
+    min?: number;
+    max?: number;
 }
 
 /**
@@ -66,6 +68,7 @@ export const VISIT_FIELDS = {
     bloodPressure: { maxLength: 10, fieldName: 'Blood pressure', type: 'text' as const },
     bp: { maxLength: 10, fieldName: 'Blood pressure', type: 'text' as const }, // Frontend alias
     sugar: { maxLength: 25, fieldName: 'Sugar', type: 'text' as const },
+    tft: { maxLength: 25, fieldName: 'TFT', type: 'text' as const },
     tpr: { maxLength: 10, fieldName: 'TPR', type: 'text' as const },
 
     // Comments/Notes (500 chars)
@@ -98,6 +101,16 @@ export const VISIT_FIELDS = {
     impressionFinding: { maxLength: 1000, fieldName: 'Impression finding', type: 'textarea' as const },
     complaintsByPatientPerVisit: { maxLength: 400, fieldName: 'Chief complaint', type: 'text' as const },
     chiefComplaint: { maxLength: 400, fieldName: 'Chief complaint', type: 'text' as const }, // Frontend alias
+    referralName: { maxLength: 200, fieldName: 'Referral doctor name', type: 'text' as const },
+    referralContact: { maxLength: 10, fieldName: 'Referral mobile', type: 'number' as const },
+    referralEmail: { maxLength: 60, fieldName: 'Referral email', type: 'email' as const },
+    referralAddress: { maxLength: 150, fieldName: 'Referral address', type: 'text' as const },
+    pastSurgicalHistory: { maxLength: 1000, fieldName: 'Past surgical history', type: 'textarea' as const },
+    pulse: { maxLength: 5, fieldName: 'Pulse', type: 'number' as const, min: 30, max: 220 },
+    height: { maxLength: 10, fieldName: 'Height', type: 'number' as const, pattern: /^\d*\.?\d*$/, min: 30, max: 250 },
+    weight: { maxLength: 10, fieldName: 'Weight', type: 'number' as const, pattern: /^\d*\.?\d*$/, min: 1, max: 250 },
+    complaintComment: { maxLength: 200, fieldName: 'Duration/Comment', type: 'text' as const },
+    complaintSearch: { maxLength: 100, fieldName: 'Complaint Search', type: 'text' as const },
 } as const;
 
 /**

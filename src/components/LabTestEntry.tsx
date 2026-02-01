@@ -1151,7 +1151,8 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                         borderRadius: '8px',
                                                         alignItems: 'flex-start',
                                                         width: '100%',
-                                                        overflow: 'hidden'
+                                                        overflow: 'hidden',
+                                                        height: 'auto !important'
                                                     },
                                                     '& .MuiInputBase-input': {
                                                         overflow: 'hidden !important',

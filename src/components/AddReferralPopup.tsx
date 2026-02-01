@@ -4,7 +4,7 @@ import { Close } from '@mui/icons-material';
 import { Snackbar, Dialog, DialogTitle, DialogContent, Grid, Box, Typography, TextField, Button, IconButton } from '@mui/material';
 import api from '../services/api';
 
-import { validateField } from '../utils/validationUtils';
+import { validateField, getMaxLength } from '../utils/validationUtils';
 
 interface AddReferralPopupProps {
     open: boolean;
@@ -70,7 +70,7 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
         // Only allow alphabets and spaces
         const alphabeticValue = value.replace(/[^a-zA-Z\s]/g, '');
 
-        const { allowed, error } = validateField('doctorName', alphabeticValue);
+        const { allowed, error } = validateField('doctorName', alphabeticValue, undefined, undefined, 'referralDoctor');
         if (allowed) {
             handleInputChange('doctorName', alphabeticValue);
             if (alphabeticValue.trim()) {
@@ -86,7 +86,7 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
         // Only allow numbers
         const numericValue = value.replace(/\D/g, '');
 
-        const { allowed, error } = validateField('doctorMob', numericValue);
+        const { allowed, error } = validateField('doctorMob', numericValue, undefined, undefined, 'referralDoctor');
         if (allowed) {
             handleInputChange('doctorMob', numericValue);
             setContactError(error);
@@ -108,7 +108,7 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
     };
 
     const handleEmailChange = (value: string) => {
-        const { allowed, error } = validateField('doctorMail', value);
+        const { allowed, error } = validateField('doctorMail', value, undefined, undefined, 'referralDoctor');
         if (allowed) {
             handleInputChange('doctorMail', value);
             setEmailError(error);
@@ -116,7 +116,7 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
     };
 
     const handleAddressChange = (value: string) => {
-        const { allowed, error } = validateField('doctorAddress', value);
+        const { allowed, error } = validateField('doctorAddress', value, undefined, undefined, 'referralDoctor');
         if (allowed) {
             handleInputChange('doctorAddress', value);
             setAddressError(error);
@@ -124,7 +124,7 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
     };
 
     const handleRemarksChange = (value: string) => {
-        const { allowed, error } = validateField('remarks', value);
+        const { allowed, error } = validateField('remarks', value, undefined, undefined, 'referralDoctor');
         if (allowed) {
             handleInputChange('remarks', value);
             setRemarksError(error);
