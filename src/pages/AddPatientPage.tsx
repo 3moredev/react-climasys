@@ -2858,13 +2858,13 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
               <Grid item xs={12} md={3}>
                 <Box sx={{ mb: 2 }}>
                   <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
-                    Referral Name
+                    Search Doctor Name
                   </Typography>
                   {!!patientId ? (
                     // Edit Mode: Restore original simple text field
                     <ClearableTextField
                       fullWidth
-                      placeholder="Referral Name"
+                      placeholder="Search Doctor Name"
                       value={formData.referralName}
                       onChange={(value) => handleInputChange('referralName', value)}
                       disabled={loading || isSelfReferral || !!patientId}
@@ -2877,6 +2877,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                   ) : !isSelfReferral ? (
                     formData.referredBy === 'D' ? (
                       <Autocomplete
+                        fullWidth
                         inputValue={referralNameSearch}
                         freeSolo
                         disableClearable // We'll provide our own clear button
@@ -2971,14 +2972,35 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                           />
                         )}
                         slotProps={{
-                          popper: { style: { zIndex: 11001 } },
-                          paper: { sx: { zIndex: 11001 } }
+                          popper: {
+                            style: { zIndex: 11001 },
+                            placement: 'bottom-start',
+                            modifiers: [
+                              {
+                                name: 'offset',
+                                options: {
+                                  offset: [0, 4]
+                                }
+                              },
+                              {
+                                name: 'sameWidth',
+                                enabled: true,
+                                fn: ({ state }) => {
+                                  state.styles.popper.width = `${state.rects.reference.width}px`
+                                  return state
+                                },
+                                phase: 'beforeWrite',
+                                requires: ['computeStyles']
+                              }
+                            ]
+                          },
+                          paper: { sx: { zIndex: 11001, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' } }
                         }}
                       />
                     ) : (
                       <ClearableTextField
                         fullWidth
-                        placeholder="Referral Name"
+                        placeholder="Search Doctor Name"
                         value={formData.referralName}
                         onChange={(value) => handleInputChange('referralName', value)}
                         disabled={loading || isSelfReferral || !!patientId}
@@ -2994,7 +3016,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                   ) : (
                     <ClearableTextField
                       fullWidth
-                      placeholder="Referral Name"
+                      placeholder="Search Doctor Name"
                       value={formData.referralName}
                       onChange={(value) => handleInputChange('referralName', value)}
                       disabled={loading || isSelfReferral || !!patientId}
