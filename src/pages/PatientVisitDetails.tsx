@@ -5,7 +5,7 @@ import {
     DialogActions, Grid, Box, Typography, TextField, Button,
     IconButton, Checkbox, FormControlLabel, MenuItem, Autocomplete,
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
-    InputAdornment, List, ListItem, ListItemText, ListItemIcon, Divider
+    InputAdornment, List, ListItem, ListItemText, ListItemIcon, Divider, CircularProgress
 } from '@mui/material';
 import { visitService, ComprehensiveVisitDataRequest } from '../services/visitService';
 import { complaintService, ComplaintOption } from '../services/complaintService';
@@ -15,6 +15,7 @@ import { doctorService } from '../services/doctorService';
 import AddReferralPopup, { ReferralData } from '../components/AddReferralPopup';
 import AddPatientPage from './AddPatientPage';
 import PatientNameDisplay from '../components/PatientNameDisplay';
+import ClearableTextField from '../components/ClearableTextField';
 import { getFieldConfig } from '../utils/fieldValidationConfig';
 import { validateField } from '../utils/validationUtils';
 
@@ -1749,11 +1750,17 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                         <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                                             Search Doctor Name
                                         </Typography>
-                                        <TextField
+                                        <ClearableTextField
                                             fullWidth
                                             size="small"
                                             value={formData.referralName}
-                                            onChange={(e) => handleInputChange('referralName', e.target.value)}
+                                            onChange={(value) => handleInputChange('referralName', value)}
+                                            onClear={() => {
+                                                handleInputChange('referralName', '');
+                                                setReferralNameSearch('');
+                                                setSelectedDoctor(null);
+                                                setReferralNameOptions([]);
+                                            }}
                                             disabled={readOnly || isSelfReferral || (isDoctorReferral() && selectedDoctor !== null)}
                                             variant="outlined"
                                             error={!!validationErrors.referralName}
@@ -1766,36 +1773,47 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                             Search Doctor Name
                                         </Typography>
                                         <Box position="relative">
-                                            <TextField
+                                            <ClearableTextField
                                                 fullWidth
                                                 size="small"
                                                 placeholder="Type Doctor Name"
                                                 value={referralNameSearch}
-                                                onChange={(e) => handleReferralNameSearch(e.target.value)}
+                                                onChange={(value) => handleReferralNameSearch(value)}
+                                                onClear={() => {
+                                                    handleInputChange('referralName', '');
+                                                    setReferralNameSearch('');
+                                                    setSelectedDoctor(null);
+                                                    setReferralNameOptions([]);
+                                                }}
                                                 disabled={readOnly || isSelfReferral}
                                                 variant="outlined"
                                                 error={!!validationErrors.referralName}
                                                 helperText={validationErrors.referralName}
                                                 InputProps={{
                                                     endAdornment: (
-                                                        <IconButton
-                                                            size="small"
-                                                            onClick={() => !readOnly && !isSelfReferral && setShowReferralPopup(true)}
-                                                            disabled={readOnly || isSelfReferral}
-                                                            title="Add New Referral Doctor"
-                                                            sx={{
-                                                                backgroundColor: readOnly ? '#9e9e9e' : '#1976d2',
-                                                                color: 'white',
-                                                                width: 24,
-                                                                height: 24,
-                                                                padding: 0,
-                                                                '&:hover': {
-                                                                    backgroundColor: readOnly ? '#9e9e9e' : '#1565c0',
-                                                                }
-                                                            }}
-                                                        >
-                                                            <Add sx={{ fontSize: 16 }} />
-                                                        </IconButton>
+                                                        <React.Fragment>
+                                                            {isSearchingReferral && <CircularProgress color="inherit" size={20} sx={{ mr: 1 }} />}
+                                                            <InputAdornment position="end">
+                                                                <IconButton
+                                                                    size="small"
+                                                                    onClick={() => !readOnly && !isSelfReferral && setShowReferralPopup(true)}
+                                                                    disabled={readOnly || isSelfReferral}
+                                                                    title="Add New Referral Doctor"
+                                                                    sx={{
+                                                                        backgroundColor: readOnly ? '#9e9e9e' : '#1976d2',
+                                                                        color: 'white',
+                                                                        width: 24,
+                                                                        height: 24,
+                                                                        padding: 0,
+                                                                        '&:hover': {
+                                                                            backgroundColor: readOnly ? '#9e9e9e' : '#1565c0',
+                                                                        }
+                                                                    }}
+                                                                >
+                                                                    <Add sx={{ fontSize: 16 }} />
+                                                                </IconButton>
+                                                            </InputAdornment>
+                                                        </React.Fragment>
                                                     )
                                                 }}
                                             />
@@ -1849,11 +1867,11 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                                         Search Doctor Name
                                     </Typography>
-                                    <TextField
+                                    <ClearableTextField
                                         fullWidth
                                         size="small"
                                         value={formData.referralName}
-                                        onChange={(e) => handleInputChange('referralName', e.target.value)}
+                                        onChange={(value) => handleInputChange('referralName', value)}
                                         disabled={readOnly || isSelfReferral}
                                         variant="outlined"
                                         placeholder='Type Doctor Name'
