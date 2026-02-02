@@ -59,7 +59,7 @@ const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(({
                     }}
                     maxLength={50}
                 />
-                {showSearchIcon && !value && (
+                {showSearchIcon && (
                     <Search
                         className="search-icon"
                         style={{
@@ -74,24 +74,26 @@ const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(({
                     />
                 )}
                 {value && (
-                    <IconButton
+                    <Close
                         onClick={handleClear}
-                        disabled={disabled}
-                        size="small"
-                        sx={{
+                        style={{
                             position: 'absolute',
-                            right: '8px',
+                            right: showSearchIcon ? '35px' : '10px',
                             top: '50%',
                             transform: 'translateY(-50%)',
-                            padding: '4px',
-                            '&:hover': {
-                                backgroundColor: 'rgba(0, 0, 0, 0.04)'
-                            }
+                            fontSize: '18px',
+                            color: '#757575',
+                            cursor: 'pointer',
+                            marginLeft: '4px',
+                            marginRight: '2px',
+                            background: 'none',
+                            border: 'none',
+                            boxShadow: 'none',
+                            display: 'block',
+                            opacity: disabled ? 0.5 : 1,
+                            pointerEvents: disabled ? 'none' : 'auto'
                         }}
-                        aria-label="Clear search"
-                    >
-                        <Close style={{ fontSize: '18px', color: '#333' }} />
-                    </IconButton>
+                    />
                 )}
             </div>
             {value.length === 50 && (
