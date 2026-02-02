@@ -126,13 +126,13 @@ export async function getCitiesByState(stateId?: string): Promise<CityItem[]> {
     if (!stateId) {
       return []
     }
-    
+
     // Use search endpoint with common search terms to get cities with translations
     // Then filter by stateId since the /cities endpoint returns entities without cityName
     const searchTerms = ['a', 'e', 'i', 'o', 'u', 'p', 'm', 'd']
     const allCitiesSet = new Set<string>()
     const allCities: CityItem[] = []
-    
+
     for (const term of searchTerms) {
       try {
         const response = await api.get('/reference/cities/search', {
@@ -146,7 +146,7 @@ export async function getCitiesByState(stateId?: string): Promise<CityItem[]> {
             const name = item?.cityName ?? item?.name ?? String(id)
             const itemStateId = item?.stateId
             const key = `${id}-${name}`
-            
+
             // Only add if not already added and matches the requested stateId
             if (!allCitiesSet.has(key) && itemStateId && String(itemStateId) === String(stateId)) {
               allCitiesSet.add(key)
@@ -161,7 +161,7 @@ export async function getCitiesByState(stateId?: string): Promise<CityItem[]> {
         console.warn(`Failed to search cities with term "${term}":`, e)
       }
     }
-    
+
     // Sort by name for better UX
     return allCities.sort((a, b) => a.name.localeCompare(b.name))
   } catch (error) {
@@ -295,7 +295,7 @@ export async function createArea(
   stateId: string,
   countryId: string = 'IND',
   languageId: number = 1
-): Promise<{ success: boolean; areaId?: number; areaName?: string; error?: string }> {
+): Promise<{ success: boolean; areaId?: number; areaName?: string; message?: string; error?: string }> {
   try {
     const response = await api.post('/reference/areas/create', null, {
       params: {
@@ -310,6 +310,7 @@ export async function createArea(
       success: response.data.success || false,
       areaId: response.data.areaId,
       areaName: response.data.areaName,
+      message: response.data.message,
       error: response.data.error
     }
   } catch (error: any) {
