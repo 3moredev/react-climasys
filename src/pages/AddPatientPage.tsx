@@ -1091,7 +1091,11 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
     if (!formData.firstName.trim()) newErrors.firstName = 'First name is required'
     if (!formData.lastName.trim()) newErrors.lastName = 'Last name is required'
     if (!formData.gender) newErrors.gender = 'Gender is required'
-    if (!formData.area.trim()) newErrors.area = 'Area is required'
+    if (!formData.area.trim()) {
+      newErrors.area = 'Area is required'
+    } else if (errors.area && errors.area.includes('duplicate area is not allowed')) {
+      newErrors.area = errors.area
+    }
 
     // Validate date of birth
     if (!formData.dobDate) {
@@ -1129,9 +1133,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
   }
 
   const handleSave = async () => {
-    if (!validateForm()) {
-      return
-    }
+    const isFormValid = validateForm()
 
     setLoading(true)
     try {
@@ -1165,23 +1167,25 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
           )
 
           if (matchingArea) {
-            const parsedId = parseInt(matchingArea.id)
-            if (!isNaN(parsedId)) {
-              resolvedAreaId = parsedId
-            }
+            // Area already exists in database - show duplicate error as requested
+            setErrors(prev => ({
+              ...prev,
+              area: 'duplicate area is not allowed'
+            }))
+            setLoading(false)
+            setSnackbarMessage('duplicate area is not allowed')
+            setSnackbarOpen(true)
 
-            // Update areaOptions with the found area
+            // Optionally update areaOptions to ensure the existing one is visible
             setAreaOptions(prev => {
               const existing = prev.find(o => o.id === matchingArea!.id)
               if (!existing) {
-                return [...prev.filter(o => !o.id.startsWith('new-') || o.name.toLowerCase() !== formData.area.toLowerCase()), matchingArea]
+                return [...prev.filter(o => !o.id.startsWith('new-') || o.name.toLowerCase() !== formData.area.toLowerCase()), matchingArea!]
               }
               return prev
             })
-            // Update formData.area to ensure it matches exactly
-            handleInputChange('area', matchingArea.name)
-            setAreaInput(matchingArea.name)
-            setSelectedAreaCityId(matchingArea.cityId || null)
+
+            return
           } else {
             // Area doesn't exist - create it
             if (!selectedCityId || !selectedStateId) {
@@ -1206,6 +1210,17 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
               )
 
               if (createResult.success && createResult.areaId) {
+                // If backend says success but indicates it already existed, show error if we want to block duplicates
+                if (createResult.message === "Area already exists") {
+                  setErrors(prev => ({
+                    ...prev,
+                    area: 'duplicate area is not allowed'
+                  }))
+                  setLoading(false)
+                  setSnackbarMessage('duplicate area is not allowed')
+                  setSnackbarOpen(true)
+                  return
+                }
 
                 const newId = createResult.areaId
                 resolvedAreaId = newId
@@ -1311,8 +1326,19 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
         }
       }
 
+      // If standard validation failed but we reached here (after async checks),
+      // we must stop now. The errors for standard validation were already set by validateForm().
+      if (!isFormValid) {
+        setLoading(false)
+        return
+      }
+
       // Map form data to API request format
       const apiRequest = mapFormDataToApiRequest()
+      // Ensure the resolved area ID is used
+      if (resolvedAreaId) {
+        apiRequest.areaId = resolvedAreaId
+      }
 
       // Explicitly set the areaId if we resolved it locally
       // This overrides whatever mapFormDataToApiRequest found (which might be stale due to state updates)
@@ -2358,8 +2384,9 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                               return prev
                             })
                             setSelectedAreaCityId(selectedCityId)
-                            // Clear any area validation error
+                            // Clear any area validation error UNLESS it's a duplicate error
                             setErrors(prev => {
+                              if (prev.area && prev.area.includes('duplicate area is not allowed')) return prev
                               const newErrors = { ...prev }
                               delete newErrors.area
                               return newErrors
@@ -2613,7 +2640,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         error={!!errors.area}
                         helperText={errors.area}
                         disabled={loading || readOnly || !selectedCityId}
-                        onBlur={() => {
+                        onBlur={async () => {
                           // Only clear if input is empty or doesn't match and is not a new area
                           const trimmedInput = areaInput.trim()
                           const trimmedArea = formData.area.trim()
@@ -2647,12 +2674,32 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                                 return prev
                               })
                               setSelectedAreaCityId(selectedCityId)
-                              // Clear validation error
-                              setErrors(prev => {
-                                const newErrors = { ...prev }
-                                delete newErrors.area
-                                return newErrors
-                              })
+
+                              // NEW: Perform async duplicate check on blur
+                              try {
+                                const { searchAreas } = await import('../services/referenceService')
+                                const searchResults = await searchAreas(trimmedInput)
+                                const matchingArea = searchResults.find(a =>
+                                  a.name.trim().toLowerCase() === trimmedInput.toLowerCase() &&
+                                  (!selectedCityId || String(a.cityId) === String(selectedCityId))
+                                )
+
+                                if (matchingArea) {
+                                  setErrors(prev => ({
+                                    ...prev,
+                                    area: 'duplicate area is not allowed'
+                                  }))
+                                } else {
+                                  // Clear validation error if not a duplicate
+                                  setErrors(prev => {
+                                    const newErrors = { ...prev }
+                                    delete newErrors.area
+                                    return newErrors
+                                  })
+                                }
+                              } catch (e) {
+                                console.error('Duplicate check failed on blur', e)
+                              }
                             } else {
                               // If no city/state selected, clear the area
                               handleInputChange('area', '')
