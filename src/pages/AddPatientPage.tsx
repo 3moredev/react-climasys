@@ -2283,6 +2283,9 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                                     cursor: 'pointer',
                                     marginLeft: '4px',
                                     marginRight: '2px',
+                                    background: 'none',
+                                    border: 'none',
+                                    boxShadow: 'none',
                                     display: 'block'
                                   }}
                                 />
@@ -2991,7 +2994,12 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                                         fontSize: '18px',
                                         color: '#757575',
                                         cursor: 'pointer',
-                                        marginRight: '8px'
+                                        marginLeft: '4px',
+                                        marginRight: '2px',
+                                        background: 'none',
+                                        border: 'none',
+                                        boxShadow: 'none',
+                                        display: 'block'
                                       }}
                                     />
                                   )}
