@@ -33,6 +33,8 @@ import prescriptionDetailsService, {
     PrescriptionTemplate as PrescriptionTemplateApiModel,
 } from "../services/prescriptionDetailsService";
 import PatientNameDisplay from "../components/PatientNameDisplay";
+import ClearableTextField from "../components/ClearableTextField";
+
 
 // Specific styles for Duration/Comment input in table
 const durationCommentStyles = `
@@ -5119,21 +5121,17 @@ export default function Treatment() {
                                             <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
                                                 {label}
                                             </label>
-                                            <input
-                                                type="text"
+                                            <ClearableTextField
                                                 value={formData[key as keyof typeof formData] as string}
-                                                onChange={(e) => handleInputChange(key, e.target.value)}
+                                                onChange={(value) => handleInputChange(key, value)}
                                                 disabled={key === 'pc' || isFormDisabled}
-                                                maxLength={maxLength}
-                                                style={{
+                                                inputProps={{ maxLength }}
+                                                sx={{
                                                     width: '100%',
-                                                    padding: '6px 10px',
-                                                    border: '1px solid #ccc',
-                                                    borderRadius: '4px',
-                                                    fontSize: '13px',
-                                                    backgroundColor: key === 'pc' || isFormDisabled ? '#f5f5f5' : 'white',
-                                                    color: key === 'pc' || isFormDisabled ? '#666' : '#333',
-                                                    cursor: key === 'pc' || isFormDisabled ? 'not-allowed' : 'text'
+                                                    '& .MuiInputBase-input': {
+                                                        padding: '6px 10px',
+                                                        fontSize: '13px',
+                                                    }
                                                 }}
                                             />
                                         </div>
@@ -5163,12 +5161,10 @@ export default function Treatment() {
                                                             {label}
                                                         </label>
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                                            <input
+                                                            <ClearableTextField
                                                                 type={isNumberField ? "number" : "text"}
                                                                 value={formData[key as keyof typeof formData] as string}
-                                                                maxLength={maxLength}
-                                                                onChange={(e) => {
-                                                                    const value = e.target.value;
+                                                                onChange={(value) => {
                                                                     if (isNumberField) {
                                                                         // Allow empty string or non-negative numbers
                                                                         if (value === '' || (!isNaN(parseFloat(value)) && parseFloat(value) >= 0)) {
@@ -5195,18 +5191,18 @@ export default function Treatment() {
                                                                         }
                                                                     }
                                                                 }}
-                                                                min={isNumberField ? "0" : undefined}
-                                                                step={isNumberField ? (key === 'pulse' ? "1" : "0.1") : undefined}
                                                                 disabled={key === 'bmi' || isFormDisabled}
-                                                                style={{
+                                                                inputProps={{
+                                                                    maxLength,
+                                                                    min: isNumberField ? "0" : undefined,
+                                                                    step: isNumberField ? (key === 'pulse' ? "1" : "0.1") : undefined
+                                                                }}
+                                                                sx={{
                                                                     flex: 1,
-                                                                    padding: '6px 10px',
-                                                                    border: '1px solid #ccc',
-                                                                    borderRadius: '4px',
-                                                                    fontSize: '13px',
-                                                                    backgroundColor: key === 'bmi' || isFormDisabled ? '#f5f5f5' : 'white',
-                                                                    color: key === 'bmi' || isFormDisabled ? '#666' : '#333',
-                                                                    cursor: key === 'bmi' || isFormDisabled ? 'not-allowed' : 'text'
+                                                                    '& .MuiInputBase-input': {
+                                                                        padding: '6px 10px',
+                                                                        fontSize: '13px',
+                                                                    }
                                                                 }}
                                                             />
                                                         </div>
