@@ -1082,7 +1082,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
 
   // Check if current referral by is a doctor (specifically referId "D")
   const isDoctorReferral = () => {
-    return formData.referredBy === 'D'
+    return formData.referredBy === 'D' || referByOptions.find(opt => opt.id === formData.referredBy)?.name === 'Doctor';
   }
 
   const validateForm = () => {
@@ -1093,7 +1093,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
     if (!formData.gender) newErrors.gender = 'Gender is required'
     if (!formData.area.trim()) {
       newErrors.area = 'Area is required'
-    } else if (errors.area && errors.area.includes('duplicate area is not allowed')) {
+    } else if (errors.area && errors.area.includes('Duplicate area is not allowed')) {
       newErrors.area = errors.area
     }
 
@@ -1170,10 +1170,10 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
             // Area already exists in database - show duplicate error as requested
             setErrors(prev => ({
               ...prev,
-              area: 'duplicate area is not allowed'
+              area: 'Duplicate area is not allowed'
             }))
             setLoading(false)
-            setSnackbarMessage('duplicate area is not allowed')
+            setSnackbarMessage('Duplicate area is not allowed')
             setSnackbarOpen(true)
 
             // Optionally update areaOptions to ensure the existing one is visible
@@ -1214,10 +1214,10 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                 if (createResult.message === "Area already exists") {
                   setErrors(prev => ({
                     ...prev,
-                    area: 'duplicate area is not allowed'
+                    area: 'Duplicate area is not allowed'
                   }))
                   setLoading(false)
-                  setSnackbarMessage('duplicate area is not allowed')
+                  setSnackbarMessage('Duplicate area is not allowed')
                   setSnackbarOpen(true)
                   return
                 }
@@ -1559,6 +1559,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
 
   // Check if "Self" is selected in Referred By
   const isSelfReferral = formData.referredBy === 'S' || referByOptions.find(opt => opt.id === formData.referredBy)?.name === 'Self';
+
 
   return (<>
     {/* Success Snackbar (outside Dialog so it persists after close) */}
@@ -2389,7 +2390,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                             setSelectedAreaCityId(selectedCityId)
                             // Clear any area validation error UNLESS it's a duplicate error
                             setErrors(prev => {
-                              if (prev.area && prev.area.includes('duplicate area is not allowed')) return prev
+                              if (prev.area && prev.area.includes('Duplicate area is not allowed')) return prev
                               const newErrors = { ...prev }
                               delete newErrors.area
                               return newErrors
@@ -2690,7 +2691,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                                 if (matchingArea) {
                                   setErrors(prev => ({
                                     ...prev,
-                                    area: 'duplicate area is not allowed'
+                                    area: 'Duplicate area is not allowed'
                                   }))
                                 } else {
                                   // Clear validation error if not a duplicate
@@ -2908,13 +2909,13 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
               <Grid item xs={12} md={3}>
                 <Box sx={{ mb: 2 }}>
                   <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
-                    Search Doctor Name
+                    {isDoctorReferral() ? 'Doctor Name' : 'Referral Name'}
                   </Typography>
                   {!!patientId ? (
                     // Edit Mode: Restore original simple text field
                     <ClearableTextField
                       fullWidth
-                      placeholder="Search Doctor Name"
+                      placeholder={isDoctorReferral() ? 'Doctor Name' : 'Type Referral Name'}
                       value={formData.referralName}
                       onChange={(value) => handleInputChange('referralName', value)}
                       disabled={loading || isSelfReferral || !!patientId}
@@ -2925,7 +2926,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                       }}
                     />
                   ) : !isSelfReferral ? (
-                    formData.referredBy === 'D' ? (
+                    isDoctorReferral() ? (
                       <Autocomplete
                         fullWidth
                         inputValue={referralNameSearch}
@@ -2969,7 +2970,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                           <TextField
                             {...params}
                             fullWidth
-                            placeholder="Type Doctor Name"
+                            placeholder={isDoctorReferral() ? 'Type Doctor Name' : 'Type Referral Name'}
                             error={!!errors.referralName}
                             helperText={errors.referralName}
                             sx={{
@@ -3055,7 +3056,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     ) : (
                       <ClearableTextField
                         fullWidth
-                        placeholder="Search Doctor Name"
+                        placeholder={isDoctorReferral() ? 'Doctor Name' : 'Type Referral Name'}
                         value={formData.referralName}
                         onChange={(value) => handleInputChange('referralName', value)}
                         disabled={loading || isSelfReferral || !!patientId}
@@ -3071,7 +3072,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                   ) : (
                     <ClearableTextField
                       fullWidth
-                      placeholder="Search Doctor Name"
+                      placeholder={isDoctorReferral() ? 'Doctor Name' : 'Type Referral Name'}
                       value={formData.referralName}
                       onChange={(value) => handleInputChange('referralName', value)}
                       disabled={loading || isSelfReferral || !!patientId}

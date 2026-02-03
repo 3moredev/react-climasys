@@ -1748,7 +1748,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                 (formData.referralName && formData.referralName.trim() !== '') || selectedDoctor !== null ? (
                                     <Box sx={{ mb: 2 }}>
                                         <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
-                                            Search Doctor Name
+                                            {isDoctorReferral() ? 'Doctor Name' : 'Referral Name'}
                                         </Typography>
                                         <ClearableTextField
                                             fullWidth
@@ -1761,22 +1761,49 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                 setSelectedDoctor(null);
                                                 setReferralNameOptions([]);
                                             }}
-                                            disabled={readOnly || isSelfReferral || (isDoctorReferral() && selectedDoctor !== null)}
+                                            disabled={readOnly || isSelfReferral}
                                             variant="outlined"
+                                            placeholder={isDoctorReferral() ? 'Type Doctor Name' : 'Type Referral Name'}
                                             error={!!validationErrors.referralName}
                                             helperText={validationErrors.referralName}
+                                            InputProps={{
+                                                endAdornment: (
+                                                    <React.Fragment>
+                                                        <InputAdornment position="end">
+                                                            <IconButton
+                                                                size="small"
+                                                                onClick={() => !readOnly && !isSelfReferral && setShowReferralPopup(true)}
+                                                                disabled={readOnly || isSelfReferral}
+                                                                title="Add New Referral Doctor"
+                                                                sx={{
+                                                                    backgroundColor: readOnly ? '#9e9e9e' : '#1976d2',
+                                                                    color: 'white',
+                                                                    width: 24,
+                                                                    height: 24,
+                                                                    padding: 0,
+                                                                    '&:hover': {
+                                                                        backgroundColor: readOnly ? '#9e9e9e' : '#1565c0',
+                                                                    }
+                                                                }}
+                                                            >
+                                                                <Add sx={{ fontSize: 16 }} />
+                                                            </IconButton>
+                                                        </InputAdornment>
+                                                    </React.Fragment>
+                                                )
+                                            }}
                                         />
                                     </Box>
                                 ) : (
                                     <Box sx={{ mb: 2 }}>
                                         <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
-                                            Search Doctor Name
+                                            {isDoctorReferral() ? 'Doctor Name' : 'Referral Name'}
                                         </Typography>
                                         <Box position="relative">
                                             <ClearableTextField
                                                 fullWidth
                                                 size="small"
-                                                placeholder="Type Doctor Name"
+                                                placeholder={isDoctorReferral() ? 'Type Doctor Name' : 'Type Referral Name'}
                                                 value={referralNameSearch}
                                                 onChange={(value) => handleReferralNameSearch(value)}
                                                 onClear={() => {
@@ -1865,7 +1892,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                             ) : (
                                 <Box sx={{ mb: 2 }}>
                                     <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
-                                        Search Doctor Name
+                                        {isDoctorReferral() ? 'Doctor Name' : 'Referral Name'}
                                     </Typography>
                                     <ClearableTextField
                                         fullWidth
@@ -1874,7 +1901,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                         onChange={(value) => handleInputChange('referralName', value)}
                                         disabled={readOnly || isSelfReferral}
                                         variant="outlined"
-                                        placeholder='Type Doctor Name'
+                                        placeholder={isDoctorReferral() ? 'Type Doctor Name' : 'Type Referral Name'}
                                         error={!!validationErrors.referralName}
                                         helperText={validationErrors.referralName}
                                     />
@@ -1886,11 +1913,11 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                                     Referral Contact
                                 </Typography>
-                                <TextField
+                                <ClearableTextField
                                     fullWidth
                                     size="small"
                                     value={formData.referralContact}
-                                    onChange={(e) => handleInputChange('referralContact', e.target.value)}
+                                    onChange={(value) => handleInputChange('referralContact', value)}
                                     disabled={readOnly || isSelfReferral || (isDoctorReferral() && selectedDoctor !== null)}
                                     variant="outlined"
                                     placeholder='Referral Contact'
@@ -1905,12 +1932,12 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                                     Referral Email
                                 </Typography>
-                                <TextField
+                                <ClearableTextField
                                     fullWidth
                                     size="small"
                                     type="email"
                                     value={formData.referralEmail}
-                                    onChange={(e) => handleInputChange('referralEmail', e.target.value)}
+                                    onChange={(value) => handleInputChange('referralEmail', value)}
                                     disabled={readOnly || isSelfReferral || (isDoctorReferral() && selectedDoctor !== null)}
                                     variant="outlined"
                                     placeholder='Referral Email'
@@ -1925,11 +1952,11 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                                     Referral Address
                                 </Typography>
-                                <TextField
+                                <ClearableTextField
                                     fullWidth
                                     size="small"
                                     value={formData.referralAddress}
-                                    onChange={(e) => handleInputChange('referralAddress', e.target.value)}
+                                    onChange={(value) => handleInputChange('referralAddress', value)}
                                     disabled={readOnly || isSelfReferral || (isDoctorReferral() && selectedDoctor !== null)}
                                     variant="outlined"
                                     inputProps={{ maxLength: getFieldConfig('referralAddress', 'visit')?.maxLength }}
@@ -1944,12 +1971,12 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                                     Pulse (/min)
                                 </Typography>
-                                <TextField
+                                <ClearableTextField
                                     fullWidth
                                     size="small"
                                     value={formData.pulse}
                                     placeholder='Pulse'
-                                    onChange={(e) => handleInputChange('pulse', e.target.value)}
+                                    onChange={(value) => handleInputChange('pulse', value)}
                                     disabled={readOnly}
                                     variant="outlined"
                                     inputProps={{
@@ -1970,11 +1997,11 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                                         Height (Cm)
                                     </Typography>
-                                    <TextField
+                                    <ClearableTextField
                                         fullWidth
                                         size="small"
                                         value={formData.height}
-                                        onChange={(e) => handleInputChange('height', e.target.value)}
+                                        onChange={(value) => handleInputChange('height', value)}
                                         disabled={readOnly}
                                         variant="outlined"
                                         inputProps={{
@@ -1991,12 +2018,12 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                                         Weight (Kg)
                                     </Typography>
-                                    <TextField
+                                    <ClearableTextField
                                         fullWidth
                                         size="small"
                                         value={formData.weight}
                                         placeholder='Weight'
-                                        onChange={(e) => handleInputChange('weight', e.target.value)}
+                                        onChange={(value) => handleInputChange('weight', value)}
                                         disabled={readOnly}
                                         variant="outlined"
                                         inputProps={{
@@ -2027,12 +2054,11 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                                         BP
                                     </Typography>
-                                    <TextField
+                                    <ClearableTextField
                                         fullWidth
                                         size="small"
                                         value={formData.bp}
-                                        onChange={(e) => {
-                                            const value = e.target.value;
+                                        onChange={(value) => {
                                             if (value === '') {
                                                 handleInputChange('bp', value);
                                                 return;
@@ -2070,11 +2096,11 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                                         Sugar
                                     </Typography>
-                                    <TextField
+                                    <ClearableTextField
                                         fullWidth
                                         size="small"
                                         value={formData.sugar}
-                                        onChange={(e) => handleInputChange('sugar', e.target.value)}
+                                        onChange={(value) => handleInputChange('sugar', value)}
                                         disabled={readOnly}
                                         variant="outlined"
                                         placeholder='Sugar'
@@ -2089,11 +2115,11 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                                         TFT
                                     </Typography>
-                                    <TextField
+                                    <ClearableTextField
                                         fullWidth
                                         size="small"
                                         value={formData.tft}
-                                        onChange={(e) => handleInputChange('tft', e.target.value)}
+                                        onChange={(value) => handleInputChange('tft', value)}
                                         disabled={readOnly}
                                         variant="outlined"
                                         placeholder='TFT'
@@ -2559,11 +2585,11 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                         {row.label}
                                                     </td>
                                                     <td style={{ padding: '12px' }}>
-                                                        <TextField
+                                                        <ClearableTextField
                                                             fullWidth
                                                             size="small"
                                                             value={row.comment}
-                                                            onChange={(e) => handleComplaintCommentChange(row.value, e.target.value)}
+                                                            onChange={(value) => handleComplaintCommentChange(row.value, value)}
                                                             disabled={readOnly}
                                                             placeholder="Enter Duration/Comment"
                                                             variant="outlined"
