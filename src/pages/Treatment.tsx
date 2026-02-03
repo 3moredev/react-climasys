@@ -34,6 +34,8 @@ import prescriptionDetailsService, {
 } from "../services/prescriptionDetailsService";
 import PatientNameDisplay from "../components/PatientNameDisplay";
 import ClearableTextField from "../components/ClearableTextField";
+import { getFieldConfig } from '../utils/fieldValidationConfig';
+import { validateField } from '../utils/validationUtils';
 
 
 // Specific styles for Duration/Comment input in table
@@ -282,6 +284,9 @@ interface BillingDetailOption {
 }
 
 export default function Treatment() {
+    // Validation errors state
+    const [errors, setErrors] = useState<Record<string, string>>({});
+
     const navigate = useNavigate();
     const location = useLocation();
     const [sessionData, setSessionData] = useState<SessionInfo | null>(null);
@@ -294,6 +299,9 @@ export default function Treatment() {
     const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
     const [billingError, setBillingError] = useState<string | null>(null);
     const [discountError, setDiscountError] = useState<string | null>(null);
+    const [planAdvError, setPlanAdvError] = useState<string | null>(null);
+    const [remarkCommentsError, setRemarkCommentsError] = useState<string | null>(null);
+    const [prescriptionError, setPrescriptionError] = useState<string | null>(null);
     const [snackbarOpen, setSnackbarOpen] = useState(false);
     const [snackbarMessage, setSnackbarMessage] = useState('');
 
@@ -2457,6 +2465,20 @@ export default function Treatment() {
     };
 
     const handleInputChange = (field: string, value: any) => {
+        // Validate the field
+        const validation = validateField(field, value, undefined, undefined, 'visit');
+
+        setErrors(prev => {
+            const newErrors = { ...prev };
+            if (validation.error) {
+                newErrors[field] = validation.error;
+            } else {
+                delete newErrors[field];
+            }
+            return newErrors;
+        });
+
+        // Always update the value to allow user to see what they typed and the error message
         setFormData(prev => ({
             ...prev,
             [field]: value
@@ -3732,7 +3754,18 @@ export default function Treatment() {
 
             // Follow-up
             checkLength(followUpData.planAdv, 1000, 'Plan / Advice');
+            checkLength(followUpData.planAdv, 1000, 'Plan / Advice');
             checkLength(followUpData.remarkComments, 1000, 'Remark');
+
+            if (followUpData.remarkComments && followUpData.remarkComments.length >= 1000) {
+                setRemarkCommentsError('Remark cannot exceed 1000 characters');
+                validationErrors.push('Remark cannot exceed 1000 characters');
+            }
+
+            if (prescriptionInput && prescriptionInput.length >= 200) {
+                setPrescriptionError('Prescription cannot exceed 200 characters');
+                validationErrors.push('Prescription cannot exceed 200 characters');
+            }
             checkLength(followUpData.followUp, 100, 'Follow-up');
 
             // Rows validation
@@ -4472,7 +4505,17 @@ export default function Treatment() {
 
     const handleAddPrescription = () => {
         const raw = prescriptionInput.trim();
-        if (!raw) return;
+        if (!raw) {
+            setSnackbarMessage('Prescription cannot be empty');
+            setSnackbarOpen(true);
+            return;
+        }
+
+        if (raw.length > 200) {
+            setSnackbarMessage('Prescription cannot exceed 200 characters');
+            setSnackbarOpen(true);
+            return;
+        }
 
         // Expected format: Name | composition | B-L-D | Days | Instruction
         // We only use Name as prescription column, split B-L-D into b/l/d, map days and instruction
@@ -4607,24 +4650,53 @@ export default function Treatment() {
             ...prev,
             [field]: value
         }));
+
+        if (field === 'planAdv') {
+            if (value.length >= 1000) {
+                setPlanAdvError('Plan / Advice cannot exceed 1000 characters');
+            } else {
+                setPlanAdvError(null);
+            }
+        }
+
+        if (field === 'remarkComments') {
+            if (value.length >= 1000) {
+                setRemarkCommentsError('Remark cannot exceed 1000 characters');
+            } else {
+                setRemarkCommentsError(null);
+            }
+        }
     };
 
     const handleBillingChange = (field: string, value: string) => {
+        // Strict blocking for discount field
+        if (field === 'discount' && value && !/^\d*\.?\d*$/.test(value)) {
+            return; // Block non-numeric input
+        }
+
         setBillingData(prev => {
             const next = { ...prev, [field]: value };
             const billedNum = parseFloat(next.billed) || 0;
-            const discountNum = parseFloat(next.discount) || 0;
+            const discountNum = parseFloat(next.discount);
 
-            // Validate discount is not greater than billed amount
-            if (discountNum > billedNum && billedNum > 0) {
-                setDiscountError('Discount cannot be greater than billed amount');
-            } else {
-                setDiscountError(null);
+            let newError: string | null = null;
+
+            if (field === 'discount') {
+                if (value && isNaN(Number(value))) {
+                    // Should be caught by blocking above, but fallback
+                    newError = 'Discount must be a valid number';
+                } else if (!isNaN(discountNum) && discountNum < 0) {
+                    newError = 'Discount cannot be negative';
+                } else if ((!isNaN(discountNum) ? discountNum : 0) > billedNum && billedNum > 0) {
+                    newError = 'Discount cannot be greater than billed amount';
+                }
             }
 
+            setDiscountError(newError);
+
             // Calculate remaining amount after discount (Dues)
-            const remainingAmount = Math.max(0, billedNum - discountNum);
-            // Keep acBalance as is - don't recalculate, just show the value from API
+            const validDiscount = isNaN(discountNum) ? 0 : discountNum;
+            const remainingAmount = Math.max(0, billedNum - validDiscount);
             return { ...next, dues: String(remainingAmount) };
         });
     };
@@ -5110,13 +5182,13 @@ export default function Treatment() {
                             <div style={{ marginBottom: '15px' }}>
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 180px)' as const, gap: '12px' }}>
                                     {[
-                                        { key: 'allergy', label: 'Allergy', maxLength: 500 },
-                                        { key: 'medicalHistoryText', label: 'Medical History', maxLength: 1000 },
-                                        { key: 'surgicalHistory', label: 'Surgical History', maxLength: 1000 },
-                                        { key: 'medicines', label: 'Medicines', maxLength: 1000 },
-                                        { key: 'visitComments', label: 'Visit Comments', maxLength: 1000 },
-                                        { key: 'pc', label: 'PC', maxLength: 400 }
-                                    ].map(({ key, label, maxLength }) => (
+                                        { key: 'allergy', label: 'Allergy' },
+                                        { key: 'medicalHistoryText', label: 'Medical History' },
+                                        { key: 'surgicalHistory', label: 'Surgical History' },
+                                        { key: 'medicines', label: 'Medicines' },
+                                        { key: 'visitComments', label: 'Visit Comments' },
+                                        { key: 'pc', label: 'PC' }
+                                    ].map(({ key, label }) => (
                                         <div key={key}>
                                             <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
                                                 {label}
@@ -5125,7 +5197,9 @@ export default function Treatment() {
                                                 value={formData[key as keyof typeof formData] as string}
                                                 onChange={(value) => handleInputChange(key, value)}
                                                 disabled={key === 'pc' || isFormDisabled}
-                                                inputProps={{ maxLength }}
+                                                error={!!errors[key]}
+                                                helperText={errors[key]}
+                                                inputProps={{ maxLength: getFieldConfig(key, 'visit')?.maxLength }}
                                                 sx={{
                                                     width: '100%',
                                                     '& .MuiInputBase-input': {
@@ -5145,15 +5219,15 @@ export default function Treatment() {
                                     <div style={{ flex: '1 1 700px', minWidth: '260px' }}>
                                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '12px' }}>
                                             {[
-                                                { key: 'height', label: 'Height (Cm)', maxLength: 10 },
-                                                { key: 'weight', label: 'Weight (Kg)', maxLength: 10 },
+                                                { key: 'height', label: 'Height (Cm)' },
+                                                { key: 'weight', label: 'Weight (Kg)' },
                                                 { key: 'bmi', label: 'BMI' },
-                                                { key: 'pulse', label: 'Pulse (min)', maxLength: 5 },
-                                                { key: 'bp', label: 'BP', maxLength: 10 },
-                                                { key: 'sugar', label: 'Sugar', maxLength: 25 },
-                                                { key: 'tft', label: 'TFT', maxLength: 25 },
-                                                { key: 'pallorHb', label: 'Pallor/HB', maxLength: 25 }
-                                            ].map(({ key, label, maxLength }) => {
+                                                { key: 'pulse', label: 'Pulse (min)' },
+                                                { key: 'bp', label: 'BP' },
+                                                { key: 'sugar', label: 'Sugar' },
+                                                { key: 'tft', label: 'TFT' },
+                                                { key: 'pallorHb', label: 'Pallor/HB' }
+                                            ].map(({ key, label }) => {
                                                 const isNumberField = key === 'pulse' || key === 'height' || key === 'weight';
                                                 return (
                                                     <div key={key}>
@@ -5166,6 +5240,9 @@ export default function Treatment() {
                                                                 value={formData[key as keyof typeof formData] as string}
                                                                 onChange={(value) => {
                                                                     if (isNumberField) {
+                                                                        const maxLength = getFieldConfig(key, 'visit')?.maxLength;
+                                                                        if (maxLength && value.length > maxLength) return;
+
                                                                         // Allow empty string or non-negative numbers
                                                                         if (value === '' || (!isNaN(parseFloat(value)) && parseFloat(value) >= 0)) {
                                                                             handleInputChange(key, value);
@@ -5192,10 +5269,12 @@ export default function Treatment() {
                                                                     }
                                                                 }}
                                                                 disabled={key === 'bmi' || isFormDisabled}
+                                                                error={!!errors[key]}
+                                                                helperText={errors[key]}
                                                                 inputProps={{
-                                                                    maxLength,
                                                                     min: isNumberField ? "0" : undefined,
-                                                                    step: isNumberField ? (key === 'pulse' ? "1" : "0.1") : undefined
+                                                                    step: isNumberField ? (key === 'pulse' ? "1" : "0.1") : undefined,
+                                                                    maxLength: getFieldConfig(key, 'visit')?.maxLength
                                                                 }}
                                                                 sx={{
                                                                     flex: 1,
@@ -5590,6 +5669,7 @@ export default function Treatment() {
                                             onChange={(e) => handleInputChange('detailedHistory', e.target.value)}
                                             disabled={isFormDisabled}
                                             rows={3}
+                                            maxLength={getFieldConfig('detailedHistory', 'visit')?.maxLength}
                                             style={{
                                                 width: '100%',
                                                 padding: '6px 10px',
@@ -5602,6 +5682,11 @@ export default function Treatment() {
                                                 cursor: isFormDisabled ? 'not-allowed' : 'text'
                                             }}
                                         />
+                                        {errors.detailedHistory && (
+                                            <div style={{ color: '#d32f2f', fontSize: '13px', marginTop: '3px' }}>
+                                                {errors.detailedHistory}
+                                            </div>
+                                        )}
                                     </div>
                                     <div>
                                         <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
@@ -5612,6 +5697,7 @@ export default function Treatment() {
                                             onChange={(e) => handleInputChange('importantFindings', e.target.value)}
                                             disabled={isFormDisabled}
                                             rows={3}
+                                            maxLength={getFieldConfig('importantFindings', 'visit')?.maxLength}
                                             style={{
                                                 width: '100%',
                                                 padding: '6px 10px',
@@ -5624,6 +5710,11 @@ export default function Treatment() {
                                                 cursor: isFormDisabled ? 'not-allowed' : 'text'
                                             }}
                                         />
+                                        {errors.importantFindings && (
+                                            <div style={{ color: '#d32f2f', fontSize: '13px', marginTop: '3px' }}>
+                                                {errors.importantFindings}
+                                            </div>
+                                        )}
                                     </div>
                                     <div>
                                         <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
@@ -5634,6 +5725,7 @@ export default function Treatment() {
                                             onChange={(e) => handleInputChange('additionalComments', e.target.value)}
                                             disabled={isFormDisabled}
                                             rows={3}
+                                            maxLength={getFieldConfig('additionalComments', 'visit')?.maxLength}
                                             style={{
                                                 width: '100%',
                                                 padding: '6px 10px',
@@ -5646,6 +5738,11 @@ export default function Treatment() {
                                                 cursor: isFormDisabled ? 'not-allowed' : 'text'
                                             }}
                                         />
+                                        {errors.additionalComments && (
+                                            <div style={{ color: '#d32f2f', fontSize: '13px', marginTop: '3px' }}>
+                                                {errors.additionalComments}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -5662,6 +5759,7 @@ export default function Treatment() {
                                             onChange={(e) => handleInputChange('procedurePerformed', e.target.value)}
                                             disabled={isFormDisabled}
                                             rows={3}
+                                            maxLength={getFieldConfig('procedurePerformed', 'visit')?.maxLength}
                                             style={{
                                                 width: '100%',
                                                 padding: '6px 10px',
@@ -5674,6 +5772,11 @@ export default function Treatment() {
                                                 cursor: isFormDisabled ? 'not-allowed' : 'text'
                                             }}
                                         />
+                                        {errors.procedurePerformed && (
+                                            <div style={{ color: '#d32f2f', fontSize: '13px', marginTop: '3px' }}>
+                                                {errors.procedurePerformed}
+                                            </div>
+                                        )}
                                     </div>
                                     <div>
                                         <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
@@ -5684,6 +5787,7 @@ export default function Treatment() {
                                             onChange={(e) => handleInputChange('dressingBodyParts', e.target.value)}
                                             disabled={isFormDisabled}
                                             rows={3}
+                                            maxLength={getFieldConfig('dressingBodyParts', 'visit')?.maxLength}
                                             style={{
                                                 width: '100%',
                                                 padding: '6px 10px',
@@ -5696,6 +5800,11 @@ export default function Treatment() {
                                                 cursor: isFormDisabled ? 'not-allowed' : 'text'
                                             }}
                                         />
+                                        {errors.dressingBodyParts && (
+                                            <div style={{ color: '#d32f2f', fontSize: '13px', marginTop: '3px' }}>
+                                                {errors.dressingBodyParts}
+                                            </div>
+                                        )}
                                     </div>
                                     <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
                                         <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px', visibility: 'hidden' }}>
@@ -6495,23 +6604,41 @@ export default function Treatment() {
                                 </div>
 
                                 <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-                                    <input
-                                        type="text"
-                                        value={prescriptionInput}
-                                        onChange={(e) => !isFormDisabled && setPrescriptionInput(e.target.value)}
-                                        disabled={isFormDisabled}
-                                        placeholder="Enter Brand Name / Prescription"
-                                        style={{
-                                            flex: 1,
-                                            padding: '6px 10px',
-                                            border: '1px solid #ccc',
-                                            borderRadius: '4px',
-                                            fontSize: '13px',
-                                            backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
-                                            color: isFormDisabled ? '#666' : '#333',
-                                            cursor: isFormDisabled ? 'not-allowed' : 'text'
-                                        }}
-                                    />
+                                    <div style={{ position: 'relative', flex: 1 }}>
+                                        <input
+                                            type="text"
+                                            value={prescriptionInput}
+                                            onChange={(e) => {
+                                                if (!isFormDisabled) {
+                                                    const val = e.target.value;
+                                                    setPrescriptionInput(val);
+                                                    if (val.length >= 200) {
+                                                        setPrescriptionError('Prescription cannot exceed 200 characters');
+                                                    } else {
+                                                        setPrescriptionError(null);
+                                                    }
+                                                }
+                                            }}
+                                            disabled={isFormDisabled}
+                                            maxLength={200}
+                                            placeholder="Enter Brand Name / Prescription (Max 200 chars)"
+                                            style={{
+                                                flex: 1,
+                                                padding: '6px 10px',
+                                                border: '1px solid #ccc',
+                                                borderRadius: '4px',
+                                                fontSize: '13px',
+                                                backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
+                                                color: isFormDisabled ? '#666' : '#333',
+                                                cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                            }}
+                                        />
+                                        {prescriptionError && (
+                                            <div style={{ color: 'red', fontSize: '12px', marginTop: '4px', position: 'absolute', bottom: '-18px', left: 0 }}>
+                                                {prescriptionError}
+                                            </div>
+                                        )}
+                                    </div>
                                     <button
                                         type="button"
                                         onClick={handleAddPrescription}
@@ -7324,15 +7451,25 @@ export default function Treatment() {
                                                 cursor: isFormDisabled ? 'not-allowed' : 'text'
                                             }}
                                         />
+                                        {remarkCommentsError && (
+                                            <div style={{ color: 'red', fontSize: '12px', marginTop: '4px' }}>
+                                                {remarkCommentsError}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
 
                             {/* Plan/Adv Section */}
                             <div style={{ marginBottom: '15px' }}>
-                                <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                    Plan / Adv
-                                </label>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                    <label style={{ fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                                        Plan / Adv
+                                    </label>
+                                    <span style={{ fontSize: '11px', color: '#666' }}>
+                                        {(followUpData.planAdv || '').length}/1000
+                                    </span>
+                                </div>
                                 <textarea
                                     disabled={isFormDisabled}
                                     style={{
@@ -7351,6 +7488,11 @@ export default function Treatment() {
                                     maxLength={1000}
                                     onChange={(e) => handleFollowUpChange('planAdv', e.target.value)}
                                 />
+                                {planAdvError && (
+                                    <div style={{ color: 'red', fontSize: '12px', marginTop: '4px' }}>
+                                        {planAdvError}
+                                    </div>
+                                )}
                             </div>
 
 
@@ -7430,6 +7572,7 @@ export default function Treatment() {
                                             value={billingData.discount}
                                             onChange={(e) => handleBillingChange('discount', e.target.value)}
                                             disabled={isFormDisabled}
+                                            maxLength={10}
                                             placeholder="0.00"
                                             style={{
                                                 width: '100%',
@@ -7457,6 +7600,7 @@ export default function Treatment() {
                                             value={billingData.dues}
                                             onChange={(e) => handleBillingChange('dues', e.target.value)}
                                             disabled
+                                            maxLength={10}
                                             placeholder="0.00"
                                             style={{
                                                 width: '100%',
@@ -7671,68 +7815,70 @@ export default function Treatment() {
             </div>
 
             {/* Patient Form Dialog */}
-            {showPatientFormDialog && (
-                <div
-                    style={{
-                        position: 'fixed',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        zIndex: 9999
-                    }}
-                    onClick={(e) => {
-                        // Close dialog when clicking on the overlay (outside the form)
-                        if (e.target === e.currentTarget) {
-                            setShowPatientFormDialog(false);
-                        }
-                    }}
-                >
+            {
+                showPatientFormDialog && (
                     <div
                         style={{
-                            backgroundColor: 'white',
-                            borderRadius: '8px',
-                            width: '95%',
-                            maxWidth: '1200px',
-                            maxHeight: '95vh',
-                            overflow: 'auto',
+                            position: 'fixed',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            backgroundColor: 'rgba(0, 0, 0, 0.5)',
                             display: 'flex',
-                            flexDirection: 'column',
-                            position: 'relative'
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            zIndex: 9999
+                        }}
+                        onClick={(e) => {
+                            // Close dialog when clicking on the overlay (outside the form)
+                            if (e.target === e.currentTarget) {
+                                setShowPatientFormDialog(false);
+                            }
                         }}
                     >
-                        {/* Patient Form Content */}
-                        <PatientFormTest
-                            onClose={() => setShowPatientFormDialog(false)}
-                            initialData={formPatientData || undefined}
-                            visitDates={visitDates}
-                            currentVisitIndex={currentVisitIndex}
-                            onVisitDateChange={(newIndex: number) => {
-                                if (newIndex >= 0 && newIndex < allVisits.length) {
-                                    setCurrentVisitIndex(newIndex);
-                                    const selectedVisit = allVisits[newIndex];
-                                    const patientName = selectedPatientForForm?.name || '';
-                                    const appointmentRow = {
-                                        patientId: treatmentData?.patientId,
-                                        patient: treatmentData?.patientName,
-                                        age: treatmentData?.age,
-                                        gender: treatmentData?.gender,
-                                        contact: treatmentData?.contact,
-                                        doctorId: treatmentData?.doctorId,
-                                        provider: getDoctorLabelById(treatmentData?.doctorId)
-                                    };
-                                    const mapped = mapPreviousVisitToInitialData(selectedVisit, patientName, appointmentRow);
-                                    setFormPatientData(mapped);
-                                }
+                        <div
+                            style={{
+                                backgroundColor: 'white',
+                                borderRadius: '8px',
+                                width: '95%',
+                                maxWidth: '1200px',
+                                maxHeight: '95vh',
+                                overflow: 'auto',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                position: 'relative'
                             }}
-                        />
+                        >
+                            {/* Patient Form Content */}
+                            <PatientFormTest
+                                onClose={() => setShowPatientFormDialog(false)}
+                                initialData={formPatientData || undefined}
+                                visitDates={visitDates}
+                                currentVisitIndex={currentVisitIndex}
+                                onVisitDateChange={(newIndex: number) => {
+                                    if (newIndex >= 0 && newIndex < allVisits.length) {
+                                        setCurrentVisitIndex(newIndex);
+                                        const selectedVisit = allVisits[newIndex];
+                                        const patientName = selectedPatientForForm?.name || '';
+                                        const appointmentRow = {
+                                            patientId: treatmentData?.patientId,
+                                            patient: treatmentData?.patientName,
+                                            age: treatmentData?.age,
+                                            gender: treatmentData?.gender,
+                                            contact: treatmentData?.contact,
+                                            doctorId: treatmentData?.doctorId,
+                                            provider: getDoctorLabelById(treatmentData?.doctorId)
+                                        };
+                                        const mapped = mapPreviousVisitToInitialData(selectedVisit, patientName, appointmentRow);
+                                        setFormPatientData(mapped);
+                                    }
+                                }}
+                            />
+                        </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* Add Complaint Popup */}
             <AddComplaintPopup
@@ -7827,28 +7973,30 @@ export default function Treatment() {
                 }}
             />
             {/* Debug: Log when popup opens */}
-            {showInstructionPopup && (() => {
-                console.log('=== TREATMENT SCREEN: Passing data to InstructionGroupsPopup ===');
-                console.log('selectedInstructionGroups state:', selectedInstructionGroups);
-                console.log('selectedInstructionGroups length:', selectedInstructionGroups?.length || 0);
-                console.log('selectedInstructionGroups is array:', Array.isArray(selectedInstructionGroups));
-                if (selectedInstructionGroups && selectedInstructionGroups.length > 0) {
-                    console.log('selectedInstructionGroups content:', JSON.stringify(selectedInstructionGroups, null, 2));
-                    selectedInstructionGroups.forEach((group, idx) => {
-                        console.log(`Group ${idx + 1}:`, {
-                            id: group.id,
-                            name: group.name,
-                            nameHindi: group.nameHindi,
-                            instructions: group.instructions,
-                            hasName: !!group.name,
-                            hasInstructions: !!group.instructions
+            {
+                showInstructionPopup && (() => {
+                    console.log('=== TREATMENT SCREEN: Passing data to InstructionGroupsPopup ===');
+                    console.log('selectedInstructionGroups state:', selectedInstructionGroups);
+                    console.log('selectedInstructionGroups length:', selectedInstructionGroups?.length || 0);
+                    console.log('selectedInstructionGroups is array:', Array.isArray(selectedInstructionGroups));
+                    if (selectedInstructionGroups && selectedInstructionGroups.length > 0) {
+                        console.log('selectedInstructionGroups content:', JSON.stringify(selectedInstructionGroups, null, 2));
+                        selectedInstructionGroups.forEach((group, idx) => {
+                            console.log(`Group ${idx + 1}:`, {
+                                id: group.id,
+                                name: group.name,
+                                nameHindi: group.nameHindi,
+                                instructions: group.instructions,
+                                hasName: !!group.name,
+                                hasInstructions: !!group.instructions
+                            });
                         });
-                    });
-                } else {
-                    console.warn('⚠️ selectedInstructionGroups is EMPTY or UNDEFINED!');
-                }
-                return null;
-            })()}
+                    } else {
+                        console.warn('⚠️ selectedInstructionGroups is EMPTY or UNDEFINED!');
+                    }
+                    return null;
+                })()
+            }
 
             {/* Add Test Lab Popup */}
             <AddTestLabPopup
@@ -7864,121 +8012,123 @@ export default function Treatment() {
             />
 
             {/* Addendum Modal */}
-            {showAddendumModal && (
-                <div
-                    role="dialog"
-                    aria-modal="true"
-                    style={{
-                        position: 'fixed',
-                        inset: 0,
-                        backgroundColor: 'rgba(0,0,0,0.4)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        zIndex: 100000
-                    }}
-                    onClick={() => setShowAddendumModal(false)}
-                >
+            {
+                showAddendumModal && (
                     <div
+                        role="dialog"
+                        aria-modal="true"
                         style={{
-                            width: '95%',
-                            maxWidth: 700,
-                            maxHeight: '80vh',
-                            overflow: 'auto',
-                            background: '#fff',
-                            borderRadius: 8,
-                            boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
-                            fontFamily: 'Roboto, sans-serif'
+                            position: 'fixed',
+                            inset: 0,
+                            backgroundColor: 'rgba(0,0,0,0.4)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            zIndex: 100000
                         }}
-                        onClick={(e) => e.stopPropagation()}
+                        onClick={() => setShowAddendumModal(false)}
                     >
-                        <div style={{
-                            background: 'linear-gradient(90deg, #1976d2 0%, #42a5f5 100%)',
-                            color: '#fff',
-                            padding: '12px 16px',
-                            borderTopLeftRadius: 8,
-                            borderTopRightRadius: 8,
-                            fontWeight: 700,
-                            fontSize: 16
-                        }}>
-                            {treatmentData?.patientName || 'Patient'} / {treatmentData?.gender || ''} / {treatmentData?.age ? `${treatmentData.age} Y` : ''}
-                        </div>
+                        <div
+                            style={{
+                                width: '95%',
+                                maxWidth: 700,
+                                maxHeight: '80vh',
+                                overflow: 'auto',
+                                background: '#fff',
+                                borderRadius: 8,
+                                boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
+                                fontFamily: 'Roboto, sans-serif'
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div style={{
+                                background: 'linear-gradient(90deg, #1976d2 0%, #42a5f5 100%)',
+                                color: '#fff',
+                                padding: '12px 16px',
+                                borderTopLeftRadius: 8,
+                                borderTopRightRadius: 8,
+                                fontWeight: 700,
+                                fontSize: 16
+                            }}>
+                                {treatmentData?.patientName || 'Patient'} / {treatmentData?.gender || ''} / {treatmentData?.age ? `${treatmentData.age} Y` : ''}
+                            </div>
 
-                        <div style={{ padding: 16 }}>
-                            <div style={{ fontWeight: 600, color: '#2e7d32', marginBottom: 8 }}>Addendum:</div>
-                            <textarea
-                                value={addendumText}
-                                onChange={(e) => {
-                                    const text = e.target.value.slice(0, 1000);
-                                    setAddendumText(text);
-                                }}
-                                placeholder="Type addendum..."
-                                style={{
-                                    width: '100%',
-                                    height: 140,
-                                    border: '1px solid #cfd8dc',
-                                    borderRadius: 6,
-                                    padding: 10,
-                                    fontSize: 13,
-                                    outline: 'none'
-                                }}
-                            />
-                            <div style={{ color: '#607d8b', fontSize: 11, marginTop: 6 }}>Maximum 1000 character</div>
-
-                            <div style={{ display: 'flex', gap: 8, marginTop: 14, justifyContent: 'flex-end' }}>
-                                <button
-                                    type="button"
-                                    onClick={() => setShowAddendumModal(false)}
-                                    title="Close addendum"
-                                    style={{ backgroundColor: 'rgb(24, 120, 215)', color: '#000', border: '1px solid #cfd8dc', padding: '6px 12px', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
-                                >
-                                    Close
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setAddendumText('')}
-                                    title="Reset addendum"
-                                    style={{ backgroundColor: 'rgb(25, 118, 210)', color: '#000', border: 'none', padding: '6px 12px', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
-                                >
-                                    Reset
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={async () => {
-                                        try {
-                                            const pid = String(treatmentData?.patientId || '').trim();
-                                            const visitNo = Number(treatmentData?.visitNumber || 0);
-                                            const userId = String(sessionData?.userId || '').trim();
-                                            const visitDate = new Date().toISOString().slice(0, 10);
-                                            if (!pid || !visitNo || !userId) {
-                                                throw new Error('Missing patient, visit or user context');
-                                            }
-                                            const resp = await patientService.updateAddendum({
-                                                addendum: addendumText || '',
-                                                visitDate,
-                                                patientId: pid,
-                                                patientVisitNo: visitNo,
-                                                userId
-                                            });
-                                            const msg = resp?.message || 'Addendum updated';
-                                            setSnackbarMessage(msg);
-                                            setSnackbarOpen(true);
-                                            setShowAddendumModal(false);
-                                        } catch (e: any) {
-                                            setSnackbarMessage(e?.message || 'Failed to update addendum');
-                                            setSnackbarOpen(true);
-                                        }
+                            <div style={{ padding: 16 }}>
+                                <div style={{ fontWeight: 600, color: '#2e7d32', marginBottom: 8 }}>Addendum:</div>
+                                <textarea
+                                    value={addendumText}
+                                    onChange={(e) => {
+                                        const text = e.target.value.slice(0, 1000);
+                                        setAddendumText(text);
                                     }}
-                                    title="Submit addendum"
-                                    style={{ backgroundColor: '#1976d2', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
-                                >
-                                    Submit
-                                </button>
+                                    placeholder="Type addendum..."
+                                    style={{
+                                        width: '100%',
+                                        height: 140,
+                                        border: '1px solid #cfd8dc',
+                                        borderRadius: 6,
+                                        padding: 10,
+                                        fontSize: 13,
+                                        outline: 'none'
+                                    }}
+                                />
+                                <div style={{ color: '#607d8b', fontSize: 11, marginTop: 6 }}>Maximum 1000 character</div>
+
+                                <div style={{ display: 'flex', gap: 8, marginTop: 14, justifyContent: 'flex-end' }}>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowAddendumModal(false)}
+                                        title="Close addendum"
+                                        style={{ backgroundColor: 'rgb(24, 120, 215)', color: '#000', border: '1px solid #cfd8dc', padding: '6px 12px', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
+                                    >
+                                        Close
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setAddendumText('')}
+                                        title="Reset addendum"
+                                        style={{ backgroundColor: 'rgb(25, 118, 210)', color: '#000', border: 'none', padding: '6px 12px', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
+                                    >
+                                        Reset
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={async () => {
+                                            try {
+                                                const pid = String(treatmentData?.patientId || '').trim();
+                                                const visitNo = Number(treatmentData?.visitNumber || 0);
+                                                const userId = String(sessionData?.userId || '').trim();
+                                                const visitDate = new Date().toISOString().slice(0, 10);
+                                                if (!pid || !visitNo || !userId) {
+                                                    throw new Error('Missing patient, visit or user context');
+                                                }
+                                                const resp = await patientService.updateAddendum({
+                                                    addendum: addendumText || '',
+                                                    visitDate,
+                                                    patientId: pid,
+                                                    patientVisitNo: visitNo,
+                                                    userId
+                                                });
+                                                const msg = resp?.message || 'Addendum updated';
+                                                setSnackbarMessage(msg);
+                                                setSnackbarOpen(true);
+                                                setShowAddendumModal(false);
+                                            } catch (e: any) {
+                                                setSnackbarMessage(e?.message || 'Failed to update addendum');
+                                                setSnackbarOpen(true);
+                                            }
+                                        }}
+                                        title="Submit addendum"
+                                        style={{ backgroundColor: '#1976d2', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
+                                    >
+                                        Submit
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             <AddBillingPopup
                 open={showBillingPopup}
@@ -8013,19 +8163,21 @@ export default function Treatment() {
                 useOverwrite={false}
             />
 
-            {showLabTestEntry && selectedPatientForLab && (
-                <LabTestEntry
-                    open={true}
-                    onClose={() => {
-                        setShowLabTestEntry(false);
-                        setSelectedPatientForLab(null);
-                    }}
-                    patientData={selectedPatientForLab}
-                    appointment={selectedPatientForLab}
-                    sessionData={sessionData}
-                    onLabTestResultsFetched={handleLabTestResultsFetched}
-                />
-            )}
+            {
+                showLabTestEntry && selectedPatientForLab && (
+                    <LabTestEntry
+                        open={true}
+                        onClose={() => {
+                            setShowLabTestEntry(false);
+                            setSelectedPatientForLab(null);
+                        }}
+                        patientData={selectedPatientForLab}
+                        appointment={selectedPatientForLab}
+                        sessionData={sessionData}
+                        onLabTestResultsFetched={handleLabTestResultsFetched}
+                    />
+                )
+            }
 
             {/* Past Services Popup */}
             <PastServicesPopup
@@ -8088,18 +8240,20 @@ export default function Treatment() {
             />
 
             {/* Quick Registration Modal - appears on top of Treatment screen */}
-            {showQuickRegistration && treatmentData?.patientId && (
-                <AddPatientPage
-                    open={showQuickRegistration}
-                    onClose={() => {
-                        setShowQuickRegistration(false);
-                    }}
-                    patientId={String(treatmentData.patientId)}
-                    readOnly={true}
-                    doctorId={treatmentData?.doctorId || sessionData?.doctorId}
-                    clinicId={treatmentData?.clinicId || sessionData?.clinicId}
-                />
-            )}
+            {
+                showQuickRegistration && treatmentData?.patientId && (
+                    <AddPatientPage
+                        open={showQuickRegistration}
+                        onClose={() => {
+                            setShowQuickRegistration(false);
+                        }}
+                        patientId={String(treatmentData.patientId)}
+                        readOnly={true}
+                        doctorId={treatmentData?.doctorId || sessionData?.doctorId}
+                        clinicId={treatmentData?.clinicId || sessionData?.clinicId}
+                    />
+                )
+            }
 
             {/* Success/Error Snackbar - Always rendered at bottom center */}
             <Snackbar
@@ -8121,6 +8275,6 @@ export default function Treatment() {
                 }}
             />
 
-        </div>
+        </div >
     );
 }
