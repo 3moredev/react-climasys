@@ -2738,7 +2738,7 @@ export default function AppointmentTable() {
                         <span className="mx-1"><span className="rounded-circle d-inline-block bg-dark" title="COMPLETE" style={{ width: 10, height: 10 }}></span> {statusCounts['COMPLETE'] || 0} </span>
                         |
                         <span className="mx-1"><span className="rounded-circle d-inline-block bg-danger" title="SAVE" style={{ width: 10, height: 10 }}></span> {statusCounts['SAVE'] || 0} </span>
-                        |                        
+                        |
                         <span className="ms-1"><span className="rounded-circle d-inline-block" title="PRESCRIPTION/COLLECTION" style={{ width: 10, height: 10, backgroundColor: '#FF9800' }}></span> {statusCounts['PRESCRIPTION/COLLECTION'] || 0} </span>
                     </div>
                 </div>
@@ -4080,7 +4080,7 @@ export default function AppointmentTable() {
                     <span className="mx-1"><span className="rounded-circle d-inline-block bg-dark" title="COMPLETE" style={{ width: 10, height: 10 }}></span> {statusCounts['COMPLETE'] || 0} </span>
                     |
                     <span className="mx-1"><span className="rounded-circle d-inline-block bg-danger" title="SAVE" style={{ width: 10, height: 10 }}></span> {statusCounts['SAVE'] || 0} </span>
-                    |                    
+                    |
                     <span className="ms-1"><span className="rounded-circle d-inline-block" title="PRESCRIPTION/COLLECTION" style={{ width: 10, height: 10, backgroundColor: '#FF9800' }}></span> {statusCounts['PRESCRIPTION/COLLECTION'] || 0} </span>
                 </div>
             </div>
@@ -4964,17 +4964,17 @@ export default function AppointmentTable() {
                                                             <Delete fontSize="small" sx={{ color: '#000000' }} />
                                                         </div>
 
-                                                        {/* Checkout Button */}
+                                                        {/* Visit Details Button */}
                                                         <div
                                                             title={(() => {
                                                                 const statusId = mapStatusLabelToId(a.status);
                                                                 const shouldDisable = isReceptionist && statusId >= 2;
-                                                                if (shouldDisable) return "Checkout";
+                                                                if (shouldDisable) return "Visit Details";
                                                                 const isWaiting = statusId === 1;
                                                                 const isComplete = statusId === 5;
                                                                 const shouldEnable = !isReceptionist || isWaiting || isComplete;
-                                                                if (!shouldEnable) return "Checkout";
-                                                                return a.status === 'WITH DOCTOR' ? 'Checkout' : 'Checkout';
+                                                                if (!shouldEnable) return "Visit Details";
+                                                                return a.status === 'WITH DOCTOR' ? 'Visit Details' : 'Visit Details';
                                                             })()}
                                                             onClick={() => {
                                                                 const statusId = mapStatusLabelToId(a.status);
