@@ -70,10 +70,16 @@ export const VISIT_FIELDS = {
     sugar: { maxLength: 25, fieldName: 'Sugar', type: 'text' as const },
     tft: { maxLength: 25, fieldName: 'TFT', type: 'text' as const },
     tpr: { maxLength: 10, fieldName: 'TPR', type: 'text' as const },
+    pallor: { maxLength: 10, fieldName: 'Pallor', type: 'text' as const },
+    pallorHb: { maxLength: 10, fieldName: 'Pallor/HB', type: 'text' as const }, // Frontend alias
+    systemic: { maxLength: 30, fieldName: 'Systemic', type: 'text' as const },
+    odeama: { maxLength: 10, fieldName: 'Odeama', type: 'text' as const },
+    gc: { maxLength: 20, fieldName: 'GC', type: 'text' as const },
 
     // Comments/Notes (500 chars)
     allergyDtls: { maxLength: 500, fieldName: 'Allergy details', type: 'textarea' as const },
     allergyDetails: { maxLength: 500, fieldName: 'Allergy details', type: 'textarea' as const }, // Frontend alias
+    allergy: { maxLength: 500, fieldName: 'Allergy', type: 'textarea' as const }, // Frontend alias
     comment: { maxLength: 500, fieldName: 'Comment', type: 'textarea' as const },
     comments: { maxLength: 500, fieldName: 'Comment', type: 'textarea' as const }, // Frontend alias
 
@@ -87,9 +93,30 @@ export const VISIT_FIELDS = {
     visitComments: { maxLength: 1000, fieldName: 'Visit comments', type: 'textarea' as const },
     currentComplaints: { maxLength: 1000, fieldName: 'Current complaints', type: 'textarea' as const },
     currentMedicines: { maxLength: 1000, fieldName: 'Current medicines', type: 'textarea' as const },
+    medicines: { maxLength: 1000, fieldName: 'Medicines', type: 'textarea' as const }, // Frontend alias
     treatmentPlan: { maxLength: 1000, fieldName: 'Treatment plan', type: 'textarea' as const },
     plan: { maxLength: 1000, fieldName: 'Plan', type: 'textarea' as const },
+    planAdv: { maxLength: 1000, fieldName: 'Plan / Adv', type: 'textarea' as const }, // Frontend alias
     notes: { maxLength: 1000, fieldName: 'Notes', type: 'textarea' as const },
+    thtext: { maxLength: 1000, fieldName: 'Medical History', type: 'textarea' as const },
+    medicalHistory: { maxLength: 1000, fieldName: 'Medical History', type: 'textarea' as const }, // Frontend alias
+    medicalHistoryText: { maxLength: 1000, fieldName: 'Medical History', type: 'textarea' as const }, // Frontend alias
+    surgicalHistory: { maxLength: 1000, fieldName: 'Surgical History', type: 'textarea' as const },
+    surgicalHistoryPastHistory: { maxLength: 1000, fieldName: 'Surgical History', type: 'textarea' as const }, // Backend field name
+    detailedHistory: { maxLength: 1000, fieldName: 'Detailed History', type: 'textarea' as const },
+    examinationFindings: { maxLength: 1000, fieldName: 'Examination Findings', type: 'textarea' as const },
+    importantFindings: { maxLength: 1000, fieldName: 'Important Findings', type: 'textarea' as const },
+    additionalComments: { maxLength: 1000, fieldName: 'Additional Comments', type: 'textarea' as const },
+    procedurePerformed: { maxLength: 1000, fieldName: 'Procedure Performed', type: 'textarea' as const },
+    dressingBodyParts: { maxLength: 1000, fieldName: 'Dressing (body parts)', type: 'textarea' as const },
+    pc: { maxLength: 1000, fieldName: 'PC', type: 'textarea' as const },
+    addendum: { maxLength: 1000, fieldName: 'Addendum', type: 'textarea' as const },
+    fmp: { maxLength: 1000, fieldName: 'FMP', type: 'textarea' as const },
+    prmc: { maxLength: 1000, fieldName: 'PRMC', type: 'textarea' as const },
+    pamc: { maxLength: 1000, fieldName: 'PAMC', type: 'textarea' as const },
+    lmp: { maxLength: 1000, fieldName: 'LMP', type: 'textarea' as const },
+    obstetricsHistory: { maxLength: 1000, fieldName: 'Obstetrics History', type: 'textarea' as const },
+    gynecAdditionalComments: { maxLength: 1000, fieldName: 'Gynec Additional Comments', type: 'textarea' as const },
     offlineReason: { maxLength: 500, fieldName: 'Offline reason', type: 'textarea' as const },
     paymentRemark: { maxLength: 1000, fieldName: 'Payment remark', type: 'textarea' as const },
     followUp: { maxLength: 100, fieldName: 'Follow up', type: 'text' as const },
@@ -128,9 +155,9 @@ export const REFERRAL_DOCTOR_FIELDS = {
  * Lab Details Fields
  */
 export const LAB_FIELDS = {
-    labName: { maxLength: 100, fieldName: 'Lab Name', type: 'text' as const },
-    labDoctorName: { maxLength: 100, fieldName: 'Doctor Name', type: 'text' as const },
-    comment: { maxLength: 500, fieldName: 'Comment', type: 'textarea' as const },
+    labName: { maxLength: 200, fieldName: 'Lab Name', type: 'text' as const },
+    labDoctorName: { maxLength: 200, fieldName: 'Doctor Name', type: 'text' as const },
+    comment: { maxLength: 1000, fieldName: 'Comment', type: 'textarea' as const },
 } as const;
 
 /**
@@ -193,7 +220,7 @@ export const LAB_MASTER_FIELDS = {
         pattern: /^[a-zA-Z0-9\s.\-\(\)]*$/
     },
     parameterName: {
-        maxLength: 50,
+        maxLength: 100,
         fieldName: 'Parameter Name',
         type: 'text' as const,
         pattern: /^[a-zA-Z0-9\s.\-\(\)\/]*$/
@@ -230,7 +257,7 @@ export const PRESCRIPTION_CATEGORY_FIELDS = {
         type: 'text' as const,
         pattern: /^[a-zA-Z\s\-\'.]*$/
     },
-    description: { maxLength: 300, fieldName: 'Category Description', type: 'text' as const },
+    description: { maxLength: 200, fieldName: 'Category Description', type: 'text' as const },
 } as const;
 
 export const PRESCRIPTION_SUB_CATEGORY_FIELDS = {
