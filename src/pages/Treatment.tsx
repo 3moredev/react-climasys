@@ -3702,6 +3702,65 @@ export default function Treatment() {
                 throw new Error('Patient Visit Number is required but not found in treatment data');
             }
 
+            // Explicit Character Length Validation
+            const validationErrors: string[] = [];
+
+            const checkLength = (value: any, maxLength: number, fieldName: string) => {
+                if (value && String(value).length > maxLength) {
+                    validationErrors.push(`${fieldName} exceeds maximum length of ${maxLength} characters`);
+                }
+            };
+
+            // Main fields
+            checkLength(formData.allergy, 500, 'Allergy');
+            checkLength(formData.medicalHistoryText, 1000, 'Medical History');
+            checkLength(formData.surgicalHistory, 1000, 'Surgical History');
+            checkLength(formData.medicines, 1000, 'Medicines');
+            checkLength(formData.visitComments, 1000, 'Visit Comments');
+            checkLength(formData.pc, 400, 'PC');
+
+            // Vitals
+            checkLength(formData.bp, 10, 'BP');
+            checkLength(formData.sugar, 25, 'Sugar');
+            checkLength(formData.tft, 25, 'TFT');
+            checkLength(formData.pallorHb, 25, 'Pallor/HB');
+            checkLength(formData.pulse, 5, 'Pulse');
+            checkLength(formData.height, 10, 'Height');
+            checkLength(formData.weight, 10, 'Weight');
+
+            // Follow-up
+            checkLength(followUpData.planAdv, 1000, 'Plan / Advice');
+            checkLength(followUpData.remarkComments, 1000, 'Remark');
+            checkLength(followUpData.followUp, 100, 'Follow-up');
+
+            // Rows validation
+            medicineRows.forEach((row, idx) => {
+                const prefix = `Medicine Row ${idx + 1}`;
+                checkLength(row.b, 10, `${prefix} Morning`);
+                checkLength(row.l, 10, `${prefix} Afternoon`);
+                checkLength(row.d, 10, `${prefix} Night`);
+                checkLength(row.days, 10, `${prefix} Days`);
+                checkLength(row.instruction, 4000, `${prefix} Instruction`);
+            });
+
+            prescriptionRows.forEach((row, idx) => {
+                const prefix = `Prescription Row ${idx + 1}`;
+                checkLength(row.b, 10, `${prefix} B`);
+                checkLength(row.l, 10, `${prefix} L`);
+                checkLength(row.d, 10, `${prefix} D`);
+                checkLength(row.days, 10, `${prefix} Days`);
+                checkLength(row.instruction, 4000, `${prefix} Instruction`);
+            });
+
+            if (validationErrors.length > 0) {
+                const firstError = validationErrors[0];
+                setSubmitError(firstError);
+                setSnackbarMessage(firstError);
+                setSnackbarOpen(true);
+                setIsSubmitting(false);
+                return;
+            }
+
             console.log('=== VALIDATION PASSED ===');
             console.log('Doctor ID:', doctorId);
             console.log('Clinic ID:', clinicId);
@@ -5049,13 +5108,13 @@ export default function Treatment() {
                             <div style={{ marginBottom: '15px' }}>
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 180px)' as const, gap: '12px' }}>
                                     {[
-                                        { key: 'allergy', label: 'Allergy' },
-                                        { key: 'medicalHistoryText', label: 'Medical History' },
-                                        { key: 'surgicalHistory', label: 'Surgical History' },
-                                        { key: 'medicines', label: 'Medicines' },
-                                        { key: 'visitComments', label: 'Visit Comments' },
-                                        { key: 'pc', label: 'PC' }
-                                    ].map(({ key, label }) => (
+                                        { key: 'allergy', label: 'Allergy', maxLength: 500 },
+                                        { key: 'medicalHistoryText', label: 'Medical History', maxLength: 1000 },
+                                        { key: 'surgicalHistory', label: 'Surgical History', maxLength: 1000 },
+                                        { key: 'medicines', label: 'Medicines', maxLength: 1000 },
+                                        { key: 'visitComments', label: 'Visit Comments', maxLength: 1000 },
+                                        { key: 'pc', label: 'PC', maxLength: 400 }
+                                    ].map(({ key, label, maxLength }) => (
                                         <div key={key}>
                                             <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
                                                 {label}
@@ -5065,6 +5124,7 @@ export default function Treatment() {
                                                 value={formData[key as keyof typeof formData] as string}
                                                 onChange={(e) => handleInputChange(key, e.target.value)}
                                                 disabled={key === 'pc' || isFormDisabled}
+                                                maxLength={maxLength}
                                                 style={{
                                                     width: '100%',
                                                     padding: '6px 10px',
@@ -5087,15 +5147,15 @@ export default function Treatment() {
                                     <div style={{ flex: '1 1 700px', minWidth: '260px' }}>
                                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '12px' }}>
                                             {[
-                                                { key: 'height', label: 'Height (Cm)' },
-                                                { key: 'weight', label: 'Weight (Kg)' },
+                                                { key: 'height', label: 'Height (Cm)', maxLength: 10 },
+                                                { key: 'weight', label: 'Weight (Kg)', maxLength: 10 },
                                                 { key: 'bmi', label: 'BMI' },
-                                                { key: 'pulse', label: 'Pulse (min)' },
-                                                { key: 'bp', label: 'BP' },
-                                                { key: 'sugar', label: 'Sugar' },
-                                                { key: 'tft', label: 'TFT' },
-                                                { key: 'pallorHb', label: 'Pallor/HB' }
-                                            ].map(({ key, label }) => {
+                                                { key: 'pulse', label: 'Pulse (min)', maxLength: 5 },
+                                                { key: 'bp', label: 'BP', maxLength: 10 },
+                                                { key: 'sugar', label: 'Sugar', maxLength: 25 },
+                                                { key: 'tft', label: 'TFT', maxLength: 25 },
+                                                { key: 'pallorHb', label: 'Pallor/HB', maxLength: 25 }
+                                            ].map(({ key, label, maxLength }) => {
                                                 const isNumberField = key === 'pulse' || key === 'height' || key === 'weight';
                                                 return (
                                                     <div key={key}>
@@ -5106,6 +5166,7 @@ export default function Treatment() {
                                                             <input
                                                                 type={isNumberField ? "number" : "text"}
                                                                 value={formData[key as keyof typeof formData] as string}
+                                                                maxLength={maxLength}
                                                                 onChange={(e) => {
                                                                     const value = e.target.value;
                                                                     if (isNumberField) {
@@ -6274,6 +6335,7 @@ export default function Treatment() {
                                                         onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
                                                         onChange={(e) => handleMedicineFieldChange(row.id, 'b', e.target.value.replace(/\D/g, ''))}
                                                         disabled={isFormDisabled}
+                                                        maxLength={10}
                                                         className="medicine-table-input"
                                                         style={{
                                                             width: '100%',
@@ -6300,6 +6362,7 @@ export default function Treatment() {
                                                         onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
                                                         onChange={(e) => handleMedicineFieldChange(row.id, 'l', e.target.value.replace(/\D/g, ''))}
                                                         disabled={isFormDisabled}
+                                                        maxLength={10}
                                                         className="medicine-table-input"
                                                         style={{
                                                             width: '100%',
@@ -6326,6 +6389,7 @@ export default function Treatment() {
                                                         onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
                                                         onChange={(e) => handleMedicineFieldChange(row.id, 'd', e.target.value.replace(/\D/g, ''))}
                                                         disabled={isFormDisabled}
+                                                        maxLength={10}
                                                         className="medicine-table-input"
                                                         style={{
                                                             width: '100%',
@@ -6352,6 +6416,7 @@ export default function Treatment() {
                                                         onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
                                                         onChange={(e) => handleMedicineFieldChange(row.id, 'days', e.target.value.replace(/\D/g, ''))}
                                                         disabled={isFormDisabled}
+                                                        maxLength={10}
                                                         className="medicine-table-input"
                                                         style={{
                                                             width: '100%',
@@ -6375,6 +6440,7 @@ export default function Treatment() {
                                                         value={row.instruction}
                                                         onChange={(e) => handleMedicineInstructionChange(row.id, e.target.value)}
                                                         disabled={isFormDisabled}
+                                                        maxLength={4000}
                                                         placeholder="Enter instruction"
                                                         className="medicine-table-input"
                                                         style={{
@@ -6602,7 +6668,8 @@ export default function Treatment() {
                                                         onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
                                                         onChange={(e) => handlePrescriptionFieldChange(row.id, 'b', e.target.value.replace(/\D/g, ''))}
                                                         disabled={isFormDisabled}
-                                                        className="prescription-table-input"
+                                                        maxLength={10}
+                                                        className="medicine-table-input"
                                                         style={{
                                                             width: '100%',
                                                             height: '100%',
@@ -6628,7 +6695,8 @@ export default function Treatment() {
                                                         onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
                                                         onChange={(e) => handlePrescriptionFieldChange(row.id, 'l', e.target.value.replace(/\D/g, ''))}
                                                         disabled={isFormDisabled}
-                                                        className="prescription-table-input"
+                                                        maxLength={10}
+                                                        className="medicine-table-input"
                                                         style={{
                                                             width: '100%',
                                                             height: '100%',
@@ -6654,7 +6722,8 @@ export default function Treatment() {
                                                         onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
                                                         onChange={(e) => handlePrescriptionFieldChange(row.id, 'd', e.target.value.replace(/\D/g, ''))}
                                                         disabled={isFormDisabled}
-                                                        className="prescription-table-input"
+                                                        maxLength={10}
+                                                        className="medicine-table-input"
                                                         style={{
                                                             width: '100%',
                                                             height: '100%',
@@ -6680,7 +6749,8 @@ export default function Treatment() {
                                                         onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
                                                         onChange={(e) => handlePrescriptionFieldChange(row.id, 'days', e.target.value.replace(/\D/g, ''))}
                                                         disabled={isFormDisabled}
-                                                        className="prescription-table-input"
+                                                        maxLength={10}
+                                                        className="medicine-table-input"
                                                         style={{
                                                             width: '100%',
                                                             height: '100%',
@@ -6703,8 +6773,9 @@ export default function Treatment() {
                                                         value={row.instruction}
                                                         onChange={(e) => handlePrescriptionInstructionChange(row.id, e.target.value)}
                                                         disabled={isFormDisabled}
+                                                        maxLength={4000}
                                                         placeholder="Enter instruction"
-                                                        className="prescription-table-input"
+                                                        className="medicine-table-input"
                                                         style={{
                                                             width: '100%',
                                                             height: '100%',
@@ -7218,6 +7289,7 @@ export default function Treatment() {
                                             value={followUpData.followUp}
                                             onChange={(e) => handleFollowUpChange('followUp', e.target.value)}
                                             disabled={isFormDisabled}
+                                            maxLength={1000}
                                             style={{
                                                 width: '100%',
                                                 padding: '6px 10px',
@@ -7239,6 +7311,7 @@ export default function Treatment() {
                                             onChange={(e) => handleFollowUpChange('remarkComments', e.target.value)}
                                             disabled={isFormDisabled}
                                             rows={1}
+                                            maxLength={1000}
                                             style={{
                                                 width: '100%',
                                                 padding: '6px 10px',
@@ -7265,21 +7338,22 @@ export default function Treatment() {
                                     Plan / Adv
                                 </label>
                                 <textarea
-                                    value={followUpData.planAdv}
-                                    onChange={(e) => handleFollowUpChange('planAdv', e.target.value)}
                                     disabled={isFormDisabled}
-                                    rows={2}
                                     style={{
                                         width: '100%',
-                                        padding: '6px 10px',
+                                        height: '60px',
+                                        padding: '8px 12px',
                                         border: '1px solid #ccc',
                                         borderRadius: '4px',
+                                        resize: 'none',
                                         fontSize: '13px',
-                                        resize: 'vertical',
                                         backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
-                                        color: isFormDisabled ? '#666' : '#333',
                                         cursor: isFormDisabled ? 'not-allowed' : 'text'
                                     }}
+                                    placeholder="Enter plan/advice"
+                                    value={followUpData.planAdv}
+                                    maxLength={1000}
+                                    onChange={(e) => handleFollowUpChange('planAdv', e.target.value)}
                                 />
                             </div>
 
