@@ -1200,10 +1200,8 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
     const validateForm = () => {
         const errors: { [key: string]: string } = {};
 
-        // Pulse is required
-        if (!formData.pulse) {
-            errors.pulse = 'Pulse is required';
-        } else {
+        // Pulse validation (optional, but range check if provided)
+        if (formData.pulse) {
             const val = parseFloat(formData.pulse);
             if (isNaN(val) || val < 30 || val > 220) {
                 errors.pulse = 'Pulse must be between 30 and 220';
@@ -1300,9 +1298,6 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
 
     const handleSubmit = async () => {
         if (!validateForm()) {
-            setSnackbarMessage('Please fix the validation errors before submitting');
-            setSnackbarSeverity('error');
-            setSnackbarOpen(true);
             return;
         }
         try {
