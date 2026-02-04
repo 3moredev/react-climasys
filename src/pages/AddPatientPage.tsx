@@ -1843,10 +1843,21 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                             '&:focus': {
                               color: 'inherit'
                             }
+                          },
+                          '& .MuiOutlinedInput-notchedOutline': {
+                            borderColor: (errors.dobDate && !String(errors.dobDate).toLowerCase().includes('required')) ? '#616161 !important' : undefined
+                          },
+                          '&:hover .MuiOutlinedInput-notchedOutline': {
+                            borderColor: (errors.dobDate && !String(errors.dobDate).toLowerCase().includes('required')) ? '#424242 !important' : undefined
                           }
                         }}
                         error={!!errors.dobDate && String(errors.dobDate).toLowerCase().includes('required')}
                         helperText={errors.dobDate}
+                        FormHelperTextProps={{
+                          sx: {
+                            color: (errors.dobDate && !String(errors.dobDate).toLowerCase().includes('required')) ? '#333333 !important' : undefined
+                          }
+                        }}
                         inputProps={{
                           max: dayjs().format('YYYY-MM-DD'),
                         }}
@@ -2086,6 +2097,17 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         sx={{
                           '& .MuiInputBase-root': {
                             backgroundColor: params.disabled ? '#f5f5f5 !important' : 'inherit'
+                          },
+                          '& .MuiOutlinedInput-notchedOutline': {
+                            borderColor: (errors.state && !String(errors.state).toLowerCase().includes('required')) ? '#616161 !important' : undefined
+                          },
+                          '&:hover .MuiOutlinedInput-notchedOutline': {
+                            borderColor: (errors.state && !String(errors.state).toLowerCase().includes('required')) ? '#424242 !important' : undefined
+                          }
+                        }}
+                        FormHelperTextProps={{
+                          sx: {
+                            color: (errors.state && !String(errors.state).toLowerCase().includes('required')) ? '#333333 !important' : undefined
                           }
                         }}
                         InputProps={{
@@ -2260,6 +2282,17 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         sx={{
                           '& .MuiInputBase-root': {
                             backgroundColor: params.disabled ? '#f5f5f5 !important' : 'inherit'
+                          },
+                          '& .MuiOutlinedInput-notchedOutline': {
+                            borderColor: (errors.city && !String(errors.city).toLowerCase().includes('required')) ? '#616161 !important' : undefined
+                          },
+                          '&:hover .MuiOutlinedInput-notchedOutline': {
+                            borderColor: (errors.city && !String(errors.city).toLowerCase().includes('required')) ? '#424242 !important' : undefined
+                          }
+                        }}
+                        FormHelperTextProps={{
+                          sx: {
+                            color: (errors.city && !String(errors.city).toLowerCase().includes('required')) ? '#333333 !important' : undefined
                           }
                         }}
                         InputProps={{
@@ -2644,6 +2677,19 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         placeholder={selectedCityId ? "Search Area or type new area name" : "Select City first"}
                         error={!!errors.area && String(errors.area).toLowerCase().includes('required')}
                         helperText={errors.area}
+                        sx={{
+                          '& .MuiOutlinedInput-notchedOutline': {
+                            borderColor: (errors.area && !String(errors.area).toLowerCase().includes('required')) ? '#616161 !important' : undefined
+                          },
+                          '&:hover .MuiOutlinedInput-notchedOutline': {
+                            borderColor: (errors.area && !String(errors.area).toLowerCase().includes('required')) ? '#424242 !important' : undefined
+                          }
+                        }}
+                        FormHelperTextProps={{
+                          sx: {
+                            color: (errors.area && !String(errors.area).toLowerCase().includes('required')) ? '#333333 !important' : undefined
+                          }
+                        }}
                         disabled={loading || readOnly || !selectedCityId}
                         onBlur={async () => {
                           // Only clear if input is empty or doesn't match and is not a new area
