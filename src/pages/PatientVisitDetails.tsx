@@ -55,7 +55,7 @@ interface PatientVisitDetailsProps {
 const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose, patientData, onVisitDetailsSubmitted, readOnly = false }) => {
 
     const [formData, setFormData] = useState({
-        referralBy: 'Self',
+        referralBy: '',
         referralName: '',
         referralContact: '',
         referralEmail: '',
@@ -630,9 +630,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                     if (normalized.referByRaw) {
                         const referIdStr = String(normalized.referByRaw);
                         const matchExists = referByOptions.some(o => String(o.id) === referIdStr);
-                        patched.referralBy = matchExists ? referIdStr : 'Self';
-                    } else if (!patched.referralBy) {
-                        patched.referralBy = 'Self';
+                        patched.referralBy = matchExists ? referIdStr : '';
                     }
 
                     // Patch referral name and contact fields from API if it's a doctor referral
@@ -756,9 +754,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                             if (normalized.referByRaw) {
                                 const referIdStr = String(normalized.referByRaw);
                                 const matchExists = referByOptions.some(o => String(o.id) === referIdStr);
-                                patched.referralBy = matchExists ? referIdStr : 'Self';
-                            } else if (!patched.referralBy) {
-                                patched.referralBy = 'Self';
+                                patched.referralBy = matchExists ? referIdStr : '';
                             }
                             // Patch referral name and contact fields from API if it's a doctor referral
                             // Always set these from API when available (they were saved when doctor was selected)
@@ -1541,7 +1537,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
 
     const handleReset = () => {
         setFormData({
-            referralBy: 'Self',
+            referralBy: '',
             referralName: '',
             referralContact: '',
             referralEmail: '',
@@ -1730,8 +1726,17 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     onChange={(e) => handleInputChange('referralBy', e.target.value)}
                                     disabled={readOnly}
                                     variant="outlined"
+                                    SelectProps={{
+                                        displayEmpty: true,
+                                        renderValue: (selected: any) => {
+                                            if (selected === '' || selected === null || selected === undefined) {
+                                                return <span style={{ color: 'rgba(0,0,0,0.6)' }}>Referred By</span>;
+                                            }
+                                            const option = referByOptions.find(opt => opt.id === selected);
+                                            return option ? option.name : String(selected ?? '');
+                                        }
+                                    }}
                                 >
-                                    <MenuItem value="Self">Self</MenuItem>
                                     {referByOptions.map(opt => (
                                         <MenuItem key={opt.id} value={opt.id}>{opt.name}</MenuItem>
                                     ))}
