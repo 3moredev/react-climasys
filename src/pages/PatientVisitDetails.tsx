@@ -1,15 +1,14 @@
 import React, { useState } from 'react';
-import { Close, Add, Delete, CloudUpload, AttachFile } from '@mui/icons-material';
+import { Close, Add, Delete } from '@mui/icons-material';
 import {
     Snackbar, Alert, Dialog, DialogTitle, DialogContent,
     DialogActions, Grid, Box, Typography, TextField, Button,
-    IconButton, Checkbox, FormControlLabel, MenuItem, Autocomplete,
-    Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
-    InputAdornment, List, ListItem, ListItemText, ListItemIcon, Divider, CircularProgress
+    IconButton, Checkbox, FormControlLabel, MenuItem,
+    InputAdornment, CircularProgress
 } from '@mui/material';
 import { visitService, ComprehensiveVisitDataRequest } from '../services/visitService';
 import { complaintService, ComplaintOption } from '../services/complaintService';
-import { DocumentService, DocumentUploadRequest } from '../services/documentService';
+import { DocumentService } from '../services/documentService';
 import { sessionService } from '../services/sessionService';
 import { doctorService } from '../services/doctorService';
 import AddReferralPopup, { ReferralData } from '../components/AddReferralPopup';
@@ -1265,32 +1264,32 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
         return Object.keys(errors).length === 0;
     };
 
-    const handleDownloadDocument = async (docId: number, originalName: string) => {
+    const handleDownloadDocument = (docId: number) => {
         try {
-            const { blob, filename } = await DocumentService.downloadDocumentFile(docId);
+            // Get the direct download URL
+            const url = DocumentService.getDownloadUrl(docId);
 
-            // Create a URL for the blob
-            const url = window.URL.createObjectURL(blob);
-
-            // Create a temporary anchor element
+            // Create a temporary anchor element and trigger download
+            // Browsers will handle this as a navigation/download, showing native progress
             const link = document.createElement('a');
             link.href = url;
-            link.download = filename || originalName; // Use server filename or fallback
+            link.target = '_blank'; // Open in new tab to avoid disrupting current page
+            link.rel = 'noopener noreferrer';
 
             // Append to body, click, and remove
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
 
-            // Clean up the URL object
-            window.URL.revokeObjectURL(url);
         } catch (error) {
-            console.error("Error downloading document", error);
-            setSnackbarMessage(`Error downloading document: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            console.error("Error initiating download", error);
+            setSnackbarMessage(`Error initiating download: ${error instanceof Error ? error.message : 'Unknown error'}`);
             setSnackbarSeverity('error');
             setSnackbarOpen(true);
         }
     };
+
+    const [documentsToDelete, setDocumentsToDelete] = useState<number[]>([]);
 
     const handleSubmit = async () => {
         if (!validateForm()) {
@@ -1302,7 +1301,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
             setIsLoading(true);
             setError(null);
             setSuccess(null);
-            setSnackbarSeverity('success');
+            // Don't set initial success severity, as we want to handle all messages at end
 
             let sessionData = null;
             try {
@@ -1451,7 +1450,21 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
             const result = await visitService.saveComprehensiveVisitData(visitData);
 
             let hasUploadError = false;
+            let hasDeleteError = false;
+
             if (result.success) {
+
+                // Process Deletions
+                if (documentsToDelete.length > 0) {
+                    try {
+                        await Promise.all(documentsToDelete.map(docId => DocumentService.deleteDocument(docId)));
+                        // Clear deletion list on success
+                        setDocumentsToDelete([]);
+                    } catch (deleteErr) {
+                        console.error("Error deleting documents:", deleteErr);
+                        hasDeleteError = true;
+                    }
+                }
 
                 // Upload documents if any are attached
                 if (formData.attachments && formData.attachments.length > 0) {
@@ -1468,34 +1481,35 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                         const failedUploads = documentResults.filter(result => !result.success);
                         if (failedUploads.length > 0) {
                             hasUploadError = true;
-                            setSnackbarSeverity('error');
-                            setSnackbarMessage('Visit details saved successfully, but documents failed to upload');
-                        } else {
-                            setSnackbarMessage('Visit details and documents saved successfully!');
                         }
 
-                        // Refresh existing documents list to reflect newly uploaded files
-                        try {
-                            if (patientData?.patientId && patientVisitNo) {
-                                await loadExistingDocuments(String(patientData.patientId), Number(patientVisitNo));
-                            }
-                        } catch (reloadErr) {
-                            console.warn('Failed to reload existing documents after upload:', reloadErr);
-                        }
-
-                        // Clear selected attachments after successful upload to avoid duplicates
+                        // Clear selected attachments after successful upload
                         setFormData(prev => ({ ...prev, attachments: [] }));
                     } catch (documentError) {
                         hasUploadError = true;
-                        setSnackbarSeverity('error');
-                        setSnackbarMessage('Visit details saved successfully, but documents failed to upload');
                     }
+                }
+
+                // Consolidate Feedback
+                if (hasUploadError || hasDeleteError) {
+                    setSnackbarSeverity('warning');
+                    setSnackbarMessage('Visit details saved, but there were issues with document updates.');
                 } else {
-                    setSnackbarMessage('Visit details saved successfully!');
+                    setSnackbarSeverity('success');
+                    setSnackbarMessage('Patient details saved successfully');
                 }
 
                 // Show success snackbar
                 setSnackbarOpen(true);
+
+                // Refresh existing documents list
+                try {
+                    if (patientData?.patientId && patientVisitNo) {
+                        await loadExistingDocuments(String(patientData.patientId), Number(patientVisitNo));
+                    }
+                } catch (reloadErr) {
+                    console.warn('Failed to reload existing documents:', reloadErr);
+                }
 
                 // Notify parent component that visit details were submitted
                 if (onVisitDetailsSubmitted) {
@@ -1518,12 +1532,10 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                 setError(null);
                 setSuccess(null);
 
-                // Close modal after showing snackbar if there was no upload error
-                if (!hasUploadError) {
-                    setTimeout(() => {
-                        if (onClose) onClose();
-                    }, 2000); // 2 second delay like AddPatientPage
-                }
+                // Close modal after showing snackbar
+                setTimeout(() => {
+                    if (onClose) onClose();
+                }, 2000);
             } else {
                 console.error('Error:', result.error || 'Failed to save visit details');
                 setError(result.error || 'Failed to save visit details');
@@ -2135,8 +2147,8 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                         <Grid container spacing={2} sx={{ mb: 2 }}>
                             <Grid item xs={12} md={4}>
                                 <Box sx={{ mb: 2 }}>
-                                    <Typography variant="subtitle2" fontWeight="bold" className="mb-0">
-                                        Past Surgical History
+                                    <Typography variant="subtitle2" fontWeight="bold" className='mb-0'>
+                                        Surgical History
                                     </Typography>
                                     <textarea
                                         rows={2}
@@ -2476,8 +2488,8 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
 
                         <Grid item xs={12} md={4}>
                             <Box sx={{ mb: 2 }}>
-                                <Typography variant="subtitle2" fontWeight="bold" className="mb-0">
-                                    Current Medicines
+                                <Typography variant="subtitle2" fontWeight="bold" className='mb-0'>
+                                    Medicines
                                 </Typography>
                                 <textarea
                                     rows={2}
@@ -2717,28 +2729,19 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                         }
                                                     }}
                                                     title={`Click to download ${originalName}`}
-                                                    onClick={() => !isDeleting && handleDownloadDocument(docId, originalName)}
+                                                    onClick={() => !isDeleting && handleDownloadDocument(docId)}
                                                 >
                                                     {displayName}{fileSize}
                                                 </Typography>
                                                 <span
                                                     onClick={async () => {
                                                         if (readOnly || isDeleting) return;
-                                                        setDeletingDocumentId(docId);
-                                                        try {
-                                                            await DocumentService.deleteDocument(docId);
-                                                            setExistingDocuments(prev => prev.filter(d => (d.documentId || d.id || (d as any).document_id || (d as any).documentID) !== docId));
-                                                            setSnackbarMessage("Document deleted successfully");
-                                                            setSnackbarSeverity('success');
-                                                            setSnackbarOpen(true);
-                                                        } catch (error) {
-                                                            console.error("Error deleting document", error);
-                                                            setSnackbarMessage(`Error deleting document: ${error instanceof Error ? error.message : 'Unknown error'}`);
-                                                            setSnackbarSeverity('error');
-                                                            setSnackbarOpen(true);
-                                                        } finally {
-                                                            setDeletingDocumentId(null);
-                                                        }
+
+                                                        // Mark for deletion in state
+                                                        setDocumentsToDelete(prev => [...prev, docId]);
+
+                                                        // Remove from UI immediately
+                                                        setExistingDocuments(prev => prev.filter(d => (d.documentId || d.id || (d as any).document_id || (d as any).documentID) !== docId));
                                                     }}
                                                     style={{
                                                         marginLeft: '4px',

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { useNavigate, useLocation } from "react-router-dom";
+import { TextField, InputAdornment, Grid, Box, Typography, DialogContent, FormHelperText } from '@mui/material';
 import { visitService, ComprehensiveVisitDataRequest } from '../services/visitService';
 import { sessionService, SessionInfo } from "../services/sessionService";
 import { DocumentService } from "../services/documentService";
@@ -3998,23 +3999,9 @@ export default function Treatment() {
                     })
                     : []
             };
-
-            console.log(`=== ${actionType}ING TREATMENT DATA TO API ===`);
-            console.log('Visit data object:', visitData);
-            console.log('Visit data JSON:', JSON.stringify(visitData, null, 2));
-            console.log('Status ID:', visitData.statusId);
-            console.log('Is Submit Patient Visit Details:', visitData.isSubmitPatientVisitDetails);
-            console.log('Clinic ID:', visitData.clinicId);
-            console.log('Doctor ID:', visitData.doctorId);
-            console.log('Shift ID:', visitData.shiftId);
-            console.log('Patient Visit No:', visitData.patientVisitNo);
-            console.log('=== INSTRUCTION GROUPS DEBUG ===');
-            console.log('selectedInstructionGroups state (clean format):', JSON.stringify(selectedInstructionGroups, null, 2));
-            console.log('selectedInstructionGroups length:', selectedInstructionGroups.length);
-            console.log('Instruction Groups Count in visitData:', visitData.instructionGroups?.length || 0);
+            
             if (visitData.instructionGroups && visitData.instructionGroups.length > 0) {
-                console.log('=== INSTRUCTION GROUPS BEING SENT TO BACKEND ===');
-                console.log('Instruction Groups in request (backend format):', JSON.stringify(visitData.instructionGroups, null, 2));
+
                 visitData.instructionGroups.forEach((ig, idx) => {
                     console.log(`Backend Instruction Group ${idx + 1}:`, {
                         groupDescription: ig.groupDescription,
@@ -4046,12 +4033,7 @@ export default function Treatment() {
 
             const result = await visitService.saveComprehensiveVisitData(visitData);
 
-            console.log('=== API RESPONSE ===');
-            console.log('API Response:', result);
-            console.log('Success status:', result.success);
-
             if (result.success) {
-                console.log(`=== TREATMENT ${actionType}ED SUCCESSFULLY ===`);
                 setSnackbarMessage(`Treatment ${isSubmit ? 'submitted' : 'saved'} successfully!`);
                 setSnackbarOpen(true);
 
@@ -4108,7 +4090,6 @@ export default function Treatment() {
                         // Empty array - clear existing rows
                         setDiagnosisRows([]);
                         diagnosisRowsLoadedFromSaveResponseRef.current = true;
-                        console.log('Cleared diagnosis rows (empty array from save response)');
                     }
                 }
 
@@ -5180,32 +5161,24 @@ export default function Treatment() {
 
                             {/* Input Fields Row 1 */}
                             <div style={{ marginBottom: '15px' }}>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 180px)' as const, gap: '12px' }}>
+                                <div className="row row-cols-5 g-3">
                                     {[
                                         { key: 'allergy', label: 'Allergy' },
                                         { key: 'medicalHistoryText', label: 'Medical History' },
                                         { key: 'surgicalHistory', label: 'Surgical History' },
                                         { key: 'medicines', label: 'Medicines' },
                                         { key: 'visitComments', label: 'Visit Comments' },
-                                        { key: 'pc', label: 'PC' }
                                     ].map(({ key, label }) => (
-                                        <div key={key}>
+                                        <div key={key} className="col">
                                             <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
                                                 {label}
                                             </label>
                                             <ClearableTextField
                                                 value={formData[key as keyof typeof formData] as string}
-                                                onChange={(value) => handleInputChange(key, value)}
-                                                disabled={key === 'pc' || isFormDisabled}
-                                                error={!!errors[key]}
-                                                helperText={errors[key]}
-                                                inputProps={{ maxLength: getFieldConfig(key, 'visit')?.maxLength }}
-                                                sx={{
-                                                    width: '100%',
-                                                    '& .MuiInputBase-input': {
-                                                        padding: '6px 10px',
-                                                        fontSize: '13px',
-                                                    }
+                                                onChange={(e) => handleInputChange(key, e)}
+                                                disabled={isFormDisabled}
+                                                style={{
+                                                    width: '100%'
                                                 }}
                                             />
                                         </div>
@@ -5217,7 +5190,7 @@ export default function Treatment() {
                             <div style={{ marginBottom: '15px' }}>
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'stretch' }}>
                                     <div style={{ flex: '1 1 700px', minWidth: '260px' }}>
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '12px' }}>
+                                        <div className="row g-3">
                                             {[
                                                 { key: 'height', label: 'Height (Cm)' },
                                                 { key: 'weight', label: 'Weight (Kg)' },
@@ -5230,7 +5203,7 @@ export default function Treatment() {
                                             ].map(({ key, label }) => {
                                                 const isNumberField = key === 'pulse' || key === 'height' || key === 'weight';
                                                 return (
-                                                    <div key={key}>
+                                                    <div key={key} className="col-6 col-md">
                                                         <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
                                                             {label}
                                                         </label>
@@ -5578,81 +5551,83 @@ export default function Treatment() {
                                             opacity: isFormDisabled ? 0.6 : 1
                                         }}
                                     >
-                                        <div style={{
-                                            display: 'grid',
-                                            gridTemplateColumns: '60px 1.5fr 1.5fr 80px' as const,
-                                            backgroundColor: '#1976d2',
-                                            color: 'white',
-                                            fontWeight: 'bold',
-                                            fontSize: '12px'
-                                        }}>
-                                            <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Sr.</div>
-                                            <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Complaint Description</div>
-                                            <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Duration / Comment</div>
-                                            <div style={{ padding: '6px' }} className="text-center">Action</div>
-                                        </div>
-                                        {[...complaintsRows].sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999)).map((row, index) => (
-                                            <div key={row.id} style={{
-                                                display: 'grid',
-                                                gridTemplateColumns: '60px 1.5fr 1.5fr 80px' as const,
-                                                backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white',
-                                                borderBottom: '1px solid #e0e0e0'
-                                            }}>
-                                                <div style={{ padding: '6px', borderRight: '1px solid #e0e0e0', fontSize: '12px' }}>{index + 1}</div>
-                                                <div style={{ padding: '6px', borderRight: '1px solid #e0e0e0', fontSize: '12px' }}>{row.label}</div>
-                                                <div style={{ padding: '0', borderRight: '1px solid #e0e0e0' }}>
-                                                    <input
-                                                        type="text"
-                                                        value={row.comment}
-                                                        onChange={(e) => handleComplaintCommentChange(row.value, e.target.value)}
-                                                        disabled={isFormDisabled}
-                                                        placeholder="Enter duration/comment"
-                                                        className="duration-comment-input duration-comment-table-input"
-                                                        style={{
-                                                            width: '100%',
-                                                            height: '100%',
-                                                            padding: '8px 10px',
-                                                            border: 'none',
-                                                            borderRadius: 0,
-                                                            outline: 'none',
-                                                            backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
-                                                            boxShadow: 'none',
-                                                            fontSize: '11px',
-                                                            color: isFormDisabled ? '#666' : '#333',
-                                                            cursor: isFormDisabled ? 'not-allowed' : 'text'
-                                                        }}
-                                                    />
-                                                </div>
-                                                <div style={{ padding: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                    <div
-                                                        onClick={() => {
-                                                            if (isFormDisabled) return;
-                                                            handleRemoveComplaint(row.value);
-                                                        }}
-                                                        title="Remove"
-                                                        style={{
-                                                            display: 'inline-flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                            width: '24px',
-                                                            height: '24px',
-                                                            cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                                            color: isFormDisabled ? '#9e9e9e' : '#000000',
-                                                            backgroundColor: 'transparent'
-                                                        }}
-                                                        onMouseEnter={(e) => {
-                                                            if (isFormDisabled) return;
-                                                            (e.currentTarget as HTMLDivElement).style.color = '#EF5350';
-                                                        }}
-                                                        onMouseLeave={(e) => {
-                                                            (e.currentTarget as HTMLDivElement).style.color = isFormDisabled ? '#9e9e9e' : '#000000';
-                                                        }}
-                                                    >
-                                                        <Delete fontSize="small" />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
+                                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                            <thead>
+                                                <tr style={{
+                                                    backgroundColor: '#1976d2',
+                                                    color: 'white',
+                                                    fontSize: '13px'
+                                                }}>
+                                                    <th style={{ borderRight: '1px solid rgba(255,255,255,0.2)', width: '60px', textAlign: 'left' }} className="py-3">Sr.</th>
+                                                    <th style={{ borderRight: '1px solid rgba(255,255,255,0.2)', textAlign: 'left' }} className="py-3">Complaint Description</th>
+                                                    <th style={{ borderRight: '1px solid rgba(255,255,255,0.2)', textAlign: 'left' }} className="py-3">Duration / Comment</th>
+                                                    <th style={{ width: '80px', textAlign: 'center' }} className="py-3">Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {[...complaintsRows].sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999)).map((row, index) => (
+                                                    <tr key={row.id} style={{
+                                                        backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white',
+                                                        borderBottom: '1px solid #e0e0e0'
+                                                    }}>
+                                                        <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '12px' }} className="px-3">{index + 1}</td>
+                                                        <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '12px' }} className="px-3">{row.label}</td>
+                                                        <td style={{ borderRight: '1px solid #e0e0e0' }} className="px-1 py-1">
+                                                            <input
+                                                                type="text"
+                                                                value={row.comment}
+                                                                onChange={(e) => handleComplaintCommentChange(row.value, e.target.value)}
+                                                                disabled={isFormDisabled}
+                                                                placeholder="Enter duration/comment"
+                                                                className="duration-comment-input duration-comment-table-input"
+                                                                style={{
+                                                                    width: '100%',
+                                                                    padding: '8px 10px',
+                                                                    border: 'none',
+                                                                    borderRadius: 0,
+                                                                    outline: 'none',
+                                                                    backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
+                                                                    boxShadow: 'none',
+                                                                    fontSize: '11px',
+                                                                    color: isFormDisabled ? '#666' : '#333',
+                                                                    cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                                                }}
+                                                            />
+                                                        </td>
+                                                        <td style={{ padding: '6px' }}>
+                                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                                <div
+                                                                    onClick={() => {
+                                                                        if (isFormDisabled) return;
+                                                                        handleRemoveComplaint(row.value);
+                                                                    }}
+                                                                    title="Remove"
+                                                                    style={{
+                                                                        display: 'inline-flex',
+                                                                        alignItems: 'center',
+                                                                        justifyContent: 'center',
+                                                                        width: '24px',
+                                                                        height: '24px',
+                                                                        cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                                                        color: isFormDisabled ? '#9e9e9e' : '#000000',
+                                                                        backgroundColor: 'transparent'
+                                                                    }}
+                                                                    onMouseEnter={(e) => {
+                                                                        if (isFormDisabled) return;
+                                                                        (e.currentTarget as HTMLDivElement).style.color = '#EF5350';
+                                                                    }}
+                                                                    onMouseLeave={(e) => {
+                                                                        (e.currentTarget as HTMLDivElement).style.color = isFormDisabled ? '#9e9e9e' : '#000000';
+                                                                    }}
+                                                                >
+                                                                    <Delete fontSize="small" />
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
                                     </div>
                                 )}
                             </div>
@@ -6109,57 +6084,61 @@ export default function Treatment() {
                                             opacity: isFormDisabled ? 0.6 : 1
                                         }}
                                     >
-                                        <div style={{
-                                            display: 'grid',
-                                            gridTemplateColumns: '60px 1fr 80px' as const,
-                                            backgroundColor: '#1976d2',
-                                            color: 'white',
-                                            fontWeight: 'bold',
-                                            fontSize: '12px'
-                                        }}>
-                                            <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Sr.</div>
-                                            <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Provisional Diagnosis</div>
-                                            <div style={{ padding: '6px' }} className="text-center">Action</div>
-                                        </div>
-                                        {[...diagnosisRows].sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999)).map((row, index) => (
-                                            <div key={row.id} style={{
-                                                display: 'grid',
-                                                gridTemplateColumns: '60px 1fr 80px' as const,
-                                                backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white',
-                                                borderBottom: '1px solid #e0e0e0'
-                                            }}>
-                                                <div style={{ padding: '6px', borderRight: '1px solid #e0e0e0', fontSize: '12px' }}>{index + 1}</div>
-                                                <div style={{ padding: '6px', borderRight: '1px solid #e0e0e0', fontSize: '12px' }}>{row.diagnosis}</div>
-                                                <div style={{ padding: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                    <div
-                                                        onClick={() => {
-                                                            if (isFormDisabled) return;
-                                                            row.value ? handleRemoveDiagnosisFromSelector(row.value) : handleRemoveDiagnosis(row.id);
-                                                        }}
-                                                        title="Remove"
-                                                        style={{
-                                                            display: 'inline-flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                            width: '24px',
-                                                            height: '24px',
-                                                            cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                                            color: isFormDisabled ? '#9e9e9e' : '#000000',
-                                                            backgroundColor: 'transparent'
-                                                        }}
-                                                        onMouseEnter={(e) => {
-                                                            if (isFormDisabled) return;
-                                                            (e.currentTarget as HTMLDivElement).style.color = '#EF5350';
-                                                        }}
-                                                        onMouseLeave={(e) => {
-                                                            (e.currentTarget as HTMLDivElement).style.color = isFormDisabled ? '#9e9e9e' : '#000000';
-                                                        }}
-                                                    >
-                                                        <Delete fontSize="small" />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
+                                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                            <thead>
+                                                <tr style={{
+                                                    backgroundColor: '#1976d2',
+                                                    color: 'white',
+                                                    fontWeight: 'bold',
+                                                    fontSize: '13px'
+                                                }}>
+                                                    <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '60px', textAlign: 'left' }}>Sr.</th>
+                                                    <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', textAlign: 'left' }}>Provisional Diagnosis</th>
+                                                    <th style={{ padding: '6px', width: '80px', textAlign: 'center' }}>Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {[...diagnosisRows].sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999)).map((row, index) => (
+                                                    <tr key={row.id} style={{
+                                                        backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white',
+                                                        borderBottom: '1px solid #e0e0e0'
+                                                    }}>
+                                                        <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '12px' }}>{index + 1}</td>
+                                                        <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '12px' }}>{row.diagnosis}</td>
+                                                        <td style={{ textAlign: 'center' }}>
+                                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                                <div
+                                                                    onClick={() => {
+                                                                        if (isFormDisabled) return;
+                                                                        row.value ? handleRemoveDiagnosisFromSelector(row.value) : handleRemoveDiagnosis(row.id);
+                                                                    }}
+                                                                    title="Remove"
+                                                                    style={{
+                                                                        display: 'inline-flex',
+                                                                        alignItems: 'center',
+                                                                        justifyContent: 'center',
+                                                                        width: '24px',
+                                                                        height: '24px',
+                                                                        cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                                                        color: isFormDisabled ? '#9e9e9e' : '#000000',
+                                                                        backgroundColor: 'transparent'
+                                                                    }}
+                                                                    onMouseEnter={(e) => {
+                                                                        if (isFormDisabled) return;
+                                                                        (e.currentTarget as HTMLDivElement).style.color = '#EF5350';
+                                                                    }}
+                                                                    onMouseLeave={(e) => {
+                                                                        (e.currentTarget as HTMLDivElement).style.color = isFormDisabled ? '#9e9e9e' : '#000000';
+                                                                    }}
+                                                                >
+                                                                    <Delete fontSize="small" />
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
                                     </div>
                                 )}
                             </div>
@@ -6405,194 +6384,193 @@ export default function Treatment() {
                                             opacity: isFormDisabled ? 0.6 : 1
                                         }}
                                     >
-                                        <div style={{
-                                            display: 'grid',
-                                            gridTemplateColumns: '50px 1fr 50px 50px 50px 50px 1fr 80px' as const,
-                                            backgroundColor: '#1976d2',
-                                            color: 'white',
-                                            fontWeight: 'bold',
-                                            fontSize: '12px'
-                                        }}>
-                                            <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Sr.</div>
-                                            <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Medicine</div>
-                                            <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>B</div>
-                                            <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>L</div>
-                                            <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>D</div>
-                                            <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Days</div>
-                                            <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Instruction</div>
-                                            <div style={{ padding: '6px' }} className="text-center">Action</div>
-                                        </div>
-                                        {[...medicineRows].sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999)).map((row, index) => (
-                                            <div key={row.id} style={{
-                                                display: 'grid',
-                                                gridTemplateColumns: '50px 1fr 50px 50px 50px 50px 1fr 80px' as const,
-                                                backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white',
-                                                borderBottom: '1px solid #e0e0e0'
-                                            }}>
-                                                <div style={{ padding: '6px', borderRight: '1px solid #e0e0e0', fontSize: '12px' }}>{index + 1}</div>
-                                                <div style={{ padding: '6px', borderRight: '1px solid #e0e0e0', fontSize: '12px' }}>{row.short_description || row.medicine}</div>
-                                                <div style={{ padding: '0', borderRight: '1px solid #e0e0e0' }}>
-                                                    <input
-                                                        type="text"
-                                                        value={row.b}
-                                                        inputMode="numeric"
-                                                        pattern="[0-9]*"
-                                                        onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
-                                                        onChange={(e) => handleMedicineFieldChange(row.id, 'b', e.target.value.replace(/\D/g, ''))}
-                                                        disabled={isFormDisabled}
-                                                        maxLength={10}
-                                                        className="medicine-table-input"
-                                                        style={{
-                                                            width: '100%',
-                                                            height: '100%',
-                                                            padding: '8px 6px',
-                                                            border: 'none',
-                                                            borderRadius: 0,
-                                                            outline: 'none',
-                                                            backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
-                                                            boxShadow: 'none',
-                                                            fontSize: '11px',
-                                                            textAlign: 'center',
-                                                            color: isFormDisabled ? '#666' : '#333',
-                                                            cursor: isFormDisabled ? 'not-allowed' : 'text'
-                                                        }}
-                                                    />
-                                                </div>
-                                                <div style={{ padding: '0', borderRight: '1px solid #e0e0e0' }}>
-                                                    <input
-                                                        type="text"
-                                                        value={row.l}
-                                                        inputMode="numeric"
-                                                        pattern="[0-9]*"
-                                                        onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
-                                                        onChange={(e) => handleMedicineFieldChange(row.id, 'l', e.target.value.replace(/\D/g, ''))}
-                                                        disabled={isFormDisabled}
-                                                        maxLength={10}
-                                                        className="medicine-table-input"
-                                                        style={{
-                                                            width: '100%',
-                                                            height: '100%',
-                                                            padding: '8px 6px',
-                                                            border: 'none',
-                                                            borderRadius: 0,
-                                                            outline: 'none',
-                                                            backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
-                                                            boxShadow: 'none',
-                                                            fontSize: '11px',
-                                                            textAlign: 'center',
-                                                            color: isFormDisabled ? '#666' : '#333',
-                                                            cursor: isFormDisabled ? 'not-allowed' : 'text'
-                                                        }}
-                                                    />
-                                                </div>
-                                                <div style={{ padding: '0', borderRight: '1px solid #e0e0e0' }}>
-                                                    <input
-                                                        type="text"
-                                                        value={row.d}
-                                                        inputMode="numeric"
-                                                        pattern="[0-9]*"
-                                                        onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
-                                                        onChange={(e) => handleMedicineFieldChange(row.id, 'd', e.target.value.replace(/\D/g, ''))}
-                                                        disabled={isFormDisabled}
-                                                        maxLength={10}
-                                                        className="medicine-table-input"
-                                                        style={{
-                                                            width: '100%',
-                                                            height: '100%',
-                                                            padding: '8px 6px',
-                                                            border: 'none',
-                                                            borderRadius: 0,
-                                                            outline: 'none',
-                                                            backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
-                                                            boxShadow: 'none',
-                                                            fontSize: '11px',
-                                                            textAlign: 'center',
-                                                            color: isFormDisabled ? '#666' : '#333',
-                                                            cursor: isFormDisabled ? 'not-allowed' : 'text'
-                                                        }}
-                                                    />
-                                                </div>
-                                                <div style={{ padding: '0', borderRight: '1px solid #e0e0e0' }}>
-                                                    <input
-                                                        type="text"
-                                                        value={row.days}
-                                                        inputMode="numeric"
-                                                        pattern="[0-9]*"
-                                                        onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
-                                                        onChange={(e) => handleMedicineFieldChange(row.id, 'days', e.target.value.replace(/\D/g, ''))}
-                                                        disabled={isFormDisabled}
-                                                        maxLength={10}
-                                                        className="medicine-table-input"
-                                                        style={{
-                                                            width: '100%',
-                                                            height: '100%',
-                                                            padding: '8px 6px',
-                                                            border: 'none',
-                                                            borderRadius: 0,
-                                                            outline: 'none',
-                                                            backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
-                                                            boxShadow: 'none',
-                                                            fontSize: '11px',
-                                                            textAlign: 'center',
-                                                            color: isFormDisabled ? '#666' : '#333',
-                                                            cursor: isFormDisabled ? 'not-allowed' : 'text'
-                                                        }}
-                                                    />
-                                                </div>
-                                                <div style={{ padding: '0', borderRight: '1px solid #e0e0e0' }}>
-                                                    <input
-                                                        type="text"
-                                                        value={row.instruction}
-                                                        onChange={(e) => handleMedicineInstructionChange(row.id, e.target.value)}
-                                                        disabled={isFormDisabled}
-                                                        maxLength={4000}
-                                                        placeholder="Enter instruction"
-                                                        className="medicine-table-input"
-                                                        style={{
-                                                            width: '100%',
-                                                            height: '100%',
-                                                            padding: '8px 10px',
-                                                            border: 'none',
-                                                            borderRadius: 0,
-                                                            outline: 'none',
-                                                            backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
-                                                            boxShadow: 'none',
-                                                            fontSize: '11px',
-                                                            color: isFormDisabled ? '#666' : '#333',
-                                                            cursor: isFormDisabled ? 'not-allowed' : 'text'
-                                                        }}
-                                                    />
-                                                </div>
-                                                <div style={{ padding: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                    <div
-                                                        onClick={() => {
-                                                            if (isFormDisabled) return;
-                                                            handleRemoveMedicine(row.id);
-                                                        }}
-                                                        title="Remove"
-                                                        style={{
-                                                            display: 'inline-flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                            width: '24px',
-                                                            height: '24px',
-                                                            cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                                            color: isFormDisabled ? '#9e9e9e' : '#000000',
-                                                            backgroundColor: 'transparent'
-                                                        }}
-                                                        onMouseEnter={(e) => {
-                                                            if (isFormDisabled) return;
-                                                            (e.currentTarget as HTMLDivElement).style.color = '#EF5350';
-                                                        }}
-                                                        onMouseLeave={(e) => {
-                                                            (e.currentTarget as HTMLDivElement).style.color = isFormDisabled ? '#9e9e9e' : '#000000';
-                                                        }}
-                                                    >
-                                                        <Delete fontSize="small" />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
+                                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                            <thead>
+                                                <tr style={{
+                                                    backgroundColor: '#1976d2',
+                                                    color: 'white',
+                                                    fontWeight: 'bold',
+                                                    fontSize: '13px'
+                                                }}>
+                                                    <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '50px', textAlign: 'left' }}>Sr.</th>
+                                                    <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', textAlign: 'left' }}>Medicine</th>
+                                                    <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '50px', textAlign: 'center' }}>B</th>
+                                                    <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '50px', textAlign: 'center' }}>L</th>
+                                                    <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '50px', textAlign: 'center' }}>D</th>
+                                                    <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '50px', textAlign: 'center' }}>Days</th>
+                                                    <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', textAlign: 'left' }}>Instruction</th>
+                                                    <th style={{ padding: '6px', width: '80px', textAlign: 'center' }}>Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {[...medicineRows].sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999)).map((row, index) => (
+                                                    <tr key={row.id} style={{
+                                                        backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white',
+                                                        borderBottom: '1px solid #e0e0e0'
+                                                    }}>
+                                                        <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '12px' }}>{index + 1}</td>
+                                                        <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '12px' }}>{row.short_description || row.medicine}</td>
+                                                        <td style={{ borderRight: '1px solid #e0e0e0' }} className="px-1 py-1">
+                                                            <input
+                                                                type="text"
+                                                                value={row.b}
+                                                                inputMode="numeric"
+                                                                pattern="[0-9]*"
+                                                                onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
+                                                                onChange={(e) => handleMedicineFieldChange(row.id, 'b', e.target.value.replace(/\D/g, ''))}
+                                                                disabled={isFormDisabled}
+                                                                className="medicine-table-input"
+                                                                style={{
+                                                                    width: '100%',
+                                                                    height: '100%',
+                                                                    padding: '8px 6px',
+                                                                    border: 'none',
+                                                                    borderRadius: 0,
+                                                                    outline: 'none',
+                                                                    backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
+                                                                    boxShadow: 'none',
+                                                                    fontSize: '11px',
+                                                                    textAlign: 'center',
+                                                                    color: isFormDisabled ? '#666' : '#333',
+                                                                    cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                                                }}
+                                                            />
+                                                        </td>
+                                                        <td style={{ borderRight: '1px solid #e0e0e0' }} className="px-1 py-1">
+                                                            <input
+                                                                type="text"
+                                                                value={row.l}
+                                                                inputMode="numeric"
+                                                                pattern="[0-9]*"
+                                                                onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
+                                                                onChange={(e) => handleMedicineFieldChange(row.id, 'l', e.target.value.replace(/\D/g, ''))}
+                                                                disabled={isFormDisabled}
+                                                                className="medicine-table-input"
+                                                                style={{
+                                                                    width: '100%',
+                                                                    height: '100%',
+                                                                    padding: '8px 6px',
+                                                                    border: 'none',
+                                                                    borderRadius: 0,
+                                                                    outline: 'none',
+                                                                    backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
+                                                                    boxShadow: 'none',
+                                                                    fontSize: '11px',
+                                                                    textAlign: 'center',
+                                                                    color: isFormDisabled ? '#666' : '#333',
+                                                                    cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                                                }}
+                                                            />
+                                                        </td>
+                                                        <td style={{ borderRight: '1px solid #e0e0e0' }} className="px-1 py-1">
+                                                            <input
+                                                                type="text"
+                                                                value={row.d}
+                                                                inputMode="numeric"
+                                                                pattern="[0-9]*"
+                                                                onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
+                                                                onChange={(e) => handleMedicineFieldChange(row.id, 'd', e.target.value.replace(/\D/g, ''))}
+                                                                disabled={isFormDisabled}
+                                                                className="medicine-table-input"
+                                                                style={{
+                                                                    width: '100%',
+                                                                    height: '100%',
+                                                                    padding: '8px 6px',
+                                                                    border: 'none',
+                                                                    borderRadius: 0,
+                                                                    outline: 'none',
+                                                                    backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
+                                                                    boxShadow: 'none',
+                                                                    fontSize: '11px',
+                                                                    textAlign: 'center',
+                                                                    color: isFormDisabled ? '#666' : '#333',
+                                                                    cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                                                }}
+                                                            />
+                                                        </td>
+                                                        <td style={{ borderRight: '1px solid #e0e0e0' }} className="px-1 py-1">
+                                                            <input
+                                                                type="text"
+                                                                value={row.days}
+                                                                inputMode="numeric"
+                                                                pattern="[0-9]*"
+                                                                onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
+                                                                onChange={(e) => handleMedicineFieldChange(row.id, 'days', e.target.value.replace(/\D/g, ''))}
+                                                                disabled={isFormDisabled}
+                                                                className="medicine-table-input"
+                                                                style={{
+                                                                    width: '100%',
+                                                                    height: '100%',
+                                                                    padding: '8px 6px',
+                                                                    border: 'none',
+                                                                    borderRadius: 0,
+                                                                    outline: 'none',
+                                                                    backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
+                                                                    boxShadow: 'none',
+                                                                    fontSize: '11px',
+                                                                    textAlign: 'center',
+                                                                    color: isFormDisabled ? '#666' : '#333',
+                                                                    cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                                                }}
+                                                            />
+                                                        </td>
+                                                        <td style={{ borderRight: '1px solid #e0e0e0' }} className="px-1 py-1">
+                                                            <input
+                                                                type="text"
+                                                                value={row.instruction}
+                                                                onChange={(e) => handleMedicineInstructionChange(row.id, e.target.value)}
+                                                                disabled={isFormDisabled}
+                                                                placeholder="Enter instruction"
+                                                                className="medicine-table-input"
+                                                                style={{
+                                                                    width: '100%',
+                                                                    height: '100%',
+                                                                    padding: '8px 10px',
+                                                                    border: 'none',
+                                                                    borderRadius: 0,
+                                                                    outline: 'none',
+                                                                    backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
+                                                                    boxShadow: 'none',
+                                                                    fontSize: '11px',
+                                                                    color: isFormDisabled ? '#666' : '#333',
+                                                                    cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                                                }}
+                                                            />
+                                                        </td>
+                                                        <td style={{ padding: '6px', textAlign: 'center' }}>
+                                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                                <div
+                                                                    onClick={() => {
+                                                                        if (isFormDisabled) return;
+                                                                        handleRemoveMedicine(row.id);
+                                                                    }}
+                                                                    title="Remove"
+                                                                    style={{
+                                                                        display: 'inline-flex',
+                                                                        alignItems: 'center',
+                                                                        justifyContent: 'center',
+                                                                        width: '24px',
+                                                                        height: '24px',
+                                                                        cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                                                        color: isFormDisabled ? '#9e9e9e' : '#000000',
+                                                                        backgroundColor: 'transparent'
+                                                                    }}
+                                                                    onMouseEnter={(e) => {
+                                                                        if (isFormDisabled) return;
+                                                                        (e.currentTarget as HTMLDivElement).style.color = '#EF5350';
+                                                                    }}
+                                                                    onMouseLeave={(e) => {
+                                                                        (e.currentTarget as HTMLDivElement).style.color = isFormDisabled ? '#9e9e9e' : '#000000';
+                                                                    }}
+                                                                >
+                                                                    <Delete fontSize="small" />
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
                                     </div>
                                 )}
                             </div>
@@ -7310,57 +7288,61 @@ export default function Treatment() {
                                             opacity: isFormDisabled ? 0.6 : 1
                                         }}
                                     >
-                                        <div style={{
-                                            display: 'grid',
-                                            gridTemplateColumns: '60px 1fr 80px' as const,
-                                            backgroundColor: '#1976d2',
-                                            color: 'white',
-                                            fontWeight: 'bold',
-                                            fontSize: '12px'
-                                        }}>
-                                            <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Sr.</div>
-                                            <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Investigation</div>
-                                            <div style={{ padding: '6px' }} className="text-center">Action</div>
-                                        </div>
-                                        {investigationRows.map((row, index) => (
-                                            <div key={row.id} style={{
-                                                display: 'grid',
-                                                gridTemplateColumns: '60px 1fr 80px' as const,
-                                                backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white',
-                                                borderBottom: '1px solid #e0e0e0'
-                                            }}>
-                                                <div style={{ padding: '6px', borderRight: '1px solid #e0e0e0', fontSize: '12px' }}>{index + 1}</div>
-                                                <div style={{ padding: '6px', borderRight: '1px solid #e0e0e0', fontSize: '12px' }}>{row.investigation}</div>
-                                                <div style={{ padding: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                    <div
-                                                        onClick={() => {
-                                                            if (isFormDisabled) return;
-                                                            handleRemoveInvestigation(row.id);
-                                                        }}
-                                                        title="Remove"
-                                                        style={{
-                                                            display: 'inline-flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                            width: '24px',
-                                                            height: '24px',
-                                                            cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                                            color: isFormDisabled ? '#9e9e9e' : '#000000',
-                                                            backgroundColor: 'transparent'
-                                                        }}
-                                                        onMouseEnter={(e) => {
-                                                            if (isFormDisabled) return;
-                                                            (e.currentTarget as HTMLDivElement).style.color = '#EF5350';
-                                                        }}
-                                                        onMouseLeave={(e) => {
-                                                            (e.currentTarget as HTMLDivElement).style.color = isFormDisabled ? '#9e9e9e' : '#000000';
-                                                        }}
-                                                    >
-                                                        <Delete style={{ fontSize: '16px' }} />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
+                                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                            <thead>
+                                                <tr style={{
+                                                    backgroundColor: '#1976d2',
+                                                    color: 'white',
+                                                    fontWeight: 'bold',
+                                                    fontSize: '13px'
+                                                }}>
+                                                    <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '60px', textAlign: 'left' }}>Sr.</th>
+                                                    <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', textAlign: 'left' }}>Investigation</th>
+                                                    <th style={{ padding: '6px', width: '80px', textAlign: 'center' }}>Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {investigationRows.map((row, index) => (
+                                                    <tr key={row.id} style={{
+                                                        backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white',
+                                                        borderBottom: '1px solid #e0e0e0'
+                                                    }}>
+                                                        <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '12px' }}>{index + 1}</td>
+                                                        <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '12px' }}>{row.investigation}</td>
+                                                        <td style={{ textAlign: 'center' }}>
+                                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                                <div
+                                                                    onClick={() => {
+                                                                        if (isFormDisabled) return;
+                                                                        handleRemoveInvestigation(row.id);
+                                                                    }}
+                                                                    title="Remove"
+                                                                    style={{
+                                                                        display: 'inline-flex',
+                                                                        alignItems: 'center',
+                                                                        justifyContent: 'center',
+                                                                        width: '24px',
+                                                                        height: '24px',
+                                                                        cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                                                        color: isFormDisabled ? '#9e9e9e' : '#000000',
+                                                                        backgroundColor: 'transparent'
+                                                                    }}
+                                                                    onMouseEnter={(e) => {
+                                                                        if (isFormDisabled) return;
+                                                                        (e.currentTarget as HTMLDivElement).style.color = '#EF5350';
+                                                                    }}
+                                                                    onMouseLeave={(e) => {
+                                                                        (e.currentTarget as HTMLDivElement).style.color = isFormDisabled ? '#9e9e9e' : '#000000';
+                                                                    }}
+                                                                >
+                                                                    <Delete fontSize="small" />
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
                                     </div>
                                 )}
                             </div>
@@ -7945,11 +7927,6 @@ export default function Treatment() {
                 patientGender={(treatmentData?.gender || '').toString()}
                 initialSelectedGroups={selectedInstructionGroups}
                 onChange={(groups) => {
-                    console.log('=== TREATMENT SCREEN: Instruction Popup onChange CALLED ===');
-                    console.log('Received groups from popup (raw):', groups);
-                    console.log('Received groups length:', groups?.length || 0);
-                    console.log('Received groups is array:', Array.isArray(groups));
-
                     // Normalize groups to ensure clean format (only id, name, nameHindi, instructions)
                     const normalizedGroups = normalizeInstructionGroups(groups || []);
 

@@ -282,6 +282,16 @@ export class DocumentService {
       throw new Error('Failed to upload one or more documents');
     }
   }
+
+  /**
+   * Get the full download URL for a document
+   * @param documentId Document ID
+   * @returns string Full URL for downloading the document
+   */
+  static getDownloadUrl(documentId: number): string {
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
+    return `${baseUrl}/patient-documents/treatment/stream/${documentId}`;
+  }
 }
 
 export default DocumentService;
