@@ -1835,6 +1835,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         }}
                         variant="outlined"
                         size="small"
+                        size="small"
                         sx={{
                           '& .MuiOutlinedInput-root': { borderRadius: '8px' },
                           '& input[type="date"]': {
@@ -1844,7 +1845,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                             }
                           }
                         }}
-                        error={!!errors.dobDate}
+                        error={!!errors.dobDate && String(errors.dobDate).toLowerCase().includes('required')}
                         helperText={errors.dobDate}
                         inputProps={{
                           max: dayjs().format('YYYY-MM-DD'),
@@ -2079,7 +2080,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         {...params}
                         fullWidth
                         placeholder="Select State"
-                        error={!!errors.state}
+                        error={!!errors.state && String(errors.state).toLowerCase().includes('required')}
                         helperText={errors.state}
                         disabled={loading || readOnly}
                         sx={{
@@ -2641,7 +2642,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         {...params}
                         fullWidth
                         placeholder={selectedCityId ? "Search Area or type new area name" : "Select City first"}
-                        error={!!errors.area}
+                        error={!!errors.area && String(errors.area).toLowerCase().includes('required')}
                         helperText={errors.area}
                         disabled={loading || readOnly || !selectedCityId}
                         onBlur={async () => {
@@ -3103,7 +3104,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     placeholder="Referral Number(10 Digits)"
                     value={formData.referralContact}
                     onChange={(value) => handleInputChange('referralContact', value)}
-                    disabled={loading || readOnly || (formData.referredBy === 'D' && selectedDoctor !== null) || isSelfReferral || (patientId && formData.referredBy !== 'D')}
+                    disabled={loading || readOnly || (formData.referredBy === 'D') || isSelfReferral || (patientId && formData.referredBy !== 'D')}
                     error={!!errors.referralContact || (formData.referralContact.length > 0 && formData.referralContact.length !== 10)}
                     helperText={errors.referralContact || (formData.referralContact.length > 0 && formData.referralContact.length !== 10 ? 'Referral contact must be 10 digits' : '')}
                     inputProps={{
@@ -3124,7 +3125,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     placeholder="Referral Email"
                     value={formData.referralEmail}
                     onChange={(value) => handleInputChange('referralEmail', value)}
-                    disabled={loading || readOnly || (formData.referredBy === 'D' && selectedDoctor !== null) || isSelfReferral || (patientId && formData.referredBy !== 'D')}
+                    disabled={loading || readOnly || (formData.referredBy === 'D') || isSelfReferral || (patientId && formData.referredBy !== 'D')}
                     error={!!errors.referralEmail}
                     helperText={errors.referralEmail}
                   />
@@ -3143,7 +3144,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     error={!!errors.referralAddress}
                     helperText={errors.referralAddress}
                     inputProps={{ maxLength: 150 }}
-                    disabled={loading || readOnly || (formData.referredBy === 'D' && selectedDoctor !== null) || isSelfReferral || (patientId && formData.referredBy !== 'D')}
+                    disabled={loading || readOnly || (formData.referredBy === 'D') || isSelfReferral || (patientId && formData.referredBy !== 'D')}
                   />
                 </Box>
               </Grid>

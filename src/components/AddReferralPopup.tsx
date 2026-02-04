@@ -73,12 +73,21 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
         const { allowed, error } = validateField('doctorName', alphabeticValue, undefined, undefined, 'referralDoctor');
         if (allowed) {
             handleInputChange('doctorName', alphabeticValue);
-            if (alphabeticValue.trim()) {
+            if (error) {
+                // If there is a warning (like max length), show it.
+                setDoctorNameError(error);
+            } else if (alphabeticValue.trim()) {
                 setDoctorNameError('');
             }
         } else if (error) {
             // If valid characters but too long, show error
             setDoctorNameError(error);
+        }
+    };
+
+    const handleDoctorNameBlur = () => {
+        if (!formData.doctorName.trim()) {
+            setDoctorNameError('Doctor Name is required');
         }
     };
 
@@ -369,8 +378,14 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
                                 placeholder="Enter Doctor Name"
                                 value={formData.doctorName}
                                 onChange={(e) => handleDoctorNameChange(e.target.value)}
-                                error={!!doctorNameError}
+                                onBlur={handleDoctorNameBlur}
+                                error={!!doctorNameError && doctorNameError.toLowerCase().includes('required')}
                                 helperText={doctorNameError}
+                                FormHelperTextProps={{
+                                    sx: {
+                                        color: (doctorNameError && !doctorNameError.toLowerCase().includes('required')) ? '#757575 !important' : undefined
+                                    }
+                                }}
                             />
                         </Box>
                     </Grid>
@@ -385,8 +400,13 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
                                 value={formData.doctorMob}
                                 onChange={(e) => handleContactNumberChange(e.target.value)}
                                 onBlur={validateContactNumber}
-                                error={!!contactError}
+                                error={!!contactError && contactError.toLowerCase().includes('required')}
                                 helperText={contactError}
+                                FormHelperTextProps={{
+                                    sx: {
+                                        color: (contactError && !contactError.toLowerCase().includes('required')) ? '#757575 !important' : undefined
+                                    }
+                                }}
                             />
                         </Box>
                     </Grid>
@@ -401,8 +421,13 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
                                 value={formData.doctorMail}
                                 onChange={(e) => handleEmailChange(e.target.value)}
                                 onBlur={validateEmail}
-                                error={!!emailError}
+                                error={!!emailError && emailError.toLowerCase().includes('required')}
                                 helperText={emailError}
+                                FormHelperTextProps={{
+                                    sx: {
+                                        color: (emailError && !emailError.toLowerCase().includes('required')) ? '#757575 !important' : undefined
+                                    }
+                                }}
                             />
                         </Box>
                     </Grid>
@@ -416,8 +441,13 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
                                 placeholder="Enter Remark"
                                 value={formData.remarks}
                                 onChange={(e) => handleRemarksChange(e.target.value)}
-                                error={!!remarksError}
+                                error={!!remarksError && remarksError.toLowerCase().includes('required')}
                                 helperText={remarksError}
+                                FormHelperTextProps={{
+                                    sx: {
+                                        color: (remarksError && !remarksError.toLowerCase().includes('required')) ? '#757575 !important' : undefined
+                                    }
+                                }}
                                 inputProps={{ maxLength: getMaxLength('remarks', 'referralDoctor') }}
                             />
                         </Box>
@@ -435,7 +465,7 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
                                 value={formData.doctorAddress}
                                 onChange={(e) => handleAddressChange(e.target.value)}
                                 style={{
-                                    border: `2px solid ${addressError ? '#f44336' : '#b7b7b7'}`,
+                                    border: `2px solid ${(addressError && addressError.toLowerCase().includes('required')) ? '#f44336' : '#b7b7b7'}`,
                                     borderRadius: '8px',
                                     padding: '8px',
                                     resize: 'vertical',
@@ -444,7 +474,11 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
                                 }}
                             />
                             {addressError && (
-                                <Typography variant="caption" sx={{ color: '#f44336', mt: 0.5, display: 'block' }}>
+                                <Typography variant="caption" sx={{
+                                    color: (addressError && !addressError.toLowerCase().includes('required')) ? '#757575' : '#f44336',
+                                    mt: 0.5,
+                                    display: 'block'
+                                }}>
                                     {addressError}
                                 </Typography>
                             )}

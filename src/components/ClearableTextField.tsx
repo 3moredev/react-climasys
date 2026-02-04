@@ -25,12 +25,25 @@ const ClearableTextField: React.FC<ClearableTextFieldProps> = ({
 
     const isReadOnly = disabled || !!InputProps?.readOnly;
 
+    const helperText = otherProps.helperText as string;
+    const isRequiredError = typeof helperText === 'string' && helperText.toLowerCase().includes('required');
+    // We only want the 'error' state (red border) if it's a required field error.
+    // Otherwise, it's just a warning/info message (gray text, normal border).
+    const effectiveError = !!otherProps.error && isRequiredError;
+    const shouldUseGrayError = !!otherProps.error && !isRequiredError;
+
     return (
         <TextField
             {...otherProps}
+            error={effectiveError} // Override error prop to control border color
             disabled={disabled}
             value={value}
             onChange={(e) => onChange(e.target.value)}
+            FormHelperTextProps={{
+                sx: {
+                    color: shouldUseGrayError ? '#757575 !important' : undefined
+                }
+            }}
             sx={{
                 '& .MuiInputBase-root': {
                     paddingRight: '6px !important',
