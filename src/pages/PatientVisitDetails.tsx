@@ -148,6 +148,9 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
     const [deletingDocumentId, setDeletingDocumentId] = useState<number | null>(null);
     const [initialComplaintsFromApi, setInitialComplaintsFromApi] = useState<string | null>(null);
 
+    // Check ref to store the computed follow-up state for restoration on Reset
+    const computedFollowUp = React.useRef<{ followUp: boolean, followUpType: string } | null>(null);
+
     const handleAddComplaints = () => {
         if (selectedComplaints.length === 0) return;
         setComplaintsRows(prev => {
@@ -540,6 +543,56 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
         };
     }, [formData.referralBy]);
 
+    // Automate Follow-Up checkbox state based on visit history
+    React.useEffect(() => {
+        if (!open || !patientData?.patientId) return;
+
+        let cancelled = false;
+        async function checkVisitHistory() {
+            try {
+                const history = await visitService.getPatientVisitHistory(String(patientData!.patientId));
+                if (cancelled) return;
+
+                if (history && history.visits && Array.isArray(history.visits)) {
+                    // Check if any visit has statusId === 5 (Visited/Completed)
+                    // We check multiple property names to be safe as backend response format varies
+                    const hasVisitedStatus = history.visits.some((v: any) => {
+                        const sid = v.statusId ?? v.status_id ?? v.visitStatusId;
+                        return Number(sid) === 5;
+                    });
+
+                    if (hasVisitedStatus) {
+                        const newState = {
+                            followUp: true,
+                            followUpType: 'Follow-up'
+                        };
+                        computedFollowUp.current = newState;
+                        setVisitType(prev => ({
+                            ...prev,
+                            ...newState
+                        }));
+                    } else {
+                        const newState = {
+                            followUp: false,
+                            followUpType: 'New'
+                        };
+                        computedFollowUp.current = newState;
+                        setVisitType(prev => ({
+                            ...prev,
+                            ...newState
+                        }));
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to check visit history for follow-up status:', error);
+            }
+        }
+
+        checkVisitHistory();
+
+        return () => { cancelled = true; };
+    }, [open, patientData?.patientId]);
+
     // Load appointment details when dialog opens and patient data is available
     React.useEffect(() => {
         let cancelled = false;
@@ -886,32 +939,12 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                 return updated;
                             });
 
-                            // If there's a valid last visit, set followUp to true and followUpType to "Follow-up"
-                            setVisitType(prev => ({
-                                ...prev,
-                                followUp: true,
-                                followUpType: 'Follow-up'
-                            }));
-                            console.log('Valid last visit exists - Setting followUp to true and followUpType to "Follow-up"');
+                            console.log('Valid last visit exists - Loaded plan and complaint');
                         } else {
-                            console.warn('No valid last visit found - lastVisitPayload is empty or missing key fields');
-                            // No valid last visit - set followUp to false and followUpType to "New"
-                            setVisitType(prev => ({
-                                ...prev,
-                                followUp: false,
-                                followUpType: 'New'
-                            }));
-                            console.log('No valid last visit - Setting followUp to false and followUpType to "New"');
+                            console.log('No valid last visit - lastVisitPayload is empty or missing key fields');
                         }
                     } else {
-                        console.warn('lastVisitResult is null or undefined');
-                        // No last visit result - set followUp to false and followUpType to "New"
-                        setVisitType(prev => ({
-                            ...prev,
-                            followUp: false,
-                            followUpType: 'New'
-                        }));
-                        console.log('No last visit result - Setting followUp to false and followUpType to "New"');
+                        console.log('No last visit result');
                     }
                 }
             } catch (previousVisitError) {
@@ -1577,8 +1610,8 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
 
         setVisitType({
             inPerson: resetInPerson,
-            followUp: false, // Will be set based on last visit existence
-            followUpType: 'New' // Will be set based on last visit existence
+            followUp: computedFollowUp.current?.followUp ?? false,
+            followUpType: computedFollowUp.current?.followUpType ?? 'New'
         });
         setError(null);
         setSuccess(null);
@@ -1651,7 +1684,6 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     control={
                                         <Checkbox
                                             checked={visitType.followUp}
-                                            onChange={(e) => setVisitType(prev => ({ ...prev, followUp: e.target.checked }))}
                                             disabled={true}
                                             size="small"
                                             sx={{ p: 0.5 }}
@@ -2057,7 +2089,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                         value={formData.bmi}
                                         disabled={true} // BMI is always calculated
                                         variant="outlined"
-                                        placeholder='BMI'
+                                        // placeholder='BMI'
                                     />
                                 </Box>
                             </Grid>
