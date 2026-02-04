@@ -466,6 +466,7 @@ export default function AppointmentTable() {
         if (s === 'ON CALL') return 'CONSULT ON CALL';
         if (s === 'COMPLETED') return 'COMPLETE';
         if (s === 'SAVED') return 'SAVE';
+        if (s === 'WAITING FOR MEDICINE') return 'PRESCRIPTION/COLLECTION';
         return s;
     };
 
