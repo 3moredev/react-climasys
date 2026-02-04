@@ -38,7 +38,7 @@ const PatientNameDisplay: React.FC<PatientNameDisplayProps> = ({
     ].filter(Boolean);
 
     const patientName = parts.join(' / ');
-console.log(patientData);
+    
     return (
         <div
             onClick={onClick}
