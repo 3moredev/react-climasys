@@ -41,7 +41,7 @@ const ClearableTextField: React.FC<ClearableTextFieldProps> = ({
             onChange={(e) => onChange(e.target.value)}
             FormHelperTextProps={{
                 sx: {
-                    color: shouldUseGrayError ? '#757575 !important' : undefined
+                    color: shouldUseGrayError ? '#333333 !important' : undefined
                 }
             }}
             sx={{
@@ -49,6 +49,13 @@ const ClearableTextField: React.FC<ClearableTextFieldProps> = ({
                     paddingRight: '6px !important',
                     backgroundColor: isReadOnly ? '#f5f5f5 !important' : 'inherit',
                     cursor: isReadOnly ? 'not-allowed !important' : 'inherit',
+                },
+                '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: shouldUseGrayError ? '#616161 !important' : undefined,
+                    borderWidth: shouldUseGrayError ? '1px !important' : undefined
+                },
+                '&:hover .MuiOutlinedInput-notchedOutline': {
+                    borderColor: shouldUseGrayError ? '#424242 !important' : undefined
                 },
                 ...(otherProps.sx || {}), // Apply external styles first
                 '& .MuiInputBase-input': {
