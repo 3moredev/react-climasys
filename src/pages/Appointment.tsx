@@ -3139,7 +3139,7 @@ export default function AppointmentTable() {
 
                                                             {/* Checkout Button - Disabled for Doctor */}
                                                             <div
-                                                                title="Checkout"
+                                                                title="Visit Details"
                                                                 style={{
                                                                     display: 'inline-flex',
                                                                     alignItems: 'center',
@@ -3154,7 +3154,7 @@ export default function AppointmentTable() {
                                                                     opacity: 0.5
                                                                 }}
                                                             >
-                                                                <img src="/images/avatar/Visit_details.svg" alt="Checkout" style={{ width: 16, height: 16 }} />
+                                                                <img src="/images/avatar/Visit_details.svg" alt="Visit Details" style={{ width: 16, height: 16 }} />
                                                             </div>
 
                                                             {/* Treatment Button - Enabled for WITH DOCTOR, CONSULT ON CALL, SAVE, COLLECTION, PRESCRIPTION/COLLECTION, or COMPLETE */}
