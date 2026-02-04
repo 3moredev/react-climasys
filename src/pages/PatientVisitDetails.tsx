@@ -1930,7 +1930,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     size="small"
                                     value={formData.referralContact}
                                     onChange={(value) => handleInputChange('referralContact', value)}
-                                    disabled={readOnly || isSelfReferral || (isDoctorReferral() && selectedDoctor !== null)}
+                                    disabled={readOnly || isSelfReferral || isDoctorReferral()}
                                     variant="outlined"
                                     placeholder='Referral Contact'
                                     inputProps={{ maxLength: getFieldConfig('referralContact', 'visit')?.maxLength }}
@@ -1950,7 +1950,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     type="email"
                                     value={formData.referralEmail}
                                     onChange={(value) => handleInputChange('referralEmail', value)}
-                                    disabled={readOnly || isSelfReferral || (isDoctorReferral() && selectedDoctor !== null)}
+                                    disabled={readOnly || isSelfReferral || isDoctorReferral()}
                                     variant="outlined"
                                     placeholder='Referral Email'
                                     inputProps={{ maxLength: getFieldConfig('referralEmail', 'visit')?.maxLength }}
@@ -1969,7 +1969,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     size="small"
                                     value={formData.referralAddress}
                                     onChange={(value) => handleInputChange('referralAddress', value)}
-                                    disabled={readOnly || isSelfReferral || (isDoctorReferral() && selectedDoctor !== null)}
+                                    disabled={readOnly || isSelfReferral || isDoctorReferral()}
                                     variant="outlined"
                                     inputProps={{ maxLength: getFieldConfig('referralAddress', 'visit')?.maxLength }}
                                     placeholder='Referral Address'
