@@ -16,6 +16,7 @@ import {
     IconButton
 } from '@mui/material';
 import { useSession } from '../store/hooks/useSession';
+import { validateField } from '../utils/validationUtils';
 
 interface AddComplaintPopupProps {
     open: boolean;
@@ -43,10 +44,7 @@ const AddComplaintPopup: React.FC<AddComplaintPopupProps> = ({ open, onClose, on
     const [displayToOperator, setDisplayToOperator] = useState(false);
 
     // Validation state
-    const [errors, setErrors] = useState({
-        shortDescription: '',
-        complaintDescription: ''
-    });
+    const [errors, setErrors] = useState<Record<string, string>>({});
 
     // Snackbar state management
     const [snackbarOpen, setSnackbarOpen] = useState(false);
@@ -59,19 +57,19 @@ const AddComplaintPopup: React.FC<AddComplaintPopupProps> = ({ open, onClose, on
             setComplaintDescription(editData.complaintDescription || '');
             setPriority(editData.priority?.toString() || '');
             setDisplayToOperator(editData.displayToOperator || false);
-            setErrors({ shortDescription: '', complaintDescription: '' });
+            setErrors({ shortDescription: '', complaintDescription: '', priority: '' });
         } else {
             // Reset form when not in edit mode
             setShortDescription('');
             setComplaintDescription('');
             setPriority('');
             setDisplayToOperator(false);
-            setErrors({ shortDescription: '', complaintDescription: '' });
+            setErrors({});
         }
     }, [editData, open]);
 
     const handleSubmit = async () => {
-        let newErrors = { shortDescription: '', complaintDescription: '' };
+        let newErrors = { shortDescription: '', complaintDescription: '', priority: '' };
         let hasError = false;
 
         if (!shortDescription.trim()) {
@@ -81,6 +79,11 @@ const AddComplaintPopup: React.FC<AddComplaintPopupProps> = ({ open, onClose, on
 
         if (!complaintDescription.trim()) {
             newErrors.complaintDescription = 'Complaint Description is required';
+            hasError = true;
+        }
+
+        if (!priority.trim()) {
+            newErrors.priority = 'Priority is required';
             hasError = true;
         }
 
@@ -101,8 +104,8 @@ const AddComplaintPopup: React.FC<AddComplaintPopupProps> = ({ open, onClose, on
         const shortDescUpper = shortDescription.trim().toUpperCase();
         const complaintDescUpper = complaintDescription.trim().toUpperCase();
 
-        // Determine priority (optional; default to "9" if not provided)
-        const priorityValue = priority.trim() || '9';
+        // Determine priority (required)
+        const priorityValue = priority.trim();
 
         // Call the parent onSave callback with all form data
         const result = await onSave({
@@ -123,7 +126,7 @@ const AddComplaintPopup: React.FC<AddComplaintPopupProps> = ({ open, onClose, on
         setComplaintDescription('');
         setPriority('');
         setDisplayToOperator(false);
-        setErrors({ shortDescription: '', complaintDescription: '' });
+        setErrors({});
 
         // Close popup - success message will be shown in parent component
         onClose();
@@ -134,7 +137,7 @@ const AddComplaintPopup: React.FC<AddComplaintPopupProps> = ({ open, onClose, on
         setComplaintDescription('');
         setPriority('');
         setDisplayToOperator(false);
-        setErrors({ shortDescription: '', complaintDescription: '' });
+        setErrors({ shortDescription: '', complaintDescription: '', priority: '' });
         onClose();
     };
 
@@ -143,7 +146,7 @@ const AddComplaintPopup: React.FC<AddComplaintPopupProps> = ({ open, onClose, on
         setComplaintDescription('');
         setPriority('');
         setDisplayToOperator(false);
-        setErrors({ shortDescription: '', complaintDescription: '' });
+        setErrors({ shortDescription: '', complaintDescription: '', priority: '' });
     };
 
     return (
@@ -191,15 +194,15 @@ const AddComplaintPopup: React.FC<AddComplaintPopupProps> = ({ open, onClose, on
                                     value={shortDescription}
                                     onChange={(e) => {
                                         const val = e.target.value.toUpperCase();
-                                        if (val.length > 50) return;
-                                        setShortDescription(val);
-                                        if (errors.shortDescription) {
-                                            setErrors(prev => ({ ...prev, shortDescription: '' }));
+                                        const { allowed, error } = validateField('shortDescription', val, undefined, undefined, 'complaint');
+                                        if (allowed) {
+                                            setShortDescription(val);
+                                            setErrors(prev => ({ ...prev, shortDescription: error }));
                                         }
                                     }}
                                     disabled={!!editData}
                                     error={!!errors.shortDescription}
-                                    helperText={errors.shortDescription || (shortDescription.length === 50 ? 'Short Description cannot exceed 50 characters' : '')}
+                                    helperText={errors.shortDescription}
                                 />
                             </Box>
                         </Grid>
@@ -216,21 +219,21 @@ const AddComplaintPopup: React.FC<AddComplaintPopupProps> = ({ open, onClose, on
                                     value={complaintDescription}
                                     onChange={(e) => {
                                         const val = e.target.value.toUpperCase();
-                                        if (val.length > 150) return;
-                                        setComplaintDescription(val);
-                                        if (errors.complaintDescription) {
-                                            setErrors(prev => ({ ...prev, complaintDescription: '' }));
+                                        const { allowed, error } = validateField('complaintDescription', val, undefined, undefined, 'complaint');
+                                        if (allowed) {
+                                            setComplaintDescription(val);
+                                            setErrors(prev => ({ ...prev, complaintDescription: error }));
                                         }
                                     }}
                                     error={!!errors.complaintDescription}
-                                    helperText={errors.complaintDescription || (complaintDescription.length === 150 ? 'Complaint Description cannot exceed 150 characters' : '')}
+                                    helperText={errors.complaintDescription}
                                 />
                             </Box>
                         </Grid>
                         <Grid item xs={12}>
                             <Box sx={{ mb: 2 }}>
                                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
-                                    Priority
+                                    Priority <span style={{ color: 'red' }}>*</span>
                                 </Typography>
                                 <TextField
                                     fullWidth
@@ -240,10 +243,13 @@ const AddComplaintPopup: React.FC<AddComplaintPopupProps> = ({ open, onClose, on
                                     value={priority}
                                     onChange={(e) => {
                                         const val = e.target.value;
-                                        if (val.length > 50) return;
-                                        setPriority(val);
+                                        const { allowed, error } = validateField('priority', val, undefined, undefined, 'complaint');
+                                        if (allowed) {
+                                            setPriority(val);
+                                            setErrors(prev => ({ ...prev, priority: error }));
+                                        }
                                     }}
-                                    helperText={priority.length === 50 ? 'Priority cannot exceed 50 characters' : ''}
+                                    helperText={errors.priority}
                                 />
                             </Box>
                         </Grid>

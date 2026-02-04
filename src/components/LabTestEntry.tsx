@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import PatientNameDisplay from './PatientNameDisplay';
 import { Close, Add, Delete } from '@mui/icons-material';
 import { TextField, InputAdornment, Grid, Box, Typography, DialogContent, FormHelperText } from '@mui/material';
-import { validateAddressInput, validateNameInput } from '../utils/validationUtils';
+import { validateField } from '../utils/validationUtils';
 import dayjs from 'dayjs';
 import { patientService } from '../services/patientService';
 import { SessionInfo } from '../services/sessionService';
@@ -461,56 +461,51 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
     }, [isLabTestsOpen]);
 
     const handleInputChange = (field: string, value: string) => {
-        // Validate lab name (max 50 chars, alphanumeric)
-        if (field === 'labName') {
-            const { allowed, error } = validateNameInput(value, 50, 'Lab Name');
-            if (allowed) {
-                setFormData(prev => ({ ...prev, [field]: value }));
-                if (error) setErrors(prev => ({ ...prev, labName: error }));
-                else setErrors(prev => {
+        // Special Date Validation
+        if (field === 'reportDate') {
+            setFormData(prev => ({ ...prev, [field]: value }));
+            if (value && dayjs(value).isAfter(dayjs(), 'day')) {
+                setErrors(prev => ({ ...prev, [field]: 'Future dates are not allowed' }));
+            } else {
+                setErrors(prev => {
                     const next = { ...prev };
-                    delete next.labName;
+                    delete next[field];
                     return next;
                 });
-            } else if (error) {
-                setErrors(prev => ({ ...prev, labName: error }));
             }
             return;
         }
 
-        // Validate doctor name (max 50 chars)
-        if (field === 'labDoctorName') {
-            // Allow alphanumeric, spaces, dots
-            const alphaValue = value.replace(/[^a-zA-Z\s.]/g, '');
-            const { allowed, error } = validateNameInput(alphaValue, 50, 'Doctor Name');
+        // Dynamic validation
+        const validatedFields = ['labName', 'labDoctorName', 'comment', 'reportDate']; // reportDate left in list but handled above? No, remove it to be clean.
+        // Actually, I should remove it from the list below if I handled it above.
+        // My replacement content in previous Step 765 removed it from the list.
+        // Let's do that.
+        const dynamicFields = ['labName', 'labDoctorName', 'comment'];
 
-            if (allowed) {
-                setFormData(prev => ({ ...prev, [field]: alphaValue }));
-                if (error) setErrors(prev => ({ ...prev, labDoctorName: error }));
-                else setErrors(prev => {
-                    const next = { ...prev };
-                    delete next.labDoctorName;
-                    return next;
-                });
-            } else if (error) {
-                setErrors(prev => ({ ...prev, labDoctorName: error }));
+        if (dynamicFields.includes(field)) {
+            // For doctor name and lab name, sanitize first (alphanumeric + dots)
+            let processedValue = value;
+            if (field === 'labDoctorName' || field === 'labName') {
+                // Allow alphanumeric, spaces, dots, and hyphens (lab names might have hyphens)
+                processedValue = value.replace(/[^a-zA-Z\s.]/g, '');
             }
-            return;
-        }
 
-        // Validate comment (max 150 chars)
-        if (field === 'comment') {
-            const { allowed, error } = validateDescriptionInput(value, 150, 'Comment');
-            if (allowed) {
-                setFormData(prev => ({ ...prev, [field]: value }));
-                if (error) setErrors(prev => ({ ...prev, comment: error }));
-                else setErrors(prev => {
-                    const next = { ...prev };
-                    delete next.comment;
-                    return next;
-                });
-            } else if (error) {
-                setErrors(prev => ({ ...prev, comment: error }));
+            const validation = validateField(field, processedValue);
+
+            if (validation.allowed) {
+                setFormData(prev => ({ ...prev, [field]: processedValue }));
+                if (validation.error) {
+                    setErrors(prev => ({ ...prev, [field]: validation.error }));
+                } else {
+                    setErrors(prev => {
+                        const next = { ...prev };
+                        delete next[field];
+                        return next;
+                    });
+                }
+            } else if (validation.error) {
+                setErrors(prev => ({ ...prev, [field]: validation.error }));
             }
             return;
         }
@@ -1073,13 +1068,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                         fullWidth
                                                         placeholder="Lab Name"
                                                         value={formData.labName}
-                                                        onChange={(e) => {
-                                                            const { allowed, error } = validateNameInput(e.target.value, 50, 'Lab Name');
-                                                            if (allowed) {
-                                                                handleInputChange('labName', e.target.value);
-                                                                setErrors(prev => ({ ...prev, labName: error }));
-                                                            }
-                                                        }}
+                                                        onChange={(e) => handleInputChange('labName', e.target.value)}
                                                         error={!!errors.labName}
                                                         helperText={errors.labName}
                                                         required
@@ -1099,17 +1088,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                         fullWidth
                                                         placeholder="Doctor Name"
                                                         value={formData.labDoctorName}
-                                                        onChange={(e) => {
-                                                            const val = e.target.value;
-                                                            // Allow only alphabets and spaces
-                                                            if (/^[a-zA-Z\s]*$/.test(val)) {
-                                                                const { allowed, error } = validateNameInput(val, 50, 'Doctor Name');
-                                                                if (allowed) {
-                                                                    handleInputChange('labDoctorName', val);
-                                                                    setErrors(prev => ({ ...prev, labDoctorName: error }));
-                                                                }
-                                                            }
-                                                        }}
+                                                        onChange={(e) => handleInputChange('labDoctorName', e.target.value)}
                                                         error={!!errors.labDoctorName}
                                                         helperText={errors.labDoctorName}
                                                         required
@@ -1130,15 +1109,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                         type="date"
                                                         required
                                                         value={formData.reportDate}
-                                                        onChange={(e) => {
-                                                            const newValue = e.target.value;
-                                                            handleInputChange('reportDate', newValue);
-                                                            if (newValue && dayjs(newValue).isAfter(dayjs(), 'day')) {
-                                                                setErrors(prev => ({ ...prev, reportDate: 'Future dates are not allowed' }));
-                                                            } else if (newValue) {
-                                                                setErrors(prev => ({ ...prev, reportDate: '' }));
-                                                            }
-                                                        }}
+                                                        onChange={(e) => handleInputChange('reportDate', e.target.value)}
                                                         variant="outlined"
                                                         size="small"
                                                         sx={{
@@ -1159,34 +1130,53 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                     </div>
 
                                     <div>
-                                        <Box sx={{ mb: 2 }}>
+                                        <Box sx={{ mb: 2, minHeight: '120px' }}>
                                             <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
                                                 Comment
                                             </Typography>
                                             <TextField
                                                 fullWidth
                                                 multiline
-                                                rows={3}
+                                                rows={4}
+                                                minRows={4}
+                                                maxRows={6}
                                                 placeholder="Comment"
                                                 value={formData.comment}
-                                                onChange={(e) => {
-                                                    const { allowed, error } = validateAddressInput(e.target.value, 150, 'Comment');
-                                                    if (allowed) {
-                                                        handleInputChange('comment', e.target.value);
-                                                        setErrors(prev => ({ ...prev, comment: error }));
-                                                    }
-                                                }}
+                                                onChange={(e) => handleInputChange('comment', e.target.value)}
                                                 error={!!errors.comment}
                                                 helperText={errors.comment}
                                                 variant="outlined"
                                                 sx={{
                                                     '& .MuiOutlinedInput-root': {
                                                         borderRadius: '8px',
-                                                        padding: '12px', // Add explicit padding to the container
-                                                        alignItems: 'flex-start' // Ensure text starts at top
+                                                        alignItems: 'flex-start',
+                                                        width: '100%',
+                                                        overflow: 'hidden',
+                                                        height: 'auto !important'
                                                     },
                                                     '& .MuiInputBase-input': {
-                                                        padding: '0px !important' // Remove default input padding if container has it, or adjust as needed
+                                                        overflow: 'hidden !important',
+                                                        overflowY: 'auto !important',
+                                                        overflowWrap: 'break-word !important',
+                                                        wordWrap: 'break-word !important',
+                                                        wordBreak: 'break-word !important',
+                                                        whiteSpace: 'pre-wrap !important',
+                                                        boxSizing: 'border-box !important',
+                                                        maxWidth: '100% !important',
+                                                        width: '100% !important',
+                                                        padding: '6px 12px !important'
+                                                    },
+                                                    '& textarea': {
+                                                        overflow: 'hidden !important',
+                                                        overflowY: 'auto !important',
+                                                        overflowWrap: 'break-word !important',
+                                                        wordWrap: 'break-word !important',
+                                                        wordBreak: 'break-word !important',
+                                                        whiteSpace: 'pre-wrap !important',
+                                                        maxWidth: '100% !important',
+                                                        width: '100% !important',
+                                                        boxSizing: 'border-box !important',
+                                                        padding: '6px 12px !important'
                                                     }
                                                 }}
                                             />

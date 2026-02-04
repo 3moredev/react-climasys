@@ -3,7 +3,8 @@ import { Close, Add, Delete } from '@mui/icons-material';
 import {
     Snackbar, Alert, Dialog, DialogTitle, DialogContent,
     DialogActions, Grid, Box, Typography, TextField, Button,
-    IconButton, Checkbox, FormControlLabel, MenuItem
+    IconButton, Checkbox, FormControlLabel, MenuItem,
+    InputAdornment, CircularProgress
 } from '@mui/material';
 import { visitService, ComprehensiveVisitDataRequest } from '../services/visitService';
 import { complaintService, ComplaintOption } from '../services/complaintService';
@@ -13,6 +14,9 @@ import { doctorService } from '../services/doctorService';
 import AddReferralPopup, { ReferralData } from '../components/AddReferralPopup';
 import AddPatientPage from './AddPatientPage';
 import PatientNameDisplay from '../components/PatientNameDisplay';
+import ClearableTextField from '../components/ClearableTextField';
+import { getFieldConfig } from '../utils/fieldValidationConfig';
+import { validateField } from '../utils/validationUtils';
 
 interface AppointmentRow {
     reports_received: any;
@@ -50,7 +54,7 @@ interface PatientVisitDetailsProps {
 const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose, patientData, onVisitDetailsSubmitted, readOnly = false }) => {
 
     const [formData, setFormData] = useState({
-        referralBy: 'Self',
+        referralBy: '',
         referralName: '',
         referralContact: '',
         referralEmail: '',
@@ -111,6 +115,8 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
     const [fileValidationMessage, setFileValidationMessage] = useState<string | null>(null);
     const [validationErrors, setValidationErrors] = useState<{ [key: string]: string | null }>({});
 
+    const isSelfReferral = formData.referralBy === 'Self' || formData.referralBy === 'S' || referByOptions.find(opt => opt.id === formData.referralBy)?.name === 'Self';
+
     const filteredComplaints = React.useMemo(() => {
         const term = complaintSearch.trim().toLowerCase();
 
@@ -163,6 +169,10 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
     };
 
     const handleComplaintCommentChange = (rowValue: string, text: string) => {
+        const config = getFieldConfig('complaintComment', 'visit');
+        if (config?.maxLength && text.length > config.maxLength) {
+            return;
+        }
         setComplaintsRows(prev => prev.map(r => r.value === rowValue ? { ...r, comment: text } : r));
     };
 
@@ -619,9 +629,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                     if (normalized.referByRaw) {
                         const referIdStr = String(normalized.referByRaw);
                         const matchExists = referByOptions.some(o => String(o.id) === referIdStr);
-                        patched.referralBy = matchExists ? referIdStr : 'Self';
-                    } else if (!patched.referralBy) {
-                        patched.referralBy = 'Self';
+                        patched.referralBy = matchExists ? referIdStr : '';
                     }
 
                     // Patch referral name and contact fields from API if it's a doctor referral
@@ -745,9 +753,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                             if (normalized.referByRaw) {
                                 const referIdStr = String(normalized.referByRaw);
                                 const matchExists = referByOptions.some(o => String(o.id) === referIdStr);
-                                patched.referralBy = matchExists ? referIdStr : 'Self';
-                            } else if (!patched.referralBy) {
-                                patched.referralBy = 'Self';
+                                patched.referralBy = matchExists ? referIdStr : '';
                             }
                             // Patch referral name and contact fields from API if it's a doctor referral
                             // Always set these from API when available (they were saved when doctor was selected)
@@ -984,67 +990,41 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
     if (!open || !patientData) return null;
 
     const handleInputChange = (field: string, value: any) => {
+        const fieldConfig = getFieldConfig(field, 'visit');
+        let processedValue = value;
+
+        // Strict Character Filtering at Source
+        if (field === 'referralName') {
+            processedValue = value.replace(/[^a-zA-Z\s]/g, '');
+        } else if (field === 'referralContact' || field === 'pulse') {
+            processedValue = value.replace(/[^0-9]/g, '');
+        } else if (field === 'height' || field === 'weight') {
+            // Allow digits and at most one dot
+            processedValue = value.replace(/[^0-9.]/g, '');
+            const parts = processedValue.split('.');
+            if (parts.length > 2) {
+                processedValue = parts[0] + '.' + parts.slice(1).join('');
+            }
+        }
+
+        // Input blocking: Prevent typing beyond maxLength
+        if (fieldConfig?.maxLength && processedValue && processedValue.length > fieldConfig.maxLength) {
+            return;
+        }
+
+        // Real-time Validation Result
+        const { error } = validateField(field, processedValue, undefined, undefined, 'visit');
+
         setFormData(prev => {
-            // Check for character limit
-            // Check for character limit
-            if (['visitComments', 'pastSurgicalHistory', 'currentMedicines'].includes(field)) {
-                if (value.length > 999) {
-                    setValidationErrors(prevErrors => ({
-                        ...prevErrors,
-                        [field]: 'Max character limit of 999 reached'
-                    }));
-                    return { ...prev, [field]: value.slice(0, 999) };
-                } else {
-                    // Clear error if below limit
-                    setValidationErrors(prevErrors => {
-                        if (prevErrors[field]) {
-                            const newErrors = { ...prevErrors };
-                            delete newErrors[field];
-                            return newErrors;
-                        }
-                        return prevErrors;
-                    });
-                }
-            }
-
-            // Referral Contact Validation (10 digits)
-            if (field === 'referralContact') {
-                const isValid = /^\d{10}$/.test(value);
-                if (value && !isValid) {
-                    setValidationErrors(prev => ({ ...prev, referralContact: 'Mobile number must be 10 digits' }));
-                } else {
-                    setValidationErrors(prev => {
-                        const newErrors = { ...prev };
-                        delete newErrors.referralContact;
-                        return newErrors;
-                    });
-                }
-            }
-
-            // Referral Email Validation
-            if (field === 'referralEmail') {
-                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                if (value && !emailRegex.test(value)) {
-                    setValidationErrors(prev => ({ ...prev, referralEmail: 'Invalid email address' }));
-                } else {
-                    setValidationErrors(prev => {
-                        const newErrors = { ...prev };
-                        delete newErrors.referralEmail;
-                        return newErrors;
-                    });
-                }
-            }
-
-            const newData = { ...prev, [field]: value };
+            const newData = { ...prev, [field]: processedValue };
 
             // Calculate BMI when height or weight changes
             if (field === 'height' || field === 'weight') {
-                const height = field === 'height' ? parseFloat(value) : parseFloat(prev.height);
-                const weight = field === 'weight' ? parseFloat(value) : parseFloat(prev.weight);
+                const height = field === 'height' ? parseFloat(processedValue) : parseFloat(prev.height);
+                const weight = field === 'weight' ? parseFloat(processedValue) : parseFloat(prev.weight);
 
                 if (height > 0 && weight > 0) {
-                    const bmi = (weight / ((height / 100) * (height / 100))).toFixed(1);
-                    newData.bmi = bmi;
+                    newData.bmi = (weight / ((height / 100) * (height / 100))).toFixed(1);
                 } else {
                     newData.bmi = '';
                 }
@@ -1052,24 +1032,27 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
 
             // Reset referral name search when referral type changes
             if (field === 'referralBy') {
-                // Clear referral details
                 newData.referralName = '';
                 newData.referralContact = '';
                 newData.referralEmail = '';
                 newData.referralAddress = '';
-
-                // Clear selected doctor state
                 setSelectedDoctor(null);
                 setReferralNameSearch('');
                 setReferralNameOptions([]);
             }
 
-            // Handle alphabets-only input for referralName
-            if (field === 'referralName') {
-                newData[field] = value.replace(/[^a-zA-Z\s]/g, '');
-            }
-
             return newData;
+        });
+
+        // Update validation errors state
+        setValidationErrors(prev => {
+            const newErrors = { ...prev };
+            if (error) {
+                newErrors[field] = error;
+            } else {
+                delete newErrors[field];
+            }
+            return newErrors;
         });
     };
 
@@ -1147,9 +1130,31 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
 
     // Search referral names when typing
     const handleReferralNameSearch = async (searchTerm: string) => {
+        const fieldConfig = getFieldConfig('referralName', 'visit');
+
         // Allow only alphabets and spaces
         const cleanSearchTerm = searchTerm.replace(/[^a-zA-Z\s]/g, '');
+
+        // Input blocking: Prevent typing beyond maxLength
+        if (fieldConfig?.maxLength && cleanSearchTerm.length > fieldConfig.maxLength) {
+            return;
+        }
+
         setReferralNameSearch(cleanSearchTerm);
+
+        // Real-time Validation Result
+        const { error } = validateField('referralName', cleanSearchTerm, undefined, undefined, 'visit');
+
+        // Update validation errors state
+        setValidationErrors(prev => {
+            const newErrors = { ...prev };
+            if (error) {
+                newErrors.referralName = error;
+            } else {
+                delete newErrors.referralName;
+            }
+            return newErrors;
+        });
 
         if (cleanSearchTerm.length < 2) {
             setReferralNameOptions([]);
@@ -1183,7 +1188,80 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
 
     // Check if current referral by is a doctor (specifically referId "D")
     const isDoctorReferral = () => {
-        return formData.referralBy === 'D';
+        return formData.referralBy === 'D' || referByOptions.find(opt => opt.id === formData.referralBy)?.name === 'Doctor';
+    };
+
+
+    const validateForm = () => {
+        const errors: { [key: string]: string } = {};
+
+        // Pulse validation (optional, but range check if provided)
+        if (formData.pulse) {
+            const val = parseFloat(formData.pulse);
+            if (isNaN(val) || val < 30 || val > 220) {
+                errors.pulse = 'Pulse must be between 30 and 220';
+            }
+        }
+
+        // Referral Name is required if not Self
+        if (formData.referralBy !== 'Self' && !formData.referralName) {
+            errors.referralName = 'Referral name is required';
+        }
+
+        // Height range check if provided
+        if (formData.height) {
+            const val = parseFloat(formData.height);
+            if (isNaN(val) || val < 30 || val > 250) {
+                errors.height = 'Height must be between 30 and 250 cm';
+            }
+        }
+
+        // Weight range check if provided
+        if (formData.weight) {
+            const val = parseFloat(formData.weight);
+            if (isNaN(val) || val < 1 || val > 250) {
+                errors.weight = 'Weight must be between 1 and 250 kg';
+            }
+        }
+
+        // BP format check if provided
+        if (formData.bp) {
+            const bpRegex = /^\d{2,3}[\/\-]\d{2,3}$/;
+            if (!bpRegex.test(formData.bp)) {
+                errors.bp = 'Invalid BP format (e.g. 120/80)';
+            }
+        }
+
+        // Referral Contact/Email checks if provided
+        if (formData.referralContact) {
+            if (!/^\d{10}$/.test(formData.referralContact)) {
+                errors.referralContact = 'Mobile number must be 10 digits';
+            }
+        }
+        if (formData.referralEmail) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(formData.referralEmail)) {
+                errors.referralEmail = 'Invalid email address';
+            }
+        }
+
+        // Generic Max Length Checks
+        const fieldsToCheck = [
+            'visitComments', 'currentMedicines', 'referralName',
+            'referralAddress', 'tft', 'pastSurgicalHistory',
+            'instructionGroupComments', 'sugar'
+        ];
+
+        fieldsToCheck.forEach(field => {
+            const value = (formData as any)[field];
+            const config = getFieldConfig(field, 'visit');
+            if (config?.maxLength && value && value.length > config.maxLength) {
+                errors[field] = `${config.fieldName} exceeds maximum length of ${config.maxLength} characters`;
+            }
+        });
+
+        setValidationErrors(errors);
+        return Object.keys(errors).length === 0;
     };
 
     const handleDownloadDocument = (docId: number) => {
@@ -1214,6 +1292,9 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
     const [documentsToDelete, setDocumentsToDelete] = useState<number[]>([]);
 
     const handleSubmit = async () => {
+        if (!validateForm()) {
+            return;
+        }
         try {
             const todayDate = new Date();
 
@@ -1468,7 +1549,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
 
     const handleReset = () => {
         setFormData({
-            referralBy: 'Self',
+            referralBy: '',
             referralName: '',
             referralContact: '',
             referralEmail: '',
@@ -1583,7 +1664,41 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                         </Box>
                     </Box>
                 </DialogTitle>
-                <DialogContent dividers sx={{ p: 2 }}>
+                <DialogContent dividers sx={{
+                    p: 2,
+                    '& .MuiOutlinedInput-root': {
+                        borderRadius: '8px',
+                        '& .MuiOutlinedInput-notchedOutline': {
+                            borderWidth: '2px',
+                            borderColor: '#B7B7B7'
+                        },
+                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                            borderColor: '#999'
+                        },
+                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                            borderWidth: '2px',
+                            borderColor: '#1E88E5'
+                        },
+                        '&.Mui-disabled': {
+                            backgroundColor: '#f5f5f5 !important',
+                            '& .MuiOutlinedInput-notchedOutline': {
+                                borderColor: '#B7B7B7 !important'
+                            }
+                        }
+                    },
+                    '& .MuiInputBase-input.Mui-disabled': {
+                        WebkitTextFillColor: 'rgba(0,0,0,0.87) !important'
+                    },
+                    '& .MuiFormHelperText-root': {
+                        fontSize: '0.75rem',
+                        lineHeight: 1.66,
+                        fontFamily: "'Roboto', sans-serif",
+                        margin: '3px 0 0 0 !important',
+                        padding: '0 !important',
+                        minHeight: '1.25rem',
+                        textAlign: 'left !important'
+                    }
+                }}>
                     {/* Error/Success Messages */}
                     {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
                     {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
@@ -1623,8 +1738,17 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     onChange={(e) => handleInputChange('referralBy', e.target.value)}
                                     disabled={readOnly}
                                     variant="outlined"
+                                    SelectProps={{
+                                        displayEmpty: true,
+                                        renderValue: (selected: any) => {
+                                            if (selected === '' || selected === null || selected === undefined) {
+                                                return <span style={{ color: 'rgba(0,0,0,0.6)' }}>Referred By</span>;
+                                            }
+                                            const option = referByOptions.find(opt => opt.id === selected);
+                                            return option ? option.name : String(selected ?? '');
+                                        }
+                                    }}
                                 >
-                                    <MenuItem value="Self">Self</MenuItem>
                                     {referByOptions.map(opt => (
                                         <MenuItem key={opt.id} value={opt.id}>{opt.name}</MenuItem>
                                     ))}
@@ -1636,111 +1760,162 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                 (formData.referralName && formData.referralName.trim() !== '') || selectedDoctor !== null ? (
                                     <Box sx={{ mb: 2 }}>
                                         <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
-                                            Referral Name
+                                            {isDoctorReferral() ? 'Doctor Name' : 'Referral Name'}
                                         </Typography>
-                                        <TextField
+                                        <ClearableTextField
                                             fullWidth
                                             size="small"
                                             value={formData.referralName}
-                                            onChange={(e) => handleInputChange('referralName', e.target.value)}
-                                            disabled={readOnly || selectedDoctor !== null}
+                                            onChange={(value) => handleInputChange('referralName', value)}
+                                            onClear={() => {
+                                                handleInputChange('referralName', '');
+                                                setReferralNameSearch('');
+                                                setSelectedDoctor(null);
+                                                setReferralNameOptions([]);
+                                            }}
+                                            disabled={readOnly || isSelfReferral}
                                             variant="outlined"
-                                        />
-                                    </Box>
-                                ) : (
-                                    <Box position="relative" sx={{ mb: 2 }}>
-                                        <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
-                                            Search Doctor Name
-                                        </Typography>
-                                        <TextField
-                                            fullWidth
-                                            size="small"
-                                            placeholder="Search Doctor Name"
-                                            value={referralNameSearch}
-                                            onChange={(e) => handleReferralNameSearch(e.target.value)}
-                                            disabled={readOnly}
-                                            variant="outlined"
+                                            placeholder={isDoctorReferral() ? 'Type Doctor Name' : 'Type Referral Name'}
+                                            error={!!validationErrors.referralName}
+                                            helperText={validationErrors.referralName}
                                             InputProps={{
                                                 endAdornment: (
-                                                    <IconButton
-                                                        size="small"
-                                                        onClick={() => !readOnly && setShowReferralPopup(true)}
-                                                        disabled={readOnly}
-                                                        title="Add New Referral Doctor"
-                                                        sx={{
-                                                            backgroundColor: readOnly ? '#9e9e9e' : '#1976d2',
-                                                            color: 'white',
-                                                            width: 24,
-                                                            height: 24,
-                                                            padding: 0,
-                                                            '&:hover': {
-                                                                backgroundColor: readOnly ? '#9e9e9e' : '#1565c0',
-                                                            }
-                                                        }}
-                                                    >
-                                                        <Add sx={{ fontSize: 16 }} />
-                                                    </IconButton>
+                                                    <React.Fragment>
+                                                        <InputAdornment position="end">
+                                                            <IconButton
+                                                                size="small"
+                                                                onClick={() => !readOnly && !isSelfReferral && setShowReferralPopup(true)}
+                                                                disabled={readOnly || isSelfReferral}
+                                                                title="Add New Referral Doctor"
+                                                                sx={{
+                                                                    backgroundColor: readOnly ? '#9e9e9e' : '#1976d2',
+                                                                    color: 'white',
+                                                                    width: 24,
+                                                                    height: 24,
+                                                                    padding: 0,
+                                                                    '&:hover': {
+                                                                        backgroundColor: readOnly ? '#9e9e9e' : '#1565c0',
+                                                                    }
+                                                                }}
+                                                            >
+                                                                <Add sx={{ fontSize: 16 }} />
+                                                            </IconButton>
+                                                        </InputAdornment>
+                                                    </React.Fragment>
                                                 )
                                             }}
                                         />
-                                        {/* Search Results Dropdown */}
-                                        {referralNameOptions.length > 0 && (
-                                            <Box sx={{
-                                                position: 'absolute',
-                                                top: '100%',
-                                                left: 0,
-                                                right: 0,
-                                                backgroundColor: 'white',
-                                                border: '1px solid #B7B7B7',
-                                                borderRadius: '6px',
-                                                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                                                zIndex: 1000,
-                                                maxHeight: '200px',
-                                                overflowY: 'auto'
-                                            }}>
-                                                {referralNameOptions.map((option) => (
-                                                    <Box
-                                                        key={option.id}
-                                                        onClick={() => {
-                                                            setSelectedDoctor((option as any).fullData);
-                                                            setFormData(prev => ({
-                                                                ...prev,
-                                                                referralName: option.name,
-                                                                referralContact: (option as any).fullData?.doctorMob || '',
-                                                                referralEmail: (option as any).fullData?.doctorMail || '',
-                                                                referralAddress: (option as any).fullData?.doctorAddress || ''
-                                                            }));
-                                                            setReferralNameSearch(option.name);
-                                                            setReferralNameOptions([]);
-                                                        }}
-                                                        sx={{
-                                                            padding: '8px 12px',
-                                                            cursor: 'pointer',
-                                                            fontSize: '0.9rem',
-                                                            borderBottom: '1px solid #f0f0f0',
-                                                            '&:hover': { backgroundColor: '#f5f5f5' }
-                                                        }}
-                                                    >
-                                                        {option.name}
-                                                    </Box>
-                                                ))}
-                                            </Box>
-                                        )}
+                                    </Box>
+                                ) : (
+                                    <Box sx={{ mb: 2 }}>
+                                        <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
+                                            {isDoctorReferral() ? 'Doctor Name' : 'Referral Name'}
+                                        </Typography>
+                                        <Box position="relative">
+                                            <ClearableTextField
+                                                fullWidth
+                                                size="small"
+                                                placeholder={isDoctorReferral() ? 'Type Doctor Name' : 'Type Referral Name'}
+                                                value={referralNameSearch}
+                                                onChange={(value) => handleReferralNameSearch(value)}
+                                                onClear={() => {
+                                                    handleInputChange('referralName', '');
+                                                    setReferralNameSearch('');
+                                                    setSelectedDoctor(null);
+                                                    setReferralNameOptions([]);
+                                                }}
+                                                disabled={readOnly || isSelfReferral}
+                                                variant="outlined"
+                                                error={!!validationErrors.referralName}
+                                                helperText={validationErrors.referralName}
+                                                InputProps={{
+                                                    endAdornment: (
+                                                        <React.Fragment>
+                                                            {isSearchingReferral && <CircularProgress color="inherit" size={20} sx={{ mr: 1 }} />}
+                                                            <InputAdornment position="end">
+                                                                <IconButton
+                                                                    size="small"
+                                                                    onClick={() => !readOnly && !isSelfReferral && setShowReferralPopup(true)}
+                                                                    disabled={readOnly || isSelfReferral}
+                                                                    title="Add New Referral Doctor"
+                                                                    sx={{
+                                                                        backgroundColor: readOnly ? '#9e9e9e' : '#1976d2',
+                                                                        color: 'white',
+                                                                        width: 24,
+                                                                        height: 24,
+                                                                        padding: 0,
+                                                                        '&:hover': {
+                                                                            backgroundColor: readOnly ? '#9e9e9e' : '#1565c0',
+                                                                        }
+                                                                    }}
+                                                                >
+                                                                    <Add sx={{ fontSize: 16 }} />
+                                                                </IconButton>
+                                                            </InputAdornment>
+                                                        </React.Fragment>
+                                                    )
+                                                }}
+                                            />
+                                            {/* Search Results Dropdown */}
+                                            {referralNameOptions.length > 0 && (
+                                                <Box sx={{
+                                                    position: 'absolute',
+                                                    top: 'calc(100% + 4px)',
+                                                    left: 0,
+                                                    right: 0,
+                                                    backgroundColor: 'white',
+                                                    borderRadius: '4px',
+                                                    boxShadow: '0px 5px 5px -3px rgba(0,0,0,0.2), 0px 8px 10px 1px rgba(0,0,0,0.14), 0px 3px 14px 2px rgba(0,0,0,0.12)',
+                                                    zIndex: 1000,
+                                                    maxHeight: '200px',
+                                                    overflowY: 'auto'
+                                                }}>
+                                                    {referralNameOptions.map((option) => (
+                                                        <Box
+                                                            key={option.id}
+                                                            onClick={() => {
+                                                                setSelectedDoctor((option as any).fullData);
+                                                                setFormData(prev => ({
+                                                                    ...prev,
+                                                                    referralName: option.name,
+                                                                    referralContact: (option as any).fullData?.doctorMob || '',
+                                                                    referralEmail: (option as any).fullData?.doctorMail || '',
+                                                                    referralAddress: (option as any).fullData?.doctorAddress || ''
+                                                                }));
+                                                                setReferralNameSearch(option.name);
+                                                                setReferralNameOptions([]);
+                                                            }}
+                                                            sx={{
+                                                                padding: '8px 12px',
+                                                                cursor: 'pointer',
+                                                                fontSize: '14px',
+                                                                borderBottom: '1px solid #f0f0f0',
+                                                                '&:hover': { backgroundColor: '#f5f5f5' }
+                                                            }}
+                                                        >
+                                                            {option.name}
+                                                        </Box>
+                                                    ))}
+                                                </Box>
+                                            )}
+                                        </Box>
                                     </Box>
                                 )
                             ) : (
                                 <Box sx={{ mb: 2 }}>
                                     <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
-                                        Referral Name
+                                        {isDoctorReferral() ? 'Doctor Name' : 'Referral Name'}
                                     </Typography>
-                                    <TextField
+                                    <ClearableTextField
                                         fullWidth
                                         size="small"
                                         value={formData.referralName}
-                                        onChange={(e) => handleInputChange('referralName', e.target.value)}
-                                        disabled={readOnly}
+                                        onChange={(value) => handleInputChange('referralName', value)}
+                                        disabled={readOnly || isSelfReferral}
                                         variant="outlined"
-                                        placeholder='Referral Name'
+                                        placeholder={isDoctorReferral() ? 'Type Doctor Name' : 'Type Referral Name'}
+                                        error={!!validationErrors.referralName}
+                                        helperText={validationErrors.referralName}
                                     />
                                 </Box>
                             )}
@@ -1750,14 +1925,15 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                                     Referral Contact
                                 </Typography>
-                                <TextField
+                                <ClearableTextField
                                     fullWidth
                                     size="small"
                                     value={formData.referralContact}
-                                    onChange={(e) => handleInputChange('referralContact', e.target.value)}
-                                    disabled={readOnly || selectedDoctor !== null}
+                                    onChange={(value) => handleInputChange('referralContact', value)}
+                                    disabled={readOnly || isSelfReferral || (isDoctorReferral() && selectedDoctor !== null)}
                                     variant="outlined"
                                     placeholder='Referral Contact'
+                                    inputProps={{ maxLength: getFieldConfig('referralContact', 'visit')?.maxLength }}
                                     error={!!validationErrors.referralContact}
                                     helperText={validationErrors.referralContact}
                                 />
@@ -1768,15 +1944,16 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                                     Referral Email
                                 </Typography>
-                                <TextField
+                                <ClearableTextField
                                     fullWidth
                                     size="small"
                                     type="email"
                                     value={formData.referralEmail}
-                                    onChange={(e) => handleInputChange('referralEmail', e.target.value)}
-                                    disabled={readOnly || selectedDoctor !== null}
+                                    onChange={(value) => handleInputChange('referralEmail', value)}
+                                    disabled={readOnly || isSelfReferral || (isDoctorReferral() && selectedDoctor !== null)}
                                     variant="outlined"
                                     placeholder='Referral Email'
+                                    inputProps={{ maxLength: getFieldConfig('referralEmail', 'visit')?.maxLength }}
                                     error={!!validationErrors.referralEmail}
                                     helperText={validationErrors.referralEmail}
                                 />
@@ -1787,15 +1964,17 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                                     Referral Address
                                 </Typography>
-                                <TextField
+                                <ClearableTextField
                                     fullWidth
                                     size="small"
                                     value={formData.referralAddress}
-                                    onChange={(e) => handleInputChange('referralAddress', e.target.value)}
-                                    disabled={readOnly || selectedDoctor !== null}
+                                    onChange={(value) => handleInputChange('referralAddress', value)}
+                                    disabled={readOnly || isSelfReferral || (isDoctorReferral() && selectedDoctor !== null)}
                                     variant="outlined"
-                                    inputProps={{ maxLength: 150 }}
+                                    inputProps={{ maxLength: getFieldConfig('referralAddress', 'visit')?.maxLength }}
                                     placeholder='Referral Address'
+                                    error={!!validationErrors.referralAddress}
+                                    helperText={validationErrors.referralAddress}
                                 />
                             </Box>
                         </Grid>
@@ -1804,32 +1983,19 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                                     Pulse (/min)
                                 </Typography>
-                                <TextField
+                                <ClearableTextField
                                     fullWidth
                                     size="small"
-                                    type="number"
                                     value={formData.pulse}
                                     placeholder='Pulse'
-                                    onChange={(e) => {
-                                        const value = e.target.value;
-                                        if (value === '' || (!isNaN(parseFloat(value)) && parseFloat(value) >= 0)) {
-                                            handleInputChange('pulse', value);
-                                        }
-                                    }}
-                                    onKeyDown={(e) => {
-                                        if (e.key === '-' || e.key === 'e' || e.key === 'E' || e.key === '+') {
-                                            e.preventDefault();
-                                        }
-                                    }}
-                                    onBlur={(e) => {
-                                        const numValue = parseFloat(e.target.value);
-                                        if (isNaN(numValue) || numValue < 0) {
-                                            handleInputChange('pulse', '');
-                                        }
-                                    }}
+                                    onChange={(value) => handleInputChange('pulse', value)}
                                     disabled={readOnly}
                                     variant="outlined"
-                                    inputProps={{ min: "0", step: "1" }}
+                                    inputProps={{
+                                        maxLength: getFieldConfig('pulse', 'visit')?.maxLength
+                                    }}
+                                    error={!!validationErrors.pulse}
+                                    helperText={validationErrors.pulse}
                                 />
                             </Box>
                         </Grid>
@@ -1843,32 +2009,19 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                                         Height (Cm)
                                     </Typography>
-                                    <TextField
+                                    <ClearableTextField
                                         fullWidth
                                         size="small"
-                                        type="number"
                                         value={formData.height}
-                                        onChange={(e) => {
-                                            const value = e.target.value;
-                                            if (value === '' || (!isNaN(parseFloat(value)) && parseFloat(value) >= 0)) {
-                                                handleInputChange('height', value);
-                                            }
-                                        }}
-                                        onKeyDown={(e) => {
-                                            if (e.key === '-' || e.key === 'e' || e.key === 'E' || e.key === '+') {
-                                                e.preventDefault();
-                                            }
-                                        }}
-                                        onBlur={(e) => {
-                                            const numValue = parseFloat(e.target.value);
-                                            if (isNaN(numValue) || numValue < 0) {
-                                                handleInputChange('height', '');
-                                            }
-                                        }}
+                                        onChange={(value) => handleInputChange('height', value)}
                                         disabled={readOnly}
                                         variant="outlined"
-                                        inputProps={{ min: "0", step: "0.1" }}
+                                        inputProps={{
+                                            maxLength: getFieldConfig('height', 'visit')?.maxLength
+                                        }}
                                         placeholder='Height'
+                                        error={!!validationErrors.height}
+                                        helperText={validationErrors.height}
                                     />
                                 </Box>
                             </Grid>
@@ -1877,33 +2030,19 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                                         Weight (Kg)
                                     </Typography>
-                                    <TextField
+                                    <ClearableTextField
                                         fullWidth
                                         size="small"
-                                        type="number"
                                         value={formData.weight}
                                         placeholder='Weight'
-                                        onChange={(e) => {
-                                            const value = e.target.value;
-                                            // Regex: Max 3 digits integer, optional dot, optional 1 digit decimal
-                                            if (value === '' || (/^\d{0,3}(\.\d{0,1})?$/.test(value))) {
-                                                handleInputChange('weight', value);
-                                            }
-                                        }}
-                                        onKeyDown={(e) => {
-                                            if (e.key === '-' || e.key === 'e' || e.key === 'E' || e.key === '+') {
-                                                e.preventDefault();
-                                            }
-                                        }}
-                                        onBlur={(e) => {
-                                            const numValue = parseFloat(e.target.value);
-                                            if (isNaN(numValue) || numValue < 0) {
-                                                handleInputChange('weight', '');
-                                            }
-                                        }}
+                                        onChange={(value) => handleInputChange('weight', value)}
                                         disabled={readOnly}
                                         variant="outlined"
-                                        inputProps={{ min: "0", step: "0.1" }}
+                                        inputProps={{
+                                            maxLength: getFieldConfig('weight', 'visit')?.maxLength
+                                        }}
+                                        error={!!validationErrors.weight}
+                                        helperText={validationErrors.weight}
                                     />
                                 </Box>
                             </Grid>
@@ -1915,11 +2054,9 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     <TextField
                                         fullWidth
                                         size="small"
-                                        type="number"
                                         value={formData.bmi}
                                         disabled={true} // BMI is always calculated
                                         variant="outlined"
-                                        sx={{ backgroundColor: '#f5f5f5' }}
                                         placeholder='BMI'
                                     />
                                 </Box>
@@ -1929,12 +2066,11 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                                         BP
                                     </Typography>
-                                    <TextField
+                                    <ClearableTextField
                                         fullWidth
                                         size="small"
                                         value={formData.bp}
-                                        onChange={(e) => {
-                                            const value = e.target.value;
+                                        onChange={(value) => {
                                             if (value === '') {
                                                 handleInputChange('bp', value);
                                                 return;
@@ -1961,6 +2097,9 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                         disabled={readOnly}
                                         variant="outlined"
                                         placeholder='BP'
+                                        inputProps={{ maxLength: getFieldConfig('bp', 'visit')?.maxLength }}
+                                        error={!!validationErrors.bp}
+                                        helperText={validationErrors.bp}
                                     />
                                 </Box>
                             </Grid>
@@ -1969,15 +2108,17 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                                         Sugar
                                     </Typography>
-                                    <TextField
+                                    <ClearableTextField
                                         fullWidth
                                         size="small"
-                                        type="number"
                                         value={formData.sugar}
-                                        onChange={(e) => handleInputChange('sugar', e.target.value)}
+                                        onChange={(value) => handleInputChange('sugar', value)}
                                         disabled={readOnly}
                                         variant="outlined"
                                         placeholder='Sugar'
+                                        inputProps={{ maxLength: getFieldConfig('sugar', 'visit')?.maxLength }}
+                                        error={!!validationErrors.sugar}
+                                        helperText={validationErrors.sugar}
                                     />
                                 </Box>
                             </Grid>
@@ -1986,15 +2127,17 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                                         TFT
                                     </Typography>
-                                    <TextField
+                                    <ClearableTextField
                                         fullWidth
                                         size="small"
-                                        type="number"
                                         value={formData.tft}
-                                        onChange={(e) => handleInputChange('tft', e.target.value)}
+                                        onChange={(value) => handleInputChange('tft', value)}
                                         disabled={readOnly}
                                         variant="outlined"
                                         placeholder='TFT'
+                                        inputProps={{ maxLength: getFieldConfig('tft', 'visit')?.maxLength }}
+                                        error={!!validationErrors.tft}
+                                        helperText={validationErrors.tft}
                                     />
                                 </Box>
                             </Grid>
@@ -2010,63 +2153,84 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     <textarea
                                         rows={2}
                                         value={formData.pastSurgicalHistory}
-                                        onChange={(e) => handleInputChange('pastSurgicalHistory', e.target.value)}
+                                        onChange={(e) =>
+                                            handleInputChange(
+                                                'pastSurgicalHistory',
+                                                e.target.value.slice(
+                                                    0,
+                                                    getFieldConfig('pastSurgicalHistory', 'visit')?.maxLength
+                                                )
+                                            )
+                                        }
                                         disabled={readOnly}
-                                        id='textarea-autosize'
+                                        maxLength={getFieldConfig('pastSurgicalHistory', 'visit')?.maxLength}
+                                        id="textarea-autosize"
                                         style={{
-                                            border: validationErrors.pastSurgicalHistory ? '1px solid #d32f2f' : '1px solid #b7b7b7',
+                                            border: validationErrors.pastSurgicalHistory
+                                                ? '1px solid #d32f2f'
+                                                : '1px solid #b7b7b7',
                                             borderRadius: '8px',
                                             padding: '8px',
-                                            resize: 'vertical'
+                                            resize: 'vertical',
+                                            width: '100%'
                                         }}
                                     />
                                     {validationErrors.pastSurgicalHistory && (
-                                        <Typography variant="caption" color="error" sx={{ mt: 0.5, display: 'block' }}>
+                                        <Typography
+                                            variant="caption"
+                                            color="error"
+                                            sx={{ mt: 0.5, display: 'block' }}
+                                        >
                                             {validationErrors.pastSurgicalHistory}
                                         </Typography>
                                     )}
                                 </Box>
                             </Grid>
+
                             <Grid item xs={12} md={4}>
                                 <Box sx={{ mb: 2 }}>
-                                    <Typography variant="subtitle2" fontWeight="bold" className='mb-0'>
+                                    <Typography variant="subtitle2" fontWeight="bold" className="mb-0">
                                         Previous Visit Plan
                                     </Typography>
                                     <textarea
                                         rows={2}
                                         value={formData.previousVisitPlan}
-                                        disabled={true}
-                                        id='textarea-autosize'
+                                        disabled
+                                        id="textarea-autosize"
                                         style={{
                                             border: '1px solid #b7b7b7',
                                             borderRadius: '8px',
                                             padding: '8px',
-                                            resize: 'vertical'
+                                            resize: 'vertical',
+                                            width: '100%'
                                         }}
                                     />
                                 </Box>
                             </Grid>
+
                             <Grid item xs={12} md={4}>
                                 <Box sx={{ mb: 2 }}>
-                                    <Typography variant="subtitle2" fontWeight="bold" className='mb-0'>
+                                    <Typography variant="subtitle2" fontWeight="bold" className="mb-0">
                                         Chief complaint entered by patient
                                     </Typography>
                                     <textarea
                                         rows={2}
                                         value={formData.chiefComplaint}
-                                        disabled={true}
-                                        id='textarea-autosize'
+                                        disabled
+                                        id="textarea-autosize"
                                         style={{
                                             border: '1px solid #b7b7b7',
                                             borderRadius: '8px',
                                             padding: '8px',
-                                            resize: 'vertical'
+                                            resize: 'vertical',
+                                            width: '100%'
                                         }}
                                     />
                                 </Box>
                             </Grid>
                         </Grid>
                     </Box>
+
                     {/* Visit Comments and Medicines */}
                     <Grid container spacing={2} sx={{ mb: 0 }}>
                         <Grid item xs={12} md={4}>
@@ -2134,8 +2298,13 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                             <input
                                                                 type="text"
                                                                 value={complaintSearch}
-                                                                onChange={(e) => setComplaintSearch(e.target.value)}
+                                                                onChange={(e) => {
+                                                                    const config = getFieldConfig('complaintSearch', 'visit');
+                                                                    if (config?.maxLength && e.target.value.length > config.maxLength) return;
+                                                                    setComplaintSearch(e.target.value);
+                                                                }}
                                                                 disabled={readOnly}
+                                                                maxLength={getFieldConfig('complaintSearch', 'visit')?.maxLength}
                                                                 placeholder="Search complaints"
                                                                 style={{
                                                                     width: '100%',
@@ -2287,7 +2456,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                         </Grid>
                         <Grid item xs={12} md={4}>
                             <Box sx={{ mb: 2 }}>
-                                <Typography variant="subtitle2" fontWeight="bold" className='mb-0'>
+                                <Typography variant="subtitle2" fontWeight="bold" className="mb-0">
                                     Visit Comments
                                 </Typography>
                                 <textarea
@@ -2295,21 +2464,28 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     value={formData.visitComments}
                                     onChange={(e) => handleInputChange('visitComments', e.target.value)}
                                     disabled={readOnly}
-                                    id='textarea-autosize'
                                     style={{
-                                        border: validationErrors.visitComments ? '1px solid #d32f2f' : '1px solid #b7b7b7',
+                                        border: validationErrors.visitComments
+                                            ? '1px solid #d32f2f'
+                                            : '1px solid #b7b7b7',
                                         borderRadius: '8px',
                                         padding: '8px',
-                                        resize: 'vertical'
+                                        resize: 'vertical',
+                                        width: '100%'
                                     }}
                                 />
                                 {validationErrors.visitComments && (
-                                    <Typography variant="caption" color="error" sx={{ mt: 0.5, display: 'block' }}>
+                                    <Typography
+                                        variant="caption"
+                                        color="error"
+                                        sx={{ mt: 0.5, display: 'block' }}
+                                    >
                                         {validationErrors.visitComments}
                                     </Typography>
                                 )}
                             </Box>
                         </Grid>
+
                         <Grid item xs={12} md={4}>
                             <Box sx={{ mb: 2 }}>
                                 <Typography variant="subtitle2" fontWeight="bold" className='mb-0'>
@@ -2320,16 +2496,22 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     value={formData.currentMedicines}
                                     onChange={(e) => handleInputChange('currentMedicines', e.target.value)}
                                     disabled={readOnly}
-                                    id='textarea-autosize'
                                     style={{
-                                        border: validationErrors.currentMedicines ? '1px solid #d32f2f' : '1px solid #b7b7b7',
+                                        border: validationErrors.currentMedicines
+                                            ? '1px solid #d32f2f'
+                                            : '1px solid #b7b7b7',
                                         borderRadius: '8px',
                                         padding: '8px',
-                                        resize: 'vertical'
+                                        resize: 'vertical',
+                                        width: '100%'
                                     }}
                                 />
                                 {validationErrors.currentMedicines && (
-                                    <Typography variant="caption" color="error" sx={{ mt: 0.5, display: 'block' }}>
+                                    <Typography
+                                        variant="caption"
+                                        color="error"
+                                        sx={{ mt: 0.5, display: 'block' }}
+                                    >
                                         {validationErrors.currentMedicines}
                                     </Typography>
                                 )}
@@ -2415,14 +2597,15 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                         {row.label}
                                                     </td>
                                                     <td style={{ padding: '12px' }}>
-                                                        <TextField
+                                                        <ClearableTextField
                                                             fullWidth
                                                             size="small"
                                                             value={row.comment}
-                                                            onChange={(e) => handleComplaintCommentChange(row.value, e.target.value)}
+                                                            onChange={(value) => handleComplaintCommentChange(row.value, value)}
                                                             disabled={readOnly}
                                                             placeholder="Enter Duration/Comment"
                                                             variant="outlined"
+                                                            inputProps={{ maxLength: getFieldConfig('complaintComment', 'visit')?.maxLength }}
                                                             InputProps={{ disableUnderline: true }}
                                                         />
                                                     </td>
@@ -2686,6 +2869,19 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                 open={showReferralPopup}
                 onClose={() => setShowReferralPopup(false)}
                 onSave={(referralData: ReferralData) => {
+                    // Update form data with the new doctor info
+                    setFormData(prev => ({
+                        ...prev,
+                        referralName: referralData.doctorName || '',
+                        referralContact: referralData.doctorMob || '',
+                        referralEmail: referralData.doctorMail || '',
+                        referralAddress: referralData.doctorAddress || ''
+                    }));
+                    setReferralNameSearch(referralData.doctorName || '');
+                    setSelectedDoctor(referralData as any);
+                    setShowReferralPopup(false);
+
+                    // Also refresh options if needed
                     if (isDoctorReferral()) {
                         handleReferralNameSearch(referralData.doctorName || '');
                     }

@@ -76,7 +76,7 @@ export default function Patients() {
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list')
   const [dialogError, setDialogError] = useState<string | null>(null)
 
-  const { control, handleSubmit, reset, formState: { errors } } = useForm<PatientFormData>({
+  const { control, handleSubmit, reset, setError, clearErrors, formState: { errors } } = useForm<PatientFormData>({
     defaultValues: {
       firstName: '',
       lastName: '',
@@ -434,9 +434,11 @@ export default function Patients() {
                       error={!!errors.firstName}
                       helperText={errors.firstName?.message}
                       onChange={(e) => {
-                        const { allowed } = validateNameInput(e.target.value, 50, 'First name');
+                        const { allowed, error } = validateNameInput(e.target.value, 50, 'First name');
                         if (allowed) {
                           field.onChange(e);
+                          if (error) setError('firstName', { type: 'manual', message: error });
+                          else clearErrors('firstName');
                         }
                       }}
                     />
@@ -456,9 +458,11 @@ export default function Patients() {
                       error={!!errors.lastName}
                       helperText={errors.lastName?.message}
                       onChange={(e) => {
-                        const { allowed } = validateNameInput(e.target.value, 50, 'Last name');
+                        const { allowed, error } = validateNameInput(e.target.value, 50, 'Last name');
                         if (allowed) {
                           field.onChange(e);
+                          if (error) setError('lastName', { type: 'manual', message: error });
+                          else clearErrors('lastName');
                         }
                       }}
                     />
@@ -474,10 +478,14 @@ export default function Patients() {
                       {...field}
                       fullWidth
                       label="Middle Name"
+                      error={!!errors.middleName}
+                      helperText={errors.middleName?.message}
                       onChange={(e) => {
-                        const { allowed } = validateNameInput(e.target.value, 50, 'Middle name');
+                        const { allowed, error } = validateNameInput(e.target.value, 50, 'Middle name');
                         if (allowed) {
                           field.onChange(e);
+                          if (error) setError('middleName', { type: 'manual', message: error });
+                          else clearErrors('middleName');
                         }
                       }}
                     />
@@ -496,6 +504,16 @@ export default function Patients() {
                       label="Mobile Number"
                       error={!!errors.mobile}
                       helperText={errors.mobile?.message}
+                      onChange={(e) => {
+                        const numericVal = e.target.value.replace(/\D/g, '');
+                        const { allowed, error } = validateField('mobileNumber', numericVal);
+                        if (allowed) {
+                          field.onChange(numericVal);
+                          if (error) setError('mobile', { type: 'manual', message: error });
+                          else if (numericVal.length > 0 && numericVal.length < 10) setError('mobile', { type: 'manual', message: 'Mobile number must be 10 digits' });
+                          else clearErrors('mobile');
+                        }
+                      }}
                     />
                   )}
                 />
@@ -556,10 +574,14 @@ export default function Patients() {
                       fullWidth
                       label="Email"
                       type="email"
+                      error={!!errors.email}
+                      helperText={errors.email?.message}
                       onChange={(e) => {
-                        const { allowed } = validateEmailInput(e.target.value, 50);
+                        const { allowed, error } = validateEmailInput(e.target.value, 50);
                         if (allowed) {
                           field.onChange(e);
+                          if (error) setError('email', { type: 'manual', message: error });
+                          else clearErrors('email');
                         }
                       }}
                     />

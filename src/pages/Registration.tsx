@@ -4,7 +4,7 @@ import { PersonAdd, Person, Phone, Email, LocationOn } from '@mui/icons-material
 import { useSelector } from 'react-redux'
 import { RootState } from '../store'
 import ClearableTextField from '../components/ClearableTextField'
-import { validateNameInput, validateEmailInput } from '../utils/validationUtils'
+import { validateField } from '../utils/validationUtils'
 
 export default function RegistrationPage() {
   const { user } = useSelector((state: RootState) => state.auth)
@@ -17,13 +17,7 @@ export default function RegistrationPage() {
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
-  // Helper function to handle numeric-only input with max 10 digits
-  const handleNumericInput = (value: string): string => {
-    // Remove all non-numeric characters
-    const numericValue = value.replace(/\D/g, '')
-    // Limit to 10 digits
-    return numericValue.length <= 10 ? numericValue : numericValue.slice(0, 10)
-  }
+
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -128,10 +122,11 @@ export default function RegistrationPage() {
                 placeholder="Enter first name"
                 value={firstName}
                 onChange={(value) => {
-                  const { allowed, error } = validateNameInput(value, 50, 'First name');
+                  const processed = value.replace(/[^a-zA-Z\s]/g, '').toUpperCase();
+                  const { allowed, error } = validateField('firstName', processed);
                   if (allowed) {
-                    setFirstName(value);
-                    setErrors(prev => ({ ...prev, firstName: error }));
+                    setFirstName(processed);
+                    setErrors(prev => ({ ...prev, firstName: error || '' }));
                   }
                 }}
                 error={!!errors.firstName}
@@ -151,10 +146,11 @@ export default function RegistrationPage() {
                 placeholder="Enter last name"
                 value={lastName}
                 onChange={(value) => {
-                  const { allowed, error } = validateNameInput(value, 50, 'Last name');
+                  const processed = value.replace(/[^a-zA-Z\s]/g, '').toUpperCase();
+                  const { allowed, error } = validateField('lastName', processed);
                   if (allowed) {
-                    setLastName(value);
-                    setErrors(prev => ({ ...prev, lastName: error }));
+                    setLastName(processed);
+                    setErrors(prev => ({ ...prev, lastName: error || '' }));
                   }
                 }}
                 error={!!errors.lastName}
@@ -174,17 +170,12 @@ export default function RegistrationPage() {
                 placeholder="Enter mobile number"
                 value={mobile}
                 onChange={(value) => {
-                  const numericVal = handleNumericInput(value)
-                  setMobile(numericVal)
-                  // Validate length
-                  if (numericVal.length > 0 && numericVal.length !== 10) {
-                    setErrors(prev => ({ ...prev, mobile: 'Mobile number must be exactly 10 digits' }))
-                  } else {
-                    setErrors(prev => {
-                      const newErrors = { ...prev };
-                      delete newErrors.mobile;
-                      return newErrors;
-                    })
+                  const numericVal = value.replace(/\D/g, '');
+                  const { allowed, error } = validateField('mobileNumber', numericVal);
+
+                  if (allowed) {
+                    setMobile(numericVal);
+                    setErrors(prev => ({ ...prev, mobile: error || '' }));
                   }
                 }}
                 error={!!errors.mobile}
@@ -205,10 +196,10 @@ export default function RegistrationPage() {
                 placeholder="Enter email address"
                 value={email}
                 onChange={(value) => {
-                  const { allowed, error } = validateEmailInput(value, 50);
+                  const { allowed, error } = validateField('patientEmail', value);
                   if (allowed) {
                     setEmail(value);
-                    setErrors(prev => ({ ...prev, email: error }));
+                    setErrors(prev => ({ ...prev, email: error || '' }));
                   }
                 }}
                 error={!!errors.email}
@@ -256,7 +247,16 @@ export default function RegistrationPage() {
             <Button
               type="submit"
               variant="contained"
-              disabled={loading || !firstName.trim() || !lastName.trim() || mobile.length !== 10}
+              disabled={
+                loading ||
+                !firstName.trim() ||
+                !lastName.trim() ||
+                mobile.length !== 10 ||
+                !!errors.firstName ||
+                !!errors.lastName ||
+                !!errors.mobile ||
+                !!errors.email
+              }
               className="form-button"
               startIcon={<PersonAdd />}
               sx={{ py: 1.5, px: 4 }}

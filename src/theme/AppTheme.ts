@@ -44,7 +44,7 @@ const AppTheme = createTheme({
                         borderRadius: '8px',
                         boxShadow: 'none'
                     },
-                    '& .Mui-error .MuiOutlinedInput-notchedOutline':{
+                    '& .Mui-error .MuiOutlinedInput-notchedOutline': {
                         borderColor: '#d32f2f !important',
                     },
                     '& .MuiOutlinedInput-root.Mui-focused': { boxShadow: 'none !important' },
@@ -58,7 +58,7 @@ const AppTheme = createTheme({
                         minHeight: '1.25rem',
                         textAlign: 'left !important',
                         color: '#d32f2f', // Ensure red color for error text
-                        position: 'absolute',
+                        // position: 'absolute',
                         bottom: '-24px',
                         left: 0
                     },

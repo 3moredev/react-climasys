@@ -15,6 +15,7 @@ import {
 } from '@mui/material';
 import procedureService, { ProcedureMaster, ProcedureFindings } from '../services/procedureService';
 import { sessionService } from '../services/sessionService';
+import { validateField } from '../utils/validationUtils';
 
 interface Finding {
     id: string;
@@ -45,9 +46,7 @@ const AddProcedurePopup: React.FC<AddProcedurePopupProps> = ({ open, onClose, on
     const [findingsLoading, setFindingsLoading] = useState(false);
 
     // Validation state
-    const [errors, setErrors] = useState({
-        procedureDescription: ''
-    });
+    const [errors, setErrors] = useState<Record<string, string>>({});
 
     // Helper to load findings from API for edit mode
     const loadFindingsForProcedure = async (procDescription: string) => {
@@ -81,14 +80,8 @@ const AddProcedurePopup: React.FC<AddProcedurePopupProps> = ({ open, onClose, on
                 } else {
                     setFindings(editData.findings || []);
                 }
-                setErrors({ procedureDescription: '' });
-            } else if (open && !editData) {
-                // Reset form for new procedure
-                setProcedureDescription('');
-                setPriority('');
-                setFindingsDescription('');
                 setFindings([]);
-                setErrors({ procedureDescription: '' });
+                setErrors({ procedureDescription: '', priority: '' });
             }
         };
 
@@ -125,11 +118,16 @@ const AddProcedurePopup: React.FC<AddProcedurePopupProps> = ({ open, onClose, on
     };
 
     const handleSubmit = async () => {
-        let newErrors = { procedureDescription: '' };
+        let newErrors = { procedureDescription: '', priority: '' };
         let hasError = false;
 
         if (!procedureDescription.trim()) {
             newErrors.procedureDescription = 'Procedure Description is required';
+            hasError = true;
+        }
+
+        if (!priority.trim()) {
+            newErrors.priority = 'Priority is required';
             hasError = true;
         }
 
@@ -271,7 +269,7 @@ const AddProcedurePopup: React.FC<AddProcedurePopupProps> = ({ open, onClose, on
             setPriority('');
             setFindingsDescription('');
             setFindings([]);
-            setErrors({ procedureDescription: '' });
+            setErrors({});
 
             // Close popup after showing success message
             setTimeout(() => {
@@ -291,7 +289,7 @@ const AddProcedurePopup: React.FC<AddProcedurePopupProps> = ({ open, onClose, on
         setPriority('');
         setFindingsDescription('');
         setFindings([]);
-        setErrors({ procedureDescription: '' });
+        setErrors({ procedureDescription: '', priority: '' });
         onClose();
     };
 
@@ -300,7 +298,7 @@ const AddProcedurePopup: React.FC<AddProcedurePopupProps> = ({ open, onClose, on
         setPriority('');
         setFindingsDescription('');
         setFindings([]);
-        setErrors({ procedureDescription: '' });
+        setErrors({});
     };
 
     if (!open) return null;
@@ -350,22 +348,22 @@ const AddProcedurePopup: React.FC<AddProcedurePopupProps> = ({ open, onClose, on
                                     value={procedureDescription}
                                     onChange={(e) => {
                                         const val = e.target.value.toUpperCase();
-                                        if (val.length > 50) return;
-                                        setProcedureDescription(val);
-                                        if (errors.procedureDescription) {
-                                            setErrors(prev => ({ ...prev, procedureDescription: '' }));
+                                        const { allowed, error } = validateField('procedureDescription', val, undefined, undefined, 'procedure');
+                                        if (allowed) {
+                                            setProcedureDescription(val);
+                                            setErrors(prev => ({ ...prev, procedureDescription: error }));
                                         }
                                     }}
-                                    disabled={loading || isEditMode}
+                                    disabled={loading}
                                     error={!!errors.procedureDescription}
-                                    helperText={errors.procedureDescription || (procedureDescription.length === 50 ? 'Procedure Description cannot exceed 50 characters' : '')}
+                                    helperText={errors.procedureDescription || (procedureDescription.length === 100 ? 'Procedure Description cannot exceed 100 characters' : '')}
                                 />
                             </Box>
                         </Grid>
                         <Grid item xs={12}>
                             <Box sx={{ mb: 2 }}>
                                 <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }} className='mb-0'>
-                                    Procedure Priority
+                                    Procedure Priority <span style={{ color: 'red' }}>*</span>
                                 </Typography>
                                 <TextField
                                     fullWidth
@@ -374,13 +372,17 @@ const AddProcedurePopup: React.FC<AddProcedurePopupProps> = ({ open, onClose, on
                                     size="small"
                                     value={priority}
                                     onChange={(e) => {
-                                        const numericValue = e.target.value.replace(/\D/g, '');
-                                        if (numericValue.length > 50) return;
-                                        setPriority(numericValue);
+                                        const val = e.target.value;
+                                        const { allowed, error } = validateField('priority', val, undefined, undefined, 'procedure');
+                                        if (allowed) {
+                                            setPriority(val);
+                                            setErrors(prev => ({ ...prev, priority: error }));
+                                        }
                                     }}
                                     disabled={loading}
                                     inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
-                                    helperText={priority.length >= 50 ? 'Priority cannot exceed 50 characters' : ''}
+                                    error={!!errors.priority}
+                                    helperText={errors.priority || (priority.length === 10 ? 'Priority cannot exceed 10 characters' : '')}
                                 />
                             </Box>
                         </Grid>
@@ -400,9 +402,11 @@ const AddProcedurePopup: React.FC<AddProcedurePopupProps> = ({ open, onClose, on
                                             size="small"
                                             value={findingsDescription}
                                             onChange={(e) => {
-                                                const val = e.target.value;
-                                                if (val.length > 150) return;
-                                                setFindingsDescription(val);
+                                                const val = e.target.value.toUpperCase();
+                                                const { allowed, error } = validateField('findingsDescription', val, undefined, undefined, 'procedure');
+                                                if (allowed) {
+                                                    setFindingsDescription(val);
+                                                }
                                             }}
                                             onKeyPress={(e) => {
                                                 if (e.key === 'Enter') {
@@ -410,7 +414,7 @@ const AddProcedurePopup: React.FC<AddProcedurePopupProps> = ({ open, onClose, on
                                                 }
                                             }}
                                             disabled={loading}
-                                            helperText={findingsDescription.length === 150 ? 'Findings Description cannot exceed 150 characters' : ''}
+                                            helperText={validateField('findingsDescription', findingsDescription, undefined, undefined, 'procedure').error}
                                         />
                                     </Grid>
                                     <Grid item>

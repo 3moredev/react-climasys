@@ -4,7 +4,7 @@ import { Close } from '@mui/icons-material';
 import { Snackbar, Dialog, DialogTitle, DialogContent, Grid, Box, Typography, TextField, Button, IconButton } from '@mui/material';
 import api from '../services/api';
 
-import { validateAddressInput, validateNameInput, validateEmailInput } from '../utils/validationUtils';
+import { validateField, getMaxLength } from '../utils/validationUtils';
 
 interface AddReferralPopupProps {
     open: boolean;
@@ -70,7 +70,7 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
         // Only allow alphabets and spaces
         const alphabeticValue = value.replace(/[^a-zA-Z\s]/g, '');
 
-        const { allowed, error } = validateNameInput(alphabeticValue, 50, 'Doctor Name');
+        const { allowed, error } = validateField('doctorName', alphabeticValue, undefined, undefined, 'referralDoctor');
         if (allowed) {
             handleInputChange('doctorName', alphabeticValue);
             if (alphabeticValue.trim()) {
@@ -86,14 +86,10 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
         // Only allow numbers
         const numericValue = value.replace(/\D/g, '');
 
-        // Limit to 10 digits
-        const limitedValue = numericValue.slice(0, 10);
-
-        handleInputChange('doctorMob', limitedValue);
-
-        // Clear error when user starts typing
-        if (contactError) {
-            setContactError('');
+        const { allowed, error } = validateField('doctorMob', numericValue, undefined, undefined, 'referralDoctor');
+        if (allowed) {
+            handleInputChange('doctorMob', numericValue);
+            setContactError(error);
         }
     };
 
@@ -112,20 +108,15 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
     };
 
     const handleEmailChange = (value: string) => {
-        const { allowed, error } = validateEmailInput(value, 50, 'Doctor Email');
+        const { allowed, error } = validateField('doctorMail', value, undefined, undefined, 'referralDoctor');
         if (allowed) {
             handleInputChange('doctorMail', value);
-            // Clear error when user starts typing
-            if (emailError) {
-                setEmailError('');
-            }
-        } else if (error) {
             setEmailError(error);
         }
     };
 
     const handleAddressChange = (value: string) => {
-        const { allowed, error } = validateAddressInput(value, 150);
+        const { allowed, error } = validateField('doctorAddress', value, undefined, undefined, 'referralDoctor');
         if (allowed) {
             handleInputChange('doctorAddress', value);
             setAddressError(error);
@@ -133,7 +124,7 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
     };
 
     const handleRemarksChange = (value: string) => {
-        const { allowed, error } = validateAddressInput(value, 150, 'Remarks');
+        const { allowed, error } = validateField('remarks', value, undefined, undefined, 'referralDoctor');
         if (allowed) {
             handleInputChange('remarks', value);
             setRemarksError(error);
@@ -278,257 +269,238 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
         onClose();
     };
 
-    if (!open) return null;
-
-    const popupContent = (
-        <>
-            <div
-                style={{
-                    position: 'fixed',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    zIndex: 13000,
-                    pointerEvents: 'auto',
-                }}
-                onClick={handleClose}
-            >
-                <div
-                    style={{
-                        backgroundColor: 'white',
-                        borderRadius: '12px',
-                        maxWidth: '800px',
-                        width: '90%',
-                        maxHeight: '80vh',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        pointerEvents: 'auto',
-                        position: 'relative',
-                        zIndex: 13001,
-                        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
+    return (
+        <Dialog
+            open={open}
+            onClose={handleClose}
+            maxWidth="md"
+            fullWidth
+            PaperProps={{
+                sx: {
+                    borderRadius: '12px',
+                    maxWidth: '800px',
+                    width: '90%',
+                    position: 'relative',
+                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
+                }
+            }}
+            sx={{
+                zIndex: 13001 // Ensure it sits above the parent PatientVisitDetails
+            }}
+        >
+            {/* Header */}
+            <DialogTitle sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '10px 20px',
+                borderBottom: '1px solid #eee'
+            }}>
+                <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                    Add New Referral Doctor
+                </Typography>
+                <IconButton
+                    onClick={handleClose}
+                    disableRipple
+                    sx={{
+                        color: '#fff',
+                        backgroundColor: '#1976d2',
+                        '&:hover': { backgroundColor: '#1565c0' },
+                        width: 36,
+                        height: 36,
+                        borderRadius: '8px'
                     }}
-                    onClick={(e) => e.stopPropagation()}
                 >
-                    {/* Header */}
-                    <DialogTitle sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '10px 20px',
-                        borderBottom: '1px solid #eee'
-                    }}>
-                        <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                            Add New Referral Doctor
-                        </Typography>
-                        <IconButton
-                            onClick={handleClose}
-                            disableRipple
-                            sx={{
-                                color: '#fff',
-                                backgroundColor: '#1976d2',
-                                '&:hover': { backgroundColor: '#1565c0' },
-                                width: 36,
-                                height: 36,
-                                borderRadius: '8px'
-                            }}
-                        >
-                            <Close />
-                        </IconButton>
-                    </DialogTitle>
+                    <Close />
+                </IconButton>
+            </DialogTitle>
 
-                    {/* Content */}
-                    <DialogContent sx={{
-                        p: '20px',
-                        '& .MuiTextField-root, & .MuiFormControl-root': { width: '100%' },
-                        '& .MuiTextField-root .MuiOutlinedInput-root, & .MuiFormControl-root .MuiOutlinedInput-root': { height: 38 },
-                        '& .MuiInputBase-input, & .MuiSelect-select': {
-                            fontFamily: "'Roboto', sans-serif",
-                            fontWeight: 500,
-                            padding: '6px 12px',
-                            lineHeight: 1.5
-                        },
-                        '& .MuiOutlinedInput-root .MuiOutlinedInput-notchedOutline': {
-                            borderWidth: '2px',
-                            borderColor: '#B7B7B7',
-                            borderRadius: '8px'
-                        },
-                        '& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline': {
-                            borderColor: '#999',
-                            borderRadius: '8px'
-                        },
-                        '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                            borderWidth: '2px',
-                            borderColor: '#1E88E5',
-                            borderRadius: '8px'
-                        },
-                        '& .MuiOutlinedInput-root': {
-                            borderRadius: '8px',
-                            boxShadow: 'none'
-                        },
-                        '& .MuiOutlinedInput-root.Mui-focused': { boxShadow: 'none !important' },
-                        '& .MuiFormHelperText-root': {
-                            fontSize: '0.75rem',
-                            lineHeight: 1.66,
-                            fontFamily: "'Roboto', sans-serif",
-                            margin: '3px 0 0 0 !important',
-                            padding: '0 !important',
-                            minHeight: '1.25rem',
-                            textAlign: 'left !important'
-                        },
-                        '& h1, & h2, & h3, & h4, & h5, & h6, & .MuiTypography-h1, & .MuiTypography-h2, & .MuiTypography-h3, & .MuiTypography-h4, & .MuiTypography-h5, & .MuiTypography-h6': {
-                            margin: '0 0 2px 0 !important'
-                        },
-                    }}>
-                        <Grid container spacing={3} sx={{ mt: 0 }}>
-                            <Grid item xs={12} md={6}>
-                                <Box sx={{ mb: 2 }}>
-                                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
-                                        Doctor Name <span style={{ color: '#f44336' }}>*</span>
-                                    </Typography>
-                                    <TextField
-                                        fullWidth
-                                        placeholder="Enter Doctor Name"
-                                        value={formData.doctorName}
-                                        onChange={(e) => handleDoctorNameChange(e.target.value)}
-                                        error={!!doctorNameError}
-                                        helperText={doctorNameError}
-                                    />
-                                </Box>
-                            </Grid>
-                            <Grid item xs={12} md={6}>
-                                <Box sx={{ mb: 2 }}>
-                                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
-                                        Doctor Number
-                                    </Typography>
-                                    <TextField
-                                        fullWidth
-                                        placeholder="Enter Doctor Number"
-                                        value={formData.doctorMob}
-                                        onChange={(e) => handleContactNumberChange(e.target.value)}
-                                        onBlur={validateContactNumber}
-                                        error={!!contactError}
-                                        helperText={contactError}
-                                    />
-                                </Box>
-                            </Grid>
-                            <Grid item xs={12} md={6}>
-                                <Box sx={{ mb: 2 }}>
-                                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
-                                        Doctor Email
-                                    </Typography>
-                                    <TextField
-                                        fullWidth
-                                        placeholder="Enter Doctor Email"
-                                        value={formData.doctorMail}
-                                        onChange={(e) => handleEmailChange(e.target.value)}
-                                        onBlur={validateEmail}
-                                        error={!!emailError}
-                                        helperText={emailError}
-                                    />
-                                </Box>
-                            </Grid>
-                            <Grid item xs={12} md={6}>
-                                <Box sx={{ mb: 2 }}>
-                                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
-                                        Remark
-                                    </Typography>
-                                    <TextField
-                                        fullWidth
-                                        placeholder="Enter Remark"
-                                        value={formData.remarks}
-                                        onChange={(e) => handleRemarksChange(e.target.value)}
-                                        error={!!remarksError}
-                                        helperText={remarksError}
-                                        inputProps={{ maxLength: 150 }}
-                                    />
-                                </Box>
-                            </Grid>
-                            <Grid item xs={12}>
-                                <Box sx={{ mb: 2 }}>
-                                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
-                                        Doctor Address
-                                    </Typography>
-                                    <textarea
-                                        id='textarea-autosize'
-                                        rows={2}
-                                        maxLength={150}
-                                        placeholder="Enter Doctor Address"
-                                        value={formData.doctorAddress}
-                                        onChange={(e) => handleAddressChange(e.target.value)}
-                                        style={{
-                                            border: `2px solid ${addressError ? '#f44336' : '#b7b7b7'}`,
-                                            borderRadius: '8px',
-                                            padding: '8px',
-                                            resize: 'vertical',
-                                            width: '100%',
-                                            fontFamily: "'Roboto', sans-serif"
-                                        }}
-                                    />
-                                    {addressError && (
-                                        <Typography variant="caption" sx={{ color: '#f44336', mt: 0.5, display: 'block' }}>
-                                            {addressError}
-                                        </Typography>
-                                    )}
-                                </Box>
-                            </Grid>
-                        </Grid>
-                    </DialogContent>
+            {/* Content */}
+            <DialogContent sx={{
+                p: '20px',
+                '& .MuiTextField-root, & .MuiFormControl-root': { width: '100%' },
+                '& .MuiTextField-root .MuiOutlinedInput-root, & .MuiFormControl-root .MuiOutlinedInput-root': { height: 38 },
+                '& .MuiInputBase-input, & .MuiSelect-select': {
+                    fontFamily: "'Roboto', sans-serif",
+                    fontWeight: 500,
+                    padding: '6px 12px',
+                    lineHeight: 1.5
+                },
+                '& .MuiOutlinedInput-root .MuiOutlinedInput-notchedOutline': {
+                    borderWidth: '2px',
+                    borderColor: '#B7B7B7',
+                    borderRadius: '8px'
+                },
+                '& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#999',
+                    borderRadius: '8px'
+                },
+                '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                    borderWidth: '2px',
+                    borderColor: '#1E88E5',
+                    borderRadius: '8px'
+                },
+                '& .MuiOutlinedInput-root': {
+                    borderRadius: '8px',
+                    boxShadow: 'none'
+                },
+                '& .MuiOutlinedInput-root.Mui-focused': { boxShadow: 'none !important' },
+                '& .MuiFormHelperText-root': {
+                    fontSize: '0.75rem',
+                    lineHeight: 1.66,
+                    fontFamily: "'Roboto', sans-serif",
+                    margin: '3px 0 0 0 !important',
+                    padding: '0 !important',
+                    minHeight: '1.25rem',
+                    textAlign: 'left !important'
+                },
+                '& h1, & h2, & h3, & h4, & h5, & h6, & .MuiTypography-h1, & .MuiTypography-h2, & .MuiTypography-h3, & .MuiTypography-h4, & .MuiTypography-h5, & .MuiTypography-h6': {
+                    margin: '0 0 2px 0 !important'
+                },
+            }}>
+                <Grid container spacing={3} sx={{ mt: 0 }}>
+                    <Grid item xs={12} md={6}>
+                        <Box sx={{ mb: 2 }}>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                                Doctor Name <span style={{ color: '#f44336' }}>*</span>
+                            </Typography>
+                            <TextField
+                                fullWidth
+                                placeholder="Enter Doctor Name"
+                                value={formData.doctorName}
+                                onChange={(e) => handleDoctorNameChange(e.target.value)}
+                                error={!!doctorNameError}
+                                helperText={doctorNameError}
+                            />
+                        </Box>
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                        <Box sx={{ mb: 2 }}>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                                Doctor Number
+                            </Typography>
+                            <TextField
+                                fullWidth
+                                placeholder="Enter Doctor Number"
+                                value={formData.doctorMob}
+                                onChange={(e) => handleContactNumberChange(e.target.value)}
+                                onBlur={validateContactNumber}
+                                error={!!contactError}
+                                helperText={contactError}
+                            />
+                        </Box>
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                        <Box sx={{ mb: 2 }}>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                                Doctor Email
+                            </Typography>
+                            <TextField
+                                fullWidth
+                                placeholder="Enter Doctor Email"
+                                value={formData.doctorMail}
+                                onChange={(e) => handleEmailChange(e.target.value)}
+                                onBlur={validateEmail}
+                                error={!!emailError}
+                                helperText={emailError}
+                            />
+                        </Box>
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                        <Box sx={{ mb: 2 }}>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                                Remark
+                            </Typography>
+                            <TextField
+                                fullWidth
+                                placeholder="Enter Remark"
+                                value={formData.remarks}
+                                onChange={(e) => handleRemarksChange(e.target.value)}
+                                error={!!remarksError}
+                                helperText={remarksError}
+                                inputProps={{ maxLength: getMaxLength('remarks', 'referralDoctor') }}
+                            />
+                        </Box>
+                    </Grid>
+                    <Grid item xs={12}>
+                        <Box sx={{ mb: 2 }}>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                                Doctor Address
+                            </Typography>
+                            <textarea
+                                id='textarea-autosize'
+                                rows={2}
+                                maxLength={getMaxLength('doctorAddress', 'referralDoctor')}
+                                placeholder="Enter Doctor Address"
+                                value={formData.doctorAddress}
+                                onChange={(e) => handleAddressChange(e.target.value)}
+                                style={{
+                                    border: `2px solid ${addressError ? '#f44336' : '#b7b7b7'}`,
+                                    borderRadius: '8px',
+                                    padding: '8px',
+                                    resize: 'vertical',
+                                    width: '100%',
+                                    fontFamily: "'Roboto', sans-serif"
+                                }}
+                            />
+                            {addressError && (
+                                <Typography variant="caption" sx={{ color: '#f44336', mt: 0.5, display: 'block' }}>
+                                    {addressError}
+                                </Typography>
+                            )}
+                        </Box>
+                    </Grid>
+                </Grid>
+            </DialogContent>
 
-                    {/* Footer */}
-                    <Box sx={{
-                        p: 2,
-                        display: 'flex',
-                        justifyContent: 'flex-end',
-                        gap: 2,
-                        borderTop: '1px solid #eee'
-                    }}>
-                        <Button
-                            variant="contained"
-                            onClick={handleClose}
-                            sx={{ borderRadius: '8px' }}
-                        >
-                            Close
-                        </Button>
-                        <Button
-                            variant="contained"
-                            onClick={() => {
-                                setFormData({
-                                    rdId: 0,
-                                    doctorName: '',
-                                    doctorAddress: '',
-                                    doctorMob: '',
-                                    doctorMail: '',
-                                    referId: 'D',
-                                    languageId: 1,
-                                    remarks: '',
-                                    deleteFlag: false
-                                });
-                                setDoctorNameError('');
-                                setContactError('');
-                                setEmailError('');
-                                setAddressError('');
-                                setRemarksError('');
-                            }}
-                            sx={{ borderRadius: '8px' }}
-                        >
-                            Reset
-                        </Button>
-                        <Button
-                            variant="contained"
-                            onClick={handleSave}
-                            disabled={isSaving}
-                            sx={{ borderRadius: '8px' }}
-                        >
-                            {isSaving ? 'Submitting...' : 'Submit'}
-                        </Button>
-                    </Box>
-                </div>
-            </div>
+            {/* Footer */}
+            <Box sx={{
+                p: 2,
+                display: 'flex',
+                justifyContent: 'flex-end',
+                gap: 2,
+                borderTop: '1px solid #eee'
+            }}>
+                <Button
+                    variant="contained"
+                    onClick={handleClose}
+                    sx={{ borderRadius: '8px' }}
+                >
+                    Close
+                </Button>
+                <Button
+                    variant="contained"
+                    onClick={() => {
+                        setFormData({
+                            rdId: 0,
+                            doctorName: '',
+                            doctorAddress: '',
+                            doctorMob: '',
+                            doctorMail: '',
+                            referId: 'D',
+                            languageId: 1,
+                            remarks: '',
+                            deleteFlag: false
+                        });
+                        setDoctorNameError('');
+                        setContactError('');
+                        setEmailError('');
+                        setAddressError('');
+                        setRemarksError('');
+                    }}
+                    sx={{ borderRadius: '8px' }}
+                >
+                    Reset
+                </Button>
+                <Button
+                    variant="contained"
+                    onClick={handleSave}
+                    disabled={isSaving}
+                    sx={{ borderRadius: '8px' }}
+                >
+                    {isSaving ? 'Submitting...' : 'Submit'}
+                </Button>
+            </Box>
 
             {/* Success/Error Snackbar */}
             <Snackbar
@@ -540,7 +512,7 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
                 message={snackbarMessage}
                 anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
                 sx={{
-                    zIndex: 13002, // Higher than popup
+                    zIndex: 13002, // Higher than dialog
                     '& .MuiSnackbarContent-root': {
                         backgroundColor: snackbarSeverity === 'success' ? '#4caf50' : '#f44336',
                         color: 'white',
@@ -548,11 +520,8 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
                     }
                 }}
             />
-        </>
+        </Dialog>
     );
-
-    // Use Portal to render outside Dialog's DOM hierarchy
-    return createPortal(popupContent, document.body);
 };
 
 export default AddReferralPopup;
