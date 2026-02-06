@@ -978,14 +978,20 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
       // Handle alphabets-only input for referralName
       if (field === 'referralName') {
         processedValue = value.replace(/[^a-zA-Z\\s]/g, '')
-        // Clear selectedDoctor when referral name is cleared
-        if (!processedValue || processedValue.trim() === '') {
+        // Clear selectedDoctor and referral fields when referral name is cleared or changed
+        if (!processedValue || processedValue.trim() === '' || (selectedDoctor && processedValue !== selectedDoctor.doctorName)) {
           setSelectedDoctor(null)
         }
       }
 
       const next = { ...prev, [field]: processedValue }
 
+      // Clear referral contact fields when referral name is cleared or changed from selected doctor
+      if (field === 'referralName' && (!processedValue || processedValue.trim() === '' || (selectedDoctor && processedValue !== selectedDoctor.doctorName))) {
+        next.referralContact = ''
+        next.referralEmail = ''
+        next.referralAddress = ''
+      }
 
       // Reset referral fields when referral type changes
       if (field === 'referredBy') {
@@ -2677,6 +2683,9 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         error={!!errors.area && String(errors.area).toLowerCase().includes('required')}
                         helperText={errors.area}
                         sx={{
+                          '& .MuiInputBase-root': {
+                            backgroundColor: params.disabled ? '#f5f5f5 !important' : 'inherit'
+                          },
                           '& .MuiOutlinedInput-notchedOutline': {
                             borderColor: (errors.area && !String(errors.area).toLowerCase().includes('required')) ? '#616161 !important' : undefined
                           },
@@ -3008,6 +3017,13 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                             handleInputChange('referralName', '')
                             setReferralNameSearch('')
                             setSelectedDoctor(null)
+                            // Clear auto-populated referral fields
+                            setFormData(prev => ({
+                              ...prev,
+                              referralContact: '',
+                              referralEmail: '',
+                              referralAddress: ''
+                            }))
                           }
                         }}
                         renderInput={(params) => (
@@ -3024,6 +3040,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                             }}
                             InputProps={{
                               ...params.InputProps,
+                              readOnly: !!selectedDoctor,
                               endAdornment: (
                                 <InputAdornment position="end">
                                   {isSearchingReferral && <CircularProgress color="inherit" size={20} sx={{ mr: 1 }} />}
@@ -3034,6 +3051,13 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                                         setReferralNameSearch('')
                                         setSelectedDoctor(null)
                                         setReferralNameOptions([])
+                                        // Clear auto-populated referral fields
+                                        setFormData(prev => ({
+                                          ...prev,
+                                          referralContact: '',
+                                          referralEmail: '',
+                                          referralAddress: ''
+                                        }))
                                       }}
                                       style={{
                                         fontSize: '18px',
