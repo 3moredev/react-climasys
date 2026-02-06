@@ -6638,7 +6638,14 @@ export default function Treatment() {
                                             }}
                                         />
                                         {prescriptionError && (
-                                            <div style={{ color: 'red', fontSize: '12px', marginTop: '4px', position: 'absolute', bottom: '-18px', left: 0 }}>
+                                            <div style={{
+                                                color: (prescriptionError.includes('cannot exceed') || prescriptionError.includes('exceeds')) ? '#333333' : 'red',
+                                                fontSize: '12px',
+                                                marginTop: '4px',
+                                                position: 'absolute',
+                                                bottom: '-18px',
+                                                left: 0
+                                            }}>
                                                 {prescriptionError}
                                             </div>
                                         )}
@@ -7460,7 +7467,11 @@ export default function Treatment() {
                                             }}
                                         />
                                         {remarkCommentsError && (
-                                            <div style={{ color: 'red', fontSize: '12px', marginTop: '4px' }}>
+                                            <div style={{
+                                                color: (remarkCommentsError.includes('cannot exceed') || remarkCommentsError.includes('exceeds')) ? '#333333' : 'red',
+                                                fontSize: '12px',
+                                                marginTop: '4px'
+                                            }}>
                                                 {remarkCommentsError}
                                             </div>
                                         )}
@@ -7497,7 +7508,11 @@ export default function Treatment() {
                                     onChange={(e) => handleFollowUpChange('planAdv', e.target.value)}
                                 />
                                 {planAdvError && (
-                                    <div style={{ color: 'red', fontSize: '12px', marginTop: '4px' }}>
+                                    <div style={{
+                                        color: (planAdvError.includes('cannot exceed') || planAdvError.includes('exceeds')) ? '#333333' : 'red',
+                                        fontSize: '12px',
+                                        marginTop: '4px'
+                                    }}>
                                         {planAdvError}
                                     </div>
                                 )}

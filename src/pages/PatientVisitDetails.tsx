@@ -2092,7 +2092,13 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                         value={formData.bmi}
                                         disabled={true} // BMI is always calculated
                                         variant="outlined"
-                                    // placeholder='BMI'
+                                        placeholder='BMI'
+                                        sx={{
+                                            '& .MuiInputBase-input.Mui-disabled::placeholder': {
+                                                color: '#666666 !important',
+                                                opacity: '0.5 !important'
+                                            }
+                                        }}
                                     />
                                 </Box>
                             </Grid>

@@ -340,104 +340,124 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
 
                         <Grid item xs={12}>
                             {/* Table */}
-                            <table style={{
-                                width: '100%',
-                                borderCollapse: 'collapse',
+                            {/* Table */}
+                            <div style={{
+                                maxHeight: '300px',
+                                overflowY: 'auto',
                                 border: '1px solid #dee2e6'
                             }}>
-                                <thead>
-                                    <tr>
-                                        <th style={{
-                                            backgroundColor: '#1976d2',
-                                            color: '#ffffff',
-                                            padding: '8px 12px',
-                                            textAlign: 'left',
-                                            fontWeight: 'bold',
-                                            fontSize: '14px',
-                                            border: '1px solid #dee2e6'
-                                        }}>Sr.</th>
-                                        <th style={{
-                                            backgroundColor: '#1976d2',
-                                            color: '#ffffff',
-                                            padding: '8px 12px',
-                                            textAlign: 'left',
-                                            fontWeight: 'bold',
-                                            fontSize: '14px',
-                                            border: '1px solid #dee2e6'
-                                        }}>Parameter Name</th>
-                                        <th style={{
-                                            backgroundColor: '#1976d2',
-                                            color: '#ffffff',
-                                            padding: '8px 12px',
-                                            textAlign: 'center',
-                                            fontWeight: 'bold',
-                                            fontSize: '14px',
-                                            border: '1px solid #dee2e6'
-                                        }} className='text-center'>Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {testLabData.labTestRows.length > 0 ? (
-                                        testLabData.labTestRows.map((row, index) => (
-                                            <tr key={row.id}>
-                                                <td style={{
-                                                    padding: '8px 12px',
-                                                    border: '1px solid #dee2e6',
+                                <table style={{
+                                    width: '100%',
+                                    borderCollapse: 'collapse',
+                                    border: 'none'
+                                }}>
+                                    <thead>
+                                        <tr>
+                                            <th style={{
+                                                backgroundColor: '#1976d2',
+                                                color: '#ffffff',
+                                                padding: '8px 12px',
+                                                textAlign: 'left',
+                                                fontWeight: 'bold',
+                                                fontSize: '14px',
+                                                borderRight: '1px solid #dee2e6',
+                                                borderBottom: '1px solid #dee2e6',
+                                                position: 'sticky',
+                                                top: 0,
+                                                zIndex: 1
+                                            }}>Sr.</th>
+                                            <th style={{
+                                                backgroundColor: '#1976d2',
+                                                color: '#ffffff',
+                                                padding: '8px 12px',
+                                                textAlign: 'left',
+                                                fontWeight: 'bold',
+                                                fontSize: '14px',
+                                                borderRight: '1px solid #dee2e6',
+                                                borderBottom: '1px solid #dee2e6',
+                                                position: 'sticky',
+                                                top: 0,
+                                                zIndex: 1
+                                            }}>Parameter Name</th>
+                                            <th style={{
+                                                backgroundColor: '#1976d2',
+                                                color: '#ffffff',
+                                                padding: '8px 12px',
+                                                textAlign: 'center',
+                                                fontWeight: 'bold',
+                                                fontSize: '14px',
+                                                borderBottom: '1px solid #dee2e6',
+                                                position: 'sticky',
+                                                top: 0,
+                                                zIndex: 1
+                                            }} className='text-center'>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {testLabData.labTestRows.length > 0 ? (
+                                            testLabData.labTestRows.map((row, index) => (
+                                                <tr key={row.id}>
+                                                    <td style={{
+                                                        padding: '8px 12px',
+                                                        borderRight: '1px solid #dee2e6',
+                                                        borderBottom: '1px solid #dee2e6',
+                                                        fontSize: '13px',
+                                                        backgroundColor: index % 2 === 0 ? '#f8f9fa' : '#ffffff'
+                                                    }}>{index + 1}</td>
+                                                    <td style={{
+                                                        padding: '8px 12px',
+                                                        borderRight: '1px solid #dee2e6',
+                                                        borderBottom: '1px solid #dee2e6',
+                                                        fontSize: '13px',
+                                                        backgroundColor: index % 2 === 0 ? '#f8f9fa' : '#ffffff'
+                                                    }}>{row.parameterName}</td>
+                                                    <td style={{
+                                                        padding: '8px 12px',
+                                                        borderBottom: '1px solid #dee2e6',
+                                                        fontSize: '13px',
+                                                        backgroundColor: index % 2 === 0 ? '#f8f9fa' : '#ffffff',
+                                                        textAlign: 'center'
+                                                    }}>
+                                                        <div
+                                                            onClick={() => handleRemoveParameter(row.id)}
+                                                            title="Delete"
+                                                            style={{
+                                                                display: 'inline-flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                cursor: 'pointer',
+                                                                color: '#666',
+                                                                transition: 'color 0.2s'
+                                                            }}
+                                                            onMouseEnter={(e) => {
+                                                                e.currentTarget.style.color = '#d32f2f';
+                                                            }}
+                                                            onMouseLeave={(e) => {
+                                                                e.currentTarget.style.color = '#666';
+                                                            }}
+                                                        >
+                                                            <Delete style={{ fontSize: '18px' }} />
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        ) : (
+                                            <tr>
+                                                <td colSpan={3} style={{
+                                                    padding: '12px',
+                                                    border: 'none',
                                                     fontSize: '13px',
-                                                    backgroundColor: index % 2 === 0 ? '#f8f9fa' : '#ffffff'
-                                                }}>{index + 1}</td>
-                                                <td style={{
-                                                    padding: '8px 12px',
-                                                    border: '1px solid #dee2e6',
-                                                    fontSize: '13px',
-                                                    backgroundColor: index % 2 === 0 ? '#f8f9fa' : '#ffffff'
-                                                }}>{row.parameterName}</td>
-                                                <td style={{
-                                                    padding: '8px 12px',
-                                                    border: '1px solid #dee2e6',
-                                                    fontSize: '13px',
-                                                    backgroundColor: index % 2 === 0 ? '#f8f9fa' : '#ffffff',
-                                                    textAlign: 'center'
+                                                    fontFamily: "'Roboto', sans-serif",
+                                                    textAlign: 'center',
+                                                    color: '#666'
                                                 }}>
-                                                    <div
-                                                        onClick={() => handleRemoveParameter(row.id)}
-                                                        title="Delete"
-                                                        style={{
-                                                            display: 'inline-flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                            cursor: 'pointer',
-                                                            color: '#666',
-                                                            transition: 'color 0.2s'
-                                                        }}
-                                                        onMouseEnter={(e) => {
-                                                            e.currentTarget.style.color = '#d32f2f';
-                                                        }}
-                                                        onMouseLeave={(e) => {
-                                                            e.currentTarget.style.color = '#666';
-                                                        }}
-                                                    >
-                                                        <Delete style={{ fontSize: '18px' }} />
-                                                    </div>
+                                                    No parameters added yet
                                                 </td>
                                             </tr>
-                                        ))
-                                    ) : (
-                                        <tr>
-                                            <td colSpan={3} style={{
-                                                padding: '12px',
-                                                border: '1px solid #dee2e6',
-                                                fontSize: '13px',
-                                                fontFamily: "'Roboto', sans-serif",
-                                                textAlign: 'center',
-                                                color: '#666'
-                                            }}>
-                                                No parameters added yet
-                                            </td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
 
                         </Grid>
                     </Grid>
