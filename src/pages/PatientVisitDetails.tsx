@@ -1809,6 +1809,19 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                 }
                                             }}
                                             disabled={readOnly || isSelfReferral}
+                                            sx={{
+                                                '& .MuiInputBase-root.Mui-disabled': {
+                                                    backgroundColor: '#f5f5f5 !important'
+                                                },
+                                                '& .MuiInputBase-input.Mui-disabled': {
+                                                    color: '#666666 !important',
+                                                    WebkitTextFillColor: '#666666 !important'
+                                                },
+                                                '& .MuiInputBase-input.Mui-disabled::placeholder': {
+                                                    color: '#666666 !important',
+                                                    opacity: '0.5 !important'
+                                                }
+                                            }}
                                             variant="outlined"
                                             placeholder={isDoctorReferral() ? 'Type Doctor Name' : 'Type Referral Name'}
                                             error={!!validationErrors.referralName}
@@ -1860,6 +1873,19 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                     setReferralNameOptions([]);
                                                 }}
                                                 disabled={readOnly || isSelfReferral}
+                                                sx={{
+                                                    '& .MuiInputBase-root.Mui-disabled': {
+                                                        backgroundColor: '#f5f5f5 !important'
+                                                    },
+                                                    '& .MuiInputBase-input.Mui-disabled': {
+                                                        color: '#666666 !important',
+                                                        WebkitTextFillColor: '#666666 !important'
+                                                    },
+                                                    '& .MuiInputBase-input.Mui-disabled::placeholder': {
+                                                        color: '#666666 !important',
+                                                        opacity: '0.5 !important'
+                                                    }
+                                                }}
                                                 variant="outlined"
                                                 error={!!validationErrors.referralName}
                                                 helperText={validationErrors.referralName}
@@ -1947,6 +1973,19 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                         value={formData.referralName}
                                         onChange={(value) => handleInputChange('referralName', value)}
                                         disabled={readOnly || isSelfReferral}
+                                        sx={{
+                                            '& .MuiInputBase-root.Mui-disabled': {
+                                                backgroundColor: '#f5f5f5 !important'
+                                            },
+                                            '& .MuiInputBase-input.Mui-disabled': {
+                                                color: '#666666 !important',
+                                                WebkitTextFillColor: '#666666 !important'
+                                            },
+                                            '& .MuiInputBase-input.Mui-disabled::placeholder': {
+                                                color: '#666666 !important',
+                                                opacity: '0.5 !important'
+                                            }
+                                        }}
                                         variant="outlined"
                                         placeholder={isDoctorReferral() ? 'Type Doctor Name' : 'Type Referral Name'}
                                         error={!!validationErrors.referralName}
@@ -1966,6 +2005,19 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     value={formData.referralContact}
                                     onChange={(value) => handleInputChange('referralContact', value)}
                                     disabled={readOnly || isSelfReferral || isDoctorReferral()}
+                                    sx={{
+                                        '& .MuiInputBase-root.Mui-disabled': {
+                                            backgroundColor: '#f5f5f5 !important'
+                                        },
+                                        '& .MuiInputBase-input.Mui-disabled': {
+                                            color: '#666666 !important',
+                                            WebkitTextFillColor: '#666666 !important'
+                                        },
+                                        '& .MuiInputBase-input.Mui-disabled::placeholder': {
+                                            color: '#666666 !important',
+                                            opacity: '0.5 !important'
+                                        }
+                                    }}
                                     variant="outlined"
                                     placeholder='Referral Contact'
                                     inputProps={{ maxLength: getFieldConfig('referralContact', 'visit')?.maxLength }}
@@ -1986,6 +2038,19 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     value={formData.referralEmail}
                                     onChange={(value) => handleInputChange('referralEmail', value)}
                                     disabled={readOnly || isSelfReferral || isDoctorReferral()}
+                                    sx={{
+                                        '& .MuiInputBase-root.Mui-disabled': {
+                                            backgroundColor: '#f5f5f5 !important'
+                                        },
+                                        '& .MuiInputBase-input.Mui-disabled': {
+                                            color: '#666666 !important',
+                                            WebkitTextFillColor: '#666666 !important'
+                                        },
+                                        '& .MuiInputBase-input.Mui-disabled::placeholder': {
+                                            color: '#666666 !important',
+                                            opacity: '0.5 !important'
+                                        }
+                                    }}
                                     variant="outlined"
                                     placeholder='Referral Email'
                                     inputProps={{ maxLength: getFieldConfig('referralEmail', 'visit')?.maxLength }}
@@ -2005,6 +2070,19 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     value={formData.referralAddress}
                                     onChange={(value) => handleInputChange('referralAddress', value)}
                                     disabled={readOnly || isSelfReferral || isDoctorReferral()}
+                                    sx={{
+                                        '& .MuiInputBase-root.Mui-disabled': {
+                                            backgroundColor: '#f5f5f5 !important'
+                                        },
+                                        '& .MuiInputBase-input.Mui-disabled': {
+                                            color: '#666666 !important',
+                                            WebkitTextFillColor: '#666666 !important'
+                                        },
+                                        '& .MuiInputBase-input.Mui-disabled::placeholder': {
+                                            color: '#666666 !important',
+                                            opacity: '0.5 !important'
+                                        }
+                                    }}
                                     variant="outlined"
                                     inputProps={{ maxLength: getFieldConfig('referralAddress', 'visit')?.maxLength }}
                                     placeholder='Referral Address'
