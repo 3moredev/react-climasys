@@ -2009,7 +2009,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     options={stateOptions}
                     disabled={loading || readOnly}
                     getOptionLabel={(opt) => opt.name || ''}
-                    value={stateOptions.find(o => o.name === formData.state || o.id === formData.state) || null}
+                    value={stateOptions.find(o => o.name === formData.state || o.id === formData.state) || undefined}
                     inputValue={stateInput}
                     popupIcon={null}
                     forcePopupIcon={false}
@@ -2198,7 +2198,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         </li>
                       )
                     }}
-                    value={cityOptions.find(o => o && o.name?.toLowerCase() === formData.city?.toLowerCase()) || null}
+                    value={cityOptions.find(o => o && o.name?.toLowerCase() === formData.city?.toLowerCase()) || undefined}
                     inputValue={cityInput}
                     onInputChange={(_, newInput, reason) => {
                       setCityInput(newInput)
@@ -2361,7 +2361,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                       if (typeof opt === 'string') return opt
                       return opt.name || ''
                     }}
-                    value={formData.area && areaInput === formData.area ? (areaOptions.find(o => o.name === formData.area) || formData.area) : null}
+                    value={formData.area && areaInput === formData.area ? (areaOptions.find(o => o.name === formData.area) || formData.area) : undefined}
                     inputValue={areaInput || ''}
                     onInputChange={(event, newInput, reason) => {
                       setAreaInput(newInput || '')
@@ -2990,7 +2990,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         }}
                         loading={isSearchingReferral}
                         disabled={loading || isSelfReferral || !!patientId}
-                        value={referralNameOptions.find(o => o.name === formData.referralName) || formData.referralName || null}
+                        value={referralNameOptions.find(o => o.name === formData.referralName) || formData.referralName || undefined}
                         onInputChange={(_, newValue) => {
                           handleReferralNameSearch(newValue)
                           handleInputChange('referralName', newValue)
@@ -3168,7 +3168,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     placeholder="Referral Number(10 Digits)"
                     value={formData.referralContact}
                     onChange={(value) => handleInputChange('referralContact', value)}
-                    disabled={loading || readOnly || (formData.referredBy === 'D') || isSelfReferral || (patientId && formData.referredBy !== 'D')}
+                    disabled={loading || readOnly || (formData.referredBy === 'D') || isSelfReferral || (!!patientId && formData.referredBy !== 'D')}
                     error={!!errors.referralContact || (formData.referralContact.length > 0 && formData.referralContact.length !== 10)}
                     helperText={errors.referralContact || (formData.referralContact.length > 0 && formData.referralContact.length !== 10 ? 'Referral contact must be 10 digits' : '')}
                     inputProps={{
@@ -3189,7 +3189,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     placeholder="Referral Email"
                     value={formData.referralEmail}
                     onChange={(value) => handleInputChange('referralEmail', value)}
-                    disabled={loading || readOnly || (formData.referredBy === 'D') || isSelfReferral || (patientId && formData.referredBy !== 'D')}
+                    disabled={loading || readOnly || (formData.referredBy === 'D') || isSelfReferral || (!!patientId && formData.referredBy !== 'D')}
                     error={!!errors.referralEmail}
                     helperText={errors.referralEmail}
                   />
@@ -3208,7 +3208,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     error={!!errors.referralAddress}
                     helperText={errors.referralAddress}
                     inputProps={{ maxLength: 150 }}
-                    disabled={loading || readOnly || (formData.referredBy === 'D') || isSelfReferral || (patientId && formData.referredBy !== 'D')}
+                    disabled={loading || readOnly || (formData.referredBy === 'D') || isSelfReferral || (!!patientId && formData.referredBy !== 'D')}
                   />
                 </Box>
               </Grid>
