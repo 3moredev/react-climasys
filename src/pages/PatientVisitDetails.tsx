@@ -648,9 +648,10 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                     referralContact: appointmentData.referralContact ?? appointmentData.doctorMobile ?? '',
                     referralEmail: appointmentData.referralEmail ?? appointmentData.doctorEmail ?? '',
                     referralAddress: appointmentData.referralAddress ?? appointmentData.doctorAddress ?? '',
-                    pulse: appointmentData.pulse ?? '',
-                    height: appointmentData.heightInCms ?? '',
-                    weight: appointmentData.weightInKgs ?? '',
+                    // Treat zero values as empty strings for vital signs
+                    pulse: (appointmentData.pulse && appointmentData.pulse !== 0) ? appointmentData.pulse : '',
+                    height: (appointmentData.heightInCms && appointmentData.heightInCms !== 0) ? appointmentData.heightInCms : '',
+                    weight: (appointmentData.weightInKgs && appointmentData.weightInKgs !== 0) ? appointmentData.weightInKgs : '',
                     bp: appointmentData.bloodPressure ?? '',
                     sugar: appointmentData.sugar ?? '',
                     tft: appointmentData.tft ?? '',
@@ -772,9 +773,10 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                             referralContact: payload.referralContact ?? payload.doctorMobile ?? '',
                             referralEmail: payload.referralEmail ?? payload.doctorEmail ?? '',
                             referralAddress: payload.referralAddress ?? payload.doctorAddress ?? '',
-                            pulse: payload.pulse ?? payload.pulsePerMin ?? '',
-                            height: payload.heightInCms ?? payload.height ?? '',
-                            weight: payload.weightInKgs ?? payload.weight ?? '',
+                            // Treat zero values as empty strings for vital signs
+                            pulse: ((payload.pulse ?? payload.pulsePerMin) && (payload.pulse ?? payload.pulsePerMin) !== 0) ? (payload.pulse ?? payload.pulsePerMin) : '',
+                            height: ((payload.heightInCms ?? payload.height) && (payload.heightInCms ?? payload.height) !== 0) ? (payload.heightInCms ?? payload.height) : '',
+                            weight: ((payload.weightInKgs ?? payload.weight) && (payload.weightInKgs ?? payload.weight) !== 0) ? (payload.weightInKgs ?? payload.weight) : '',
                             bp: payload.bloodPressure ?? payload.bp ?? '',
                             sugar: payload.sugar ?? '',
                             tft: payload.tft ?? '',
@@ -1234,11 +1236,6 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
             if (isNaN(val) || val < 30 || val > 220) {
                 errors.pulse = 'Pulse must be between 30 and 220';
             }
-        }
-
-        // Referral Name is required if not Self
-        if (formData.referralBy !== 'Self' && !formData.referralName) {
-            errors.referralName = 'Referral name is required';
         }
 
         // Height range check if provided
@@ -1805,6 +1802,12 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                 setSelectedDoctor(null);
                                                 setReferralNameOptions([]);
                                             }}
+                                            onKeyDown={(e) => {
+                                                // Prevent any keyboard input when doctor is selected (except Tab for navigation)
+                                                if (selectedDoctor && e.key !== 'Tab') {
+                                                    e.preventDefault();
+                                                }
+                                            }}
                                             disabled={readOnly || isSelfReferral}
                                             variant="outlined"
                                             placeholder={isDoctorReferral() ? 'Type Doctor Name' : 'Type Referral Name'}
@@ -2089,7 +2092,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                         value={formData.bmi}
                                         disabled={true} // BMI is always calculated
                                         variant="outlined"
-                                        // placeholder='BMI'
+                                    // placeholder='BMI'
                                     />
                                 </Box>
                             </Grid>

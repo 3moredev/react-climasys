@@ -65,13 +65,16 @@ export const VISIT_FIELDS = {
     doctorEmail: { maxLength: 60, fieldName: 'Referral email', type: 'email' as const },
 
     // Vitals
+    pulse: { maxLength: 5, fieldName: 'Pulse', type: 'number' as const, min: 30, max: 220 },
+    height: { maxLength: 10, fieldName: 'Height', type: 'number' as const, pattern: /^\d*\.?\d*$/, min: 30, max: 250 },
+    weight: { maxLength: 10, fieldName: 'Weight', type: 'number' as const, pattern: /^\d*\.?\d*$/, min: 1, max: 250 },
     bloodPressure: { maxLength: 10, fieldName: 'Blood pressure', type: 'text' as const },
     bp: { maxLength: 10, fieldName: 'Blood pressure', type: 'text' as const }, // Frontend alias
     sugar: { maxLength: 25, fieldName: 'Sugar', type: 'text' as const },
     tft: { maxLength: 25, fieldName: 'TFT', type: 'text' as const },
     tpr: { maxLength: 10, fieldName: 'TPR', type: 'text' as const },
     pallor: { maxLength: 10, fieldName: 'Pallor', type: 'text' as const },
-    pallorHb: { maxLength: 10, fieldName: 'Pallor/HB', type: 'text' as const }, // Frontend alias
+    pallorHb: { maxLength: 25, fieldName: 'Pallor/HB', type: 'text' as const }, // Frontend alias
     systemic: { maxLength: 30, fieldName: 'Systemic', type: 'text' as const },
     odeama: { maxLength: 10, fieldName: 'Odeama', type: 'text' as const },
     gc: { maxLength: 20, fieldName: 'GC', type: 'text' as const },
@@ -134,13 +137,6 @@ export const VISIT_FIELDS = {
     referralEmail: { maxLength: 60, fieldName: 'Referral email', type: 'email' as const },
     referralAddress: { maxLength: 150, fieldName: 'Referral address', type: 'text' as const },
     pastSurgicalHistory: { maxLength: 1000, fieldName: 'Past surgical history', type: 'textarea' as const },
-    pulse: { maxLength: 5, fieldName: 'Pulse', type: 'number' as const, min: 30, max: 220 },
-    height: { maxLength: 10, fieldName: 'Height', type: 'number' as const, pattern: /^\d*\.?\d*$/, min: 30, max: 250 },
-    weight: { maxLength: 10, fieldName: 'Weight', type: 'number' as const, pattern: /^\d*\.?\d*$/, min: 1, max: 250 },
-    bp: { maxLength: 10, fieldName: 'BP', type: 'text' as const },
-    sugar: { maxLength: 25, fieldName: 'Sugar', type: 'text' as const },
-    tft: { maxLength: 25, fieldName: 'TFT', type: 'text' as const },
-    pallorHb: { maxLength: 25, fieldName: 'Pallor/HB', type: 'text' as const },
     complaintComment: { maxLength: 200, fieldName: 'Duration/Comment', type: 'text' as const },
     complaintSearch: { maxLength: 100, fieldName: 'Complaint Search', type: 'text' as const },
 } as const;

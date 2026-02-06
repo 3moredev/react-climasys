@@ -381,7 +381,6 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
                                 onBlur={handleDoctorNameBlur}
                                 error={!!doctorNameError && doctorNameError.toLowerCase().includes('required')}
                                 helperText={doctorNameError}
-                                helperText={doctorNameError}
                                 FormHelperTextProps={{
                                     sx: {
                                         color: (doctorNameError && !doctorNameError.toLowerCase().includes('required')) ? '#333333 !important' : undefined
@@ -410,7 +409,6 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
                                 onChange={(e) => handleContactNumberChange(e.target.value)}
                                 onBlur={validateContactNumber}
                                 error={!!contactError && contactError.toLowerCase().includes('required')}
-                                helperText={contactError}
                                 helperText={contactError}
                                 FormHelperTextProps={{
                                     sx: {
@@ -441,7 +439,6 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
                                 onBlur={validateEmail}
                                 error={!!emailError && emailError.toLowerCase().includes('required')}
                                 helperText={emailError}
-                                helperText={emailError}
                                 FormHelperTextProps={{
                                     sx: {
                                         color: (emailError && !emailError.toLowerCase().includes('required')) ? '#333333 !important' : undefined
@@ -469,7 +466,6 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
                                 value={formData.remarks}
                                 onChange={(e) => handleRemarksChange(e.target.value)}
                                 error={!!remarksError && remarksError.toLowerCase().includes('required')}
-                                helperText={remarksError}
                                 helperText={remarksError}
                                 FormHelperTextProps={{
                                     sx: {
@@ -499,7 +495,6 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
                                 maxLength={getMaxLength('doctorAddress', 'referralDoctor')}
                                 placeholder="Enter Doctor Address"
                                 value={formData.doctorAddress}
-                                onChange={(e) => handleAddressChange(e.target.value)}
                                 onChange={(e) => handleAddressChange(e.target.value)}
                                 style={{
                                     border: `2px solid ${(addressError && addressError.toLowerCase().includes('required')) ? '#f44336' : (addressError ? '#616161' : '#b7b7b7')}`,

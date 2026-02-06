@@ -977,7 +977,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
       }
       // Handle alphabets-only input for referralName
       if (field === 'referralName') {
-        processedValue = value.replace(/[^a-zA-Z\\s]/g, '')
+        processedValue = value.replace(/[^a-zA-Z\s]/g, '')
         // Clear selectedDoctor and referral fields when referral name is cleared or changed
         if (!processedValue || processedValue.trim() === '' || (selectedDoctor && processedValue !== selectedDoctor.doctorName)) {
           setSelectedDoctor(null)
@@ -2103,6 +2103,10 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                           '& .MuiInputBase-root': {
                             backgroundColor: params.disabled ? '#f5f5f5 !important' : 'inherit'
                           },
+                          '& .MuiInputBase-input.Mui-disabled::placeholder': {
+                            color: '#666666 !important',
+                            opacity: '0.5 !important'
+                          },
                           '& .MuiOutlinedInput-notchedOutline': {
                             borderColor: (errors.state && !String(errors.state).toLowerCase().includes('required')) ? '#616161 !important' : undefined
                           },
@@ -2287,6 +2291,10 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         sx={{
                           '& .MuiInputBase-root': {
                             backgroundColor: params.disabled ? '#f5f5f5 !important' : 'inherit'
+                          },
+                          '& .MuiInputBase-input.Mui-disabled::placeholder': {
+                            color: '#666666 !important',
+                            opacity: '0.5 !important'
                           },
                           '& .MuiOutlinedInput-notchedOutline': {
                             borderColor: (errors.city && !String(errors.city).toLowerCase().includes('required')) ? '#616161 !important' : undefined
@@ -2686,6 +2694,10 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                           '& .MuiInputBase-root': {
                             backgroundColor: params.disabled ? '#f5f5f5 !important' : 'inherit'
                           },
+                          '& .MuiInputBase-input.Mui-disabled::placeholder': {
+                            color: '#666666 !important',
+                            opacity: '0.5 !important'
+                          },
                           '& .MuiOutlinedInput-notchedOutline': {
                             borderColor: (errors.area && !String(errors.area).toLowerCase().includes('required')) ? '#616161 !important' : undefined
                           },
@@ -2932,7 +2944,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                       displayEmpty
                       renderValue={(selected) => {
                         if (selected === '' || selected === null || selected === undefined) {
-                          return <span style={{ color: 'rgba(0,0,0,0.6)' }}>Referred By</span>
+                          return <span style={{ color: 'rgba(0,0,0,0.5)' }}>Referred By</span>
                         }
                         const option = referByOptions.find(opt => opt.id === selected)
                         return option ? option.name : String(selected ?? '')
@@ -3030,9 +3042,19 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                             placeholder={isDoctorReferral() ? 'Type Doctor Name' : 'Type Referral Name'}
                             error={!!errors.referralName}
                             helperText={errors.referralName}
+                            onKeyDown={(e) => {
+                              // Prevent any keyboard input when doctor is selected (except Tab for navigation)
+                              if (selectedDoctor && e.key !== 'Tab') {
+                                e.preventDefault();
+                              }
+                            }}
                             sx={{
                               '& .MuiInputBase-root.Mui-disabled': {
                                 backgroundColor: '#f5f5f5 !important'
+                              },
+                              '& .MuiInputBase-input.Mui-disabled::placeholder': {
+                                color: '#666666 !important',
+                                opacity: '0.5 !important'
                               }
                             }}
                             InputProps={{
