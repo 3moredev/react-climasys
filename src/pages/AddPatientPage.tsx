@@ -2691,9 +2691,6 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                           },
                           '&:hover .MuiOutlinedInput-notchedOutline': {
                             borderColor: (errors.area && !String(errors.area).toLowerCase().includes('required')) ? '#424242 !important' : undefined
-                          },
-                          '& .MuiInputBase-root': {
-                            backgroundColor: params.disabled ? '#f5f5f5 !important' : 'inherit'
                           }
                         }}
                         FormHelperTextProps={{
