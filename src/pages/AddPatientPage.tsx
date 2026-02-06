@@ -2690,6 +2690,12 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         placeholder={selectedCityId ? "Search Area or type new area name" : "Select City first"}
                         error={!!errors.area && String(errors.area).toLowerCase().includes('required')}
                         helperText={errors.area}
+                        onKeyDown={(e) => {
+                          // Prevent any keyboard input when area is selected (except Tab for navigation)
+                          if (selectedAreaCityId && e.key !== 'Tab') {
+                            e.preventDefault();
+                          }
+                        }}
                         sx={{
                           '& .MuiInputBase-root': {
                             backgroundColor: params.disabled ? '#f5f5f5 !important' : 'inherit'
@@ -2703,6 +2709,10 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                           },
                           '&:hover .MuiOutlinedInput-notchedOutline': {
                             borderColor: (errors.area && !String(errors.area).toLowerCase().includes('required')) ? '#424242 !important' : undefined
+                          },
+                          // Style for locked/readOnly state to match disabled look if desired, or just standard readOnly
+                          '& .MuiInputBase-root.Mui-readOnly': {
+                            backgroundColor: '#f5f5f5' // Optional: visual cue that it's locked
                           }
                         }}
                         FormHelperTextProps={{
@@ -2784,6 +2794,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         }}
                         InputProps={{
                           ...params.InputProps,
+                          readOnly: !!selectedAreaCityId,
                           endAdornment: (
                             <React.Fragment>
                               {params.InputProps.endAdornment}

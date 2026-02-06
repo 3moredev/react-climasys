@@ -1242,88 +1242,106 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                             }}
                                                         />
                                                     </div>
-                                                    <div style={{ maxHeight: '240px', overflowY: 'auto', padding: '4px 6px', display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', columnGap: '8px', rowGap: '6px' }}>
-                                                        {labTestsLoading && (
-                                                            <div style={{ padding: '6px', fontSize: '12px', color: '#777', gridColumn: '1 / -1', textAlign: 'center' }}>Loading lab tests...</div>
-                                                        )}
-                                                        {labTestsError && (
-                                                            <div style={{ padding: '6px', fontSize: '12px', color: '#d32f2f', gridColumn: '1 / -1', textAlign: 'center' }}>
-                                                                {labTestsError}
-                                                                <button
-                                                                    onClick={() => {
-                                                                        setLabTestsError(null);
-                                                                        const doctorId = patientData?.doctorId || (patientData?.provider ?? '').toString();
-                                                                        if (!doctorId) return;
-                                                                        setLabTestsLoading(true);
-                                                                        const clinicId = patientData?.clinicId || sessionData?.clinicId || 'DEFAULT_CLINIC';
-                                                                        patientService.getAllLabTestsWithParameters(doctorId, clinicId)
-                                                                            .then((res: any) => {
-                                                                                const mapped = extractLabTests(res);
-                                                                                console.log('Parsed lab tests count (retry):', mapped.length);
-                                                                                if (mapped.length === 0) {
-                                                                                    console.warn('Lab tests response could not be parsed. Raw response:', res);
-                                                                                }
-                                                                                setLabTestsOptions(mapped);
-                                                                            })
-                                                                            .catch((e: any) => setLabTestsError(e?.message || 'Failed to load lab tests'))
-                                                                            .finally(() => setLabTestsLoading(false));
-                                                                    }}
-                                                                    style={{ marginLeft: '8px', padding: '2px 6px', fontSize: '10px', backgroundColor: '#1976d2', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer' }}
-                                                                >
-                                                                    Retry
-                                                                </button>
-                                                            </div>
-                                                        )}
-                                                        {!labTestsLoading && !labTestsError && filteredLabTests.length === 0 && (
-                                                            <div style={{ padding: '6px', fontSize: '12px', color: '#777', gridColumn: '1 / -1' }}>No lab tests found</div>
-                                                        )}
-                                                        {!labTestsLoading && !labTestsError && filteredLabTests.map((opt) => {
-                                                            const isAdded = labTestResults.some(r => r.labTestName === opt.label);
-                                                            const isChecked = selectedLabTests.includes(opt.value) || isAdded;
-                                                            return (
-                                                                <label
-                                                                    key={opt.value}
-                                                                    title={opt.label}
-                                                                    style={{
-                                                                        display: 'flex',
-                                                                        alignItems: 'center',
-                                                                        gap: '4px',
-                                                                        padding: '4px 2px',
-                                                                        cursor: isAdded ? 'not-allowed' : 'pointer',
-                                                                        fontSize: '12px',
-                                                                        border: 'none',
-                                                                        backgroundColor: isAdded ? '#f5f5f5' : 'transparent',
-                                                                        borderRadius: '3px',
-                                                                        fontWeight: 400,
-                                                                        opacity: isAdded ? 0.6 : 1,
-                                                                        color: isAdded ? '#999' : '#333'
-                                                                    }}
-                                                                >
-                                                                    <input
-                                                                        type="checkbox"
-                                                                        checked={isChecked}
-                                                                        disabled={isAdded}
-                                                                        onChange={(e) => {
-                                                                            if (isAdded) return;
-                                                                            setDropdownError(null); // Clear error on interaction
-                                                                            setSelectedLabTests(prev => {
-                                                                                if (e.target.checked) {
-                                                                                    if (prev.includes(opt.value)) return prev;
-                                                                                    const next = [...prev, opt.value];
-                                                                                    return next;
-                                                                                } else {
-                                                                                    const next = prev.filter(v => v !== opt.value);
-                                                                                    return next;
-                                                                                }
-                                                                            });
+                                                    <Box sx={{
+                                                        maxHeight: '140px',
+                                                        overflowY: 'auto',
+                                                        borderTop: '1px solid #eee',
+                                                        '&::-webkit-scrollbar': {
+                                                            width: '6px'
+                                                        },
+                                                        '&::-webkit-scrollbar-track': {
+                                                            background: '#f1f1f1'
+                                                        },
+                                                        '&::-webkit-scrollbar-thumb': {
+                                                            background: '#c1c1c1',
+                                                            borderRadius: '4px'
+                                                        },
+                                                        '&::-webkit-scrollbar-thumb:hover': {
+                                                            background: '#a8a8a8'
+                                                        }
+                                                    }}>
+                                                        <div style={{ padding: '4px 6px', display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', columnGap: '8px', rowGap: '6px' }}>
+                                                            {labTestsLoading && (
+                                                                <div style={{ padding: '6px', fontSize: '12px', color: '#777', textAlign: 'center' }}>Loading lab tests...</div>
+                                                            )}
+                                                            {labTestsError && (
+                                                                <div style={{ padding: '6px', fontSize: '12px', color: '#d32f2f', textAlign: 'center' }}>
+                                                                    {labTestsError}
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            setLabTestsError(null);
+                                                                            const doctorId = patientData?.doctorId || (patientData?.provider ?? '').toString();
+                                                                            if (!doctorId) return;
+                                                                            setLabTestsLoading(true);
+                                                                            const clinicId = patientData?.clinicId || sessionData?.clinicId || 'DEFAULT_CLINIC';
+                                                                            patientService.getAllLabTestsWithParameters(doctorId, clinicId)
+                                                                                .then((res: any) => {
+                                                                                    const mapped = extractLabTests(res);
+                                                                                    console.log('Parsed lab tests count (retry):', mapped.length);
+                                                                                    if (mapped.length === 0) {
+                                                                                        console.warn('Lab tests response could not be parsed. Raw response:', res);
+                                                                                    }
+                                                                                    setLabTestsOptions(mapped);
+                                                                                })
+                                                                                .catch((e: any) => setLabTestsError(e?.message || 'Failed to load lab tests'))
+                                                                                .finally(() => setLabTestsLoading(false));
                                                                         }}
-                                                                        style={{ margin: 0, maxWidth: 16 }}
-                                                                    />
-                                                                    <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{opt.label}{isAdded ? ' (Added)' : ''}</span>
-                                                                </label>
-                                                            );
-                                                        })}
-                                                    </div>
+                                                                        style={{ marginLeft: '8px', padding: '2px 6px', fontSize: '10px', backgroundColor: '#1976d2', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer' }}
+                                                                    >
+                                                                        Retry
+                                                                    </button>
+                                                                </div>
+                                                            )}
+                                                            {!labTestsLoading && !labTestsError && filteredLabTests.length === 0 && (
+                                                                <div style={{ padding: '6px', fontSize: '12px', color: '#777' }}>No lab tests found</div>
+                                                            )}
+                                                            {!labTestsLoading && !labTestsError && filteredLabTests.map((opt) => {
+                                                                const isAdded = labTestResults.some(r => r.labTestName === opt.label);
+                                                                const isChecked = selectedLabTests.includes(opt.value) || isAdded;
+                                                                return (
+                                                                    <label
+                                                                        key={opt.value}
+                                                                        title={opt.label}
+                                                                        style={{
+                                                                            display: 'flex',
+                                                                            alignItems: 'center',
+                                                                            gap: '6px',
+                                                                            padding: '6px 4px',
+                                                                            cursor: isAdded ? 'not-allowed' : 'pointer',
+                                                                            fontSize: '13px',
+                                                                            borderBottom: '1px solid #f9f9f9',
+                                                                            backgroundColor: isAdded ? '#f5f5f5' : 'transparent',
+                                                                            fontWeight: 400,
+                                                                            opacity: isAdded ? 0.6 : 1,
+                                                                            color: isAdded ? '#999' : '#333'
+                                                                        }}
+                                                                    >
+                                                                        <input
+                                                                            type="checkbox"
+                                                                            checked={isChecked}
+                                                                            disabled={isAdded}
+                                                                            onChange={(e) => {
+                                                                                if (isAdded) return;
+                                                                                setDropdownError(null); // Clear error on interaction
+                                                                                setSelectedLabTests(prev => {
+                                                                                    if (e.target.checked) {
+                                                                                        if (prev.includes(opt.value)) return prev;
+                                                                                        const next = [...prev, opt.value];
+                                                                                        return next;
+                                                                                    } else {
+                                                                                        const next = prev.filter(v => v !== opt.value);
+                                                                                        return next;
+                                                                                    }
+                                                                                });
+                                                                            }}
+                                                                            style={{ margin: 0, maxWidth: 16 }}
+                                                                        />
+                                                                        <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{opt.label}{isAdded ? ' (Added)' : ''}</span>
+                                                                    </label>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </Box>
                                                 </div>
                                             )}
                                         </div>
@@ -1386,121 +1404,144 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                             border: '1px solid #ddd',
                                             borderTop: 'none',
                                             borderRadius: '0 0 4px 4px',
-                                            overflow: 'hidden'
+                                            overflow: 'hidden',
+                                            display: 'flex',
+                                            flexDirection: 'column'
                                         }}>
-                                            <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
-                                                <thead>
-                                                    <tr style={{ backgroundColor: '#f5f5f5' }}>
-                                                        <th style={{
-                                                            padding: '12px',
-                                                            textAlign: 'left',
-                                                            borderBottom: '1px solid #ddd',
-                                                            fontWeight: '400',
-                                                            color: 'black',
-                                                            width: '35%'
-                                                        }}>
-                                                            Lab Test Name
-                                                        </th>
-                                                        <th style={{
-                                                            padding: '12px',
-                                                            textAlign: 'left',
-                                                            borderBottom: '1px solid #ddd',
-                                                            fontWeight: '400',
-                                                            color: 'black',
-                                                            width: '190px'
-                                                        }}>
-                                                            Parameter Name
-                                                        </th>
-                                                        <th style={{
-                                                            padding: '12px',
-                                                            textAlign: 'left',
-                                                            borderBottom: '1px solid #ddd',
-                                                            fontWeight: '400',
-                                                            color: 'black',
-                                                            width: '120px'
-                                                        }}>
-                                                            Value / Results <span style={{ color: 'red' }}>*</span>
-                                                        </th>
-                                                        <th style={{
-                                                            padding: '12px',
-                                                            textAlign: 'center',
-                                                            borderBottom: '1px solid #ddd',
-                                                            fontWeight: '400',
-                                                            color: 'black',
-                                                            width: '80px'
-                                                        }}>
-                                                            Action
-                                                        </th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {labTestResults.map((result) => (
-                                                        <tr key={result.id}>
-                                                            <td style={{
-                                                                padding: '16px',
-                                                                borderBottom: '1px solid #eee',
+                                            <div style={{
+                                                maxHeight: '300px',
+                                                overflowY: 'auto'
+                                            }}>
+                                                <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+                                                    <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
+                                                        <tr style={{ backgroundColor: '#f5f5f5' }}>
+                                                            <th style={{
+                                                                padding: '12px',
+                                                                textAlign: 'left',
+                                                                borderBottom: '1px solid #ddd',
+                                                                fontWeight: '400',
                                                                 color: 'black',
-                                                                height: '38px',
-                                                                fontSize: '14px'
+                                                                width: '35%',
+                                                                position: 'sticky',
+                                                                top: 0,
+                                                                backgroundColor: '#f5f5f5',
+                                                                zIndex: 1
                                                             }}>
-                                                                {result.labTestName}
-                                                            </td>
-                                                            <td style={{
-                                                                padding: '16px',
-                                                                borderBottom: '1px solid #eee',
+                                                                Lab Test Name
+                                                            </th>
+                                                            <th style={{
+                                                                padding: '12px',
+                                                                textAlign: 'left',
+                                                                borderBottom: '1px solid #ddd',
+                                                                fontWeight: '400',
                                                                 color: 'black',
-                                                                height: '38px',
-                                                                fontSize: '14px'
+                                                                width: '190px',
+                                                                position: 'sticky',
+                                                                top: 0,
+                                                                backgroundColor: '#f5f5f5',
+                                                                zIndex: 1
                                                             }}>
-                                                                {result.parameterName}
-                                                            </td>
-                                                            <td style={{ padding: '16px', borderBottom: '1px solid #eee' }}>
-                                                                <TextField
-                                                                    fullWidth
-                                                                    placeholder="Value / Results"
-                                                                    value={result.value}
-                                                                    onChange={(e) => handleResultChange(result.id, 'value', e.target.value)}
-                                                                    required
-                                                                    error={resultErrors.has(result.id)}
-                                                                    helperText={resultErrors.has(result.id) ? 'Value is required' : ''}
-                                                                    variant="outlined"
-                                                                    size="small"
-                                                                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
-                                                                />
-                                                            </td>
-                                                            <td style={{
-                                                                padding: '16px',
-                                                                borderBottom: '1px solid #eee',
+                                                                Parameter Name
+                                                            </th>
+                                                            <th style={{
+                                                                padding: '12px',
+                                                                textAlign: 'left',
+                                                                borderBottom: '1px solid #ddd',
+                                                                fontWeight: '400',
+                                                                color: 'black',
+                                                                width: '120px',
+                                                                position: 'sticky',
+                                                                top: 0,
+                                                                backgroundColor: '#f5f5f5',
+                                                                zIndex: 1
+                                                            }}>
+                                                                Value / Results <span style={{ color: 'red' }}>*</span>
+                                                            </th>
+                                                            <th style={{
+                                                                padding: '12px',
                                                                 textAlign: 'center',
-                                                                height: '38px'
+                                                                borderBottom: '1px solid #ddd',
+                                                                fontWeight: '400',
+                                                                color: 'black',
+                                                                width: '80px',
+                                                                position: 'sticky',
+                                                                top: 0,
+                                                                backgroundColor: '#f5f5f5',
+                                                                zIndex: 1
                                                             }}>
-                                                                <button
-                                                                    onClick={() => handleRemoveResult(result.id)}
-                                                                    style={{
-                                                                        background: 'none',
-                                                                        border: 'none',
-                                                                        cursor: 'pointer',
-                                                                        color: '#f44336',
-                                                                        padding: '6px',
-                                                                        borderRadius: '4px',
-                                                                        display: 'flex',
-                                                                        alignItems: 'center',
-                                                                        justifyContent: 'center'
-                                                                    }}
-                                                                    onMouseEnter={(e) => {
-                                                                        e.currentTarget.style.backgroundColor = '#ffebee';
-                                                                    }}
-                                                                    onMouseLeave={(e) => {
-                                                                        e.currentTarget.style.backgroundColor = 'transparent';
-                                                                    }}
-                                                                >
-                                                                    <Delete fontSize="small" style={{ color: 'black' }} />
-                                                                </button>
-                                                            </td>
+                                                                Action
+                                                            </th>
                                                         </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
+                                                    </thead>
+                                                    <tbody>
+                                                        {labTestResults.map((result) => (
+                                                            <tr key={result.id}>
+                                                                <td style={{
+                                                                    padding: '16px',
+                                                                    borderBottom: '1px solid #eee',
+                                                                    color: 'black',
+                                                                    height: '38px',
+                                                                    fontSize: '14px'
+                                                                }}>
+                                                                    {result.labTestName}
+                                                                </td>
+                                                                <td style={{
+                                                                    padding: '16px',
+                                                                    borderBottom: '1px solid #eee',
+                                                                    color: 'black',
+                                                                    height: '38px',
+                                                                    fontSize: '14px'
+                                                                }}>
+                                                                    {result.parameterName}
+                                                                </td>
+                                                                <td style={{ padding: '16px', borderBottom: '1px solid #eee' }}>
+                                                                    <TextField
+                                                                        fullWidth
+                                                                        placeholder="Value / Results"
+                                                                        value={result.value}
+                                                                        onChange={(e) => handleResultChange(result.id, 'value', e.target.value)}
+                                                                        required
+                                                                        error={resultErrors.has(result.id)}
+                                                                        helperText={resultErrors.has(result.id) ? 'Value is required' : ''}
+                                                                        variant="outlined"
+                                                                        size="small"
+                                                                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
+                                                                    />
+                                                                </td>
+                                                                <td style={{
+                                                                    padding: '16px',
+                                                                    borderBottom: '1px solid #eee',
+                                                                    textAlign: 'center',
+                                                                    height: '38px'
+                                                                }}>
+                                                                    <button
+                                                                        onClick={() => handleRemoveResult(result.id)}
+                                                                        style={{
+                                                                            background: 'none',
+                                                                            border: 'none',
+                                                                            cursor: 'pointer',
+                                                                            color: '#f44336',
+                                                                            padding: '6px',
+                                                                            borderRadius: '4px',
+                                                                            display: 'flex',
+                                                                            alignItems: 'center',
+                                                                            justifyContent: 'center'
+                                                                        }}
+                                                                        onMouseEnter={(e) => {
+                                                                            e.currentTarget.style.backgroundColor = '#ffebee';
+                                                                        }}
+                                                                        onMouseLeave={(e) => {
+                                                                            e.currentTarget.style.backgroundColor = 'transparent';
+                                                                        }}
+                                                                    >
+                                                                        <Delete fontSize="small" style={{ color: 'black' }} />
+                                                                    </button>
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
                                         </div>
                                     </div>
                                 )}
