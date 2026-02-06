@@ -74,7 +74,7 @@ export default function AdvanceCollectionDialog({
   // Format date to dd-mmm-yy format for display
   const formatDateToDDMMMYY = (dateString: string): string => {
     if (!dateString) return "";
-    
+
     // If it's already in yyyy-mm-dd format, convert it
     if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
       const date = new Date(dateString);
@@ -86,12 +86,12 @@ export default function AdvanceCollectionDialog({
         return `${day}-${month}-${year}`;
       }
     }
-    
+
     // If already in dd-mmm-yy format, return as is
     if (/^\d{2}-[A-Za-z]{3}-\d{2}$/.test(dateString)) {
       return dateString.toUpperCase();
     }
-    
+
     // Handle ISO string yyyy-mm-ddTHH:mm:ss.sssZ
     const isoDate = new Date(dateString);
     if (!isNaN(isoDate.getTime())) {
@@ -101,14 +101,14 @@ export default function AdvanceCollectionDialog({
       const year = String(isoDate.getFullYear()).slice(-2);
       return `${day}-${month}-${year}`;
     }
-    
+
     return dateString;
   };
 
   // Get company name from company ID
   const getCompanyName = (companyId: string | undefined): string => {
     if (!companyId) return '--';
-    
+
     const company = insuranceCompanies.find(ic => ic.id === companyId);
     return company ? company.name : companyId; // Return ID if name not found
   };
@@ -142,13 +142,13 @@ export default function AdvanceCollectionDialog({
         setLoadingInsuranceCompanies(true);
         const response = await admissionService.getAllActiveInsuranceCompanies();
         console.log('Insurance Companies API Response:', response);
-        
+
         if (response.success && response.data && response.data.length > 0) {
           // Ensure data structure is correct (id and name)
           const validCompanies = response.data.filter(
             (ic: any) => ic.id && ic.name
           );
-          
+
           if (validCompanies.length > 0) {
             setInsuranceCompanies(validCompanies);
             console.log(`Loaded ${validCompanies.length} insurance companies:`, validCompanies);
@@ -174,18 +174,18 @@ export default function AdvanceCollectionDialog({
         const preferKeys = ['paymentMethods', 'paymentBy', 'paymentTypes', 'paymentModes', 'payments', 'paymentByList'];
         let raw: any[] = [];
         for (const key of preferKeys) {
-          if (Array.isArray((ref as any)?.[key])) { 
-            raw = (ref as any)[key]; 
-            break; 
+          if (Array.isArray((ref as any)?.[key])) {
+            raw = (ref as any)[key];
+            break;
           }
         }
         if (raw.length === 0) {
-          const firstArrayKey = Object.keys(ref || {}).find(k => 
-            Array.isArray((ref as any)[k]) && 
-            ((ref as any)[k][0] && 
-              (('description' in (ref as any)[k][0]) || 
-               ('label' in (ref as any)[k][0]) || 
-               ('name' in (ref as any)[k][0])))
+          const firstArrayKey = Object.keys(ref || {}).find(k =>
+            Array.isArray((ref as any)[k]) &&
+            ((ref as any)[k][0] &&
+              (('description' in (ref as any)[k][0]) ||
+                ('label' in (ref as any)[k][0]) ||
+                ('name' in (ref as any)[k][0])))
           );
           if (firstArrayKey) raw = (ref as any)[firstArrayKey];
         }
@@ -197,15 +197,15 @@ export default function AdvanceCollectionDialog({
         };
         const options: { value: number; label: string }[] = Array.isArray(raw)
           ? raw.map((r: any) => ({
-              value: toNum(r?.id ?? r?.value ?? r?.code ?? r?.paymentById ?? r?.key ?? r),
-              label: toStr(r?.paymentDescription ?? r?.description ?? r?.label ?? r?.name ?? r?.paymentBy ?? r)
-            })).filter(o => o.label && o.value > 0) // Filter out invalid options
+            value: toNum(r?.id ?? r?.value ?? r?.code ?? r?.paymentById ?? r?.key ?? r),
+            label: toStr(r?.paymentDescription ?? r?.description ?? r?.label ?? r?.name ?? r?.paymentBy ?? r)
+          })).filter(o => o.label && o.value > 0) // Filter out invalid options
           : [];
         setPaymentByOptions(options);
         // If no selection yet, initialize to first option
-        setFormData(prev => ({ 
-          ...prev, 
-          paymentBy: prev.paymentBy || (options[0]?.value || 0) 
+        setFormData(prev => ({
+          ...prev,
+          paymentBy: prev.paymentBy || (options[0]?.value || 0)
         }));
         console.log('Loaded payment by options:', options);
       } catch (error) {
@@ -246,7 +246,7 @@ export default function AdvanceCollectionDialog({
         };
 
         const response = await advanceCollectionService.getAdvanceDetails(params);
-        
+
         if (response.success && response.data) {
           setPreviousAdvanceRecords(response.data);
         } else {
@@ -272,7 +272,7 @@ export default function AdvanceCollectionDialog({
       const today = new Date();
       const todayYYYYMMDD = today.toISOString().split('T')[0];
       const todayFormatted = formatDateToDDMMMYY(todayYYYYMMDD);
-      
+
       setAdvanceDateYYYYMMDD(todayYYYYMMDD);
       setReceiptDateYYYYMMDD(todayYYYYMMDD);
       setFormData({
@@ -322,13 +322,13 @@ export default function AdvanceCollectionDialog({
       const day = parts[0];
       const monthStr = parts[1];
       const yearStr = parts[2];
-      
+
       const months: { [key: string]: string } = {
         'jan': '01', 'feb': '02', 'mar': '03', 'apr': '04',
         'may': '05', 'jun': '06', 'jul': '07', 'aug': '08',
         'sep': '09', 'oct': '10', 'nov': '11', 'dec': '12'
       };
-      
+
       const month = months[monthStr.toLowerCase()];
       if (month) {
         const fullYear = parseInt(yearStr) < 50 ? `20${yearStr}` : `19${yearStr}`;
@@ -345,13 +345,13 @@ export default function AdvanceCollectionDialog({
       const day = parts[0];
       const monthStr = parts[1];
       const yearStr = parts[2];
-      
+
       const months: { [key: string]: string } = {
         'jan': '01', 'feb': '02', 'mar': '03', 'apr': '04',
         'may': '05', 'jun': '06', 'jul': '07', 'aug': '08',
         'sep': '09', 'oct': '10', 'nov': '11', 'dec': '12'
       };
-      
+
       const month = months[monthStr.toLowerCase()];
       if (month) {
         const fullYear = parseInt(yearStr) < 50 ? `20${yearStr}` : `19${yearStr}`;
@@ -363,15 +363,15 @@ export default function AdvanceCollectionDialog({
 
 
   // Helper function to get gender from gender_id
-//   const getGenderFromId = (genderId: number): string => {
-//     switch (genderId) {
-//       case 1: return 'Male';
-//       case 2: return 'Female';
-//       default: return 'N/A';
-//     }
-//   };
+  //   const getGenderFromId = (genderId: number): string => {
+  //     switch (genderId) {
+  //       case 1: return 'Male';
+  //       case 2: return 'Female';
+  //       default: return 'N/A';
+  //     }
+  //   };
 
-  const displayPatientData: { name?: string; id?: string; gender?: string; age?: number } | null = 
+  const displayPatientData: { name?: string; id?: string; gender?: string; age?: number } | null =
     patientData ? {
       name: patientData.name,
       id: patientData.id ? String(patientData.id) : undefined,
@@ -387,12 +387,12 @@ export default function AdvanceCollectionDialog({
   // Helper function to convert date string to date-only format (yyyy-mm-dd)
   const convertToDateOnly = (dateString: string): string => {
     if (!dateString) return '';
-    
+
     // If already in yyyy-mm-dd format, return as is
     if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
       return dateString;
     }
-    
+
     // Try to parse the date string and extract only the date part
     const date = new Date(dateString);
     if (!isNaN(date.getTime())) {
@@ -401,7 +401,7 @@ export default function AdvanceCollectionDialog({
       const day = String(date.getDate()).padStart(2, '0');
       return `${year}-${month}-${day}`;
     }
-    
+
     return '';
   };
 
@@ -442,13 +442,13 @@ export default function AdvanceCollectionDialog({
     setIsSubmitting(true);
 
     // Convert dates to date-only format (yyyy-mm-dd)
-    const dateISO = advanceDateYYYYMMDD 
+    const dateISO = advanceDateYYYYMMDD
       ? convertToDateOnly(advanceDateYYYYMMDD) // Date only format
       : '';
-    const dateOfAdvanceISO = advanceDateYYYYMMDD 
+    const dateOfAdvanceISO = advanceDateYYYYMMDD
       ? convertToDateOnly(advanceDateYYYYMMDD) // Date only format
       : undefined;
-    const receiptDateISO = receiptDateYYYYMMDD 
+    const receiptDateISO = receiptDateYYYYMMDD
       ? convertToDateOnly(receiptDateYYYYMMDD) // Date only format
       : undefined;
 
@@ -458,7 +458,7 @@ export default function AdvanceCollectionDialog({
     try {
       // First, call saveAdvanceReceiptDetails to generate receipt number
       let generatedReceiptNo = formData.receiptNo?.trim() || '';
-      
+
       try {
         const receiptRequest: ReceiptDetailsRequest = {
           patientId: String(displayPatientData.id || ''),
@@ -473,10 +473,10 @@ export default function AdvanceCollectionDialog({
           loginId: '',
           date: receiptDateISO
         };
-        
+
         console.log('Generating receipt number via saveAdvanceReceiptDetails:', receiptRequest);
         const receiptResponse = await advanceCollectionService.saveAdvanceReceiptDetails(receiptRequest);
-        
+
         if (receiptResponse.success) {
           // Extract generated receipt number from response
           // Check if receiptNo is in data object or response directly
@@ -495,7 +495,7 @@ export default function AdvanceCollectionDialog({
               console.log('Generated receipt number (from message):', generatedReceiptNo);
             }
           }
-          
+
           if (!generatedReceiptNo) {
             console.warn('Receipt number not found in response, using provided receiptNo or empty');
           }
@@ -525,7 +525,7 @@ export default function AdvanceCollectionDialog({
         loginId: '',
         receiptDate: receiptDateISO, // Send receipt date in date-only format (yyyy-mm-dd)
       };
-      
+
       console.log('Submitting advance collection request:', request);
       console.log('Payment By ID:', formData.paymentBy);
       console.log('Using receipt number:', generatedReceiptNo);
@@ -533,10 +533,10 @@ export default function AdvanceCollectionDialog({
       const response = await advanceCollectionService.saveAdvanceCollection(request);
 
       if (response.success) {
-        
+
         setSnackbarMessage(response.message || "Advance collection saved successfully");
         setSnackbarOpen(true);
-        
+
         // Reload previous advance records
         if (patientData?.id && sessionData?.clinicId && admissionData?.admissionIpdNo) {
           const params: AdvanceCollectionDetailsRequest = {
@@ -549,10 +549,10 @@ export default function AdvanceCollectionDialog({
             setPreviousAdvanceRecords(recordsResponse.data);
           }
         }
-        
+
         // Call the onSubmit callback if provided
         onSubmit?.(formData);
-        
+
         // Reset form
         const today = new Date();
         const todayYYYYMMDD = today.toISOString().split('T')[0];
@@ -583,7 +583,7 @@ export default function AdvanceCollectionDialog({
       if (request) {
         console.error("Request that failed:", JSON.stringify(request, null, 2));
       }
-      
+
       // Extract detailed error message
       let errorMessage = "An error occurred while saving advance collection";
       if (error.response?.data?.message) {
@@ -593,7 +593,7 @@ export default function AdvanceCollectionDialog({
       } else if (error.message) {
         errorMessage = error.message;
       }
-      
+
       setSnackbarMessage(errorMessage);
       setSnackbarOpen(true);
     } finally {
@@ -644,9 +644,9 @@ export default function AdvanceCollectionDialog({
           <h4 className="mb-0 fw-bold" style={{ color: "#007bff", fontSize: "1.5rem" }}>Advance Collection</h4>
           <button
             onClick={onClose}
-            style={{ 
-              border: "none", 
-              background: "none", 
+            style={{
+              border: "none",
+              background: "none",
               cursor: "pointer",
               padding: "4px",
               display: "flex",
@@ -660,14 +660,14 @@ export default function AdvanceCollectionDialog({
 
         {/* Patient Information */}
         {displayPatientData ? (
-          <div 
+          <div
             onClick={() => {
               if (displayPatientData.id) {
                 setShowQuickRegistration(true);
               }
             }}
-            className="mb-3" 
-            style={{ 
+            className="mb-3"
+            style={{
               fontSize: "14px",
               cursor: displayPatientData.id ? 'pointer' : 'default',
               textDecoration: displayPatientData.id ? 'underline' : 'none',
@@ -695,13 +695,13 @@ export default function AdvanceCollectionDialog({
                 label="Admission No"
                 value={admissionData?.admissionIpdNo || '--'}
                 disabled={true}
-                onChange={() => {}}
+                onChange={() => { }}
               />
               <HorizontalField
                 label="Discharge Date"
                 value={admissionData?.dischargeDate ? formatDateToDDMMMYY(admissionData.dischargeDate) : '--'}
                 disabled={true}
-                onChange={() => {}}
+                onChange={() => { }}
                 isDate
                 dateFormat="dd-mmm-yy"
               />
@@ -709,13 +709,13 @@ export default function AdvanceCollectionDialog({
                 label="Insurance"
                 value={admissionData?.insurance || 'No'}
                 disabled={true}
-                onChange={() => {}}
+                onChange={() => { }}
               />
               <HorizontalField
                 label="Hospital bill Date"
                 value={admissionData?.hospitalBillDate ? formatDateToDDMMMYY(admissionData.hospitalBillDate) : '--'}
                 disabled={true}
-                onChange={() => {}}
+                onChange={() => { }}
                 isDate
                 dateFormat="dd-mmm-yy"
               />
@@ -727,7 +727,7 @@ export default function AdvanceCollectionDialog({
                 label="IPD File No"
                 value={admissionData?.ipdFileNo || '--'}
                 disabled={true}
-                onChange={() => {}}
+                onChange={() => { }}
               />
               <div className="row align-items-center mb-3">
                 <label className="col-4 col-form-label fw-medium">Room - Bed</label>
@@ -744,13 +744,13 @@ export default function AdvanceCollectionDialog({
                 label="Company"
                 value={getCompanyName(admissionData?.company)}
                 disabled={true}
-                onChange={() => {}}
+                onChange={() => { }}
               />
               <HorizontalField
                 label="Package remarks"
                 value={admissionData?.packageRemarks || '--'}
                 disabled={true}
-                onChange={() => {}}
+                onChange={() => { }}
               />
             </div>
 
@@ -760,7 +760,7 @@ export default function AdvanceCollectionDialog({
                 label="Admission Date"
                 value={admissionData?.admissionDate ? formatDateToDDMMMYY(admissionData.admissionDate) : '--'}
                 disabled={true}
-                onChange={() => {}}
+                onChange={() => { }}
                 isDate
                 dateFormat="dd-mmm-yy"
               />
@@ -768,19 +768,19 @@ export default function AdvanceCollectionDialog({
                 label="Department"
                 value={admissionData?.department || '--'}
                 disabled={true}
-                onChange={() => {}}
+                onChange={() => { }}
               />
               <HorizontalField
                 label="Hospital bill No"
                 value={admissionData?.hospitalBillNo || '--'}
                 disabled={true}
-                onChange={() => {}}
+                onChange={() => { }}
               />
               <HorizontalField
                 label="Total Advance(Rs)"
                 value={admissionData?.advanceRs ? admissionData.advanceRs.toFixed(2) : '0.00'}
                 disabled={true}
-                onChange={() => {}}
+                onChange={() => { }}
               />
             </div>
           </div>
@@ -815,10 +815,10 @@ export default function AdvanceCollectionDialog({
                 }}
                 required
               />
-              
+
             </div>
             <div className="col-md-4">
-            <HorizontalField
+              <HorizontalField
                 label="Payment By"
                 isSelect
                 options={paymentByOptions.map(opt => opt.label)}
@@ -828,11 +828,11 @@ export default function AdvanceCollectionDialog({
               />
             </div>
           </div>
-          
+
           {/* SECOND ROW - 3 fields */}
           <div className="row">
-          <div className="col-md-4">
-            <HorizontalField
+            <div className="col-md-4">
+              <HorizontalField
                 label="Payment Remark"
                 value={formData.paymentRemark}
                 onChange={(v) => handleInputChange("paymentRemark", v)}
@@ -916,12 +916,12 @@ export default function AdvanceCollectionDialog({
 
         {/* Footer Buttons */}
         <div className="d-flex justify-content-end border-top pt-3 mt-3 gap-2">
-          <button 
-            className="btn" 
-            onClick={onClose} 
+          <button
+            className="btn"
+            onClick={onClose}
             disabled={isSubmitting}
-            style={{ 
-              backgroundColor: "rgb(0, 123, 255)", 
+            style={{
+              backgroundColor: "rgb(0, 123, 255)",
               color: "#ffffff",
               border: "none",
               padding: "8px 20px",
@@ -932,7 +932,7 @@ export default function AdvanceCollectionDialog({
           >
             Close
           </button>
-          <button 
+          <button
             className="btn"
             onClick={handlePrintReceipt}
             disabled={true}
@@ -949,12 +949,12 @@ export default function AdvanceCollectionDialog({
           >
             Print Receipt
           </button>
-          <button 
-            className="btn" 
+          <button
+            className="btn"
             onClick={handleSubmit}
             disabled={isSubmitting}
-            style={{ 
-              backgroundColor: "#007bff", 
+            style={{
+              backgroundColor: "#007bff",
               color: "#ffffff",
               border: "none",
               padding: "8px 20px",
@@ -996,9 +996,9 @@ export default function AdvanceCollectionDialog({
         sx={{
           zIndex: 99999,
           '& .MuiSnackbarContent-root': {
-            backgroundColor: snackbarMessage.toLowerCase().includes('error') || 
-                           snackbarMessage.toLowerCase().includes('failed') || 
-                           snackbarMessage.toLowerCase().includes('missing') ? '#f44336' : '#4caf50',
+            backgroundColor: snackbarMessage.toLowerCase().includes('error') ||
+              snackbarMessage.toLowerCase().includes('failed') ||
+              snackbarMessage.toLowerCase().includes('missing') ? '#f44336' : '#4caf50',
             color: 'white',
             fontWeight: 'bold'
           }
@@ -1010,170 +1010,179 @@ export default function AdvanceCollectionDialog({
 
 /* Reusable Horizontal Field Component */
 function HorizontalField({
-    label,
-    value,
-    onChange,
-    isTextarea,
-    isSelect,
-    options,
-    optionValues,
-    isRadio,
-    isDate,
-    dateFormat,
-    onDatePickerChange,
-    datePickerValue,
-    datePickerRef,
-    disabled = false,
-    maxLength,
-    required = false,
-  }: {
-    label: string;
-    value?: any;
-    onChange: (v: any) => void;
-    isTextarea?: boolean;
-    isSelect?: boolean;
-    options?: string[];
-    optionValues?: string[]; // Values to use when options are displayed names
-    isRadio?: boolean;
-    isDate?: boolean;
-    dateFormat?: string;
-    onDatePickerChange?: (v: string) => void;
-    datePickerValue?: string;
-    datePickerRef?: React.RefObject<HTMLInputElement>;
-    disabled?: boolean;
-    maxLength?: number;
-    required?: boolean;
-  }) {
-    return (
-      <div className="row align-items-center mb-3">
-        <label className="col-4 col-form-label fw-medium">
-          {label}
-          {required && <span style={{ color: '#f44336', marginLeft: '4px' }}>*</span>}
-        </label>
-        <div className="col-8">
-          {isTextarea ? (
-              <textarea
-                className="form-control"
-                rows={2}
-                value={value}
-                onChange={(e) => onChange(e.target.value)}
-                disabled={disabled}
-                style={{
-                  border: "1px solid #ced4da",
-                  borderRadius: "4px",
-                  padding: "6px 12px",
-                  fontSize: "14px"
-                }}
-              />
-          ) : isSelect ? (
-            <select
-              className="form-select"
-              value={value || ""}
+  label,
+  value,
+  onChange,
+  isTextarea,
+  isSelect,
+  options,
+  optionValues,
+  isRadio,
+  isDate,
+  dateFormat,
+  onDatePickerChange,
+  datePickerValue,
+  datePickerRef,
+  disabled = false,
+  maxLength,
+  required = false,
+}: {
+  label: string;
+  value?: any;
+  onChange: (v: any) => void;
+  isTextarea?: boolean;
+  isSelect?: boolean;
+  options?: string[];
+  optionValues?: string[]; // Values to use when options are displayed names
+  isRadio?: boolean;
+  isDate?: boolean;
+  dateFormat?: string;
+  onDatePickerChange?: (v: string) => void;
+  datePickerValue?: string;
+  datePickerRef?: React.RefObject<HTMLInputElement>;
+  disabled?: boolean;
+  maxLength?: number;
+  required?: boolean;
+}) {
+  return (
+    <div className="row align-items-center mb-3">
+      <label className="col-4 col-form-label fw-medium">
+        {label}
+        {required && <span style={{ color: '#f44336', marginLeft: '4px' }}>*</span>}
+      </label>
+      <div className="col-8">
+        {isTextarea ? (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '2px' }}>
+              <span style={{ fontSize: '11px', color: '#666' }}>
+                {(value || '').length}/{maxLength || 1000}
+              </span>
+            </div>
+            <textarea
+              className="form-control"
+              rows={2}
+              value={value}
               onChange={(e) => onChange(e.target.value)}
               disabled={disabled}
+              maxLength={maxLength || 1000}
               style={{
                 border: "1px solid #ced4da",
                 borderRadius: "4px",
                 padding: "6px 12px",
-                fontSize: "14px"
+                fontSize: "14px",
+                width: "100%"
               }}
-            >
-              {options && options.length > 0 ? (
-                options.map((opt, index) => {
-                  // If optionValues is provided, use it for the value, otherwise use the option text
-                  const optionValue = (optionValues && optionValues[index] !== undefined) 
-                    ? optionValues[index] 
-                    : opt;
-                  // Use a combination of index and optionValue for unique key
-                  const uniqueKey = optionValue ? `${optionValue}-${index}` : `option-${index}`;
-                  return (
-                    <option key={uniqueKey} value={optionValue}>
-                      {opt}
-                    </option>
-                  );
-                })
-              ) : (
-                <option value="">Select...</option>
-              )}
-            </select>
-          ) : isRadio ? (
-            <div className="d-flex gap-3">
-              {options?.map((opt) => (
-                <label key={opt}>
-                  <input
-                    type="radio"
-                    name={label}
-                    value={opt}
-                    checked={value === opt}
-                    onChange={(e) => onChange(e.target.value)}
-                    className="me-1"
-                    disabled={disabled}
-                  />
-                  {opt}
-                </label>
-              ))}
-            </div>
-          ) : isDate ? (
-            <div style={{ position: "relative" }}>
-              <input
-                type="text"
-                className="form-control"
-                value={value || ""}
-                onChange={(e) => onChange(e.target.value)}
-                disabled={disabled}
-                placeholder={dateFormat || "dd-mmm-yy"}
-                style={{ textTransform: "uppercase", paddingRight: "40px" }}
-              />
-              <Calendar
-                size={20}
-                color="#666"
-                style={{
-                  position: "absolute",
-                  right: "10px",
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  cursor: disabled ? "not-allowed" : "pointer",
-                  pointerEvents: disabled ? "none" : "auto"
-                }}
-                onClick={() => {
-                  if (!disabled && datePickerRef?.current) {
-                    datePickerRef.current.showPicker?.();
-                  }
-                }}
-              />
-              {/* Hidden native date picker */}
-              <input
-                ref={datePickerRef}
-                type="date"
-                value={datePickerValue || ""}
-                onChange={(e) => onDatePickerChange?.(e.target.value)}
-                style={{
-                  position: "absolute",
-                  opacity: 0,
-                  pointerEvents: "none",
-                  width: 0,
-                  height: 0
-                }}
-              />
-            </div>
-          ) : (
+            />
+          </div>
+        ) : isSelect ? (
+          <select
+            className="form-select"
+            value={value || ""}
+            onChange={(e) => onChange(e.target.value)}
+            disabled={disabled}
+            style={{
+              border: "1px solid #ced4da",
+              borderRadius: "4px",
+              padding: "6px 12px",
+              fontSize: "14px"
+            }}
+          >
+            {options && options.length > 0 ? (
+              options.map((opt, index) => {
+                // If optionValues is provided, use it for the value, otherwise use the option text
+                const optionValue = (optionValues && optionValues[index] !== undefined)
+                  ? optionValues[index]
+                  : opt;
+                // Use a combination of index and optionValue for unique key
+                const uniqueKey = optionValue ? `${optionValue}-${index}` : `option-${index}`;
+                return (
+                  <option key={uniqueKey} value={optionValue}>
+                    {opt}
+                  </option>
+                );
+              })
+            ) : (
+              <option value="">Select...</option>
+            )}
+          </select>
+        ) : isRadio ? (
+          <div className="d-flex gap-3">
+            {options?.map((opt) => (
+              <label key={opt}>
+                <input
+                  type="radio"
+                  name={label}
+                  value={opt}
+                  checked={value === opt}
+                  onChange={(e) => onChange(e.target.value)}
+                  className="me-1"
+                  disabled={disabled}
+                />
+                {opt}
+              </label>
+            ))}
+          </div>
+        ) : isDate ? (
+          <div style={{ position: "relative" }}>
             <input
               type="text"
               className="form-control"
               value={value || ""}
               onChange={(e) => onChange(e.target.value)}
               disabled={disabled}
-              maxLength={maxLength}
+              placeholder={dateFormat || "dd-mmm-yy"}
+              style={{ textTransform: "uppercase", paddingRight: "40px" }}
+            />
+            <Calendar
+              size={20}
+              color="#666"
               style={{
-                border: "1px solid #ced4da",
-                borderRadius: "4px",
-                padding: "6px 12px",
-                fontSize: "14px"
+                position: "absolute",
+                right: "10px",
+                top: "50%",
+                transform: "translateY(-50%)",
+                cursor: disabled ? "not-allowed" : "pointer",
+                pointerEvents: disabled ? "none" : "auto"
+              }}
+              onClick={() => {
+                if (!disabled && datePickerRef?.current) {
+                  datePickerRef.current.showPicker?.();
+                }
               }}
             />
-          )}
-        </div>
+            {/* Hidden native date picker */}
+            <input
+              ref={datePickerRef}
+              type="date"
+              value={datePickerValue || ""}
+              onChange={(e) => onDatePickerChange?.(e.target.value)}
+              style={{
+                position: "absolute",
+                opacity: 0,
+                pointerEvents: "none",
+                width: 0,
+                height: 0
+              }}
+            />
+          </div>
+        ) : (
+          <input
+            type="text"
+            className="form-control"
+            value={value || ""}
+            onChange={(e) => onChange(e.target.value)}
+            disabled={disabled}
+            maxLength={maxLength}
+            style={{
+              border: "1px solid #ced4da",
+              borderRadius: "4px",
+              padding: "6px 12px",
+              fontSize: "14px"
+            }}
+          />
+        )}
       </div>
-    );
+    </div>
+  );
 }
 
