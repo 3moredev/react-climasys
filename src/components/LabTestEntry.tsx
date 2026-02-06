@@ -491,7 +491,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                 processedValue = value.replace(/[^a-zA-Z\s.]/g, '');
             }
 
-            const validation = validateField(field, processedValue);
+            const validation = validateField(field, processedValue, undefined, undefined, 'lab');
 
             if (validation.allowed) {
                 setFormData(prev => ({ ...prev, [field]: processedValue }));
@@ -1131,55 +1131,31 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
 
                                     <div>
                                         <Box sx={{ mb: 2, minHeight: '120px' }}>
-                                            <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
-                                                Comment
-                                            </Typography>
-                                            <TextField
-                                                fullWidth
-                                                multiline
-                                                rows={4}
-                                                minRows={4}
-                                                maxRows={6}
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                                                    Comment
+                                                </Typography>
+                                                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                                                    {(formData.comment || '').length}/1000
+                                                </Typography>
+                                            </div>
+                                            <textarea
+                                                id='textarea-autosize'
+                                                rows={3}
                                                 placeholder="Comment"
                                                 value={formData.comment}
                                                 onChange={(e) => handleInputChange('comment', e.target.value)}
-                                                error={!!errors.comment}
-                                                helperText={errors.comment}
-                                                variant="outlined"
-                                                sx={{
-                                                    '& .MuiOutlinedInput-root': {
-                                                        borderRadius: '8px',
-                                                        alignItems: 'flex-start',
-                                                        width: '100%',
-                                                        overflow: 'hidden',
-                                                        height: 'auto !important'
-                                                    },
-                                                    '& .MuiInputBase-input': {
-                                                        overflow: 'hidden !important',
-                                                        overflowY: 'auto !important',
-                                                        overflowWrap: 'break-word !important',
-                                                        wordWrap: 'break-word !important',
-                                                        wordBreak: 'break-word !important',
-                                                        whiteSpace: 'pre-wrap !important',
-                                                        boxSizing: 'border-box !important',
-                                                        maxWidth: '100% !important',
-                                                        width: '100% !important',
-                                                        padding: '6px 12px !important'
-                                                    },
-                                                    '& textarea': {
-                                                        overflow: 'hidden !important',
-                                                        overflowY: 'auto !important',
-                                                        overflowWrap: 'break-word !important',
-                                                        wordWrap: 'break-word !important',
-                                                        wordBreak: 'break-word !important',
-                                                        whiteSpace: 'pre-wrap !important',
-                                                        maxWidth: '100% !important',
-                                                        width: '100% !important',
-                                                        boxSizing: 'border-box !important',
-                                                        padding: '6px 12px !important'
-                                                    }
-                                                }}
+                                                maxLength={1000}
                                             />
+                                            {errors.comment && (
+                                                <Typography variant="caption" sx={{
+                                                    color: (errors.comment && !errors.comment.toLowerCase().includes('required')) ? '#f44336' : '#f44336',
+                                                    mt: 0.5,
+                                                    display: 'block'
+                                                }}>
+                                                    {errors.comment}
+                                                </Typography>
+                                            )}
                                         </Box>
                                     </div>
                                 </div>

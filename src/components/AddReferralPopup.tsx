@@ -486,9 +486,14 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
                     </Grid>
                     <Grid item xs={12}>
                         <Box sx={{ mb: 2 }}>
-                            <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
-                                Doctor Address
-                            </Typography>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                                    Doctor Address
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px' }}>
+                                    {(formData.doctorAddress || '').length}/{getMaxLength('doctorAddress', 'referralDoctor') || 150}
+                                </Typography>
+                            </div>
                             <textarea
                                 id='textarea-autosize'
                                 rows={2}

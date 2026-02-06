@@ -2182,9 +2182,14 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                         <Grid container spacing={2} sx={{ mb: 2 }}>
                             <Grid item xs={12} md={4}>
                                 <Box sx={{ mb: 2 }}>
-                                    <Typography variant="subtitle2" fontWeight="bold" className='mb-0'>
-                                        Surgical History
-                                    </Typography>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                                        <Typography variant="subtitle2" fontWeight="bold" className='mb-0'>
+                                            Surgical History
+                                        </Typography>
+                                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px' }}>
+                                            {(formData.pastSurgicalHistory || '').length}/{getFieldConfig('pastSurgicalHistory', 'visit')?.maxLength || 1000}
+                                        </Typography>
+                                    </div>
                                     <textarea
                                         rows={2}
                                         value={formData.pastSurgicalHistory}
@@ -2224,9 +2229,14 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
 
                             <Grid item xs={12} md={4}>
                                 <Box sx={{ mb: 2 }}>
-                                    <Typography variant="subtitle2" fontWeight="bold" className="mb-0">
-                                        Previous Visit Plan
-                                    </Typography>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                                        <Typography variant="subtitle2" fontWeight="bold" className="mb-0">
+                                            Previous Visit Plan
+                                        </Typography>
+                                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px' }}>
+                                            {(formData.previousVisitPlan || '').length}/{getFieldConfig('plan', 'visit')?.maxLength || 1000}
+                                        </Typography>
+                                    </div>
                                     <textarea
                                         rows={2}
                                         value={formData.previousVisitPlan}
@@ -2245,9 +2255,14 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
 
                             <Grid item xs={12} md={4}>
                                 <Box sx={{ mb: 2 }}>
-                                    <Typography variant="subtitle2" fontWeight="bold" className="mb-0">
-                                        Chief complaint entered by patient
-                                    </Typography>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                                        <Typography variant="subtitle2" fontWeight="bold" className="mb-0">
+                                            Chief complaint entered by patient
+                                        </Typography>
+                                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px' }}>
+                                            {(formData.chiefComplaint || '').length}/{getFieldConfig('chiefComplaint', 'visit')?.maxLength || 400}
+                                        </Typography>
+                                    </div>
                                     <textarea
                                         rows={2}
                                         value={formData.chiefComplaint}
@@ -2491,9 +2506,14 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                         </Grid>
                         <Grid item xs={12} md={4}>
                             <Box sx={{ mb: 2 }}>
-                                <Typography variant="subtitle2" fontWeight="bold" className="mb-0">
-                                    Visit Comments
-                                </Typography>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                                    <Typography variant="subtitle2" fontWeight="bold" className="mb-0">
+                                        Visit Comments
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px' }}>
+                                        {(formData.visitComments || '').length}/{getFieldConfig('visitComments', 'visit')?.maxLength || 1000}
+                                    </Typography>
+                                </div>
                                 <textarea
                                     rows={2}
                                     value={formData.visitComments}
@@ -2523,9 +2543,14 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
 
                         <Grid item xs={12} md={4}>
                             <Box sx={{ mb: 2 }}>
-                                <Typography variant="subtitle2" fontWeight="bold" className='mb-0'>
-                                    Medicines
-                                </Typography>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                                    <Typography variant="subtitle2" fontWeight="bold" className='mb-0'>
+                                        Medicines
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px' }}>
+                                        {(formData.currentMedicines || '').length}/{getFieldConfig('currentMedicines', 'visit')?.maxLength || 1000}
+                                    </Typography>
+                                </div>
                                 <textarea
                                     rows={2}
                                     value={formData.currentMedicines}

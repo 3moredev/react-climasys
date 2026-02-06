@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { useNavigate, useLocation } from "react-router-dom";
-import { TextField, InputAdornment, Grid, Box, Typography, DialogContent, FormHelperText } from '@mui/material';
 import { visitService, ComprehensiveVisitDataRequest } from '../services/visitService';
 import { sessionService, SessionInfo } from "../services/sessionService";
 import { DocumentService } from "../services/documentService";
@@ -33,7 +32,6 @@ import { buildPrescriptionPrintHTML, buildLabTestsPrintHTML, getHeaderImageUrl }
 import prescriptionDetailsService, {
     PrescriptionTemplate as PrescriptionTemplateApiModel,
 } from "../services/prescriptionDetailsService";
-import PatientNameDisplay from "../components/PatientNameDisplay";
 import ClearableTextField from "../components/ClearableTextField";
 import { getFieldConfig } from '../utils/fieldValidationConfig';
 import { validateField } from '../utils/validationUtils';
@@ -296,8 +294,7 @@ export default function Treatment() {
     const [showVitalsTrend, setShowVitalsTrend] = useState<boolean>(false);
     const [showInstructionPopup, setShowInstructionPopup] = useState<boolean>(false);
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-    const [submitError, setSubmitError] = useState<string | null>(null);
-    const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
+    const [initialComplaintsFromApi, setInitialComplaintsFromApi] = useState<string | null>(null);
     const [billingError, setBillingError] = useState<string | null>(null);
     const [discountError, setDiscountError] = useState<string | null>(null);
     const [planAdvError, setPlanAdvError] = useState<string | null>(null);
@@ -375,23 +372,14 @@ export default function Treatment() {
     const [showTestLabPopup, setShowTestLabPopup] = useState(false);
     const [showLabTestEntry, setShowLabTestEntry] = useState<boolean>(false);
     const [selectedPatientForLab, setSelectedPatientForLab] = useState<any>(null);
-    const [labTestResults, setLabTestResults] = useState<any[] | null>(null);
     // Use ref to store latest lab test results for closure access
     const labTestResultsRef = useRef<any[] | null>(null);
 
     // Handler to receive lab test results from LabTestEntry popup
     const handleLabTestResultsFetched = (results: any[] | null) => {
         if (results && results.length > 0) {
-            console.log('=== Lab Test Results Received in Treatment Screen ===');
-            console.log('Lab Test Results Data:', results);
-            console.log('Number of results:', results.length);
-            console.log('====================================================');
-            setLabTestResults(results);
-            // Also update ref for closure access
             labTestResultsRef.current = results;
         } else {
-            console.log('=== Lab Test Results: No data available ===');
-            setLabTestResults(null);
             labTestResultsRef.current = null;
         }
     };
@@ -1890,20 +1878,10 @@ export default function Treatment() {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [isBillingOpen]);
 
-    const toggleBillingDetail = (id: string) => {
-        setSelectedBillingDetailIds((prev) =>
-            prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-        );
-    };
-
     // Fetch previous visits for the current patient
     const fetchPreviousVisits = async () => {
         if (!treatmentData?.patientId || !sessionData?.doctorId || !sessionData?.clinicId) {
-            console.log('Missing required data for fetching previous visits:', {
-                patientId: treatmentData?.patientId,
-                doctorId: sessionData?.doctorId,
-                clinicId: sessionData?.clinicId
-            });
+            ;
             return;
         }
 
@@ -3174,8 +3152,6 @@ export default function Treatment() {
         languageId?: number;
     }, opts?: { retries?: number; delayMs?: number }) => {
         try {
-            console.log('=== FETCHING APPOINTMENT DETAILS AFTER SAVE ===');
-            console.log('Request params:', params);
             // Add retry loop to tolerate eventual consistency after save
             const retries = Math.max(0, opts?.retries ?? 0);
             const delayMs = Math.max(0, opts?.delayMs ?? 0);
@@ -3193,18 +3169,14 @@ export default function Treatment() {
                     break;
                 }
                 if (attempt < retries && delayMs > 0) {
-                    console.log(`Appointment details not ready yet, retrying... (${attempt + 1}/${retries})`);
                     await new Promise(res => setTimeout(res, delayMs));
                 }
             }
-            console.log('Raw appointment-details API result:', result);
             if (!result || !result.found || !result.mainData || result.mainData.length === 0) {
-                console.log('No appointment details found to patch.');
                 return;
             }
 
             const appointmentData = result.mainData[0] || {};
-            console.log('Appointment data (first item):', appointmentData);
 
             const normalized: any = {
                 pulse: appointmentData.pulse ?? '',
@@ -3439,7 +3411,6 @@ export default function Treatment() {
                     ...prev,
                     planAdv: planAdvText
                 }));
-                console.log('Patched followUpData.planAdv from appointment details:', planAdvText);
             }
 
             // Patch Remark Comments using additional instruction fields
@@ -3453,7 +3424,6 @@ export default function Treatment() {
                     ...prev,
                     remarkComments: String(remarkSource)
                 }));
-                console.log('Patched followUpData.remarkComments from appointment details:', remarkSource);
             }
 
             // Load complaints rows from API response (support multiple shapes)
@@ -3464,13 +3434,38 @@ export default function Treatment() {
                     : (Array.isArray(appointmentData.complaints) ? appointmentData.complaints : null);
                 if (complaintsSource && complaintsSource.length > 0) {
                     const mappedComplaintsRows: ComplaintRow[] = complaintsSource.map((row: any, index: number) => {
-                        const value = row.value || row.complaint_description || row.short_description || row.complaint || '';
+                        let value = row.value || row.complaint_description || row.short_description || row.complaint || '';
+                        let label = row.label || row.complaint_description || row.complaint || row.short_description || '';
+                        let comment = row.comment || row.complaint_comment || row.duration || '';
+
+                        // Attempt to parse "Name (Comment)" format if present in value/label and comment is empty
+                        // OR if value/label contains parenthesis
+                        const parseString = (str: string) => {
+                            const match = str.match(/^(.*?)(?:\s*\((.*)\))?$/);
+                            if (match && match[2]) {
+                                return { name: match[1].trim(), comment: match[2].trim() };
+                            }
+                            return null;
+                        };
+
+                        const parsedValue = parseString(value);
+                        if (parsedValue) {
+                            value = parsedValue.name;
+                            if (!comment) comment = parsedValue.comment;
+                        }
+
+                        const parsedLabel = parseString(label);
+                        if (parsedLabel) {
+                            label = parsedLabel.name;
+                            if (!comment) comment = parsedLabel.comment;
+                        }
+
                         const opt = complaintsOptions.find(o => o.value === value);
                         return {
                             id: `complaint-${index}-${Date.now()}`,
                             value,
-                            label: row.label || row.complaint_description || row.complaint || row.short_description || '',
-                            comment: row.comment || row.complaint_comment || row.duration || '',
+                            label: label,
+                            comment: comment,
                             priority: opt?.priority ?? opt?.priority_value ?? row.priority ?? row.priority_value ?? 999
                         };
                     });
@@ -3478,7 +3473,7 @@ export default function Treatment() {
                     const sortedRows = mappedComplaintsRows.sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999));
                     setComplaintsRows(sortedRows);
                     complaintsRowsBuiltFromApiRef.current = true; // Mark as built from API
-                    console.log('Loaded complaints rows from API:', mappedComplaintsRows);
+                    console.log('Loaded complaints rows from API (parsed):', mappedComplaintsRows);
                 } else if (Array.isArray(complaintsSource)) {
                     // Empty array - clear existing rows
                     setComplaintsRows([]);
@@ -3491,13 +3486,64 @@ export default function Treatment() {
             }
 
             // Update complaint selections if available (for dropdown display)
+            // Update complaint selections if available (for dropdown display)
             if (normalized.currentComplaint && typeof normalized.currentComplaint === 'string') {
-                const parts = normalized.currentComplaint.split(/\*|,/).map((s: string) => s.trim()).filter(Boolean);
-                if (Array.isArray(parts) && parts.length > 0) {
-                    const uniqueParts = Array.from(new Set(parts));
-                    selectedComplaintsPatchedFromApiRef.current = true;
-                    setSelectedComplaints(uniqueParts);
-                    console.log('Patched selectedComplaints from appointment details (deduped):', uniqueParts);
+                const raw = normalized.currentComplaint.trim();
+
+                if (raw) {
+                    // Regex to split by comma but ignore commas inside parentheses
+                    const parts = raw.split(/,(?![^(]*\))/).map((s: string) => s.trim()).filter(Boolean);
+
+                    if (parts.length > 0) {
+                        const foundValues: string[] = [];
+                        const foundRows: ComplaintRow[] = [];
+                        const seen = new Set<string>();
+
+                        parts.forEach((fullString: string, index: number) => {
+                            const match = fullString.match(/^(.*?)(?:\s*\((.*)\))?$/);
+                            if (!match) return;
+
+                            const namePart = match[1].trim();
+                            const commentPart = match[2] ? match[2].trim() : '';
+
+                            // Try to match by value first, then by label (case-insensitive)
+                            const byValue = complaintsOptions.find(o => (o.value || '').toLowerCase() === namePart.toLowerCase());
+                            const byLabel = byValue ? undefined : complaintsOptions.find(o => (o.label || '').toLowerCase() === namePart.toLowerCase());
+                            const matchedOption = byValue || byLabel;
+
+                            if (matchedOption && !seen.has(matchedOption.value)) {
+                                seen.add(matchedOption.value);
+                                foundValues.push(matchedOption.value);
+                                foundRows.push({
+                                    id: `complaint-parsed-${index}-${Date.now()}`,
+                                    value: matchedOption.value,
+                                    label: matchedOption.label,
+                                    comment: commentPart,
+                                    priority: matchedOption.priority ?? matchedOption.priority_value ?? 999
+                                });
+                            } else if (!matchedOption && namePart) {
+                                // Use name as value if not found in options (fallback)
+                                if (!seen.has(namePart)) {
+                                    seen.add(namePart);
+                                    foundValues.push(namePart);
+                                    foundRows.push({
+                                        id: `complaint-parsed-${index}-${Date.now()}`,
+                                        value: namePart,
+                                        label: namePart,
+                                        comment: commentPart,
+                                        priority: 999
+                                    });
+                                }
+                            }
+                        });
+
+                        if (foundValues.length > 0) {
+                            selectedComplaintsPatchedFromApiRef.current = true;
+                            setSelectedComplaints(foundValues);
+                            setComplaintsRows(foundRows);
+                            console.log('Patched selectedComplaints from appointment details (parsed):', foundValues);
+                        }
+                    }
                 }
             }
 
@@ -3639,6 +3685,46 @@ export default function Treatment() {
             }
 
             console.log('=== FINISHED PATCHING FROM APPOINTMENT DETAILS ===');
+
+            // Automate Follow-Up checkbox state based on visit history
+            // We do this here as part of the initial data fetch flow
+            if (params.patientId) {
+                try {
+                    const history = await visitService.getPatientVisitHistory(String(params.patientId));
+                    if (history && history.visits && Array.isArray(history.visits)) {
+                        // Check if any visit has statusId === 5 (Visited/Completed)
+                        const hasVisitedStatus = history.visits.some((v: any) => {
+                            const sid = v.statusId ?? v.status_id ?? v.visitStatusId;
+                            return Number(sid) === 5;
+                        });
+
+                        if (hasVisitedStatus) {
+                            setFormData(prev => ({
+                                ...prev,
+                                visitType: {
+                                    ...prev.visitType,
+                                    followUp: true
+                                }
+                            }));
+                            setFollowUpData(prev => ({ ...prev, followUpType: '2' }));
+                            console.log('Updated Follow-up to TRUE based on visit history (found completed visit)');
+                        } else {
+                            setFormData(prev => ({
+                                ...prev,
+                                visitType: {
+                                    ...prev.visitType,
+                                    followUp: false
+                                }
+                            }));
+                            setFollowUpData(prev => ({ ...prev, followUpType: '1' }));
+                            console.log('Updated Follow-up to FALSE based on visit history (no completed visit)');
+                        }
+                    }
+                } catch (historyError) {
+                    console.error('Failed to check visit history for follow-up status in fetchAndPatch:', historyError);
+                }
+            }
+
         } catch (e) {
             console.warn('Failed to fetch/patch appointment details after save:', e);
         }
@@ -3674,19 +3760,15 @@ export default function Treatment() {
         });
     }, [treatmentData?.patientId, treatmentData?.doctorId, sessionData?.doctorId, treatmentData?.clinicId, sessionData?.clinicId, treatmentData?.visitNumber]);
 
+
+
+
+
     // Generic treatment handler for both save and submit
     const handleTreatmentAction = async (isSubmit: boolean) => {
         try {
             const actionType = isSubmit ? 'SUBMIT' : 'SAVE';
-            console.log(`=== TREATMENT FORM ${actionType} STARTED ===`);
-            console.log('Form data:', formData);
-            console.log('Treatment data:', treatmentData);
-            console.log('Session data:', sessionData);
-            console.log('Is Submit:', isSubmit);
-
             setIsSubmitting(true);
-            setSubmitError(null);
-            setSubmitSuccess(null);
             setSnackbarOpen(false);
             setSnackbarMessage('');
 
@@ -3697,7 +3779,6 @@ export default function Treatment() {
                     const sessionResult = await sessionService.getSessionInfo();
                     if (sessionResult.success) {
                         currentSessionData = sessionResult.data;
-                        console.log('Session data loaded:', currentSessionData);
                     }
                 } catch (sessionError) {
                     console.warn('Could not load session data:', sessionError);
@@ -3790,21 +3871,11 @@ export default function Treatment() {
 
             if (validationErrors.length > 0) {
                 const firstError = validationErrors[0];
-                setSubmitError(firstError);
                 setSnackbarMessage(firstError);
                 setSnackbarOpen(true);
                 setIsSubmitting(false);
                 return;
             }
-
-            console.log('=== VALIDATION PASSED ===');
-            console.log('Doctor ID:', doctorId);
-            console.log('Clinic ID:', clinicId);
-            console.log('Shift ID:', shiftId);
-            console.log('User ID:', userId);
-            console.log('Patient Visit No:', patientVisitNo);
-            console.log('In-Person (computed):', inPersonChecked);
-            console.log('In-Person (formData):', formData.visitType.inPerson);
 
             // Map form data to API request format
             const visitData: ComprehensiveVisitDataRequest = {
@@ -3999,7 +4070,7 @@ export default function Treatment() {
                     })
                     : []
             };
-            
+
             if (visitData.instructionGroups && visitData.instructionGroups.length > 0) {
 
                 visitData.instructionGroups.forEach((ig, idx) => {
@@ -4026,8 +4097,6 @@ export default function Treatment() {
             if (!visitData.userId) nullFields.push('userId');
 
             if (nullFields.length > 0) {
-                console.error('=== NULL/UNDEFINED FIELDS DETECTED ===');
-                console.error('Fields with null/undefined values:', nullFields);
                 throw new Error(`Required fields are missing: ${nullFields.join(', ')}`);
             }
 
@@ -4057,13 +4126,11 @@ export default function Treatment() {
                         setComplaintsRows(sortedRows);
                         complaintsRowsBuiltFromApiRef.current = true; // Mark as built from API
                         complaintsRowsLoadedFromSaveResponseRef.current = true; // Mark as loaded from save response
-                        console.log('Loaded complaints rows from save response:', mappedComplaintsRows);
                     } else {
                         // Empty array - clear existing rows
                         setComplaintsRows([]);
                         complaintsRowsBuiltFromApiRef.current = false;
                         complaintsRowsLoadedFromSaveResponseRef.current = true; // Mark as loaded from save response (even if empty)
-                        console.log('Cleared complaints rows (empty array from save response)');
                     }
                 }
 
@@ -4085,7 +4152,6 @@ export default function Treatment() {
                         const sortedRows = mappedDiagnosisRows.sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999));
                         setDiagnosisRows(sortedRows);
                         diagnosisRowsLoadedFromSaveResponseRef.current = true;
-                        console.log('Loaded diagnosis rows from save response:', mappedDiagnosisRows);
                     } else {
                         // Empty array - clear existing rows
                         setDiagnosisRows([]);
@@ -4123,12 +4189,10 @@ export default function Treatment() {
                         const sortedRows = mappedMedicineRows.sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999));
                         setMedicineRows(sortedRows);
                         medicineRowsLoadedFromSaveResponseRef.current = true;
-                        console.log('Loaded medicine rows from save response:', mappedMedicineRows);
                     } else {
                         // Empty array - clear existing rows
                         setMedicineRows([]);
                         medicineRowsLoadedFromSaveResponseRef.current = true;
-                        console.log('Cleared medicine rows (empty array from save response)');
                     }
                 }
 
@@ -4146,12 +4210,10 @@ export default function Treatment() {
                         }));
                         setPrescriptionRows(mappedPrescriptionRows);
                         prescriptionRowsLoadedFromSaveResponseRef.current = true;
-                        console.log('Loaded prescription rows from save response:', mappedPrescriptionRows);
                     } else {
                         // Empty array - clear existing rows
                         setPrescriptionRows([]);
                         prescriptionRowsLoadedFromSaveResponseRef.current = true;
-                        console.log('Cleared prescription rows (empty array from save response)');
                     }
                 }
 
@@ -4164,12 +4226,10 @@ export default function Treatment() {
                         }));
                         setInvestigationRows(mappedInvestigationRows);
                         investigationRowsLoadedFromSaveResponseRef.current = true;
-                        console.log('Loaded investigation rows from save response:', mappedInvestigationRows);
                     } else {
                         // Empty array - clear existing rows
                         setInvestigationRows([]);
                         investigationRowsLoadedFromSaveResponseRef.current = true;
-                        console.log('Cleared investigation rows (empty array from save response)');
                     }
                 }
 
@@ -4202,8 +4262,6 @@ export default function Treatment() {
                     });
                 }, 2000);
             } else {
-                console.error(`=== TREATMENT ${actionType} FAILED ===`);
-                console.error('Error:', result.error || `Failed to ${isSubmit ? 'submit' : 'save'} treatment`);
                 setSnackbarMessage(result.error || `Failed to ${isSubmit ? 'submit' : 'save'} treatment`);
                 setSnackbarOpen(true);
 
@@ -4224,17 +4282,10 @@ export default function Treatment() {
             }
         } catch (err: any) {
             const actionType = isSubmit ? 'SUBMIT' : 'SAVE';
-            console.error(`=== ERROR DURING TREATMENT ${actionType} ===`);
-            console.error(`Error ${isSubmit ? 'submitting' : 'saving'} treatment data:`, err);
-            console.error('Error type:', typeof err);
-            console.error('Error message:', err instanceof Error ? err.message : 'Unknown error');
             setSnackbarMessage(err.message || `An error occurred while ${isSubmit ? 'submitting' : 'saving'} treatment`);
             setSnackbarOpen(true);
         } finally {
-            console.log('=== FINALLY BLOCK ===');
-            console.log('Setting submitting to false');
             setIsSubmitting(false);
-            console.log('Submitting state updated');
         }
     };
 
@@ -4298,7 +4349,6 @@ export default function Treatment() {
         setComplaintsRows(sortedRows);
         complaintsRowsBuiltFromApiRef.current = true; // Mark as built
         selectedComplaintsPatchedFromApiRef.current = false; // Reset so manual changes do not auto-build
-        console.log('Built complaintsRows from selectedComplaints:', newRows);
     }, [complaintsOptions, selectedComplaints, complaintsRows.length]); // Include complaintsRows.length to detect when it changes
 
     // Auto-select billed charges based on billed amount from appointment details
@@ -4410,12 +4460,6 @@ export default function Treatment() {
         setDiagnosisRows(prev => prev.filter(r => r.value !== rowValue));
         // Also uncheck from selector
         setSelectedDiagnoses(prev => prev.filter(v => v !== rowValue));
-    };
-
-    const handleDiagnosisCommentChangeById = (id: string, comment: string) => {
-        setDiagnosisRows(prev => prev.map(row =>
-            row.id === id ? { ...row, comment } : row
-        ));
     };
 
     const handleAddMedicine = () => {
@@ -4581,49 +4625,6 @@ export default function Treatment() {
 
     const handleRemoveInvestigation = (id: string) => {
         setInvestigationRows(prev => prev.filter(row => row.id !== id));
-    };
-
-    const handleRemoveInvestigationFromSelector = (value: string) => {
-        setInvestigationRows(prev => prev.filter(r => r.investigation !== value));
-        setSelectedInvestigations(prev => prev.filter(v => v !== value));
-    };
-
-    // Dressing handlers
-    const handleAddDressings = () => {
-        if (selectedDressings.length === 0) return;
-        setDressingRows(prev => {
-            const existingValues = new Set(prev.map(r => r.value || r.dressing));
-            const newRows: DressingRow[] = [];
-            selectedDressings.forEach(val => {
-                const option = dressingsOptions.find(opt => opt.value === val);
-                if (option && !existingValues.has(val)) {
-                    newRows.push({ id: `dressing_${Date.now()}_${val}`, value: val, dressing: option.label });
-                }
-            });
-            return [...prev, ...newRows];
-        });
-        setSelectedDressings([]);
-    };
-
-    const handleRemoveDressing = (id: string) => {
-        setDressingRows(prev => prev.filter(row => row.id !== id));
-    };
-
-    const handleRemoveDressingFromSelector = (value: string) => {
-        setDressingRows(prev => prev.filter(r => r.value !== value));
-        setSelectedDressings(prev => prev.filter(v => v !== value));
-    };
-
-    const handleAddCustomDressing = () => {
-        // Placeholder for custom dressing - user will integrate later
-        const customDressing = prompt('Enter custom dressing:');
-        if (customDressing && customDressing.trim()) {
-            const newDressing: DressingRow = {
-                id: `dressing_custom_${Date.now()}`,
-                dressing: customDressing.trim()
-            };
-            setDressingRows(prev => [...prev, newDressing]);
-        }
     };
 
     const handleFollowUpChange = (field: string, value: string) => {
@@ -4931,7 +4932,7 @@ export default function Treatment() {
                                                 >
                                                     <span style={{ marginRight: '5px' }}>📄</span>
                                                     <span style={{ maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                        {doc.documentName || `Document ${index + 1}`}
+                                                        {(doc.documentName || `Document ${index + 1}`).split(/[/\\]/).pop()}
                                                     </span>
                                                     {doc.fileSize && (
                                                         <span style={{
@@ -5124,7 +5125,7 @@ export default function Treatment() {
                                                 type="checkbox"
                                                 checked={formData.visitType.followUp}
                                                 onChange={(e) => handleVisitTypeChange('followUp', e.target.checked)}
-                                                disabled={isFormDisabled}
+                                                disabled={true}
                                             />
                                             Follow-up
                                         </label>
@@ -5636,9 +5637,14 @@ export default function Treatment() {
                             <div style={{ marginBottom: '15px' }}>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr' as const, gap: '12px' }}>
                                     <div>
-                                        <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                            Detailed History
-                                        </label>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                            <label style={{ fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                                                Detailed History
+                                            </label>
+                                            <span style={{ fontSize: '11px', color: '#666' }}>
+                                                {(formData.detailedHistory || '').length}/{getFieldConfig('detailedHistory', 'visit')?.maxLength || 1000}
+                                            </span>
+                                        </div>
                                         <textarea
                                             value={formData.detailedHistory}
                                             onChange={(e) => handleInputChange('detailedHistory', e.target.value)}
@@ -5664,9 +5670,14 @@ export default function Treatment() {
                                         )}
                                     </div>
                                     <div>
-                                        <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                            Examination Findings
-                                        </label>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                            <label style={{ fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                                                Examination Findings
+                                            </label>
+                                            <span style={{ fontSize: '11px', color: '#666' }}>
+                                                {(formData.importantFindings || '').length}/{getFieldConfig('importantFindings', 'visit')?.maxLength || 1000}
+                                            </span>
+                                        </div>
                                         <textarea
                                             value={formData.importantFindings}
                                             onChange={(e) => handleInputChange('importantFindings', e.target.value)}
@@ -5692,9 +5703,14 @@ export default function Treatment() {
                                         )}
                                     </div>
                                     <div>
-                                        <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                            Additional Comments
-                                        </label>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                            <label style={{ fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                                                Additional Comments
+                                            </label>
+                                            <span style={{ fontSize: '11px', color: '#666' }}>
+                                                {(formData.additionalComments || '').length}/{getFieldConfig('additionalComments', 'visit')?.maxLength || 1000}
+                                            </span>
+                                        </div>
                                         <textarea
                                             value={formData.additionalComments}
                                             onChange={(e) => handleInputChange('additionalComments', e.target.value)}
@@ -5726,9 +5742,14 @@ export default function Treatment() {
                             <div style={{ marginBottom: '15px' }}>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr' as const, gap: '12px' }}>
                                     <div>
-                                        <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                            Procedure Performed
-                                        </label>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                            <label style={{ fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                                                Procedure Performed
+                                            </label>
+                                            <span style={{ fontSize: '11px', color: '#666' }}>
+                                                {(formData.procedurePerformed || '').length}/{getFieldConfig('procedurePerformed', 'visit')?.maxLength || 1000}
+                                            </span>
+                                        </div>
                                         <textarea
                                             value={formData.procedurePerformed}
                                             onChange={(e) => handleInputChange('procedurePerformed', e.target.value)}
@@ -5754,9 +5775,14 @@ export default function Treatment() {
                                         )}
                                     </div>
                                     <div>
-                                        <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                            Dressing (body parts)
-                                        </label>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                            <label style={{ fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                                                Dressing (body parts)
+                                            </label>
+                                            <span style={{ fontSize: '11px', color: '#666' }}>
+                                                {(formData.dressingBodyParts || '').length}/{getFieldConfig('dressingBodyParts', 'visit')?.maxLength || 1000}
+                                            </span>
+                                        </div>
                                         <textarea
                                             value={formData.dressingBodyParts}
                                             onChange={(e) => handleInputChange('dressingBodyParts', e.target.value)}
@@ -5788,7 +5814,7 @@ export default function Treatment() {
                                         <button
                                             type="button"
                                             disabled={isFormDisabled}
-                                            title="Record lab test results"
+                                            title="Lab Details"
                                             style={{
                                                 width: '100%',
                                                 height: '40px',
@@ -5820,13 +5846,13 @@ export default function Treatment() {
                                                 setShowLabTestEntry(true);
                                             }}
                                         >
-                                            RECORD TEST RESULT
+                                            RECORD LAB TEST RESULT
                                         </button>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Diagnosis Section */}
+                            {/* Diagnosis Section  */}
                             <div style={{ marginBottom: '15px' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '5px', width: '88%', gap: '8px' }}>
                                     <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Diagnosis</label>
@@ -6603,10 +6629,10 @@ export default function Treatment() {
                                             style={{
                                                 flex: 1,
                                                 padding: '6px 10px',
-                                                border: '1px solid #ccc',
+                                                border: '1px solid #B7B7B7',
                                                 borderRadius: '4px',
                                                 fontSize: '13px',
-                                                backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
+                                                // backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
                                                 color: isFormDisabled ? '#666' : '#333',
                                                 cursor: isFormDisabled ? 'not-allowed' : 'text'
                                             }}
@@ -7465,7 +7491,7 @@ export default function Treatment() {
                                         backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
                                         cursor: isFormDisabled ? 'not-allowed' : 'text'
                                     }}
-                                    placeholder="Enter plan/advice"
+                                    placeholder="Enter Plan/Advice"
                                     value={followUpData.planAdv}
                                     maxLength={1000}
                                     onChange={(e) => handleFollowUpChange('planAdv', e.target.value)}
@@ -7609,7 +7635,7 @@ export default function Treatment() {
                                                 }}
                                                 onClick={() => setShowAccountsPopup(true)}
                                                 title="View Accounts"
-                                            >payment history</span>
+                                            >Payment History</span>
                                         </label>
                                         <div style={{ position: 'relative', width: '100%' }}>
                                             <input

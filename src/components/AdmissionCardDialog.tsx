@@ -74,7 +74,7 @@ export default function AdmissionCardDialog({
   // Format date to dd-mmm-yy format for display
   const formatDateToDDMMMYY = (dateString: string): string => {
     if (!dateString) return "";
-    
+
     // If it's already in yyyy-mm-dd format, convert it
     if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
       const date = new Date(dateString);
@@ -86,12 +86,12 @@ export default function AdmissionCardDialog({
         return `${day}-${month}-${year}`;
       }
     }
-    
+
     // If already in dd-mmm-yy format, return as is
     if (/^\d{2}-[A-Za-z]{3}-\d{2}$/.test(dateString)) {
       return dateString.toUpperCase();
     }
-    
+
     return dateString;
   };
 
@@ -105,13 +105,13 @@ export default function AdmissionCardDialog({
         const day = parts[0];
         const monthStr = parts[1];
         const yearStr = parts[2];
-        
+
         const months: { [key: string]: string } = {
           'jan': '01', 'feb': '02', 'mar': '03', 'apr': '04',
           'may': '05', 'jun': '06', 'jul': '07', 'aug': '08',
           'sep': '09', 'oct': '10', 'nov': '11', 'dec': '12'
         };
-        
+
         const month = months[monthStr.toLowerCase()];
         if (month) {
           const fullYear = parseInt(yearStr) < 50 ? `20${yearStr}` : `19${yearStr}`;
@@ -120,7 +120,7 @@ export default function AdmissionCardDialog({
       } else if (dateOfAdmission && /^\d{4}-\d{2}-\d{2}$/.test(dateOfAdmission)) {
         yyyyMMDD = dateOfAdmission;
       }
-      
+
       setDateOfAdmissionYYYYMMDD(yyyyMMDD);
       setFormData({
         admissionIpdNo: admissionData.admissionIpdNo || "",
@@ -190,13 +190,13 @@ export default function AdmissionCardDialog({
     if (insuranceCompanies.length > 0 && formData.company) {
       // Check if company is already an ID (exists in insuranceCompanies from API response)
       const isId = insuranceCompanies.some(ic => ic.id === formData.company);
-      
+
       if (!isId) {
         // Try to find by name in the fetched insurance companies
         const foundCompany = insuranceCompanies.find(
           ic => ic.name.toLowerCase() === formData.company.toLowerCase()
         );
-        
+
         if (foundCompany && foundCompany.id !== formData.company) {
           // Update to use ID from API response instead of name
           console.log(`Converting company name "${formData.company}" to ID "${foundCompany.id}"`);
@@ -276,13 +276,13 @@ export default function AdmissionCardDialog({
         setLoadingInsuranceCompanies(true);
         const response = await admissionService.getAllActiveInsuranceCompanies();
         console.log('Insurance Companies API Response:', response);
-        
+
         if (response.success && response.data && response.data.length > 0) {
           // Ensure data structure is correct (id and name)
           const validCompanies = response.data.filter(
             (ic: any) => ic.id && ic.name
           );
-          
+
           if (validCompanies.length > 0) {
             setInsuranceCompanies(validCompanies);
             console.log(`Loaded ${validCompanies.length} insurance companies:`, validCompanies);
@@ -346,13 +346,13 @@ export default function AdmissionCardDialog({
       const day = parts[0];
       const monthStr = parts[1];
       const yearStr = parts[2];
-      
+
       const months: { [key: string]: string } = {
         'jan': '01', 'feb': '02', 'mar': '03', 'apr': '04',
         'may': '05', 'jun': '06', 'jul': '07', 'aug': '08',
         'sep': '09', 'oct': '10', 'nov': '11', 'dec': '12'
       };
-      
+
       const month = months[monthStr.toLowerCase()];
       if (month) {
         // Assume 20xx for years < 50, 19xx for years >= 50
@@ -438,10 +438,10 @@ export default function AdmissionCardDialog({
       if (response.success) {
         setSnackbarMessage(response.message || "Admission card saved successfully");
         setSnackbarOpen(true);
-        
+
         // Call the onSubmit callback if provided (for parent component to refresh data)
         onSubmit?.(formData);
-        
+
         // Close dialog after a short delay to show success message
         setTimeout(() => {
           onClose();
@@ -502,14 +502,14 @@ export default function AdmissionCardDialog({
           </button>
         </div>
         {displayPatientData ? (
-          <div 
+          <div
             onClick={() => {
               if (displayPatientData.id) {
                 setShowQuickRegistration(true);
               }
             }}
-            className="text-primary mb-3" 
-            style={{ 
+            className="text-primary mb-3"
+            style={{
               fontSize: "14px",
               cursor: displayPatientData.id ? 'pointer' : 'default',
               textDecoration: displayPatientData.id ? 'underline' : 'none'
@@ -591,7 +591,7 @@ export default function AdmissionCardDialog({
                 value={formData.commentsNotes}
                 onChange={(v) => handleInputChange("commentsNotes", v)}
               />
-               <HorizontalField
+              <HorizontalField
                 label="Date of Discharge"
                 value={formData.dateOfDischarge}
                 disabled={true}
@@ -675,7 +675,7 @@ export default function AdmissionCardDialog({
                 optionValues={insuranceCompanies.map(ic => ic.id)}
                 disabled={formData.insurance !== "Yes" || loadingInsuranceCompanies}
               />
-                <HorizontalField
+              <HorizontalField
                 label="First Advance"
                 value={formData.firstAdvance}
                 disabled={true}
@@ -696,8 +696,8 @@ export default function AdmissionCardDialog({
           <button className="btn btn-primary" onClick={onClose} disabled={isSubmitting}>
             Close
           </button>
-          <button 
-            className="btn btn-primary" 
+          <button
+            className="btn btn-primary"
             onClick={handleSubmit}
             disabled={isSubmitting}
           >
@@ -733,9 +733,9 @@ export default function AdmissionCardDialog({
         sx={{
           zIndex: 99999,
           '& .MuiSnackbarContent-root': {
-            backgroundColor: snackbarMessage.toLowerCase().includes('error') || 
-                           snackbarMessage.toLowerCase().includes('failed') || 
-                           snackbarMessage.toLowerCase().includes('missing') ? '#f44336' : '#4caf50',
+            backgroundColor: snackbarMessage.toLowerCase().includes('error') ||
+              snackbarMessage.toLowerCase().includes('failed') ||
+              snackbarMessage.toLowerCase().includes('missing') ? '#f44336' : '#4caf50',
             color: 'white',
             fontWeight: 'bold'
           }
@@ -747,217 +747,226 @@ export default function AdmissionCardDialog({
 
 /* ✅ Reusable Horizontal Field Component */
 function HorizontalField({
-    label,
-    value,
-    onChange,
-    isTextarea,
-    isSelect,
-    options,
-    optionValues,
-    isRadio,
-    isTime,
-    isDate,
-    dateFormat,
-    onDatePickerChange,
-    datePickerValue,
-    datePickerRef,
-    dual, // ✅ NEW: for two inputs like Room/Bed
-    disabled = false,
-    maxLength,
-    required = false,
-  }: {
-    label: string;
-    value?: any;
-    onChange: (v: any) => void;
-    isTextarea?: boolean;
-    isSelect?: boolean;
-    options?: string[];
-    optionValues?: string[]; // Values to use when options are displayed names
-    isRadio?: boolean;
-    isTime?: boolean;
-    isDate?: boolean;
-    dateFormat?: string;
-    onDatePickerChange?: (v: string) => void;
-    datePickerValue?: string;
-    datePickerRef?: React.RefObject<HTMLInputElement>;
-    dual?: { 
-      label2: string; 
-      value2: string; 
-      onChange2: (v: string) => void; 
-    };
-    disabled?: boolean;
-    maxLength?: number;
-    required?: boolean;
-  }) {
-    return (
-      <div className="row align-items-center mb-3">
-        <label className="col-4 col-form-label fw-medium">
-          {label}
-          {required && <span style={{ color: '#f44336', marginLeft: '4px' }}>*</span>}
-        </label>
-        <div className="col-8">
-          {dual ? (
-            // ✅ Two inputs (Room + Bed)
-            <div className="d-flex gap-2">
-              <input
-                type="text"
-                className="form-control"
-                placeholder={label}
-                value={value}
-                onChange={(e) => onChange(e.target.value)}
-                disabled={disabled}
-              />
-              <input
-                type="text"
-                className="form-control"
-                placeholder={dual.label2}
-                value={dual.value2}
-                onChange={(e) => dual.onChange2(e.target.value)}
-                disabled={disabled}
-              />
+  label,
+  value,
+  onChange,
+  isTextarea,
+  isSelect,
+  options,
+  optionValues,
+  isRadio,
+  isTime,
+  isDate,
+  dateFormat,
+  onDatePickerChange,
+  datePickerValue,
+  datePickerRef,
+  dual, // ✅ NEW: for two inputs like Room/Bed
+  disabled = false,
+  maxLength,
+  required = false,
+}: {
+  label: string;
+  value?: any;
+  onChange: (v: any) => void;
+  isTextarea?: boolean;
+  isSelect?: boolean;
+  options?: string[];
+  optionValues?: string[]; // Values to use when options are displayed names
+  isRadio?: boolean;
+  isTime?: boolean;
+  isDate?: boolean;
+  dateFormat?: string;
+  onDatePickerChange?: (v: string) => void;
+  datePickerValue?: string;
+  datePickerRef?: React.RefObject<HTMLInputElement>;
+  dual?: {
+    label2: string;
+    value2: string;
+    onChange2: (v: string) => void;
+  };
+  disabled?: boolean;
+  maxLength?: number;
+  required?: boolean;
+}) {
+  return (
+    <div className="row align-items-center mb-3">
+      <label className="col-4 col-form-label fw-medium">
+        {label}
+        {required && <span style={{ color: '#f44336', marginLeft: '4px' }}>*</span>}
+      </label>
+      <div className="col-8">
+        {dual ? (
+          // ✅ Two inputs (Room + Bed)
+          <div className="d-flex gap-2">
+            <input
+              type="text"
+              className="form-control"
+              placeholder={label}
+              value={value}
+              onChange={(e) => onChange(e.target.value)}
+              disabled={disabled}
+            />
+            <input
+              type="text"
+              className="form-control"
+              placeholder={dual.label2}
+              value={dual.value2}
+              onChange={(e) => dual.onChange2(e.target.value)}
+              disabled={disabled}
+            />
+          </div>
+        ) : isTextarea ? (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '2px' }}>
+              <span style={{ fontSize: '11px', color: '#666' }}>
+                {(value || '').length}/{maxLength || 1000}
+              </span>
             </div>
-          ) : isTextarea ? (
             <textarea
               className="form-control"
               rows={2}
               value={value}
               onChange={(e) => onChange(e.target.value)}
               disabled={disabled}
+              maxLength={maxLength || 1000}
+              style={{ width: "100%" }}
             />
-          ) : isSelect ? (
+          </div>
+        ) : isSelect ? (
+          <select
+            className="form-select"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            disabled={disabled}
+          >
+            <option value="">Select...</option>
+            {options?.map((opt, index) => {
+              // If optionValues is provided, use it for the value, otherwise use the option text
+              const optionValue = (optionValues && optionValues[index] !== undefined)
+                ? optionValues[index]
+                : opt;
+              // Use a combination of index and optionValue for unique key
+              const uniqueKey = optionValue ? `${optionValue}-${index}` : `option-${index}`;
+              return (
+                <option key={uniqueKey} value={optionValue}>
+                  {opt}
+                </option>
+              );
+            })}
+          </select>
+        ) : isRadio ? (
+          <div className="d-flex gap-3">
+            {options?.map((opt) => (
+              <label key={opt}>
+                <input
+                  type="radio"
+                  name={label}
+                  value={opt}
+                  checked={value === opt}
+                  onChange={(e) => onChange(e.target.value)}
+                  className="me-1"
+                  disabled={disabled}
+                />
+                {opt}
+              </label>
+            ))}
+          </div>
+        ) : isTime ? (
+          <div className="d-flex gap-2">
             <select
               className="form-select"
-              value={value}
-              onChange={(e) => onChange(e.target.value)}
+              style={{ width: "80px" }}
+              value={value.hh}
+              onChange={(e) => onChange({ ...value, hh: e.target.value })}
               disabled={disabled}
             >
-              <option value="">Select...</option>
-              {options?.map((opt, index) => {
-                // If optionValues is provided, use it for the value, otherwise use the option text
-                const optionValue = (optionValues && optionValues[index] !== undefined) 
-                  ? optionValues[index] 
-                  : opt;
-                // Use a combination of index and optionValue for unique key
-                const uniqueKey = optionValue ? `${optionValue}-${index}` : `option-${index}`;
-                return (
-                  <option key={uniqueKey} value={optionValue}>
-                    {opt}
-                  </option>
-                );
-              })}
-            </select>
-          ) : isRadio ? (
-            <div className="d-flex gap-3">
-              {options?.map((opt) => (
-                <label key={opt}>
-                  <input
-                    type="radio"
-                    name={label}
-                    value={opt}
-                    checked={value === opt}
-                    onChange={(e) => onChange(e.target.value)}
-                    className="me-1"
-                    disabled={disabled}
-                  />
-                  {opt}
-                </label>
+              <option value="">HH</option>
+              {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
+                <option key={n} value={String(n).padStart(2, "0")}>
+                  {String(n).padStart(2, "0")}
+                </option>
               ))}
-            </div>
-          ) : isTime ? (
-            <div className="d-flex gap-2">
-              <select
-                className="form-select"
-                style={{ width: "80px" }}
-                value={value.hh}
-                onChange={(e) => onChange({ ...value, hh: e.target.value })}
-                disabled={disabled}
-              >
-                <option value="">HH</option>
-                {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
-                  <option key={n} value={String(n).padStart(2, "0")}>
-                    {String(n).padStart(2, "0")}
-                  </option>
-                ))}
-              </select>
-              <select
-                className="form-select"
-                style={{ width: "80px" }}
-                value={value.mm}
-                onChange={(e) => onChange({ ...value, mm: e.target.value })}
-                disabled={disabled}
-              >
-                <option value="">MM</option>
-                {Array.from({ length: 60 }, (_, i) => i).map((n) => (
-                  <option key={n} value={String(n).padStart(2, "0")}>
-                    {String(n).padStart(2, "0")}
-                  </option>
-                ))}
-              </select>
-              <select
-                className="form-select"
-                style={{ width: "80px" }}
-                value={value.ampm}
-                onChange={(e) => onChange({ ...value, ampm: e.target.value })}
-                disabled={disabled}
-              >
-                <option value="AM">AM</option>
-                <option value="PM">PM</option>
-              </select>
-            </div>
-          ) : isDate ? (
-            <div style={{ position: "relative" }}>
-              <input
-                type="text"
-                className="form-control"
-                value={value || ""}
-                onChange={(e) => onChange(e.target.value)}
-                disabled={disabled}
-                placeholder={dateFormat || "dd-mmm-yy"}
-                style={{ textTransform: "uppercase", paddingRight: "40px" }}
-              />
-              <Calendar
-                size={20}
-                color="#666"
-                style={{
-                  position: "absolute",
-                  right: "10px",
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  cursor: disabled ? "not-allowed" : "pointer",
-                  pointerEvents: disabled ? "none" : "auto"
-                }}
-                onClick={() => {
-                  if (!disabled && datePickerRef?.current) {
-                    datePickerRef.current.showPicker?.();
-                  }
-                }}
-              />
-              {/* Hidden native date picker */}
-              <input
-                ref={datePickerRef}
-                type="date"
-                value={datePickerValue || ""}
-                onChange={(e) => onDatePickerChange?.(e.target.value)}
-                style={{
-                  position: "absolute",
-                  opacity: 0,
-                  pointerEvents: "none",
-                  width: 0,
-                  height: 0
-                }}
-              />
-            </div>
-          ) : (
+            </select>
+            <select
+              className="form-select"
+              style={{ width: "80px" }}
+              value={value.mm}
+              onChange={(e) => onChange({ ...value, mm: e.target.value })}
+              disabled={disabled}
+            >
+              <option value="">MM</option>
+              {Array.from({ length: 60 }, (_, i) => i).map((n) => (
+                <option key={n} value={String(n).padStart(2, "0")}>
+                  {String(n).padStart(2, "0")}
+                </option>
+              ))}
+            </select>
+            <select
+              className="form-select"
+              style={{ width: "80px" }}
+              value={value.ampm}
+              onChange={(e) => onChange({ ...value, ampm: e.target.value })}
+              disabled={disabled}
+            >
+              <option value="AM">AM</option>
+              <option value="PM">PM</option>
+            </select>
+          </div>
+        ) : isDate ? (
+          <div style={{ position: "relative" }}>
             <input
               type="text"
               className="form-control"
               value={value || ""}
               onChange={(e) => onChange(e.target.value)}
               disabled={disabled}
-              maxLength={maxLength}
+              placeholder={dateFormat || "dd-mmm-yy"}
+              style={{ textTransform: "uppercase", paddingRight: "40px" }}
             />
-          )}
-        </div>
+            <Calendar
+              size={20}
+              color="#666"
+              style={{
+                position: "absolute",
+                right: "10px",
+                top: "50%",
+                transform: "translateY(-50%)",
+                cursor: disabled ? "not-allowed" : "pointer",
+                pointerEvents: disabled ? "none" : "auto"
+              }}
+              onClick={() => {
+                if (!disabled && datePickerRef?.current) {
+                  datePickerRef.current.showPicker?.();
+                }
+              }}
+            />
+            {/* Hidden native date picker */}
+            <input
+              ref={datePickerRef}
+              type="date"
+              value={datePickerValue || ""}
+              onChange={(e) => onDatePickerChange?.(e.target.value)}
+              style={{
+                position: "absolute",
+                opacity: 0,
+                pointerEvents: "none",
+                width: 0,
+                height: 0
+              }}
+            />
+          </div>
+        ) : (
+          <input
+            type="text"
+            className="form-control"
+            value={value || ""}
+            onChange={(e) => onChange(e.target.value)}
+            disabled={disabled}
+            maxLength={maxLength}
+          />
+        )}
       </div>
-    );
+    </div>
+  );
 }

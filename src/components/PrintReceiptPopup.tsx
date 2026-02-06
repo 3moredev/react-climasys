@@ -402,10 +402,16 @@ const PrintReceiptPopup: React.FC<PrintReceiptPopupProps> = ({
                             />
                         </div>
                         <div style={{ gridColumn: "span 2" }}>
-                            <label style={fieldLabelStyle}>Details</label>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <label style={fieldLabelStyle}>Details</label>
+                                <span style={{ fontSize: '11px', color: '#666', marginBottom: '4px' }}>
+                                    {(formValues.details || '').length}/150
+                                </span>
+                            </div>
                             <textarea
                                 value={formValues.details}
                                 onChange={(e) => handleChange("details", e.target.value)}
+                                maxLength={150}
                                 style={{ ...inputStyle, minHeight: 70, resize: "vertical" }}
                             />
                         </div>

@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Delete, Close } from '@mui/icons-material';
 import { patientService } from '../services/patientService';
 import { sessionService } from '../services/sessionService';
+import { getMaxLength } from '../utils/validationUtils';
 
 export interface InstructionGroup {
   id: string;
@@ -545,7 +546,7 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
                 <div style={{ border: '1px solid #ccc', borderRadius: '4px', overflow: 'hidden' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
-                      <tr style={{ backgroundColor: '#1976d2', color: 'white', fontWeight: 'bold', fontSize: '11px' }}>
+                      <tr style={{ backgroundColor: '#1976d2', color: 'white', fontWeight: 'bold', fontSize: '13px' }}>
                         <th style={{
                           padding: '6px',
                           textAlign: 'left',
@@ -595,25 +596,22 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
                           }}
                         >
                           <td style={{
-                            padding: '6px',
                             color: '#333',
-                            fontSize: '12px',
+                            fontSize: '13px',
                             borderRight: '1px solid #e0e0e0'
-                          }}>
+                          }} className='py-2'>
                             {index + 1}
                           </td>
                           <td style={{
-                            padding: '6px',
                             color: '#333',
-                            fontSize: '12px',
+                            fontSize: '13px',
                             borderRight: '1px solid #e0e0e0'
-                          }}>
+                          }} className='py-2'>
                             {group.name}
                           </td>
                           <td style={{
-                            padding: '6px',
                             textAlign: 'center'
-                          }}>
+                          }} className='py-2'>
                             <div
                               onClick={() => handleRemoveGroup(group.id)}
                               title="Remove"
@@ -648,21 +646,10 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
             {/* Detailed instructions table */}
             {selectedGroups.length > 0 && (
               <div style={{ marginTop: '40px', marginBottom: '40px' }}>
-                {/* <div style={{
-                  backgroundColor: '#1976d2',
-                  color: 'white',
-                  padding: '12px 16px',
-                  borderRadius: '4px 4px 0 0',
-                  fontWeight: '600',
-                  fontSize: '16px'
-                }}>
-                  Instructions
-                </div> */}
-
                 <div style={{ border: '1px solid #ccc', borderRadius: '4px', overflow: 'hidden' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
-                      <tr style={{ backgroundColor: '#1976d2', color: 'white', fontWeight: 'bold', fontSize: '11px' }}>
+                      <tr style={{ backgroundColor: '#1976d2', color: 'white', fontWeight: 'bold', fontSize: '13px' }}>
                         <th style={{
                           padding: '6px',
                           textAlign: 'left',
@@ -712,26 +699,23 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
                           }}
                         >
                           <td style={{
-                            padding: '6px',
                             color: '#333',
-                            fontSize: '12px',
+                            fontSize: '13px',
                             borderRight: '1px solid #e0e0e0'
-                          }}>
+                          }} className='py-2'>
                             {index + 1}
                           </td>
                           <td style={{
-                            padding: '6px',
                             color: '#333',
-                            fontSize: '12px',
+                            fontSize: '13px',
                             borderRight: '1px solid #e0e0e0'
-                          }}>
+                          }} className='py-2'>
                             {group.name}
                           </td>
                           <td style={{
-                            padding: '6px',
                             color: '#333',
-                            fontSize: '12px'
-                          }}>
+                            fontSize: '13px'
+                          }} className='py-2'>
                             {group.instructions}
                           </td>
                         </tr>
