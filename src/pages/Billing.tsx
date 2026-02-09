@@ -3,8 +3,8 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import { useNavigate, useLocation } from "react-router-dom";
 import { visitService, ComprehensiveVisitDataRequest } from '../services/visitService';
 import { sessionService, SessionInfo } from "../services/sessionService";
-import { Delete, Edit, Add, Info, ExpandMore, ExpandLess, Download as DownloadIcon } from '@mui/icons-material';
-import { Snackbar } from '@mui/material';
+import { Download as DownloadIcon } from '@mui/icons-material';
+import { Snackbar, Box, Typography, TextField } from '@mui/material';
 import { complaintService, ComplaintOption } from "../services/complaintService";
 import { medicineService, MedicineOption } from "../services/medicineService";
 import { diagnosisService, DiagnosisOption } from "../services/diagnosisService";
@@ -13,11 +13,6 @@ import { appointmentService } from "../services/appointmentService";
 import { getFollowUpTypes, FollowUpTypeItem } from "../services/referenceService";
 import { patientService, MasterListsRequest, SaveMedicineOverwriteRequest } from "../services/patientService";
 import PatientFormTest from "../components/Test/PatientFormTest";
-import AddComplaintPopup from "../components/AddComplaintPopup";
-import AddDiagnosisPopup from "../components/AddDiagnosisPopup";
-import AddMedicinePopup, { MedicineData } from "../components/AddMedicinePopup";
-import AddPrescriptionPopup, { PrescriptionData } from "../components/AddPrescriptionPopup";
-import AddTestLabPopup, { TestLabData } from "../components/AddLabTestPopup";
 import PastServicesPopup from "../components/PastServicesPopup";
 import { DocumentService } from "../services/documentService";
 import { SaveReceiptPayload } from "../services/receiptService";
@@ -215,11 +210,7 @@ export default function Treatment() {
     const [loading, setLoading] = useState<boolean>(true);
     const [billingError, setBillingError] = useState<string | null>(null);
     const [isFormDisabled, setIsFormDisabled] = useState<boolean>(false);
-    const [showVitalsTrend, setShowVitalsTrend] = useState<boolean>(false);
-    const [showInstructionPopup, setShowInstructionPopup] = useState<boolean>(false);
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-    const [submitError, setSubmitError] = useState<string | null>(null);
-    const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
     const [snackbarOpen, setSnackbarOpen] = useState(false);
     const [snackbarMessage, setSnackbarMessage] = useState('');
     const [hasSubmittedSuccessfully, setHasSubmittedSuccessfully] = useState<boolean>(false);
@@ -288,22 +279,6 @@ export default function Treatment() {
     const [pastServicesError, setPastServicesError] = useState<string | null>(null);
     const [showPastServicesPopup, setShowPastServicesPopup] = useState(false);
     const [selectedPastServiceDate, setSelectedPastServiceDate] = useState<string | null>(null);
-
-    // Complaint popup state
-    const [showComplaintPopup, setShowComplaintPopup] = useState(false);
-
-    // Diagnosis popup state
-    const [showDiagnosisPopup, setShowDiagnosisPopup] = useState(false);
-
-    // Medicine popup state
-    const [showMedicinePopup, setShowMedicinePopup] = useState(false);
-
-    // Prescription popup state
-    const [showPrescriptionPopup, setShowPrescriptionPopup] = useState(false);
-
-    // Test Lab popup state
-    const [showTestLabPopup, setShowTestLabPopup] = useState(false);
-
     // Toggle state for showing details till Provisional Diagnosis
     const [isDetailsOpen, setIsDetailsOpen] = useState<boolean>(false);
 
@@ -325,7 +300,8 @@ export default function Treatment() {
     // Billing popup state
     const [showBillingPopup, setShowBillingPopup] = useState<boolean>(false);
     const [showPrintReceiptPopup, setShowPrintReceiptPopup] = useState<boolean>(false);
-    const [totalSelectedFees, setTotalSelectedFees] = useState<number>(0);
+    // const [totalSelectedFees, setTotalSelectedFees] = useState<number>(0); // Removed as it causes sync issues
+    const [discountError, setDiscountError] = useState<string | null>(null);
 
     const filteredComplaints = React.useMemo(() => {
         const term = complaintSearch.trim().toLowerCase();
@@ -385,32 +361,10 @@ export default function Treatment() {
     const [diagnosesLoading, setDiagnosesLoading] = useState(false);
     const [diagnosesError, setDiagnosesError] = useState<string | null>(null);
 
-    const filteredDiagnoses = React.useMemo(() => {
-        const term = diagnosisSearch.trim().toLowerCase();
-
-        if (!term) {
-            // No search term - show all options with selected ones first
-            const selectedOptions = diagnosesOptions.filter(opt => selectedDiagnoses.includes(opt.value));
-            const unselectedOptions = diagnosesOptions.filter(opt => !selectedDiagnoses.includes(opt.value));
-            return [...selectedOptions, ...unselectedOptions];
-        } else {
-            // Search term provided - show selected items first, then search results
-            const selectedOptions = diagnosesOptions.filter(opt =>
-                selectedDiagnoses.includes(opt.value) && opt.label.toLowerCase().includes(term)
-            );
-            const unselectedSearchResults = diagnosesOptions.filter(opt =>
-                !selectedDiagnoses.includes(opt.value) && opt.label.toLowerCase().includes(term)
-            );
-            return [...selectedOptions, ...unselectedSearchResults];
-        }
-    }, [diagnosesOptions, diagnosisSearch, selectedDiagnoses]);
-
     const [diagnosisRows, setDiagnosisRows] = useState<DiagnosisRow[]>([]);
     const [medicineRows, setMedicineRows] = useState<MedicineRow[]>([]);
     const [prescriptionRows, setPrescriptionRows] = useState<PrescriptionRow[]>([]);
-    const [selectedComplaint, setSelectedComplaint] = useState('');
     const [selectedDiagnosis, setSelectedDiagnosis] = useState('');
-    const [prescriptionInput, setPrescriptionInput] = useState('');
 
     // Investigation multi-select state (mirrors Diagnosis)
     const [selectedInvestigations, setSelectedInvestigations] = useState<string[]>([]);
@@ -421,27 +375,7 @@ export default function Treatment() {
     const [investigationsLoading, setInvestigationsLoading] = useState(false);
     const [investigationsError, setInvestigationsError] = useState<string | null>(null);
 
-    const filteredInvestigations = React.useMemo(() => {
-        const term = investigationSearch.trim().toLowerCase();
-        if (!term) {
-            const selectedOptions = investigationsOptions.filter(opt => selectedInvestigations.includes(opt.value));
-            const unselectedOptions = investigationsOptions.filter(opt => !selectedInvestigations.includes(opt.value));
-            return [...selectedOptions, ...unselectedOptions];
-        } else {
-            const selectedOptions = investigationsOptions.filter(opt =>
-                selectedInvestigations.includes(opt.value) && opt.label.toLowerCase().includes(term)
-            );
-            const unselectedSearchResults = investigationsOptions.filter(opt =>
-                !selectedInvestigations.includes(opt.value) && opt.label.toLowerCase().includes(term)
-            );
-            return [...selectedOptions, ...unselectedSearchResults];
-        }
-    }, [investigationsOptions, investigationSearch, selectedInvestigations]);
-
-    const [investigationRows, setInvestigationRows] = useState<InvestigationRow[]>([]);
-
     // Previous visit prescriptions state
-    const [showPreviousVisit, setShowPreviousVisit] = useState(false);
     const [previousVisitPrescriptions, setPreviousVisitPrescriptions] = useState<PrescriptionRow[]>([]);
 
     // Additional form data
@@ -458,8 +392,6 @@ export default function Treatment() {
 
     // Follow-up types data
     const [followUpTypesOptions, setFollowUpTypesOptions] = useState<FollowUpTypeItem[]>([]);
-    const [followUpTypesLoading, setFollowUpTypesLoading] = useState(false);
-    const [followUpTypesError, setFollowUpTypesError] = useState<string | null>(null);
 
     // Master list driven display data for tables
     const [mlComplaints, setMlComplaints] = useState<Array<{ label: string; comment?: string }>>([]);
@@ -470,8 +402,7 @@ export default function Treatment() {
     const [mlTestsTable, setMlTestsTable] = useState<string[]>([]);
     // Store labTestsAsked from master-lists API for print
     const labTestsAskedRef = React.useRef<any[]>([]);
-    // Store billing array from master-lists API to use collected_fees for receipt details
-    const masterListsBillingRef = React.useRef<any[]>([]);
+
 
     const [billingData, setBillingData] = useState({
         billed: '',
@@ -495,13 +426,6 @@ export default function Treatment() {
 
     // Ref to track if folder-amount API has set acBalance (to prevent master-lists from overwriting)
     const folderAmountSetRef = React.useRef<boolean>(false);
-
-    // Attachments data
-    const [attachments, setAttachments] = useState<Attachment[]>([
-        { id: '1', name: 'AniruddhaTongaonkar.Pdf', type: 'pdf' },
-        { id: '2', name: 'Jyoti Shinde.docx', type: 'docx' },
-        { id: '3', name: 'Sachin Patankar.xlsx', type: 'xlsx' }
-    ]);
 
     // Existing documents for current visit (from backend)
     const [existingDocuments, setExistingDocuments] = useState<any[]>([]);
@@ -593,17 +517,6 @@ export default function Treatment() {
         const headerImageUrl = getHeaderImageUrl();
         // Get current date and time
         const now = new Date();
-        const dateStr = now.toLocaleDateString('en-GB', {
-            day: '2-digit',
-            month: '2-digit',
-            year: '2-digit'
-        });
-        const timeStr = now.toLocaleTimeString('en-US', {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: true
-        });
-
         // Format visit date
         const visitDate = treatmentData?.visitNumber
             ? new Date().toLocaleDateString('en-GB', {
@@ -759,11 +672,6 @@ export default function Treatment() {
         const handleLabResultsPrint = () => {
             // Use ref to get labTestsAsked from API
             const currentLabTestsAsked = labTestsAskedRef.current;
-            console.log('🔍 handleLabResultsPrint called');
-            console.log('🔍 labResultsPrinted:', labResultsPrinted);
-            console.log('🔍 currentLabTestsAsked (from ref):', currentLabTestsAsked);
-            console.log('🔍 currentLabTestsAsked length:', currentLabTestsAsked?.length);
-            console.log('🔍 currentLabTestsAsked is array:', Array.isArray(currentLabTestsAsked));
 
             if (!labResultsPrinted) {
                 // Check if labTestsAsked exist using ref
@@ -883,13 +791,8 @@ export default function Treatment() {
     const printLabTestResults = () => {
         // Use ref to get labTestsAsked from API
         const currentLabTestsAsked = labTestsAskedRef.current;
-        console.log('🔍 printLabTestResults called');
-        console.log('🔍 currentLabTestsAsked (from ref):', currentLabTestsAsked);
-        console.log('🔍 currentLabTestsAsked length:', currentLabTestsAsked?.length);
-        console.log('🔍 currentLabTestsAsked is array:', Array.isArray(currentLabTestsAsked));
 
         if (!currentLabTestsAsked || !Array.isArray(currentLabTestsAsked) || currentLabTestsAsked.length === 0) {
-            console.log('❌ No lab tests asked to print - invalid or empty data');
             return;
         }
 
@@ -1055,9 +958,9 @@ export default function Treatment() {
     // Billing details (from symptom-data API)
     const [billingDetailsOptions, setBillingDetailsOptions] = useState<BillingDetailOption[]>([]);
     const [selectedBillingDetailIds, setSelectedBillingDetailIds] = useState<string[]>([]);
-    const [isBillingOpen, setIsBillingOpen] = useState(false);
     const [billingSearch, setBillingSearch] = useState('');
     const billingRef = React.useRef<HTMLDivElement | null>(null);
+    const masterListsBillingRef = React.useRef<any[]>([]);
 
     const filteredBillingDetails = React.useMemo(() => {
         const term = billingSearch.trim().toLowerCase();
@@ -1076,253 +979,211 @@ export default function Treatment() {
         return [...selectedFiltered, ...unselectedFiltered];
     }, [billingDetailsOptions, billingSearch, selectedBillingDetailIds]);
 
+    // Consolidate data fetching and matching to prevent race conditions
     useEffect(() => {
         let cancelled = false;
-        async function loadBillingDetails() {
-            if (!treatmentData?.doctorId || !sessionData?.clinicId) return;
+
+        async function loadAllData() {
+            const doctorId = treatmentData?.doctorId || sessionData?.doctorId;
+            const clinicId = sessionData?.clinicId || treatmentData?.clinicId; // fallback if needed
+            const patientId = treatmentData?.patientId;
+            const visitNumber = treatmentData?.visitNumber;
+            const shiftId = (sessionData as any)?.shiftId ?? 1;
+
+            // We need at least doctor and clinic to load billing options
+            if (!doctorId || !clinicId) return;
+
             try {
-                const doctorId = encodeURIComponent(treatmentData.doctorId);
-                const clinicId = encodeURIComponent(sessionData.clinicId);
-                const resp = await fetch(`/api/refdata/symptom-data?doctorId=${doctorId}&clinicId=${clinicId}`);
-                if (!resp.ok) throw new Error(`Failed to load billing details (${resp.status})`);
-                const data = await resp.json();
-                const raw: any[] = Array.isArray(data?.billingDetails)
-                    ? data.billingDetails
-                    : Array.isArray(data?.resultSet2)
-                        ? data.resultSet2
-                        : [];
-                const mapped: BillingDetailOption[] = raw.map((item: any, idx: number) => ({
-                    id: String(item.id ?? item.sequence_no ?? idx),
-                    billing_details: String(item.billing_details ?? item.billing_group_name ?? 'Unknown'),
-                    billing_group_name: item.billing_group_name,
-                    billing_subgroup_name: item.billing_subgroup_name,
-                    default_fees: typeof item.default_fees === 'number' ? item.default_fees : Number(item.default_fees ?? 0),
-                    visit_type: item.visit_type,
-                    visit_type_description: item.visit_type_description,
-                    visit_type_id: item.visit_type_id,
-                    isdefault: Boolean(item.isdefault),
-                    sequence_no: typeof item.sequence_no === 'number' ? item.sequence_no : Number(item.sequence_no ?? idx)
-                }));
-                if (!cancelled) setBillingDetailsOptions(mapped);
-            } catch (e) {
-                console.error('Error loading billing details:', e);
-                if (!cancelled) setBillingDetailsOptions([]);
-            }
-        }
-        loadBillingDetails();
-        return () => { cancelled = true; };
-    }, [treatmentData?.doctorId, sessionData?.clinicId]);
-
-    // Load master lists for the current visit context
-    useEffect(() => {
-        const fetchMasterLists = async () => {
-            try {
-                if (!treatmentData?.patientId || !sessionData?.clinicId) return;
-                const doctorId = treatmentData?.doctorId || sessionData?.doctorId;
-                const clinicId = sessionData?.clinicId;
-                const shiftId = (sessionData as any)?.shiftId ?? 1;
-                const patientVisitNo = treatmentData?.visitNumber;
-
-                if (!doctorId || !patientVisitNo) return;
-
-                const params: MasterListsRequest = {
-                    patientId: String(treatmentData.patientId),
-                    shiftId: Number(shiftId),
-                    clinicId: String(clinicId),
-                    doctorId: String(doctorId),
-                    visitDate: new Date().toISOString().slice(0, 10), // YYYY-MM-DD
-                    patientVisitNo: Number(patientVisitNo)
+                // 1. Define Fetch for Billing Options
+                const fetchBillingOptions = async () => {
+                    const encDr = encodeURIComponent(doctorId);
+                    const encCl = encodeURIComponent(clinicId);
+                    const resp = await fetch(`/api/refdata/symptom-data?doctorId=${encDr}&clinicId=${encCl}`);
+                    if (!resp.ok) throw new Error(`Failed to load billing details (${resp.status})`);
+                    const data = await resp.json();
+                    const raw: any[] = Array.isArray(data?.billingDetails)
+                        ? data.billingDetails
+                        : Array.isArray(data?.resultSet2) ? data.resultSet2 : [];
+                    return raw.map((item: any, idx: number) => ({
+                        id: String(item.id ?? item.sequence_no ?? idx),
+                        billing_details: String(item.billing_details ?? item.billing_group_name ?? 'Unknown'),
+                        billing_group_name: item.billing_group_name,
+                        billing_subgroup_name: item.billing_subgroup_name,
+                        default_fees: typeof item.default_fees === 'number' ? item.default_fees : Number(item.default_fees ?? 0),
+                        visit_type: item.visit_type,
+                        visit_type_description: item.visit_type_description,
+                        visit_type_id: item.visit_type_id,
+                        isdefault: Boolean(item.isdefault),
+                        sequence_no: typeof item.sequence_no === 'number' ? item.sequence_no : Number(item.sequence_no ?? idx)
+                    }));
                 };
 
-                console.log('Requesting master lists with:', params);
-                const resp = await patientService.getMasterLists(params);
-                console.log('Master lists (Billing):', resp);
-                // Patch vitals (from resp.data.vitals[0]) into form fields
-                try {
-                    const vitals = (resp as any)?.data?.vitals?.[0];
-                    const dataRoot = (resp as any)?.data || {};
-                    const safeToStr = (v: any) => (v === undefined || v === null ? '' : String(v));
-                    const medicinesFromMaster = Array.isArray(dataRoot?.medicines) ? dataRoot.medicines : [];
-                    const medicinesJoined = medicinesFromMaster
-                        .map((m: any) => String(m?.short_description ?? m?.medicine ?? m?.medicineName ?? m?.name ?? ''))
-                        .filter(Boolean)
-                        .join(', ');
-                    const dressingFromMaster = Array.isArray(dataRoot?.dressing) ? dataRoot.dressing : [];
-                    const dressingCombined = dressingFromMaster
-                        .map((d: any) =>
-                            safeToStr(
-                                d?.dressing_description ??
-                                d?.short_description ??
-                                d?.longdressing_description ??
-                                d
-                            ).trim()
-                        )
-                        .filter((text: string) => text.length > 0)
-                        .join(', ');
-                    if (vitals && typeof vitals === 'object') {
-                        setFormData(prev => ({
-                            ...prev,
-                            height: vitals.height_in_cms !== undefined ? String(vitals.height_in_cms) : prev.height,
-                            weight: vitals.weight_in_kgs !== undefined ? String(vitals.weight_in_kgs) : prev.weight,
-                            pulse: vitals.pulse !== undefined ? String(vitals.pulse) : prev.pulse,
-                            bp: vitals.blood_pressure !== undefined ? String(vitals.blood_pressure) : prev.bp,
-                            sugar: vitals.sugar !== undefined ? String(vitals.sugar) : prev.sugar,
-                            tft: vitals.thtext !== undefined ? String(vitals.thtext) : prev.tft,
-                            pallorHb: vitals.pallor !== undefined ? String(vitals.pallor) : prev.pallorHb,
-                            allergy: vitals.allergy_dtls !== undefined ? String(vitals.allergy_dtls) : prev.allergy,
-                            medicalHistoryText: vitals.habits_comments !== undefined ? String(vitals.habits_comments) : prev.medicalHistoryText,
-                            // Map vitals.ui-style narrative fields into Billing form fields
-                            // Instructions → Plan / Advice (visitComments)
-                            visitComments: vitals.visit_comments !== undefined ? String(vitals.visit_comments) : prev.visitComments,
-                            // symptom_comment → Detailed History
-                            detailedHistory: vitals.symptom_comment !== undefined ? String(vitals.symptom_comment) : prev.detailedHistory,
-                            // surgical_history_past_history → Surgical History
-                            surgicalHistory: vitals.surgical_history_past_history !== undefined ? String(vitals.surgical_history_past_history) : prev.surgicalHistory,
-                            // observation → Procedure Performed
-                            procedurePerformed: vitals.observation !== undefined ? String(vitals.observation) : prev.procedurePerformed,
-                            // important_findings → Examination Findings
-                            examinationFindings: vitals.important_findings !== undefined ? String(vitals.important_findings) : prev.examinationFindings,
-                            // impression → Additional Comments
-                            additionalComments: vitals.impression !== undefined ? String(vitals.impression) : prev.additionalComments,
-                            // medicines: medicinesJoined || prev.medicines,
-                            medicines: vitals.current_medicines !== undefined ? String(vitals.current_medicines) : prev.medicines,
-                            dressingBodyParts: dressingCombined || prev.dressingBodyParts,
-                            visitType: {
-                                ...prev.visitType,
-                                inPerson: vitals.in_person !== undefined ? Boolean(vitals.in_person) : prev.visitType.inPerson,
-                                followUp: vitals.follow_up_type !== undefined ? Boolean(vitals.follow_up_type) : prev.visitType.followUp
-                            },
-                            medicalHistory: {
-                                ...prev.medicalHistory,
-                                hypertension: Boolean(vitals.hypertension ?? prev.medicalHistory.hypertension),
-                                diabetes: Boolean(vitals.diabetes ?? prev.medicalHistory.diabetes),
-                                cholesterol: Boolean((vitals.cholestrol !== undefined ? vitals.cholestrol : prev.medicalHistory.cholesterol)),
-                                ihd: Boolean(vitals.ihd ?? prev.medicalHistory.ihd),
-                                asthma: Boolean((vitals.asthama !== undefined ? vitals.asthama : prev.medicalHistory.asthma)),
-                                th: Boolean(vitals.th ?? prev.medicalHistory.th),
-                                smoking: Boolean(vitals.smoking ?? prev.medicalHistory.smoking),
-                                tobacco: Boolean((vitals.tobaco !== undefined ? vitals.tobaco : prev.medicalHistory.tobacco)),
-                                alcohol: Boolean((vitals.alchohol !== undefined ? vitals.alchohol : prev.medicalHistory.alcohol))
-                            }
-                        }));
-                        try {
-                            const uiFields = (dataRoot as any)?.uiFields || {};
-                            // Get followUpDescription from response and find matching ID
-                            const followUpDesc = (uiFields?.followUpDescription ?? vitals?.follow_up_description ?? vitals?.followUpDescription ?? '') as string;
+                // 2. Define Fetch for Master Lists (only if patient context exists)
+                const fetchMasterListsData = async () => {
+                    if (!patientId || !visitNumber) return null;
+                    const params: MasterListsRequest = {
+                        patientId: String(patientId),
+                        shiftId: Number(shiftId),
+                        clinicId: String(clinicId),
+                        doctorId: String(doctorId),
+                        visitDate: new Date().toISOString().slice(0, 10),
+                        patientVisitNo: Number(visitNumber)
+                    };
+                    console.log('Requesting master lists with:', params);
+                    return await patientService.getMasterLists(params);
+                };
 
-                            // Store the description for later matching when options load
-                            if (followUpDesc) {
-                                setStoredFollowUpDescription(followUpDesc);
-                            }
+                // 3. Execute Fetches in Parallel
+                const [billingOptions, masterListsResp] = await Promise.all([
+                    fetchBillingOptions(),
+                    fetchMasterListsData()
+                ]);
 
-                            let fuTypeId = '';
-                            if (followUpDesc && followUpTypesOptions.length > 0) {
-                                // Find the follow-up type by description
-                                const matchedOption = followUpTypesOptions.find(
-                                    opt => opt.followUpDescription?.toLowerCase() === followUpDesc.toLowerCase() ||
-                                        opt.followUpDescription === followUpDesc
-                                );
-                                if (matchedOption) {
-                                    fuTypeId = matchedOption.id;
-                                }
-                            }
-                            // Fallback to direct followUpType if no description match found
-                            if (!fuTypeId) {
-                                fuTypeId = (uiFields?.followUpType ?? vitals.follow_up_type ?? '') as any;
-                            }
-                            const fu = (uiFields?.followUp ?? vitals.follow_up ?? '') as any;
-                            const fuDate = (uiFields?.followUpDate ?? vitals.follow_up_date ?? '') as any;
-                            setFollowUpData(prev => ({
+                if (cancelled) return;
+
+                // --- Apply Billing Options ---
+                setBillingDetailsOptions(billingOptions);
+
+                // --- Apply Master Lists Data (if available) ---
+                if (masterListsResp) {
+                    const resp = masterListsResp; // Alias for compatibility with existing logic
+                    console.log('Master lists (Billing):', resp);
+
+                    // Patch vitals (from resp.data.vitals[0]) into form fields
+                    try {
+                        const vitals = (resp as any)?.data?.vitals?.[0];
+                        const dataRoot = (resp as any)?.data || {};
+                        const safeToStr = (v: any) => (v === undefined || v === null ? '' : String(v));
+
+                        // ... (Processing Vitals and UI Fields) ...
+                        const dressingFromMaster = Array.isArray(dataRoot?.dressing) ? dataRoot.dressing : [];
+                        const dressingCombined = dressingFromMaster
+                            .map((d: any) =>
+                                safeToStr(d?.dressing_description ?? d?.short_description ?? d?.longdressing_description ?? d).trim()
+                            )
+                            .filter((text: string) => text.length > 0)
+                            .join(', ');
+
+                        if (vitals && typeof vitals === 'object') {
+                            setFormData(prev => ({
                                 ...prev,
-                                followUpType: fuTypeId ? String(fuTypeId) : prev.followUpType,
-                                followUp: vitals.follow_up_comment !== undefined ? String(vitals.follow_up_comment) : prev.followUp,
-                                followUpDate: fuDate ? String(fuDate) : prev.followUpDate,
-                                planAdv: vitals.instructions !== undefined ? String(vitals.instructions) : prev.planAdv,
-                                fud: vitals.follow_up_type !== undefined ? String(vitals.follow_up_type) : prev.fud
+                                // Map vitals exactly as before
+                                height: vitals.height_in_cms !== undefined ? String(vitals.height_in_cms) : prev.height,
+                                weight: vitals.weight_in_kgs !== undefined ? String(vitals.weight_in_kgs) : prev.weight,
+                                pulse: vitals.pulse !== undefined ? String(vitals.pulse) : prev.pulse,
+                                bp: vitals.blood_pressure !== undefined ? String(vitals.blood_pressure) : prev.bp,
+                                sugar: vitals.sugar !== undefined ? String(vitals.sugar) : prev.sugar,
+                                tft: vitals.thtext !== undefined ? String(vitals.thtext) : prev.tft,
+                                pallorHb: vitals.pallor !== undefined ? String(vitals.pallor) : prev.pallorHb,
+                                allergy: vitals.allergy_dtls !== undefined ? String(vitals.allergy_dtls) : prev.allergy,
+                                medicalHistoryText: vitals.habits_comments !== undefined ? String(vitals.habits_comments) : prev.medicalHistoryText,
+                                visitComments: vitals.visit_comments !== undefined ? String(vitals.visit_comments) : prev.visitComments,
+                                detailedHistory: vitals.symptom_comment !== undefined ? String(vitals.symptom_comment) : prev.detailedHistory,
+                                surgicalHistory: vitals.surgical_history_past_history !== undefined ? String(vitals.surgical_history_past_history) : prev.surgicalHistory,
+                                procedurePerformed: vitals.observation !== undefined ? String(vitals.observation) : prev.procedurePerformed,
+                                examinationFindings: vitals.important_findings !== undefined ? String(vitals.important_findings) : prev.examinationFindings,
+                                additionalComments: vitals.impression !== undefined ? String(vitals.impression) : prev.additionalComments,
+                                medicines: vitals.current_medicines !== undefined ? String(vitals.current_medicines) : prev.medicines,
+                                dressingBodyParts: dressingCombined || prev.dressingBodyParts,
+                                visitType: {
+                                    ...prev.visitType,
+                                    inPerson: vitals.in_person !== undefined ? Boolean(vitals.in_person) : prev.visitType.inPerson
+                                    // followUp will be set separately based on previous visits
+                                },
+                                medicalHistory: {
+                                    ...prev.medicalHistory,
+                                    hypertension: Boolean(vitals.hypertension ?? prev.medicalHistory.hypertension),
+                                    diabetes: Boolean(vitals.diabetes ?? prev.medicalHistory.diabetes),
+                                    cholesterol: Boolean((vitals.cholestrol !== undefined ? vitals.cholestrol : prev.medicalHistory.cholesterol)),
+                                    ihd: Boolean(vitals.ihd ?? prev.medicalHistory.ihd),
+                                    asthma: Boolean((vitals.asthama !== undefined ? vitals.asthama : prev.medicalHistory.asthma)),
+                                    th: Boolean(vitals.th ?? prev.medicalHistory.th),
+                                    smoking: Boolean(vitals.smoking ?? prev.medicalHistory.smoking),
+                                    tobacco: Boolean((vitals.tobaco !== undefined ? vitals.tobaco : prev.medicalHistory.tobacco)),
+                                    alcohol: Boolean((vitals.alchohol !== undefined ? vitals.alchohol : prev.medicalHistory.alcohol))
+                                }
                             }));
 
-                            // Patch billing fields from master lists (uiFields and vitals)
-                            setBillingData(prev => {
-                                // Check for billed value from multiple sources: uiFields.billedRs, vitals.fees_to_collect, or vitals.Fees_To_Collect
-                                const billedValue = uiFields?.billedRs ?? vitals?.fees_to_collect ?? vitals?.Fees_To_Collect ?? prev.billed;
-                                const billedStr = billedValue !== undefined && billedValue !== null ? String(billedValue) : prev.billed;
+                            try {
+                                const uiFields = (dataRoot as any)?.uiFields || {};
+                                const followUpDesc = (uiFields?.followUpDescription ?? vitals?.follow_up_description ?? vitals?.followUpDescription ?? '') as string;
 
-                                // Don't overwrite acBalance if folder-amount API has already set it
-                                // Use ref to check if folder-amount API has set the value (more reliable than state)
-                                const acBalanceValue = folderAmountSetRef.current ? prev.acBalance :
-                                    (uiFields?.acBalanceRs !== undefined && uiFields?.acBalanceRs !== null ? String(uiFields.acBalanceRs) : prev.acBalance);
-
-                                // Check for collectedRs from multiple sources: dataRoot.collectedRs, uiFields.feesCollected, or uiFields.collectedRs
-                                const collectedValue = dataRoot?.collectedRs ?? uiFields?.feesCollected ?? uiFields?.collectedRs ?? prev.feesCollected;
-                                const collectedStr = collectedValue !== undefined && collectedValue !== null ? String(collectedValue) : prev.feesCollected;
-
-                                // Format receiptDate from ISO string to readable format if available
-                                let receiptDateStr = prev.receiptDate;
-                                if (uiFields?.receiptDate !== undefined && uiFields?.receiptDate !== null) {
-                                    try {
-                                        const receiptDate = new Date(uiFields.receiptDate);
-                                        if (!isNaN(receiptDate.getTime())) {
-                                            receiptDateStr = receiptDate.toLocaleDateString('en-GB', {
-                                                day: '2-digit',
-                                                month: '2-digit',
-                                                year: 'numeric'
-                                            });
-                                        } else {
-                                            receiptDateStr = String(uiFields.receiptDate);
-                                        }
-                                    } catch (e) {
-                                        receiptDateStr = String(uiFields.receiptDate);
-                                    }
+                                if (followUpDesc) {
+                                    setStoredFollowUpDescription(followUpDesc);
                                 }
 
-                                // Handle paymentBy - convert to string if it's a number
-                                const paymentByValue = uiFields?.paymentBy !== undefined && uiFields?.paymentBy !== null
-                                    ? String(uiFields.paymentBy)
-                                    : prev.paymentBy;
-
-                                // Handle paymentRemark - allow null/empty string to clear the field
-                                const paymentRemarkValue = uiFields?.paymentRemark !== undefined
-                                    ? (uiFields.paymentRemark !== null ? String(uiFields.paymentRemark) : '')
-                                    : prev.paymentRemark;
-
-                                // Handle reason - prefer vitals[0].comment, fall back to uiFields/dataRoot, then keep previous
-                                const reasonValue =
-                                    vitals?.comment ??
-                                    uiFields?.reason ??
-                                    uiFields?.Reason ??
-                                    dataRoot?.reason ??
-                                    dataRoot?.Reason ??
-                                    prev.reason;
-                                const reasonStr = reasonValue !== undefined && reasonValue !== null ? String(reasonValue) : prev.reason;
-                                console.log('reasonValue', reasonValue);
-
-                                return {
+                                let fuTypeId = '';
+                                if (followUpDesc && followUpTypesOptions.length > 0) {
+                                    const matchedOption = followUpTypesOptions.find(
+                                        opt => opt.followUpDescription?.toLowerCase() === followUpDesc.toLowerCase() ||
+                                            opt.followUpDescription === followUpDesc
+                                    );
+                                    if (matchedOption) fuTypeId = matchedOption.id;
+                                }
+                                if (!fuTypeId) {
+                                    fuTypeId = (uiFields?.followUpType ?? vitals.follow_up_type ?? '') as any;
+                                }
+                                const fuDate = (uiFields?.followUpDate ?? vitals.follow_up_date ?? '') as any;
+                                setFollowUpData(prev => ({
                                     ...prev,
-                                    billed: billedStr,
-                                    discount: uiFields?.discountRs !== undefined && uiFields?.discountRs !== null ? String(uiFields.discountRs) : prev.discount,
-                                    dues: uiFields?.duesRs !== undefined && uiFields?.duesRs !== null ? String(uiFields.duesRs) : prev.dues,
-                                    acBalance: acBalanceValue,
-                                    receiptNo: uiFields?.receiptNo !== undefined && uiFields?.receiptNo !== null ? String(uiFields.receiptNo) : prev.receiptNo,
-                                    receiptDate: receiptDateStr,
-                                    feesCollected: collectedStr,
-                                    paymentRemark: paymentRemarkValue,
-                                    paymentBy: paymentByValue,
-                                    reason: reasonStr
-                                };
-                            });
+                                    followUpType: fuTypeId ? String(fuTypeId) : prev.followUpType,
+                                    followUp: vitals.follow_up_comment !== undefined ? String(vitals.follow_up_comment) : prev.followUp,
+                                    followUpDate: fuDate ? String(fuDate) : prev.followUpDate,
+                                    planAdv: vitals.instructions !== undefined ? String(vitals.instructions) : prev.planAdv,
+                                    fud: vitals.follow_up_type !== undefined ? String(vitals.follow_up_type) : prev.fud
+                                }));
 
-                            // Load statusId from master lists (vitals or uiFields)
-                            const loadedStatusId = vitals?.statusId ?? vitals?.status_id ?? uiFields?.statusId ?? dataRoot?.statusId;
-                            if (loadedStatusId !== undefined && loadedStatusId !== null) {
-                                setStatusId(Number(loadedStatusId));
-                            }
-                        } catch (_) {
-                            // ignore mapping errors
+                                // Billing Fields from master list
+                                setBillingData(prev => {
+                                    const billedValue = uiFields?.billedRs ?? vitals?.fees_to_collect ?? vitals?.Fees_To_Collect ?? prev.billed;
+                                    const billedStr = billedValue !== undefined && billedValue !== null ? String(billedValue) : prev.billed;
+                                    const acBalanceValue = folderAmountSetRef.current ? prev.acBalance :
+                                        (uiFields?.acBalanceRs !== undefined && uiFields?.acBalanceRs !== null ? String(uiFields.acBalanceRs) : prev.acBalance);
+                                    const collectedValue = dataRoot?.collectedRs ?? uiFields?.feesCollected ?? uiFields?.collectedRs ?? prev.feesCollected;
+                                    const collectedStr = collectedValue !== undefined && collectedValue !== null ? String(collectedValue) : prev.feesCollected;
+
+                                    let receiptDateStr = prev.receiptDate;
+                                    if (uiFields?.receiptDate !== undefined && uiFields?.receiptDate !== null) {
+                                        try {
+                                            const receiptDate = new Date(uiFields.receiptDate);
+                                            if (!isNaN(receiptDate.getTime())) {
+                                                receiptDateStr = receiptDate.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                                            } else {
+                                                receiptDateStr = String(uiFields.receiptDate);
+                                            }
+                                        } catch (e) {
+                                            receiptDateStr = String(uiFields.receiptDate);
+                                        }
+                                    }
+
+                                    const paymentByValue = uiFields?.paymentBy !== undefined && uiFields?.paymentBy !== null ? String(uiFields.paymentBy) : prev.paymentBy;
+                                    const paymentRemarkValue = uiFields?.paymentRemark !== undefined ? (uiFields.paymentRemark !== null ? String(uiFields.paymentRemark) : '') : prev.paymentRemark;
+                                    const reasonValue = vitals?.comment ?? uiFields?.reason ?? uiFields?.Reason ?? dataRoot?.reason ?? dataRoot?.Reason ?? prev.reason;
+                                    const reasonStr = reasonValue !== undefined && reasonValue !== null ? String(reasonValue) : prev.reason;
+
+                                    return {
+                                        ...prev,
+                                        billed: billedStr,
+                                        discount: uiFields?.discountRs !== undefined && uiFields?.discountRs !== null ? String(uiFields.discountRs) : prev.discount,
+                                        dues: uiFields?.duesRs !== undefined && uiFields?.duesRs !== null ? String(uiFields.duesRs) : prev.dues,
+                                        acBalance: acBalanceValue,
+                                        receiptNo: uiFields?.receiptNo !== undefined && uiFields?.receiptNo !== null ? String(uiFields.receiptNo) : prev.receiptNo,
+                                        receiptDate: receiptDateStr,
+                                        feesCollected: collectedStr,
+                                        paymentRemark: paymentRemarkValue,
+                                        paymentBy: paymentByValue,
+                                        reason: reasonStr
+                                    };
+                                });
+
+                                const loadedStatusId = vitals?.statusId ?? vitals?.status_id ?? uiFields?.statusId ?? dataRoot?.statusId;
+                                if (loadedStatusId !== undefined && loadedStatusId !== null) {
+                                    setStatusId(Number(loadedStatusId));
+                                }
+                            } catch (_) { /* ignore */ }
                         }
-                    }
 
-                    // Patch table data from master lists
-                    try {
+                        // Patch Table Data
                         const mlComplaintsArr = Array.isArray(dataRoot?.complaints) ? dataRoot.complaints : [];
                         setMlComplaints(mlComplaintsArr.map((c: any) => ({
                             label: safeToStr(c?.complaint_description ?? c?.label ?? c?.name ?? c?.complaint ?? c?.description ?? ''),
@@ -1334,8 +1195,8 @@ export default function Treatment() {
                             label: safeToStr(d?.desease_description ?? d?.description ?? d?.diagnosis ?? d?.name ?? d?.label ?? '')
                         })).filter((d: any) => d.label));
 
+                        // ... Map Prescriptions ...
                         const mapToRxRow = (p: any, idx: number, prefix: string): PrescriptionRow => {
-                            // Build prescription as "medicine_name(brand_name)" when available
                             const medicineName = safeToStr(p?.medicine_name ?? '');
                             const brandName = safeToStr(p?.brand_name ?? '');
                             const fallbackPrescription = safeToStr(p?.prescription ?? p?.medicine ?? p?.medicineName ?? p?.short_description ?? p?.name ?? '');
@@ -1356,18 +1217,12 @@ export default function Treatment() {
                         const mlRxArr = Array.isArray(dataRoot?.prescriptions) ? dataRoot.prescriptions : [];
                         const mappedPrescriptions = mlRxArr.map((p: any, idx: number) => mapToRxRow(p, idx, 'mlrx')).filter((r: PrescriptionRow) => !!r.prescription);
                         setMlPrescriptionsTable(mappedPrescriptions);
-                        // Populate prescriptionRows from master-lists API data (same as Treatment.tsx uses API data)
-                        // If no prescriptions from API, set empty array so print shows "No prescriptions found"
                         setPrescriptionRows(mappedPrescriptions.length > 0 ? mappedPrescriptions : []);
 
-                        // Build Instructions table ONLY from Instructions arrays
-                        const instrArrRaw = Array.isArray((dataRoot as any)?.instructions)
-                            ? (dataRoot as any).instructions
-                            : (Array.isArray((dataRoot as any)?.Instructions)
-                                ? (dataRoot as any).Instructions
-                                : (Array.isArray((dataRoot as any)?.Instrctions)
-                                    ? (dataRoot as any).Instrctions
-                                    : []));
+                        // ... Map Instructions ...
+                        const instrArrRaw = Array.isArray((dataRoot as any)?.instructions) ? (dataRoot as any).instructions :
+                            (Array.isArray((dataRoot as any)?.Instructions) ? (dataRoot as any).Instructions :
+                                (Array.isArray((dataRoot as any)?.Instrctions) ? (dataRoot as any).Instrctions : []));
 
                         const instructionRows: PrescriptionRow[] = instrArrRaw.map((p: any, idx: number) => {
                             const groupName = safeToStr(p?.group_description ?? p?.Group_Description ?? '');
@@ -1375,141 +1230,99 @@ export default function Treatment() {
                             const title = groupName || safeToStr(p?.prescription ?? p?.name ?? '');
                             return { id: `mlins_${idx}`, prescription: title, b: '', l: '', d: '', days: '', instruction: instructionText };
                         }).filter((r: PrescriptionRow) => r.prescription || r.instruction);
-
                         setMlInstructionsTable(instructionRows);
 
                         const testsArr = Array.isArray(dataRoot?.labTestsAsked) ? dataRoot.labTestsAsked : [];
                         setMlTestsTable(testsArr.map((t: any) => safeToStr(t?.id ?? t?.name ?? t?.testName ?? t?.label ?? t)).filter((s: string) => !!s));
-                        // Store labTestsAsked in ref for print functionality
                         if (Array.isArray(testsArr) && testsArr.length > 0) {
                             labTestsAskedRef.current = testsArr;
-                            console.log('Stored labTestsAsked from master-lists:', testsArr);
                         } else {
                             labTestsAskedRef.current = [];
                         }
 
-                        // Store billing array from master-lists API to use collected_fees for receipt details
+                        // Store billing array from master-lists API
                         const billingArray = Array.isArray(dataRoot?.billing) ? dataRoot.billing : [];
                         if (Array.isArray(billingArray) && billingArray.length > 0) {
                             masterListsBillingRef.current = billingArray;
-                            console.log('Stored billing array from master-lists:', billingArray);
                         } else {
                             masterListsBillingRef.current = [];
                         }
-                    } catch (e2) {
-                        console.warn('Billing: could not map table data from master lists', e2);
-                        // Clear prescriptionRows if mapping fails
-                        setPrescriptionRows([]);
+                    } catch (e) {
+                        console.warn('Billing: Error processing master list data', e);
                     }
-                } catch (e) {
-                    console.warn('Billing: could not map vitals from master lists response', e);
                 }
+
+                // --- Execute Matching Logic (consolidated) ---
+                if (masterListsResp && billingOptions.length > 0) {
+                    const billingArray = masterListsBillingRef.current; // already set above from masterListsResp
+                    console.log('Matching billing items. Options:', billingOptions.length, 'Master-lists:', billingArray.length);
+
+                    const matchedIds: string[] = [];
+                    billingArray.forEach((billingItem: any) => {
+                        const itemGroup = (billingItem.billing_group_name || '').trim().toLowerCase();
+                        const itemSubgroup = (billingItem.billing_subgroup_name || '').trim().toLowerCase();
+                        const itemDetails = (billingItem.billing_details || '').trim().toLowerCase();
+
+                        let match = billingOptions.find((opt: any) => {
+                            const optGroup = (opt.billing_group_name || '').trim().toLowerCase();
+                            const optSubgroup = (opt.billing_subgroup_name || '').trim().toLowerCase();
+                            const optDetails = (opt.billing_details || '').trim().toLowerCase();
+                            return optGroup === itemGroup && optSubgroup === itemSubgroup && optDetails === itemDetails;
+                        });
+
+                        if (!match) {
+                            match = billingOptions.find((opt: any) => {
+                                const optGroup = (opt.billing_group_name || '').trim().toLowerCase();
+                                const optSubgroup = (opt.billing_subgroup_name || '').trim().toLowerCase();
+                                return optGroup === itemGroup && optSubgroup === itemSubgroup;
+                            });
+                        }
+
+                        if (match) matchedIds.push(match.id);
+                    });
+
+                    if (matchedIds.length > 0) {
+                        setSelectedBillingDetailIds(matchedIds);
+                        console.log('Pre-selected billing IDs:', matchedIds);
+
+                        // Calculate total fees
+                        const totalFees = matchedIds.reduce((sum: number, id: string) => {
+                            const opt = billingOptions.find((o: any) => o.id === id);
+                            if (!opt) return sum;
+
+                            const matchingItem = billingArray.find((item: any) => {
+                                const itemGroup = (item.billing_group_name || '').trim().toLowerCase();
+                                const itemSubgroup = (item.billing_subgroup_name || '').trim().toLowerCase();
+                                const optGroup = (opt.billing_group_name || '').trim().toLowerCase();
+                                const optSubgroup = (opt.billing_subgroup_name || '').trim().toLowerCase();
+                                if (itemGroup !== optGroup || itemSubgroup !== optSubgroup) return false;
+                                const itemDetails = (item.billing_details || '').trim().toLowerCase();
+                                const optDetails = (opt.billing_details || '').trim().toLowerCase();
+                                return !itemDetails || !optDetails || itemDetails === optDetails;
+                            });
+
+                            const fee = matchingItem?.collected_fees ?? matchingItem?.collectedFees ?? opt.default_fees ?? 0;
+                            return sum + Number(fee);
+                        }, 0);
+
+                        console.log('Calculated total fees:', totalFees.toFixed(2));
+                        setBillingData(prev => ({
+                            ...prev,
+                            // Only update billed if it wasn't already manually set? 
+                            // Actually, if we are loading fresh, we should trust the calculated fees especially if they come from master lists.
+                            billed: totalFees > 0 ? totalFees.toFixed(2) : prev.billed
+                        }));
+                    }
+                }
+
             } catch (error) {
-                console.error('Failed to fetch master lists (Billing):', error);
+                console.error('Error loading initial billing data:', error);
             }
-        };
-
-        fetchMasterLists();
-    }, [treatmentData?.patientId, treatmentData?.visitNumber, sessionData?.clinicId, sessionData?.doctorId, (sessionData as any)?.shiftId, treatmentData?.doctorId]);
-
-    // Update Billed field based on currently selected checkboxes (not from master-lists array)
-    // This will be updated via onTotalFeesChange callback from AddBillingPopup
-
-    // Match and pre-select billing items after billing options are loaded
-    React.useEffect(() => {
-        // Only proceed if we have both billing options and master-lists billing data
-        if (billingDetailsOptions.length === 0 || masterListsBillingRef.current.length === 0) {
-            return;
         }
 
-        const billingArray = masterListsBillingRef.current;
-        console.log('Matching billing items. Options:', billingDetailsOptions.length, 'Master-lists:', billingArray.length);
-
-        // Match billing items from master-lists to existing billing options by fields
-        const matchedIds: string[] = [];
-
-        billingArray.forEach((billingItem: any) => {
-            // Find matching option by comparing billing fields (case-insensitive, trimmed)
-            // Try exact match first, then try matching by subgroup and group if details don't match
-            const itemGroup = (billingItem.billing_group_name || '').trim().toLowerCase();
-            const itemSubgroup = (billingItem.billing_subgroup_name || '').trim().toLowerCase();
-            const itemDetails = (billingItem.billing_details || '').trim().toLowerCase();
-
-            let match = billingDetailsOptions.find(opt => {
-                const optGroup = (opt.billing_group_name || '').trim().toLowerCase();
-                const optSubgroup = (opt.billing_subgroup_name || '').trim().toLowerCase();
-                const optDetails = (opt.billing_details || '').trim().toLowerCase();
-
-                // Exact match: all three fields match
-                return optGroup === itemGroup && optSubgroup === itemSubgroup && optDetails === itemDetails;
-            });
-
-            // If no exact match, try matching by group and subgroup only (more flexible)
-            if (!match) {
-                match = billingDetailsOptions.find(opt => {
-                    const optGroup = (opt.billing_group_name || '').trim().toLowerCase();
-                    const optSubgroup = (opt.billing_subgroup_name || '').trim().toLowerCase();
-
-                    return optGroup === itemGroup && optSubgroup === itemSubgroup;
-                });
-            }
-
-            if (match) {
-                matchedIds.push(match.id);
-                console.log('✓ Matched billing item:', {
-                    fromMasterLists: {
-                        group: billingItem.billing_group_name,
-                        subgroup: billingItem.billing_subgroup_name,
-                        details: billingItem.billing_details,
-                        default_fees: billingItem.default_fees
-                    },
-                    matchedTo: {
-                        id: match.id,
-                        group: match.billing_group_name,
-                        subgroup: match.billing_subgroup_name,
-                        details: match.billing_details,
-                        default_fees: match.default_fees
-                    }
-                });
-            } else {
-                console.warn('✗ Could not match billing item:', {
-                    group: billingItem.billing_group_name,
-                    subgroup: billingItem.billing_subgroup_name,
-                    details: billingItem.billing_details,
-                    default_fees: billingItem.default_fees
-                });
-            }
-        });
-
-        // Pre-select the matched billing items - replace existing selections with matched items
-        if (matchedIds.length > 0) {
-            setSelectedBillingDetailIds(matchedIds);
-            console.log('Pre-selected billing IDs from master-lists:', matchedIds);
-
-            // Calculate and update Billed field based on selected items
-            const totalDefaultFees = matchedIds.reduce((sum: number, id: string) => {
-                const opt = billingDetailsOptions.find(o => o.id === id);
-                if (opt) {
-                    const defaultFees = typeof opt.default_fees === 'number' ? opt.default_fees : Number(opt.default_fees || 0);
-                    return sum + defaultFees;
-                }
-                return sum;
-            }, 0);
-
-            console.log('Calculated total default_fees from selected checkboxes:', totalDefaultFees.toFixed(2));
-            setBillingData(prev => ({
-                ...prev,
-                billed: totalDefaultFees > 0 ? totalDefaultFees.toFixed(2) : prev.billed
-            }));
-        } else {
-            console.warn('No billing items matched for pre-selection');
-            // If no matches, set billed to 0
-            setBillingData(prev => ({
-                ...prev,
-                billed: '0.00'
-            }));
-        }
-    }, [billingDetailsOptions]);
+        loadAllData();
+        return () => { cancelled = true; };
+    }, [treatmentData?.doctorId, sessionData?.clinicId, treatmentData?.patientId, treatmentData?.visitNumber]);
 
     // Get treatment data from location state
     useEffect(() => {
@@ -1699,8 +1512,6 @@ export default function Treatment() {
     React.useEffect(() => {
         let cancelled = false;
         async function loadFollowUpTypes() {
-            setFollowUpTypesLoading(true);
-            setFollowUpTypesError(null);
 
             try {
                 const options = await getFollowUpTypes();
@@ -1709,13 +1520,6 @@ export default function Treatment() {
                 }
             } catch (error: any) {
                 console.error('Error loading follow-up types:', error);
-                if (!cancelled) {
-                    setFollowUpTypesError(error.message);
-                }
-            } finally {
-                if (!cancelled) {
-                    setFollowUpTypesLoading(false);
-                }
             }
         }
 
@@ -1802,51 +1606,17 @@ export default function Treatment() {
     }, [paymentByOptions, billingData.paymentBy]);
 
     const receiptDetailsText = React.useMemo(() => {
-        const billingArray = masterListsBillingRef.current || [];
-
-        // Preferred: build Details text directly from master-lists billing array
-        // using billing_group_name, billing_subgroup_name, and collected_fees
-        if (billingArray.length > 0) {
-            const parts = billingArray
-                .map((item: any) => {
-                    const group = (item.billing_group_name || '').toString().trim();
-                    const subgroup = (item.billing_subgroup_name || '').toString().trim();
-                    const rawAmount =
-                        item.collected_fees ??
-                        item.collectedFees ??
-                        item.default_fees ??
-                        item.defaultFees;
-
-                    const hasAmount =
-                        typeof rawAmount === 'number' && !isNaN(rawAmount) && rawAmount > 0;
-                    const amountText = hasAmount ? `Rs.${rawAmount.toFixed(2)}` : '';
-
-                    if (!group && !subgroup && !amountText) return '';
-
-                    // Build "Group - SubGroup - Rs.xxx.xx" (skip empty parts cleanly)
-                    const labelParts: string[] = [];
-                    if (group) labelParts.push(group);
-                    if (subgroup) labelParts.push(subgroup);
-                    if (amountText) labelParts.push(amountText);
-
-                    return labelParts.join(' - ');
-                })
-                .filter(Boolean);
-
-            if (parts.length > 0) {
-                return parts.join(', ');
-            }
-        }
-
-        // Fallback: derive from currently selected billing options
         if (selectedBillingDetailIds.length === 0) return '';
+
+        const billingArray = masterListsBillingRef.current || [];
 
         const parts = selectedBillingDetailIds
             .map(id => {
                 const opt = billingDetailsOptions.find(o => o.id === id);
                 if (!opt) return '';
 
-                const billingItem = billingArray.find((item: any) => {
+                // Try to find matching item in master list to get collected_fees if available
+                const existingItem = billingArray.find((item: any) => {
                     const optGroup = (opt.billing_group_name || '').trim().toLowerCase();
                     const optSubgroup = (opt.billing_subgroup_name || '').trim().toLowerCase();
                     const optDetails = (opt.billing_details || '').trim().toLowerCase();
@@ -1855,23 +1625,15 @@ export default function Treatment() {
                     const itemSubgroup = (item.billing_subgroup_name || '').trim().toLowerCase();
                     const itemDetails = (item.billing_details || '').trim().toLowerCase();
 
-                    return (
-                        optGroup === itemGroup &&
-                        optSubgroup === itemSubgroup &&
-                        optDetails === itemDetails
-                    );
+                    return optGroup === itemGroup && optSubgroup === itemSubgroup && optDetails === itemDetails;
                 });
 
-                const rawAmount =
-                    billingItem?.collected_fees ??
-                    billingItem?.collectedFees ??
-                    opt.default_fees;
-                const hasAmount =
-                    typeof rawAmount === 'number' && !isNaN(rawAmount) && rawAmount > 0;
-                const amountText = hasAmount ? `Rs.${rawAmount.toFixed(2)}` : '';
+                const fee = existingItem?.collected_fees ?? existingItem?.collectedFees ?? opt.default_fees ?? 0;
 
+                // Build string
                 const group = (opt.billing_group_name || '').toString().trim();
                 const subgroup = (opt.billing_subgroup_name || '').toString().trim();
+                const amountText = fee > 0 ? `Rs.${Number(fee).toFixed(2)}` : '';
 
                 const labelParts: string[] = [];
                 if (group) labelParts.push(group);
@@ -1896,11 +1658,6 @@ export default function Treatment() {
         const userId = sessionData?.userId;
 
         if (!clinicId || !doctorId || !userId) {
-            console.warn('Cannot build receipt payload - missing clinic/doctor/user info', {
-                clinicId,
-                doctorId,
-                userId
-            });
             return null;
         }
 
@@ -1917,11 +1674,6 @@ export default function Treatment() {
         const receiptAmount = Math.max(0, receiptAmountRaw);
 
         if (receiptAmount <= 0) {
-            console.warn('Skipping receipt generation - non-positive receipt amount', {
-                billedAmount,
-                discountAmount,
-                collectedAmount
-            });
             return null;
         }
 
@@ -1966,15 +1718,24 @@ export default function Treatment() {
     };
 
     // Memoized callback to handle total fees changes from AddBillingPopup
+    // Memoized callback to handle total fees changes from AddBillingPopup
     const handleTotalFeesChange = useCallback((totalFees: number) => {
         // Update Billed input based on currently selected checkboxes
         // This updates dynamically as user checks/unchecks items
         const totalFeesFixed = totalFees.toFixed(2);
-        console.log('totalSelectedFees from AddBillingPopup (current selection):', totalFeesFixed);
-        setTotalSelectedFees(totalFees);
+        // setTotalSelectedFees(totalFees); // Removed
+
         // Update billed field with current selection total (not cumulative)
         setBillingData(prev => {
             const discountNum = parseFloat(prev.discount) || 0;
+
+            // Validate discount against new billed amount
+            if (discountNum > totalFees) {
+                setDiscountError('Discount cannot be greater than billed amount');
+            } else {
+                setDiscountError(null);
+            }
+
             const acBal = Math.max(0, totalFees - discountNum);
             return {
                 ...prev,
@@ -1996,11 +1757,6 @@ export default function Treatment() {
     // Fetch previous visits for the current patient
     const fetchPreviousVisits = async () => {
         if (!treatmentData?.patientId || !sessionData?.doctorId || !sessionData?.clinicId) {
-            console.log('Missing required data for fetching previous visits:', {
-                patientId: treatmentData?.patientId,
-                doctorId: sessionData?.doctorId,
-                clinicId: sessionData?.clinicId
-            });
             return;
         }
 
@@ -2015,9 +1771,6 @@ export default function Treatment() {
                 clinicId: sessionData.clinicId,
                 todaysVisitDate
             });
-
-            console.log('Previous visits response:', response);
-
             // Try common shapes
             const visits = response?.visits || response?.data?.visits || response?.resultSet1 || [];
             const success = response?.success !== false;
@@ -2201,6 +1954,46 @@ export default function Treatment() {
         }
     }, [formData.height, formData.weight]);
 
+    // Auto-set Follow-up checkbox based on previous visits with statusId 5
+    useEffect(() => {
+        if (!allVisits || allVisits.length === 0) {
+            // No previous visits, so this is not a follow-up
+            setFormData(prev => {
+                if (prev.visitType.followUp !== false) {
+                    return {
+                        ...prev,
+                        visitType: {
+                            ...prev.visitType,
+                            followUp: false
+                        }
+                    };
+                }
+                return prev;
+            });
+            return;
+        }
+
+        // Check if there's any previous visit with statusId === 5 (Complete)
+        const hasCompletedVisit = allVisits.some((visit: any) => {
+            const statusId = visit?.statusId ?? visit?.status_id ?? visit?.Status_Id;
+            return Number(statusId) === 5;
+        });
+
+        setFormData(prev => {
+            if (prev.visitType.followUp !== hasCompletedVisit) {
+                return {
+                    ...prev,
+                    visitType: {
+                        ...prev.visitType,
+                        followUp: hasCompletedVisit
+                    }
+                };
+            }
+            return prev;
+        });
+    }, [allVisits]);
+
+
     // Load patient folder amount for billing
     useEffect(() => {
         let cancelled = false;
@@ -2237,10 +2030,6 @@ export default function Treatment() {
                 }
 
                 const data = await response.json();
-                console.log('=== Patient Folder Amount API Response (Billing) ===');
-                console.log('API URL:', `/api/fees/folder-amount?${params.toString()}`);
-                console.log('Response Data:', data);
-                console.log('==========================================');
 
                 if (!cancelled && data) {
                     setFolderAmountData(data);
@@ -2394,11 +2183,6 @@ export default function Treatment() {
 
     // Map previous visit data to form data (copied from Appointment page)
     const mapPreviousVisitToInitialData = (visit: any, patientName: string, appointmentRow?: any) => {
-        console.log('=== MAPPING VISIT DATA ===');
-        console.log('Raw visit object:', visit);
-        console.log('Visit keys:', Object.keys(visit || {}));
-        console.log('Patient name:', patientName);
-        console.log('Appointment row:', appointmentRow);
 
         const [firstName, ...rest] = String(patientName || '').trim().split(/\s+/);
         const lastName = rest.join(' ');
@@ -2470,9 +2254,6 @@ export default function Treatment() {
                     dosage: doseCombined,
                     instructions: instr
                 };
-
-                console.log('Mapped prescription:', mappedPrescription);
-                console.log('Number of days found:', noOfdays);
                 return mappedPrescription;
             })
             : (toStr(get(visit, 'Medicine_Name'))
@@ -2503,9 +2284,6 @@ export default function Treatment() {
             contact: toStr(appointmentRow?.contact || get(visit, 'mobile', 'mobile_1', 'contact')),
             email: toStr(get(visit, 'email')),
             provider: (() => {
-                console.log('Provider mapping - appointmentRow?.provider:', appointmentRow?.provider);
-                console.log('Provider mapping - appointmentRow?.doctorId:', appointmentRow?.doctorId);
-
                 // First try rawVisit.DoctorName
                 const rawDoctorName = toStr(get(visit, 'DoctorName', 'doctor_name', 'Doctor_Name'));
                 console.log('Raw visit DoctorName:', rawDoctorName);
@@ -2673,10 +2451,6 @@ export default function Treatment() {
             rawVisit: visit
         };
 
-        console.log('=== MAPPED FORM DATA ===');
-        console.log('Final mapped data:', mappedData);
-        console.log('=== END MAPPED FORM DATA ===');
-
         return mappedData;
     };
 
@@ -2718,16 +2492,6 @@ export default function Treatment() {
         return str.trim() === '' ? '-' : str;
     };
 
-    const handleMedicalHistoryChange = (field: string, checked: boolean) => {
-        setFormData(prev => ({
-            ...prev,
-            medicalHistory: {
-                ...prev.medicalHistory,
-                [field]: checked
-            }
-        }));
-    };
-
     const handleVisitTypeChange = (field: string, checked: boolean) => {
         setFormData(prev => ({
             ...prev,
@@ -2736,192 +2500,6 @@ export default function Treatment() {
                 [field]: checked
             }
         }));
-    };
-
-    const handleAddComplaints = () => {
-        if (selectedComplaints.length === 0) return;
-        setComplaintsRows(prev => {
-            const existingValues = new Set(prev.map(r => r.value));
-            const newRows: ComplaintRow[] = [];
-            selectedComplaints.forEach(val => {
-                if (!existingValues.has(val)) {
-                    const opt = complaintsOptions.find(o => o.value === val);
-                    if (opt) {
-                        newRows.push({ id: `${val}`, value: val, label: opt.label, comment: '' });
-                    }
-                }
-            });
-            const next = [...prev, ...newRows];
-            return next;
-        });
-        // Keep dropdown selections as-is; close menu
-        setIsComplaintsOpen(false);
-    };
-
-    const handleAddCustomComplaint = () => {
-        setShowComplaintPopup(true);
-    };
-
-    const handleSaveComplaint = (complaintDescription: string) => {
-        // Add the new complaint to the complaints rows
-        const newComplaint: ComplaintRow = {
-            id: `custom_${Date.now()}`,
-            value: `custom_${Date.now()}`,
-            label: complaintDescription,
-            comment: ''
-        };
-
-        setComplaintsRows(prev => [...prev, newComplaint]);
-        setShowComplaintPopup(false);
-    };
-
-    const handleAddCustomDiagnosis = () => {
-        setShowDiagnosisPopup(true);
-    };
-
-    const handleSaveDiagnosis = (diagnosisDescription: string) => {
-        // Add the new diagnosis to the diagnosis rows
-        const newDiagnosis: DiagnosisRow = {
-            id: `custom_${Date.now()}`,
-            diagnosis: diagnosisDescription,
-            comment: ''
-        };
-
-        setDiagnosisRows(prev => [...prev, newDiagnosis]);
-        setShowDiagnosisPopup(false);
-    };
-
-    const handleAddCustomMedicine = () => {
-        setShowMedicinePopup(true);
-    };
-
-    const handleSaveMedicine = (medicineData: MedicineData) => {
-        // Add the new medicine to the medicine rows
-        const newMedicine: MedicineRow = {
-            id: `custom_${Date.now()}`,
-            medicine: `${medicineData.medicineName} (${medicineData.shortDescription})`,
-            short_description: medicineData.shortDescription,
-            morning: parseInt(medicineData.breakfast) || 0,
-            afternoon: parseInt(medicineData.lunch) || 0,
-            b: medicineData.breakfast || '',
-            l: medicineData.lunch || '',
-            d: medicineData.dinner || '',
-            days: medicineData.days || '',
-            instruction: `${medicineData.instruction} - Priority: ${medicineData.priority}`
-        };
-
-        setMedicineRows(prev => [...prev, newMedicine]);
-        setShowMedicinePopup(false);
-    };
-
-    const handleAddCustomPrescription = () => {
-        setShowPrescriptionPopup(true);
-    };
-
-    const handleSavePrescription = (prescriptionData: PrescriptionData) => {
-        // Add the new prescription to the prescription rows
-        const newPrescription: PrescriptionRow = {
-            id: `custom_${Date.now()}`,
-            prescription: `${prescriptionData.brandName} (${prescriptionData.genericName})`,
-            b: prescriptionData.breakfast,
-            l: prescriptionData.lunch,
-            d: prescriptionData.dinner,
-            days: prescriptionData.days,
-            instruction: `${prescriptionData.instruction} - Priority: ${prescriptionData.priority} - Category: ${prescriptionData.categoryName} - SubCategory: ${prescriptionData.subCategoryName} - Marketed By: ${prescriptionData.marketedBy}`
-        };
-
-        setPrescriptionRows(prev => [...prev, newPrescription]);
-        setShowPrescriptionPopup(false);
-    };
-
-    const handleAddCustomTestLab = () => {
-        setShowTestLabPopup(true);
-    };
-
-    const handleSaveTestLab = (testLabData: TestLabData) => {
-        // Add the new test lab data
-        console.log('Test Lab Data:', testLabData);
-        setShowTestLabPopup(false);
-    };
-
-    // Function to collect all form fields into an array
-    const collectAllFormFields = () => {
-        const allFields = [
-            // Basic form data
-            { field: 'referralBy', value: formData.referralBy },
-            { field: 'visitType.inPerson', value: formData.visitType.inPerson },
-            { field: 'visitType.followUp', value: formData.visitType.followUp },
-            { field: 'allergy', value: formData.allergy },
-            { field: 'medicalHistoryText', value: formData.medicalHistoryText },
-            { field: 'surgicalHistory', value: formData.surgicalHistory },
-            { field: 'medicines', value: formData.medicines },
-            { field: 'visitComments', value: formData.visitComments },
-            { field: 'pc', value: formData.pc },
-
-            // Vitals
-            { field: 'height', value: formData.height },
-            { field: 'weight', value: formData.weight },
-            { field: 'bmi', value: formData.bmi },
-            { field: 'pulse', value: formData.pulse },
-            { field: 'bp', value: formData.bp },
-            { field: 'sugar', value: formData.sugar },
-            { field: 'tft', value: formData.tft },
-            { field: 'pallorHb', value: formData.pallorHb },
-
-            // Medical history checkboxes
-            { field: 'medicalHistory.hypertension', value: formData.medicalHistory.hypertension },
-            { field: 'medicalHistory.diabetes', value: formData.medicalHistory.diabetes },
-            { field: 'medicalHistory.cholesterol', value: formData.medicalHistory.cholesterol },
-            { field: 'medicalHistory.ihd', value: formData.medicalHistory.ihd },
-            { field: 'medicalHistory.asthma', value: formData.medicalHistory.asthma },
-            { field: 'medicalHistory.th', value: formData.medicalHistory.th },
-            { field: 'medicalHistory.smoking', value: formData.medicalHistory.smoking },
-            { field: 'medicalHistory.tobacco', value: formData.medicalHistory.tobacco },
-            { field: 'medicalHistory.alcohol', value: formData.medicalHistory.alcohol },
-
-            // Clinical data
-            { field: 'detailedHistory', value: formData.detailedHistory },
-            { field: 'examinationFindings', value: formData.examinationFindings },
-            { field: 'additionalComments', value: formData.additionalComments },
-            { field: 'procedurePerformed', value: formData.procedurePerformed },
-            { field: 'dressingBodyParts', value: formData.dressingBodyParts },
-
-            // Selected complaints
-            { field: 'selectedComplaints', value: selectedComplaints },
-            { field: 'complaintsRows', value: complaintsRows },
-
-            // Selected diagnoses
-            { field: 'selectedDiagnoses', value: selectedDiagnoses },
-            { field: 'diagnosisRows', value: diagnosisRows },
-
-            // Selected medicines
-            { field: 'selectedMedicines', value: selectedMedicines },
-            { field: 'medicineRows', value: medicineRows },
-
-            // Prescriptions
-            { field: 'prescriptionRows', value: prescriptionRows },
-
-            // Selected investigations
-            { field: 'selectedInvestigations', value: selectedInvestigations },
-            { field: 'investigationRows', value: investigationRows },
-
-            // Follow-up data
-            { field: 'followUpData.followUpType', value: followUpData.followUpType },
-            { field: 'followUpData.followUp', value: followUpData.followUp },
-
-            // Billing data
-            { field: 'billingData.billed', value: billingData.billed },
-            { field: 'billingData.discount', value: billingData.discount },
-
-            // Attachments
-            { field: 'attachments', value: attachments },
-
-            // Session data
-            { field: 'sessionData', value: sessionData },
-            { field: 'treatmentData', value: treatmentData }
-        ];
-
-        return allFields;
     };
 
     // Function to convert date to YYYY-MM-DD format
@@ -2935,15 +2513,8 @@ export default function Treatment() {
     const handleTreatmentAction = async (isSubmit: boolean) => {
         try {
             const actionType = isSubmit ? 'SUBMIT' : 'SAVE';
-            console.log(`=== TREATMENT FORM ${actionType} STARTED ===`);
-            console.log('Form data:', formData);
-            console.log('Treatment data:', treatmentData);
-            console.log('Session data:', sessionData);
-            console.log('Is Submit:', isSubmit);
 
             setIsSubmitting(true);
-            setSubmitError(null);
-            setSubmitSuccess(null);
             setSnackbarOpen(false);
             setSnackbarMessage('');
 
@@ -2982,13 +2553,6 @@ export default function Treatment() {
             if (!patientVisitNo) {
                 throw new Error('Patient Visit Number is required but not found in treatment data');
             }
-
-            console.log('=== VALIDATION PASSED ===');
-            console.log('Doctor ID:', doctorId);
-            console.log('Clinic ID:', clinicId);
-            console.log('Shift ID:', shiftId);
-            console.log('User ID:', userId);
-            console.log('Patient Visit No:', patientVisitNo);
 
             // Map form data to API request format
             // Status 5 = Complete, 9 = Draft/Saved
@@ -3089,16 +2653,6 @@ export default function Treatment() {
                 isSubmitPatientVisitDetails: isSubmit // true for submit, false for save
             };
 
-            console.log(`=== ${actionType}ING TREATMENT DATA TO API ===`);
-            console.log('Visit data object:', visitData);
-            console.log('Visit data JSON:', JSON.stringify(visitData, null, 2));
-            console.log('Status ID:', visitData.statusId);
-            console.log('Is Submit Patient Visit Details:', visitData.isSubmitPatientVisitDetails);
-            console.log('Clinic ID:', visitData.clinicId);
-            console.log('Doctor ID:', visitData.doctorId);
-            console.log('Shift ID:', visitData.shiftId);
-            console.log('Patient Visit No:', visitData.patientVisitNo);
-
             // Check for null/undefined values that might cause validation errors
             const nullFields = [];
             if (!visitData.patientId) nullFields.push('patientId');
@@ -3112,8 +2666,6 @@ export default function Treatment() {
             if (!visitData.userId) nullFields.push('userId');
 
             if (nullFields.length > 0) {
-                console.error('=== NULL/UNDEFINED FIELDS DETECTED ===');
-                console.error('Fields with null/undefined values:', nullFields);
                 throw new Error(`Required fields are missing: ${nullFields.join(', ')}`);
             }
 
@@ -3147,14 +2699,8 @@ export default function Treatment() {
                 result = await visitService.saveComprehensiveVisitData(visitData);
             }
 
-            console.log('=== API RESPONSE ===');
-            console.log('API Response:', result);
-            console.log('Success status:', result.success);
-
             if (result.success) {
                 const successMessage = `Treatment ${isSubmit ? 'submitted' : 'saved'} successfully!`;
-
-                console.log(`=== TREATMENT ${actionType}ED SUCCESSFULLY ===`);
                 setSnackbarMessage(successMessage);
                 setSnackbarOpen(true);
                 if (isSubmit) {
@@ -3183,10 +2729,6 @@ export default function Treatment() {
             }
         } catch (err: any) {
             const actionType = isSubmit ? 'SUBMIT' : 'SAVE';
-            console.error(`=== ERROR DURING TREATMENT ${actionType} ===`);
-            console.error(`Error ${isSubmit ? 'submitting' : 'saving'} treatment data:`, err);
-            console.error('Error type:', typeof err);
-            console.error('Error message:', err instanceof Error ? err.message : 'Unknown error');
             setSnackbarMessage(err.message || `An error occurred while ${isSubmit ? 'submitting' : 'saving'} treatment`);
             setSnackbarOpen(true);
         } finally {
@@ -3195,11 +2737,6 @@ export default function Treatment() {
             setIsSubmitting(false);
             console.log('Submitting state updated');
         }
-    };
-
-    // Specific handlers for save and submit
-    const handleTreatmentSave = async () => {
-        await handleTreatmentAction(false); // false = save
     };
 
     const handleTreatmentSubmit = async () => {
@@ -3216,174 +2753,12 @@ export default function Treatment() {
         await handleTreatmentAction(true); // true = submit
     };
 
-    const handleComplaintCommentChange = (rowValue: string, text: string) => {
-        setComplaintsRows(prev => prev.map(r => r.value === rowValue ? { ...r, comment: text } : r));
-    };
-
-    const handleRemoveComplaint = (rowValue: string) => {
-        setComplaintsRows(prev => prev.filter((r: ComplaintRow) => r.value !== rowValue));
-        // Also uncheck from selector
-        setSelectedComplaints(prev => prev.filter(v => v !== rowValue));
-    };
-
-    const handleAddDiagnosis = () => {
-        if (selectedDiagnosis.trim()) {
-            const newDiagnosis: DiagnosisRow = {
-                id: Date.now().toString(),
-                diagnosis: selectedDiagnosis,
-                comment: ''
-            };
-            setDiagnosisRows(prev => [...prev, newDiagnosis]);
-            setSelectedDiagnosis('');
-        }
-    };
-
-    const handleRemoveDiagnosis = (id: string) => {
-        setDiagnosisRows(prev => prev.filter(row => row.id !== id));
-    };
-
-    const handleAddDiagnoses = () => {
-        if (selectedDiagnoses.length === 0) return;
-        setDiagnosisRows(prev => {
-            const existingValues = new Set(prev.map(r => r.value));
-            const newRows: DiagnosisRow[] = [];
-            selectedDiagnoses.forEach(val => {
-                if (!existingValues.has(val)) {
-                    const diagnosisOption = diagnosesOptions.find(opt => opt.value === val);
-                    newRows.push({
-                        id: Date.now().toString() + Math.random(),
-                        value: val,
-                        diagnosis: diagnosisOption?.label || val,
-                        comment: ''
-                    });
-                }
-            });
-            return [...prev, ...newRows];
-        });
-        setSelectedDiagnoses([]);
-    };
-
-    const handleDiagnosisCommentChange = (rowValue: string, text: string) => {
-        setDiagnosisRows(prev => prev.map(r => r.value === rowValue ? { ...r, comment: text } : r));
-    };
-
-    const handleRemoveDiagnosisFromSelector = (rowValue: string) => {
-        setDiagnosisRows(prev => prev.filter((r: DiagnosisRow) => r.value !== rowValue));
-        // Also uncheck from selector
-        setSelectedDiagnoses(prev => prev.filter(v => v !== rowValue));
-    };
-
-    const handleDiagnosisCommentChangeById = (id: string, comment: string) => {
-        setDiagnosisRows(prev => prev.map(row =>
-            row.id === id ? { ...row, comment } : row
-        ));
-    };
-
-    const handleAddMedicine = () => {
-        if (selectedMedicines.length > 0) {
-            selectedMedicines.forEach(medicineValue => {
-                const medicineOption = medicinesOptions.find(opt => opt.value === medicineValue);
-                if (medicineOption) {
-                    const newMedicine: MedicineRow = {
-                        id: Date.now().toString() + Math.random(),
-                        medicine: medicineOption.short_description,
-                        short_description: medicineOption.short_description,
-                        morning: medicineOption.morning,
-                        afternoon: medicineOption.afternoon,
-                        b: medicineOption.morning.toString(),
-                        l: medicineOption.afternoon.toString(),
-                        d: '0',
-                        days: '1',
-                        instruction: ''
-                    };
-                    setMedicineRows(prev => [...prev, newMedicine]);
-                }
-            });
-            setSelectedMedicines([]);
-        }
-    };
-
-    const handleRemoveMedicine = (id: string) => {
-        setMedicineRows(prev => prev.filter(row => row.id !== id));
-    };
-
-    const handleMedicineFieldChange = (id: string, field: string, value: string) => {
-        setMedicineRows(prev => prev.map(row =>
-            row.id === id ? { ...row, [field]: value } : row
-        ));
-    };
-
-    const handleMedicineInstructionChange = (id: string, instruction: string) => {
-        setMedicineRows(prev => prev.map(row =>
-            row.id === id ? { ...row, instruction } : row
-        ));
-    };
-
-    const handleAddPrescription = () => {
-        if (prescriptionInput.trim()) {
-            const newPrescription: PrescriptionRow = {
-                id: Date.now().toString(),
-                prescription: prescriptionInput,
-                b: '',
-                l: '',
-                d: '',
-                days: '',
-                instruction: ''
-            };
-            setPrescriptionRows(prev => [...prev, newPrescription]);
-            setPrescriptionInput('');
-        }
-    };
-
-    const handleRemovePrescription = (id: string) => {
-        setPrescriptionRows(prev => prev.filter(row => row.id !== id));
-    };
-
-    const handlePrescriptionInstructionChange = (id: string, instruction: string) => {
-        setPrescriptionRows(prev => prev.map(row =>
-            row.id === id ? { ...row, instruction } : row
-        ));
-    };
-
-    const handlePrescriptionFieldChange = (id: string, field: string, value: string) => {
-        setPrescriptionRows(prev => prev.map(row =>
-            row.id === id ? { ...row, [field]: value } : row
-        ));
-    };
-
-    // Investigation handlers
-    const handleAddInvestigations = () => {
-        if (selectedInvestigations.length === 0) return;
-        setInvestigationRows(prev => {
-            const existingValues = new Set(prev.map(r => r.investigation));
-            const newRows: InvestigationRow[] = [];
-            selectedInvestigations.forEach(val => {
-                if (!existingValues.has(val)) {
-                    newRows.push({ id: `inv_${Date.now()}_${val}`, investigation: val });
-                }
-            });
-            return [...prev, ...newRows];
-        });
-        setSelectedInvestigations([]);
-    };
-
-    const handleRemoveInvestigation = (id: string) => {
-        setInvestigationRows(prev => prev.filter(row => row.id !== id));
-    };
-
-    const handleRemoveInvestigationFromSelector = (value: string) => {
-        setInvestigationRows(prev => prev.filter((r: InvestigationRow) => r.investigation !== value));
-        setSelectedInvestigations(prev => prev.filter(v => v !== value));
-    };
-
-    const handleFollowUpChange = (field: string, value: string) => {
-        setFollowUpData(prev => ({
-            ...prev,
-            [field]: value
-        }));
-    };
-
     const handleBillingChange = (field: string, value: string) => {
+        // Strict blocking for discount field
+        if ((field === 'discount' || field === 'billed') && value && !/^\d*\.?\d*$/.test(value)) {
+            return; // Block non-numeric input
+        }
+
         const sanitizedValue = field === 'feesCollected'
             ? value.replace(/[^0-9]/g, '')
             : value;
@@ -3394,15 +2769,34 @@ export default function Treatment() {
                 [field]: sanitizedValue
             };
 
-            // When discount changes, automatically subtract it from fees_collected
-            // Formula: fees_collected = billed - discount
-            if (field === 'discount') {
-                const billedAmount = parseFloat(prev.billed) || 0;
-                const discountAmount = parseFloat(value) || 0;
-                // Calculate new fees_collected: billed minus discount (handles float/double)
-                const newFeesCollected = Math.max(0, billedAmount - discountAmount);
-                // Format to 2 decimal places for float/double values, or empty string if 0
-                updated.feesCollected = newFeesCollected > 0 ? newFeesCollected.toFixed(2) : '';
+            // Linkage: Recalculate Dues when Billed or Discount changes
+            if (field === 'billed' || field === 'discount') {
+                const billedNum = parseFloat(updated.billed) || 0;
+                const discountNum = parseFloat(updated.discount); // Keep as is for validation (can be NaN if empty)
+
+                let newError: string | null = null;
+                if (field === 'discount') {
+                    if (value && isNaN(Number(value))) {
+                        newError = 'Discount must be a valid number';
+                    } else if (!isNaN(discountNum) && discountNum < 0) {
+                        newError = 'Discount cannot be negative';
+                    } else if ((!isNaN(discountNum) ? discountNum : 0) > billedNum && billedNum > 0) {
+                        newError = 'Discount cannot be greater than billed amount';
+                    }
+                }
+                // If billed changes, we should also re-validate if discount is now invalid?
+                if (field === 'billed') {
+                    const validDisc = parseFloat(prev.discount) || 0;
+                    if (validDisc > billedNum && billedNum > 0) {
+                        newError = 'Discount cannot be greater than billed amount';
+                    }
+                }
+
+                setDiscountError(newError);
+
+                const validDiscount = isNaN(discountNum) ? 0 : discountNum;
+                const acBal = Math.max(0, billedNum - validDiscount);
+                updated.dues = acBal.toFixed(2);
             }
 
             return updated;
@@ -3430,7 +2824,7 @@ export default function Treatment() {
         // <>
         <div className="page billing-root">
             <style dangerouslySetInnerHTML={{ __html: durationCommentStyles }} />
-            <div className="body">
+            <div>
                 {/* Header */}
                 <div className="dashboard-header" style={{ background: 'transparent', display: 'flex', alignItems: 'center', padding: '5px 16px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -3439,7 +2833,7 @@ export default function Treatment() {
                 </div>
 
                 {/* Main Content - Two Column Layout */}
-                <div style={{ display: 'flex', minHeight: 'calc(100vh - 120px)', fontFamily: "'Roboto', sans-serif", overflowY: 'auto' }}>
+                <div style={{ display: 'flex' }}>
                     {/* Left Sidebar - Previous Visits and Attachments */}
                     <div style={{
                         width: '240px',
@@ -3646,7 +3040,13 @@ export default function Treatment() {
                                                 >
                                                     <span style={{ marginRight: '5px' }}>📄</span>
                                                     <span style={{ maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                        {doc.documentName || `Document ${index + 1}`}
+                                                        {(() => {
+                                                            const fullPath = doc.documentName;
+                                                            // Split by forward or backward slash, filter out empty strings (e.g. trailing slash), and take the last part
+                                                            const parts = String(fullPath).split('/').pop();
+                                                            console.log('/part', parts);
+                                                            return parts || fullPath;
+                                                        })()}
                                                     </span>
                                                     {doc.fileSize && (
                                                         <span style={{
@@ -3770,7 +3170,7 @@ export default function Treatment() {
 
                     {/* Right Content - Treatment Form */}
                     <div style={{ flex: 1, padding: '15px', display: 'flex', flexDirection: 'column' }}>
-                        <div style={{ flex: 1, overflowY: 'auto', paddingBottom: '20px' }}>
+                        <div style={{ flex: 1, paddingBottom: '20px' }}>
                             {/* Patient Header */}
                             <div style={{
                                 marginBottom: '15px',
@@ -3822,10 +3222,10 @@ export default function Treatment() {
                                         <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'not-allowed', fontSize: '12px', whiteSpace: 'nowrap' }}>
                                             <input
                                                 type="checkbox"
-                                                checked={false}
+                                                checked={formData.visitType.followUp}
                                                 onChange={(e) => handleVisitTypeChange('followUp', e.target.checked)}
                                                 disabled
-                                                style={{ backgroundColor: '#D5D5D8' }}
+                                                style={{ backgroundColor: '#e9ecef', cursor: 'not-allowed' }}
                                             />
                                             Follow-up
                                         </label>
@@ -3863,7 +3263,7 @@ export default function Treatment() {
 
                             {/* Input Fields Row 1 */}
                             <div style={{ marginBottom: '15px' }}>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 180px)' as const, gap: '12px' }}>
+                                <div className="row">
                                     {[
                                         { key: 'allergy', label: 'Allergy' },
                                         { key: 'medicalHistoryText', label: 'Medical History' },
@@ -3872,26 +3272,33 @@ export default function Treatment() {
                                         { key: 'visitComments', label: 'Visit Comments' },
                                         { key: 'pc', label: 'PC' }
                                     ].map(({ key, label }) => (
-                                        <div key={key}>
-                                            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                                {label}
-                                            </label>
-                                            <input
-                                                type="text"
-                                                value={display(formData[key as keyof typeof formData] as string)}
-                                                onChange={(e) => handleInputChange(key, e.target.value)}
-                                                disabled
-                                                style={{
-                                                    width: '100%',
-                                                    padding: '6px 10px',
-                                                    border: '1px solid #ccc',
-                                                    borderRadius: '4px',
-                                                    fontSize: '13px',
-                                                    backgroundColor: '#D5D5D8',
-                                                    color: '#333',
-                                                    cursor: 'not-allowed'
-                                                }}
-                                            />
+                                        <div key={key} className="col-2" style={{ marginBottom: '12px' }}>
+                                            <Box>
+                                                <Typography
+                                                    variant="body2"
+                                                    sx={{
+                                                        fontWeight: 'bold',
+                                                        color: '#333',
+                                                        fontSize: '13px',
+                                                        marginBottom: '4px'
+                                                    }}
+                                                >
+                                                    {label}
+                                                </Typography>
+                                                <TextField
+                                                    fullWidth
+                                                    size="small"
+                                                    value={display(formData[key as keyof typeof formData] as string)}
+                                                    onChange={(e) => handleInputChange(key, e.target.value)}
+                                                    disabled
+                                                    sx={{
+                                                        '& .MuiInputBase-root': {
+                                                            fontSize: '13px',
+                                                            backgroundColor: '#D5D5D8'
+                                                        }
+                                                    }}
+                                                />
+                                            </Box>
                                         </div>
                                     ))}
                                 </div>
@@ -4316,7 +3723,7 @@ export default function Treatment() {
                                     <div style={{ position: 'relative' }}>
                                         <input
                                             type="text"
-                                            value={totalSelectedFees.toFixed(2)}
+                                            value={billingData.billed}
                                             onChange={(e) => handleBillingChange('billed', e.target.value)}
                                             disabled
                                             placeholder="Billed Amount"
@@ -4391,6 +3798,12 @@ export default function Treatment() {
                                             color: isFormDisabled ? '#666' : '#333'
                                         }}
                                     />
+
+                                    {discountError && (
+                                        <div style={{ color: 'red', fontSize: '12px', marginTop: '4px' }}>
+                                            {discountError}
+                                        </div>
+                                    )}
                                 </div>
                                 {/* Dues (disabled) */}
                                 <div>
@@ -4417,7 +3830,7 @@ export default function Treatment() {
                                             }}
                                             onClick={() => setShowAccountsPopup(true)}
                                             title="View Accounts"
-                                        >payment history</span>
+                                        >Payment History</span>
                                     </label>
                                     <div style={{ position: 'relative', width: '100%' }}>
                                         <input
@@ -4573,7 +3986,7 @@ export default function Treatment() {
                                 </div>
                             </div>
 
-                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '20px', marginBottom: '40px', flexWrap: 'wrap' }}>
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '20px', marginBottom: '20px', flexWrap: 'wrap' }}>
                                 <button
                                     type="button"
                                     disabled={!isFormDisabled}
@@ -4796,6 +4209,10 @@ export default function Treatment() {
                 patientVisitNo={treatmentData?.visitNumber}
                 shiftId={(sessionData as any)?.shiftId || 1}
                 useOverwrite={false}
+                discount={billingData.discount}
+                discountError={discountError}
+                setDiscountError={setDiscountError}
+                disableAutoSelect={true}
             />
 
             <PrintReceiptPopup
