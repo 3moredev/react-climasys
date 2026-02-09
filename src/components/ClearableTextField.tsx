@@ -26,11 +26,24 @@ const ClearableTextField: React.FC<ClearableTextFieldProps> = ({
     const isReadOnly = disabled || !!InputProps?.readOnly;
 
     const helperText = otherProps.helperText as string;
-    const isRequiredError = typeof helperText === 'string' && helperText.toLowerCase().includes('required');
-    // We only want the 'error' state (red border) if it's a required field error.
-    // Otherwise, it's just a warning/info message (gray text, normal border).
-    const effectiveError = !!otherProps.error && isRequiredError;
-    const shouldUseGrayError = !!otherProps.error && !isRequiredError;
+    const isBlockingError = typeof helperText === 'string' && (
+        helperText.toLowerCase().includes('required') ||
+        helperText.toLowerCase().includes('must be') ||
+        helperText.toLowerCase().includes('invalid') ||
+        helperText.toLowerCase().includes('digits') ||
+        helperText.toLowerCase().includes('minimum') ||
+        helperText.toLowerCase().includes('maximum') ||
+        helperText.toLowerCase().includes('digits')
+    );
+    // If it's just a length warning (e.g. "cannot exceed", "exceeds maximum"), it can remain gray.
+    const isLengthWarning = typeof helperText === 'string' && (
+        helperText.toLowerCase().includes('cannot exceed') ||
+        helperText.toLowerCase().includes('exceeds maximum')
+    );
+
+    // Any error that is not just a length warning should be red.
+    const effectiveError = !!otherProps.error && !isLengthWarning;
+    const shouldUseGrayError = !!otherProps.error && isLengthWarning;
 
     return (
         <TextField
@@ -63,6 +76,14 @@ const ClearableTextField: React.FC<ClearableTextFieldProps> = ({
                     boxShadow: 'none !important',
                     backgroundColor: isReadOnly ? '#f5f5f5 !important' : 'inherit',
                     cursor: isReadOnly ? 'not-allowed !important' : 'inherit',
+                    '&::placeholder': {
+                        color: isReadOnly ? '#666666 !important' : 'inherit',
+                        opacity: isReadOnly ? '0.5 !important' : 1
+                    },
+                    '&.Mui-disabled::placeholder': {
+                        color: '#666666 !important',
+                        opacity: '0.5 !important'
+                    },
                     ...(typeof otherProps.sx === 'object' && (otherProps.sx as any)?.['& .MuiInputBase-input'] ? (otherProps.sx as any)['& .MuiInputBase-input'] : {})
                 }
             }}

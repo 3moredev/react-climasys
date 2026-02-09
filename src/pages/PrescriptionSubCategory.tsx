@@ -9,8 +9,10 @@ import prescriptionSubCategoryService, {
 import prescriptionCategoryService, {
   PrescriptionCategory as PrescriptionCategoryApiModel,
 } from '../services/prescriptionCategoryService'
+import Link from '@mui/material/Link'
 import DeleteConfirmationDialog from '../components/DeleteConfirmationDialog'
 import SearchInput from '../components/SearchInput'
+import ClearableTextField from '../components/ClearableTextField'
 import { validateField } from '../utils/validationUtils'
 
 type SubCategoryRow = {
@@ -46,6 +48,7 @@ export default function PrescriptionSubCategory() {
 
   const [subCategories, setSubCategories] = useState<SubCategoryRow[]>([])
   const [formData, setFormData] = useState({ categoryName: '', subCategoryName: '' })
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
   const [editingId, setEditingId] = useState<string | null>(null)
   const [searchDraft, setSearchDraft] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
@@ -343,6 +346,7 @@ export default function PrescriptionSubCategory() {
         .form-field {
           flex: 1;
           min-width: 240px;
+          position: relative;
         }
         .form-field label {
           display: block;
@@ -420,7 +424,7 @@ export default function PrescriptionSubCategory() {
         }
         .search-section {
           display: flex;
-          align-items: center;
+          align-items: flex-start;
           gap: 12px;
           margin-bottom: 20px;
           flex-wrap: nowrap;
@@ -628,24 +632,39 @@ export default function PrescriptionSubCategory() {
         </div>
         <div className="form-field">
           <label>SubCategory Name</label>
-          <input
-            type="text"
+          <ClearableTextField
+            fullWidth
+            size="small"
             placeholder="SubCategory Name"
             value={formData.subCategoryName}
-            maxLength={200}
-            onChange={(event) => {
-              const val = event.target.value.toUpperCase();
-              const { allowed, error } = validateField('subCategoryName', val, undefined, undefined, 'prescriptionSubCategory');
+            onChange={(val) => {
+              const upperVal = val.toUpperCase();
+              const { allowed, error } = validateField('subCategoryName', upperVal, undefined, undefined, 'prescriptionSubCategory');
               if (allowed) {
-                setFormData((prev) => ({ ...prev, subCategoryName: val }));
+                setFormData((prev) => ({ ...prev, subCategoryName: upperVal }));
+              }
+              setValidationErrors(prev => ({ ...prev, subCategoryName: error }));
+            }}
+            disabled={!!editingId} // Disable if editing (based on ID presence logic often implies key fields locked) checks
+            error={!!validationErrors.subCategoryName && !validationErrors.subCategoryName.includes('cannot exceed')}
+            helperText={null}
+            sx={{
+              '& .MuiInputBase-root': {
+                height: '40px',
+                backgroundColor: !!editingId ? '#f5f5f5 !important' : 'inherit'
               }
             }}
-            style={{
-              borderColor: formData.subCategoryName.length === 200 ? 'red' : undefined
-            }}
           />
-          {formData.subCategoryName.length === 200 && (
-            <span style={{ color: 'red', fontSize: '11px' }}>SubCategory Name cannot exceed 200 characters</span>
+          {validationErrors.subCategoryName && (
+            <span style={{
+              color: validationErrors.subCategoryName.includes('cannot exceed') ? '#666' : '#d32f2f',
+              fontSize: '0.75rem',
+              display: 'block',
+              position: 'relative',
+              zIndex: 1
+            }}>
+              {validationErrors.subCategoryName}
+            </span>
           )}
         </div>
         <div className="form-actions">

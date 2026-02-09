@@ -180,8 +180,9 @@ interface TreatmentData {
     age?: number;
     gender?: string;
     contact?: string;
-    status?: string;
     statusId?: number;
+    referralName?: string;
+    referralCode?: string;
 }
 
 interface PreviousVisit {
@@ -296,6 +297,7 @@ export default function Treatment() {
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
     const [billingError, setBillingError] = useState<string | null>(null);
     const [discountError, setDiscountError] = useState<string | null>(null);
+    const [followUpError, setFollowUpError] = useState<string | null>(null);
     const [planAdvError, setPlanAdvError] = useState<string | null>(null);
     const [remarkCommentsError, setRemarkCommentsError] = useState<string | null>(null);
     const [prescriptionError, setPrescriptionError] = useState<string | null>(null);
@@ -396,6 +398,7 @@ export default function Treatment() {
 
     // Billing popup state
     const [showBillingPopup, setShowBillingPopup] = useState<boolean>(false);
+    const [referByOptions, setReferByOptions] = useState<{ id: string; name: string }[]>([]);
 
     // Accounts popup state
     const [showAccountsPopup, setShowAccountsPopup] = useState<boolean>(false);
@@ -1243,9 +1246,87 @@ export default function Treatment() {
     // Get treatment data from location state
     useEffect(() => {
         if (location.state) {
-            setTreatmentData(location.state as TreatmentData);
+            const stateData = location.state as any;
+            const normalizedData: TreatmentData = {
+                ...stateData,
+                referralCode: stateData.referralCode || stateData.referBy
+            };
+            setTreatmentData(normalizedData);
+
+            // Initialize referralBy from state if present
+            if (normalizedData.referralName) {
+                setFormData(prev => ({
+                    ...prev,
+                    referralBy: normalizedData.referralName
+                }));
+            }
         }
     }, [location.state]);
+
+    // Load referral options from API
+    React.useEffect(() => {
+        let cancelled = false;
+        async function loadReferBy() {
+            try {
+                const { getReferByTranslations } = await import('../services/referralService');
+                const items = await getReferByTranslations(1); // languageId = 1
+                if (!cancelled) setReferByOptions(items);
+            } catch (e) {
+                console.error('Failed to load refer-by options', e);
+            }
+        }
+        loadReferBy();
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    // Fetch patient master record to ensure referral info is correct (backfilling if appointment data is incomplete)
+    React.useEffect(() => {
+        const patientId = treatmentData?.patientId;
+        if (!patientId) return;
+
+        async function fetchMasterReferral() {
+            try {
+                const patient = await patientService.getPatient(String(patientId));
+                if (patient) {
+                    // In patient record, refer_doctor_details is the common field name
+                    const masterReferralName = (patient.refer_doctor_details || patient.referralName || '').trim();
+                    const referId = patient.refer_id || '';
+
+                    // If master record has a referral name, and current referral is "Self" or empty, update it
+                    // Only update if referId is not 'S' (Self)
+                    if (masterReferralName && referId !== 'S') {
+                        console.log('Found master referral info:', masterReferralName);
+
+                        setTreatmentData(prev => {
+                            if (prev && (!prev.referralName || prev.referralName === 'Self')) {
+                                return { ...prev, referralName: masterReferralName, referralCode: referId };
+                            }
+                            if (prev && !prev.referralCode) {
+                                return { ...prev, referralCode: referId };
+                            }
+                            return prev;
+                        });
+
+                        setFormData(prev => {
+                            if (prev.referralBy === 'Self' || !prev.referralBy) {
+                                return { ...prev, referralBy: masterReferralName };
+                            }
+                            return prev;
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching master referral info:', error);
+            }
+        }
+
+        // We only do this if it's currently showing Self or empty
+        if (!treatmentData?.referralName || treatmentData?.referralName === 'Self' || formData.referralBy === 'Self') {
+            fetchMasterReferral();
+        }
+    }, [treatmentData?.patientId]);
 
     // Check if form should be disabled (status is "Waiting for Medicine" or "Complete")
     const isFormDisabled = React.useMemo(() => {
@@ -1297,6 +1378,21 @@ export default function Treatment() {
             });
         }
     }, [treatmentData?.status, inPersonChecked]);
+
+    // Sync referralBy from treatmentData (initial or patched) to formData
+    React.useEffect(() => {
+        if (treatmentData?.referralName) {
+            setFormData(prev => {
+                if (prev.referralBy !== treatmentData.referralName) {
+                    return {
+                        ...prev,
+                        referralBy: treatmentData.referralName
+                    };
+                }
+                return prev;
+            });
+        }
+    }, [treatmentData?.referralName]);
 
     // Check if Addendum button should be enabled (for "Waiting for Medicine" and "Complete")
     const isAddendumEnabled = React.useMemo(() => {
@@ -2353,9 +2449,9 @@ export default function Treatment() {
             })(),
 
             // Vitals
-            height: toStr(get(visit, 'height_cm', 'height', 'Height_In_Cms', 'Height')),
-            weight: toStr(get(visit, 'weight_kg', 'weight', 'Weight_IN_KGS', 'Weight')),
-            pulse: toStr(get(visit, 'pulse', 'Pulse', 'pulse_rate')),
+            height: (get(visit, 'height_cm', 'height', 'Height_In_Cms', 'Height') === 0 || get(visit, 'height_cm', 'height', 'Height_In_Cms', 'Height') === '0') ? '' : toStr(get(visit, 'height_cm', 'height', 'Height_In_Cms', 'Height')),
+            weight: (get(visit, 'weight_kg', 'weight', 'Weight_IN_KGS', 'Weight') === 0 || get(visit, 'weight_kg', 'weight', 'Weight_IN_KGS', 'Weight') === '0') ? '' : toStr(get(visit, 'weight_kg', 'weight', 'Weight_IN_KGS', 'Weight')),
+            pulse: (get(visit, 'pulse', 'Pulse', 'pulse_rate') === 0 || get(visit, 'pulse', 'Pulse', 'pulse_rate') === '0') ? '' : toStr(get(visit, 'pulse', 'Pulse', 'pulse_rate')),
             bp: toStr(get(visit, 'bp', 'blood_pressure', 'Blood_Pressure', 'BP')),
             temperature: toStr(get(visit, 'temperature_f', 'temperature', 'Temperature', 'temp')),
             sugar: toStr(get(visit, 'sugar', 'Sugar', 'blood_sugar', 'glucose')),
@@ -2432,8 +2528,40 @@ export default function Treatment() {
     };
 
     const handleInputChange = (field: string, value: any) => {
+        const fieldConfig = getFieldConfig(field, 'visit');
+        let processedValue = value;
+
+        // Strict Character Filtering at Source (Matching PatientVisitDetails.tsx)
+        if (field === 'pulse') {
+            processedValue = String(value).replace(/[^0-9]/g, '');
+        } else if (field === 'height' || field === 'weight') {
+            // Allow digits and at most one dot
+            processedValue = String(value).replace(/[^0-9.]/g, '');
+            const parts = processedValue.split('.');
+            if (parts.length > 2) {
+                processedValue = parts[0] + '.' + parts.slice(1).join('');
+            }
+        }
+
+        // Input blocking: Prevent typing beyond maxLength
+        if (fieldConfig?.maxLength && processedValue && processedValue.length > fieldConfig.maxLength) {
+            return;
+        }
+
         // Validate the field
-        const validation = validateField(field, value, undefined, undefined, 'visit');
+        let validation = validateField(field, processedValue, undefined, undefined, 'visit');
+
+        // Custom error message override for height and weight to match PatientVisitDetails.tsx
+        if (validation.error) {
+            const numValue = parseFloat(processedValue);
+            if (field === 'height' && (numValue < 30 || numValue > 250)) {
+                validation.error = 'Height must be between 30 and 250 cm';
+            } else if (field === 'weight' && (numValue < 1 || numValue > 250)) {
+                validation.error = 'Weight must be between 1 and 250 kg';
+            } else if (field === 'pulse' && (numValue < 30 || numValue > 220)) {
+                validation.error = 'Pulse must be between 30 and 220 /min';
+            }
+        }
 
         setErrors(prev => {
             const newErrors = { ...prev };
@@ -2448,7 +2576,7 @@ export default function Treatment() {
         // Always update the value to allow user to see what they typed and the error message
         setFormData(prev => ({
             ...prev,
-            [field]: value
+            [field]: processedValue
         }));
     };
 
@@ -3087,9 +3215,9 @@ export default function Treatment() {
             const appointmentData = result.mainData[0] || {};
 
             const normalized: any = {
-                pulse: appointmentData.pulse ?? '',
-                height: appointmentData.heightInCms ?? '',
-                weight: appointmentData.weightInKgs ?? '',
+                pulse: (appointmentData.pulse === 0 || appointmentData.pulse === '0') ? '' : (appointmentData.pulse ?? ''),
+                height: (appointmentData.heightInCms === 0 || appointmentData.heightInCms === '0') ? '' : (appointmentData.heightInCms ?? ''),
+                weight: (appointmentData.weightInKgs === 0 || appointmentData.weightInKgs === '0') ? '' : (appointmentData.weightInKgs ?? ''),
                 bp: appointmentData.bloodPressure ?? '',
                 sugar: appointmentData.sugar ?? '',
                 tft: appointmentData.tft ?? '',
@@ -3124,7 +3252,26 @@ export default function Treatment() {
                 habitDetails: appointmentData.habitDetails ?? '',
                 procedurePerformed: appointmentData.observation ?? '',
                 dressingBodyParts: appointmentData.dressingBodyParts ?? appointmentData.dressing_body_parts ?? '',
-                followUpComment: appointmentData.followUpComment ?? ''
+                followUpComment: appointmentData.followUpComment ?? '',
+                // Robust referral name extraction
+                referralName: appointmentData.referralName ||
+                    appointmentData.referral_name ||
+                    appointmentData.ReferralName ||
+                    appointmentData.Referral_Name ||
+                    appointmentData.Refer_Doctor_Details ||
+                    appointmentData.refer_doctor_details ||
+                    appointmentData.referredBy ||
+                    appointmentData.referred_by ||
+                    appointmentData.Referred_By ||
+                    appointmentData.referred_to ||
+                    appointmentData.referalName ||
+                    appointmentData.ReferalName || '',
+                referralCode: appointmentData.referBy ||
+                    appointmentData.refer_by ||
+                    appointmentData.refer_id ||
+                    appointmentData.Refer_By ||
+                    appointmentData.referredBy ||
+                    appointmentData.referred_by || ''
             };
             console.log('Normalized appointment fields:', normalized);
 
@@ -3157,6 +3304,12 @@ export default function Treatment() {
                 maybeSet('medicalHistoryText', normalized.habitDetails);
                 maybeSet('procedurePerformed', normalized.procedurePerformed);
                 maybeSet('dressingBodyParts', normalized.dressingBodyParts);
+
+                // Patch referral name
+                if (normalized.referralName) {
+                    next.referralBy = normalized.referralName;
+                }
+
                 // Do not patch PC with complaints fetched from appointment details
 
                 const heightNum = parseFloat(String(next.height));
@@ -3580,11 +3733,33 @@ export default function Treatment() {
                 const status = String(appointmentData.status || appointmentData.statusDescription || '').trim();
                 const statusId = appointmentData.statusId || appointmentData.status_id;
                 setTreatmentData(prev => {
-                    if (prev && (prev.status !== status || prev.statusId !== statusId)) {
+                    const status = String(appointmentData.status || appointmentData.statusDescription || (prev?.status || '')).trim();
+                    const statusId = appointmentData.statusId || appointmentData.status_id || prev?.statusId;
+                    const referralName = appointmentData.referralName ||
+                        appointmentData.referral_name ||
+                        appointmentData.ReferralName ||
+                        appointmentData.Refer_Doctor_Details ||
+                        appointmentData.refer_doctor_details ||
+                        appointmentData.referredBy ||
+                        appointmentData.referred_by ||
+                        appointmentData.Referred_By ||
+                        (prev?.referralName || '');
+
+                    const referralCode = appointmentData.referBy ||
+                        appointmentData.refer_by ||
+                        appointmentData.refer_id ||
+                        appointmentData.Refer_By ||
+                        appointmentData.referredBy ||
+                        appointmentData.referred_by ||
+                        (prev?.referralCode || '');
+
+                    if (prev && (prev.status !== status || prev.statusId !== statusId || prev.referralName !== referralName || prev.referralCode !== referralCode)) {
                         return {
                             ...prev,
                             status: status,
-                            statusId: statusId
+                            statusId: statusId,
+                            referralName: referralName,
+                            referralCode: referralCode
                         };
                     }
                     return prev;
@@ -4542,19 +4717,18 @@ export default function Treatment() {
         }));
 
         if (field === 'planAdv') {
-            if (value.length >= 1000) {
-                setPlanAdvError('Plan / Advice cannot exceed 1000 characters');
-            } else {
-                setPlanAdvError(null);
-            }
+            const { error } = validateField('planAdv', value, 1000, 'Plan / Advice', 'visit');
+            setPlanAdvError(error || null);
         }
 
         if (field === 'remarkComments') {
-            if (value.length >= 1000) {
-                setRemarkCommentsError('Remark cannot exceed 1000 characters');
-            } else {
-                setRemarkCommentsError(null);
-            }
+            const { error } = validateField('remarkComments', value, 1000, 'Remark', 'visit');
+            setRemarkCommentsError(error || null);
+        }
+
+        if (field === 'followUp') {
+            const { error } = validateField('followUp', value, 100, 'Follow up', 'visit');
+            setFollowUpError(error || null);
         }
     };
 
@@ -4572,7 +4746,10 @@ export default function Treatment() {
             let newError: string | null = null;
 
             if (field === 'discount') {
-                if (value && isNaN(Number(value))) {
+                const { error: lengthError } = validateField('discount', value, 10, 'Discount', 'billing');
+                if (lengthError) {
+                    newError = lengthError;
+                } else if (value && isNaN(Number(value))) {
                     // Should be caught by blocking above, but fallback
                     newError = 'Discount must be a valid number';
                 } else if (!isNaN(discountNum) && discountNum < 0) {
@@ -5023,7 +5200,20 @@ export default function Treatment() {
                                                 fontSize: '12px',
                                                 color: '#333',
                                                 fontWeight: 500
-                                            }}>Self</span>
+                                            }}>
+                                                {(() => {
+                                                    const code = treatmentData?.referralCode || (treatmentData?.referralName === 'Self' ? 'S' : '');
+                                                    const name = treatmentData?.referralName;
+                                                    const opt = referByOptions.find(o => String(o.id) === String(code));
+                                                    const categoryName = opt?.name || (code === 'S' || name === 'Self' ? 'Self' : '');
+
+                                                    if (!categoryName) {
+                                                        return '';
+                                                    }
+
+                                                    return `${categoryName}`;
+                                                })()}
+                                            </span>
                                         </div>
                                         <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: (isFormDisabled || inPersonDisabled) ? 'not-allowed' : 'pointer', fontSize: '12px', whiteSpace: 'nowrap' }}>
                                             <input
@@ -5093,6 +5283,8 @@ export default function Treatment() {
                                                 value={formData[key as keyof typeof formData] as string}
                                                 onChange={(e) => handleInputChange(key, e)}
                                                 disabled={isFormDisabled}
+                                                error={!!errors[key]}
+                                                helperText={errors[key]}
                                                 style={{
                                                     width: '100%'
                                                 }}
@@ -5552,13 +5744,10 @@ export default function Treatment() {
                             <div style={{ marginBottom: '15px' }}>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr' as const, gap: '12px' }}>
                                     <div>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                        <div style={{ marginBottom: '4px' }}>
                                             <label style={{ fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
                                                 Detailed History
                                             </label>
-                                            <span style={{ fontSize: '11px', color: '#666' }}>
-                                                {(formData.detailedHistory || '').length}/{getFieldConfig('detailedHistory', 'visit')?.maxLength || 1000}
-                                            </span>
                                         </div>
                                         <textarea
                                             value={formData.detailedHistory}
@@ -5579,19 +5768,20 @@ export default function Treatment() {
                                             }}
                                         />
                                         {errors.detailedHistory && (
-                                            <div style={{ color: '#d32f2f', fontSize: '13px', marginTop: '3px' }}>
+                                            <div style={{
+                                                color: errors.detailedHistory.includes('cannot exceed') ? '#333333' : '#d32f2f',
+                                                fontSize: '13px',
+                                                marginTop: '3px'
+                                            }}>
                                                 {errors.detailedHistory}
                                             </div>
                                         )}
                                     </div>
                                     <div>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                        <div style={{ marginBottom: '4px' }}>
                                             <label style={{ fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
                                                 Examination Findings
                                             </label>
-                                            <span style={{ fontSize: '11px', color: '#666' }}>
-                                                {(formData.importantFindings || '').length}/{getFieldConfig('importantFindings', 'visit')?.maxLength || 1000}
-                                            </span>
                                         </div>
                                         <textarea
                                             value={formData.importantFindings}
@@ -5612,19 +5802,20 @@ export default function Treatment() {
                                             }}
                                         />
                                         {errors.importantFindings && (
-                                            <div style={{ color: '#d32f2f', fontSize: '13px', marginTop: '3px' }}>
+                                            <div style={{
+                                                color: errors.importantFindings.includes('cannot exceed') ? '#333333' : '#d32f2f',
+                                                fontSize: '13px',
+                                                marginTop: '3px'
+                                            }}>
                                                 {errors.importantFindings}
                                             </div>
                                         )}
                                     </div>
                                     <div>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                        <div style={{ marginBottom: '4px' }}>
                                             <label style={{ fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
                                                 Additional Comments
                                             </label>
-                                            <span style={{ fontSize: '11px', color: '#666' }}>
-                                                {(formData.additionalComments || '').length}/{getFieldConfig('additionalComments', 'visit')?.maxLength || 1000}
-                                            </span>
                                         </div>
                                         <textarea
                                             value={formData.additionalComments}
@@ -5645,7 +5836,11 @@ export default function Treatment() {
                                             }}
                                         />
                                         {errors.additionalComments && (
-                                            <div style={{ color: '#d32f2f', fontSize: '13px', marginTop: '3px' }}>
+                                            <div style={{
+                                                color: errors.additionalComments.includes('cannot exceed') ? '#333333' : '#d32f2f',
+                                                fontSize: '13px',
+                                                marginTop: '3px'
+                                            }}>
                                                 {errors.additionalComments}
                                             </div>
                                         )}
@@ -5657,13 +5852,10 @@ export default function Treatment() {
                             <div style={{ marginBottom: '15px' }}>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr' as const, gap: '12px' }}>
                                     <div>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                        <div style={{ marginBottom: '4px' }}>
                                             <label style={{ fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
                                                 Procedure Performed
                                             </label>
-                                            <span style={{ fontSize: '11px', color: '#666' }}>
-                                                {(formData.procedurePerformed || '').length}/{getFieldConfig('procedurePerformed', 'visit')?.maxLength || 1000}
-                                            </span>
                                         </div>
                                         <textarea
                                             value={formData.procedurePerformed}
@@ -5684,19 +5876,20 @@ export default function Treatment() {
                                             }}
                                         />
                                         {errors.procedurePerformed && (
-                                            <div style={{ color: '#d32f2f', fontSize: '13px', marginTop: '3px' }}>
+                                            <div style={{
+                                                color: errors.procedurePerformed.includes('cannot exceed') ? '#333333' : '#d32f2f',
+                                                fontSize: '13px',
+                                                marginTop: '3px'
+                                            }}>
                                                 {errors.procedurePerformed}
                                             </div>
                                         )}
                                     </div>
                                     <div>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                        <div style={{ marginBottom: '4px' }}>
                                             <label style={{ fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
                                                 Dressing (body parts)
                                             </label>
-                                            <span style={{ fontSize: '11px', color: '#666' }}>
-                                                {(formData.dressingBodyParts || '').length}/{getFieldConfig('dressingBodyParts', 'visit')?.maxLength || 1000}
-                                            </span>
                                         </div>
                                         <textarea
                                             value={formData.dressingBodyParts}
@@ -5717,7 +5910,11 @@ export default function Treatment() {
                                             }}
                                         />
                                         {errors.dressingBodyParts && (
-                                            <div style={{ color: '#d32f2f', fontSize: '13px', marginTop: '3px' }}>
+                                            <div style={{
+                                                color: errors.dressingBodyParts.includes('cannot exceed') ? '#333333' : '#d32f2f',
+                                                fontSize: '13px',
+                                                marginTop: '3px'
+                                            }}>
                                                 {errors.dressingBodyParts}
                                             </div>
                                         )}
@@ -6553,7 +6750,14 @@ export default function Treatment() {
                                             }}
                                         />
                                         {prescriptionError && (
-                                            <div style={{ color: 'red', fontSize: '12px', marginTop: '4px', position: 'absolute', bottom: '-18px', left: 0 }}>
+                                            <div style={{
+                                                color: (prescriptionError.includes('cannot exceed') || prescriptionError.includes('exceeds')) ? '#333333' : 'red',
+                                                fontSize: '12px',
+                                                marginTop: '4px',
+                                                position: 'absolute',
+                                                bottom: '-18px',
+                                                left: 0
+                                            }}>
                                                 {prescriptionError}
                                             </div>
                                         )}
@@ -7335,11 +7539,11 @@ export default function Treatment() {
                                             value={followUpData.followUp}
                                             onChange={(e) => handleFollowUpChange('followUp', e.target.value)}
                                             disabled={isFormDisabled}
-                                            maxLength={1000}
+                                            maxLength={100}
                                             style={{
                                                 width: '100%',
                                                 padding: '6px 10px',
-                                                border: '1px solid #ccc',
+                                                border: followUpError ? '1px solid red' : '1px solid #ccc',
                                                 borderRadius: '4px',
                                                 fontSize: '13px',
                                                 backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
@@ -7347,6 +7551,15 @@ export default function Treatment() {
                                                 cursor: isFormDisabled ? 'not-allowed' : 'text'
                                             }}
                                         />
+                                        {followUpError && (
+                                            <div style={{
+                                                color: (followUpError.includes('cannot exceed') || followUpError.includes('exceeds')) ? '#333333' : 'red',
+                                                fontSize: '12px',
+                                                marginTop: '4px'
+                                            }}>
+                                                {followUpError}
+                                            </div>
+                                        )}
                                     </div>
                                     <div>
                                         <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
@@ -7361,7 +7574,7 @@ export default function Treatment() {
                                             style={{
                                                 width: '100%',
                                                 padding: '6px 10px',
-                                                border: '1px solid #ccc',
+                                                border: remarkCommentsError ? '1px solid red' : '1px solid #ccc',
                                                 borderRadius: '4px',
                                                 fontSize: '13px',
                                                 resize: 'none',
@@ -7375,7 +7588,11 @@ export default function Treatment() {
                                             }}
                                         />
                                         {remarkCommentsError && (
-                                            <div style={{ color: 'red', fontSize: '12px', marginTop: '4px' }}>
+                                            <div style={{
+                                                color: (remarkCommentsError.includes('cannot exceed') || remarkCommentsError.includes('exceeds')) ? '#333333' : 'red',
+                                                fontSize: '12px',
+                                                marginTop: '4px'
+                                            }}>
                                                 {remarkCommentsError}
                                             </div>
                                         )}
@@ -7385,13 +7602,10 @@ export default function Treatment() {
 
                             {/* Plan/Adv Section */}
                             <div style={{ marginBottom: '15px' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                <div style={{ marginBottom: '4px' }}>
                                     <label style={{ fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
                                         Plan / Adv
                                     </label>
-                                    <span style={{ fontSize: '11px', color: '#666' }}>
-                                        {(followUpData.planAdv || '').length}/1000
-                                    </span>
                                 </div>
                                 <textarea
                                     disabled={isFormDisabled}
@@ -7399,7 +7613,7 @@ export default function Treatment() {
                                         width: '100%',
                                         height: '60px',
                                         padding: '8px 12px',
-                                        border: '1px solid #ccc',
+                                        border: planAdvError ? '1px solid red' : '1px solid #ccc',
                                         borderRadius: '4px',
                                         resize: 'none',
                                         fontSize: '13px',
@@ -7412,7 +7626,11 @@ export default function Treatment() {
                                     onChange={(e) => handleFollowUpChange('planAdv', e.target.value)}
                                 />
                                 {planAdvError && (
-                                    <div style={{ color: 'red', fontSize: '12px', marginTop: '4px' }}>
+                                    <div style={{
+                                        color: (planAdvError.includes('cannot exceed') || planAdvError.includes('exceeds')) ? '#333333' : 'red',
+                                        fontSize: '12px',
+                                        marginTop: '4px'
+                                    }}>
                                         {planAdvError}
                                     </div>
                                 )}
@@ -7490,29 +7708,41 @@ export default function Treatment() {
                                         <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
                                             Discount (Rs)
                                         </label>
-                                        <input
-                                            type="text"
-                                            value={billingData.discount}
-                                            onChange={(e) => handleBillingChange('discount', e.target.value)}
-                                            disabled={isFormDisabled}
-                                            maxLength={10}
-                                            placeholder="0.00"
-                                            style={{
-                                                width: '100%',
-                                                padding: '6px 10px',
-                                                border: discountError ? '1px solid red' : '1px solid #ccc',
-                                                borderRadius: '4px',
-                                                fontSize: '13px',
-                                                backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
-                                                color: isFormDisabled ? '#666' : '#333',
-                                                cursor: isFormDisabled ? 'not-allowed' : 'text'
-                                            }}
-                                        />
-                                        {discountError && (
-                                            <div style={{ color: 'red', fontSize: '12px', marginTop: '4px', marginLeft: 0, textAlign: 'left' }}>
-                                                {discountError}
-                                            </div>
-                                        )}
+                                        <div style={{ position: 'relative' }}>
+                                            <input
+                                                type="text"
+                                                value={billingData.discount}
+                                                onChange={(e) => handleBillingChange('discount', e.target.value)}
+                                                disabled={isFormDisabled}
+                                                maxLength={10}
+                                                placeholder="0.00"
+                                                style={{
+                                                    width: '100%',
+                                                    padding: '6px 10px',
+                                                    border: discountError ? '1px solid red' : '1px solid #ccc',
+                                                    borderRadius: '4px',
+                                                    fontSize: '13px',
+                                                    backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
+                                                    color: isFormDisabled ? '#666' : '#333',
+                                                    cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                                }}
+                                            />
+                                            {discountError && (
+                                                <div style={{
+                                                    position: 'absolute',
+                                                    top: '100%',
+                                                    left: 0,
+                                                    width: '100%',
+                                                    color: (discountError.includes('cannot exceed') || discountError.includes('exceeds')) ? '#333333' : '#d32f2f',
+                                                    fontSize: '12px',
+                                                    marginTop: '2px',
+                                                    textAlign: 'left',
+                                                    zIndex: 10
+                                                }}>
+                                                    {discountError}
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                     <div>
                                         <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
@@ -7954,9 +8184,10 @@ export default function Treatment() {
                                 borderTopLeftRadius: 8,
                                 borderTopRightRadius: 8,
                                 fontWeight: 700,
-                                fontSize: 16
+                                fontSize: 16,
+                                textDecoration: 'underline'
                             }}>
-                                {treatmentData?.patientName || 'Patient'} / {treatmentData?.gender || ''} / {treatmentData?.age ? `${treatmentData.age} Y` : ''}
+                                {treatmentData?.patientName || 'Patient'} / {treatmentData?.gender || ''} / {treatmentData?.age ? `${treatmentData.age} Y` : ''} / {treatmentData?.contact || 'N/A'}
                             </div>
 
                             <div style={{ padding: 16 }}>
@@ -7985,7 +8216,7 @@ export default function Treatment() {
                                         type="button"
                                         onClick={() => setShowAddendumModal(false)}
                                         title="Close addendum"
-                                        style={{ backgroundColor: 'rgb(24, 120, 215)', color: '#000', border: '1px solid #cfd8dc', padding: '6px 12px', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
+                                        style={{ backgroundColor: 'rgb(24, 120, 215)', color: '#fff', border: '1px solid #cfd8dc', padding: '6px 12px', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
                                     >
                                         Close
                                     </button>
@@ -7993,7 +8224,7 @@ export default function Treatment() {
                                         type="button"
                                         onClick={() => setAddendumText('')}
                                         title="Reset addendum"
-                                        style={{ backgroundColor: 'rgb(25, 118, 210)', color: '#000', border: 'none', padding: '6px 12px', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
+                                        style={{ backgroundColor: 'rgb(25, 118, 210)', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
                                     >
                                         Reset
                                     </button>

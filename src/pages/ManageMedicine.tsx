@@ -339,7 +339,7 @@ export default function ManageMedicine() {
         }
         .search-section {
           display: flex;
-          align-items: center;
+          align-items: flex-start;
           gap: 12px;
           margin-bottom: 20px;
           flex-wrap: nowrap;

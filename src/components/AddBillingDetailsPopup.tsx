@@ -398,6 +398,10 @@ const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
                   onChange={(e) => handleInputChange('group', e.target.value)}
                   error={!!errors.group}
                   helperText={errors.group}
+                  sx={{ position: 'relative' }}
+                  FormHelperTextProps={{
+                    sx: { position: 'absolute', bottom: '-18px', left: 0 }
+                  }}
                   SelectProps={{
                     displayEmpty: true,
                     renderValue: (selected: any) => {
@@ -451,6 +455,10 @@ const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
                   onChange={(e) => handleInputChange('visitType', e.target.value)}
                   error={!!errors.visitType}
                   helperText={errors.visitType}
+                  sx={{ position: 'relative' }}
+                  FormHelperTextProps={{
+                    sx: { position: 'absolute', bottom: '-18px', left: 0 }
+                  }}
                   SelectProps={{
                     displayEmpty: true,
                     renderValue: (selected: any) => {
@@ -500,6 +508,10 @@ const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
                   value={billingData.subGroup}
                   onChange={(e) => handleInputChange('subGroup', e.target.value)}
                   disabled={!billingData.group || loadingSubCategories}
+                  sx={{ position: 'relative' }}
+                  FormHelperTextProps={{
+                    sx: { position: 'absolute', bottom: '-18px', left: 0 }
+                  }}
                   SelectProps={{
                     displayEmpty: true,
                     renderValue: (selected: any) => {
@@ -546,6 +558,10 @@ const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
                   error={!!errors.defaultFee}
                   helperText={errors.defaultFee}
                   inputProps={{ inputMode: 'numeric' }}
+                  sx={{ position: 'relative' }}
+                  FormHelperTextProps={{
+                    sx: { position: 'absolute', bottom: '-18px', left: 0 }
+                  }}
                 />
               </Box>
 
@@ -564,6 +580,10 @@ const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
                   error={!!errors.sequenceNo}
                   helperText={errors.sequenceNo}
                   inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
+                  sx={{ position: 'relative' }}
+                  FormHelperTextProps={{
+                    sx: { position: 'absolute', bottom: '-18px', left: 0 }
+                  }}
                 />
               </Box>
             </Grid>

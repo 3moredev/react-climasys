@@ -1,6 +1,6 @@
 import React from 'react';
+import { FormHelperText, IconButton } from '@mui/material';
 import { Search, Close } from '@mui/icons-material';
-import { IconButton } from '@mui/material';
 
 interface SearchInputProps {
     value: string;
@@ -51,8 +51,8 @@ const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(({
                     ref={ref}
                     style={{
                         width: '100%',
-                        padding: showSearchIcon ? '8px 40px 8px 12px' : '8px 40px 8px 12px',
-                        border: value.length === 50 ? '1px solid red' : '1px solid #ced4da',
+                        padding: showSearchIcon ? '8px 70px 8px 12px' : '8px 70px 8px 12px',
+                        border: value.length === 50 ? '1px solid #616161' : '1px solid #ced4da',
                         borderRadius: '4px',
                         fontSize: '0.9rem',
                         ...inputStyle
@@ -96,18 +96,20 @@ const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(({
                     />
                 )}
             </div>
+
+            {/* Error Message Space (Reserved to shift layout) */}
             {value.length === 50 && (
-                <span style={{
-                    color: '#d32f2f',
+                <FormHelperText sx={{
+                    m: 0,
+                    mt: 0.5,
                     fontSize: '0.75rem',
-                    marginTop: '3px',
-                    marginLeft: '14px',
-                    fontFamily: '"Roboto","Helvetica","Arial",sans-serif',
-                    fontWeight: 400,
-                    lineHeight: 1.66
+                    pl: 0,
+                    color: '#333333',
+                    position: 'relative',
+                    zIndex: 1
                 }}>
-                    Search query cannot exceed 50 characters
-                </span>
+                    Search cannot exceed 50 characters
+                </FormHelperText>
             )}
         </div>
     );

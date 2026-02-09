@@ -23,7 +23,7 @@ interface AppointmentRow {
     appointmentId?: string;
     sr: number;
     patient: string;
-    patientId: number;
+    patientId: string;
     age: number;
     contact: string;
     time: string;
@@ -648,9 +648,10 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                     referralContact: appointmentData.referralContact ?? appointmentData.doctorMobile ?? '',
                     referralEmail: appointmentData.referralEmail ?? appointmentData.doctorEmail ?? '',
                     referralAddress: appointmentData.referralAddress ?? appointmentData.doctorAddress ?? '',
-                    pulse: appointmentData.pulse ?? '',
-                    height: appointmentData.heightInCms ?? '',
-                    weight: appointmentData.weightInKgs ?? '',
+                    // Treat zero values as empty strings for vital signs
+                    pulse: (appointmentData.pulse && appointmentData.pulse !== 0) ? appointmentData.pulse : '',
+                    height: (appointmentData.heightInCms && appointmentData.heightInCms !== 0) ? appointmentData.heightInCms : '',
+                    weight: (appointmentData.weightInKgs && appointmentData.weightInKgs !== 0) ? appointmentData.weightInKgs : '',
                     bp: appointmentData.bloodPressure ?? '',
                     sugar: appointmentData.sugar ?? '',
                     tft: appointmentData.tft ?? '',
@@ -772,9 +773,10 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                             referralContact: payload.referralContact ?? payload.doctorMobile ?? '',
                             referralEmail: payload.referralEmail ?? payload.doctorEmail ?? '',
                             referralAddress: payload.referralAddress ?? payload.doctorAddress ?? '',
-                            pulse: payload.pulse ?? payload.pulsePerMin ?? '',
-                            height: payload.heightInCms ?? payload.height ?? '',
-                            weight: payload.weightInKgs ?? payload.weight ?? '',
+                            // Treat zero values as empty strings for vital signs
+                            pulse: ((payload.pulse ?? payload.pulsePerMin) && (payload.pulse ?? payload.pulsePerMin) !== 0) ? (payload.pulse ?? payload.pulsePerMin) : '',
+                            height: ((payload.heightInCms ?? payload.height) && (payload.heightInCms ?? payload.height) !== 0) ? (payload.heightInCms ?? payload.height) : '',
+                            weight: ((payload.weightInKgs ?? payload.weight) && (payload.weightInKgs ?? payload.weight) !== 0) ? (payload.weightInKgs ?? payload.weight) : '',
                             bp: payload.bloodPressure ?? payload.bp ?? '',
                             sugar: payload.sugar ?? '',
                             tft: payload.tft ?? '',
@@ -1028,7 +1030,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
 
         // Strict Character Filtering at Source
         if (field === 'referralName') {
-            processedValue = value.replace(/[^a-zA-Z\s]/g, '');
+            processedValue = value.replace(/[^a-zA-Z\s.'-]/g, '');
         } else if (field === 'referralContact' || field === 'pulse') {
             processedValue = value.replace(/[^0-9]/g, '');
         } else if (field === 'height' || field === 'weight') {
@@ -1046,7 +1048,18 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
         }
 
         // Real-time Validation Result
-        const { error } = validateField(field, processedValue, undefined, undefined, 'visit');
+        let { error } = validateField(field, processedValue, undefined, undefined, 'visit');
+
+        // Custom error message override for height and weight to include units
+        if (error) {
+            if (field === 'height' && (parseFloat(processedValue) < 30 || parseFloat(processedValue) > 250)) {
+                error = 'Height must be between 30 and 250 cm';
+            } else if (field === 'weight' && (parseFloat(processedValue) < 1 || parseFloat(processedValue) > 250)) {
+                error = 'Weight must be between 1 and 250 kg';
+            } else if (field === 'pulse' && (parseFloat(processedValue) < 30 || parseFloat(processedValue) > 220)) {
+                error = 'Pulse must be between 30 and 220 /min';
+            }
+        }
 
         setFormData(prev => {
             const newData = { ...prev, [field]: processedValue };
@@ -1063,6 +1076,13 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                 }
             }
 
+            // Clear referral contact fields when referral name is cleared or changed from selected doctor
+            if (field === 'referralName' && (!processedValue || processedValue.trim() === '' || (selectedDoctor && processedValue !== selectedDoctor.doctorName))) {
+                newData.referralContact = '';
+                newData.referralEmail = '';
+                newData.referralAddress = '';
+            }
+
             // Reset referral name search when referral type changes
             if (field === 'referralBy') {
                 newData.referralName = '';
@@ -1076,6 +1096,11 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
 
             return newData;
         });
+
+        // Clear selectedDoctor state if referralName input changes and doesn't match anymore
+        if (field === 'referralName' && selectedDoctor && processedValue !== selectedDoctor.doctorName) {
+            setSelectedDoctor(null);
+        }
 
         // Update validation errors state
         setValidationErrors(prev => {
@@ -1166,7 +1191,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
         const fieldConfig = getFieldConfig('referralName', 'visit');
 
         // Allow only alphabets and spaces
-        const cleanSearchTerm = searchTerm.replace(/[^a-zA-Z\s]/g, '');
+        const cleanSearchTerm = searchTerm.replace(/[^a-zA-Z\s.'-]/g, '');
 
         // Input blocking: Prevent typing beyond maxLength
         if (fieldConfig?.maxLength && cleanSearchTerm.length > fieldConfig.maxLength) {
@@ -1234,11 +1259,6 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
             if (isNaN(val) || val < 30 || val > 220) {
                 errors.pulse = 'Pulse must be between 30 and 220';
             }
-        }
-
-        // Referral Name is required if not Self
-        if (formData.referralBy !== 'Self' && !formData.referralName) {
-            errors.referralName = 'Referral name is required';
         }
 
         // Height range check if provided
@@ -1805,7 +1825,26 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                 setSelectedDoctor(null);
                                                 setReferralNameOptions([]);
                                             }}
+                                            onKeyDown={(e) => {
+                                                // Prevent any keyboard input when doctor is selected (except Tab for navigation)
+                                                if (selectedDoctor && e.key !== 'Tab') {
+                                                    e.preventDefault();
+                                                }
+                                            }}
                                             disabled={readOnly || isSelfReferral}
+                                            sx={{
+                                                '& .MuiInputBase-root.Mui-disabled': {
+                                                    backgroundColor: '#f5f5f5 !important'
+                                                },
+                                                '& .MuiInputBase-input.Mui-disabled': {
+                                                    color: '#666666 !important',
+                                                    WebkitTextFillColor: '#666666 !important'
+                                                },
+                                                '& .MuiInputBase-input.Mui-disabled::placeholder': {
+                                                    color: '#666666 !important',
+                                                    opacity: '0.5 !important'
+                                                }
+                                            }}
                                             variant="outlined"
                                             placeholder={isDoctorReferral() ? 'Type Doctor Name' : 'Type Referral Name'}
                                             error={!!validationErrors.referralName}
@@ -1856,7 +1895,26 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                     setSelectedDoctor(null);
                                                     setReferralNameOptions([]);
                                                 }}
+                                                onBlur={() => {
+                                                    // When user clicks away, ensure the typed name is saved
+                                                    if (referralNameSearch && referralNameSearch !== formData.referralName) {
+                                                        handleInputChange('referralName', referralNameSearch);
+                                                    }
+                                                }}
                                                 disabled={readOnly || isSelfReferral}
+                                                sx={{
+                                                    '& .MuiInputBase-root.Mui-disabled': {
+                                                        backgroundColor: '#f5f5f5 !important'
+                                                    },
+                                                    '& .MuiInputBase-input.Mui-disabled': {
+                                                        color: '#666666 !important',
+                                                        WebkitTextFillColor: '#666666 !important'
+                                                    },
+                                                    '& .MuiInputBase-input.Mui-disabled::placeholder': {
+                                                        color: '#666666 !important',
+                                                        opacity: '0.5 !important'
+                                                    }
+                                                }}
                                                 variant="outlined"
                                                 error={!!validationErrors.referralName}
                                                 helperText={validationErrors.referralName}
@@ -1905,7 +1963,8 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                     {referralNameOptions.map((option) => (
                                                         <Box
                                                             key={option.id}
-                                                            onClick={() => {
+                                                            onMouseDown={() => {
+                                                                console.log('DEBUG: Doctor selected from list', option)
                                                                 setSelectedDoctor((option as any).fullData);
                                                                 setFormData(prev => ({
                                                                     ...prev,
@@ -1944,6 +2003,19 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                         value={formData.referralName}
                                         onChange={(value) => handleInputChange('referralName', value)}
                                         disabled={readOnly || isSelfReferral}
+                                        sx={{
+                                            '& .MuiInputBase-root.Mui-disabled': {
+                                                backgroundColor: '#f5f5f5 !important'
+                                            },
+                                            '& .MuiInputBase-input.Mui-disabled': {
+                                                color: '#666666 !important',
+                                                WebkitTextFillColor: '#666666 !important'
+                                            },
+                                            '& .MuiInputBase-input.Mui-disabled::placeholder': {
+                                                color: '#666666 !important',
+                                                opacity: '0.5 !important'
+                                            }
+                                        }}
                                         variant="outlined"
                                         placeholder={isDoctorReferral() ? 'Type Doctor Name' : 'Type Referral Name'}
                                         error={!!validationErrors.referralName}
@@ -1963,6 +2035,19 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     value={formData.referralContact}
                                     onChange={(value) => handleInputChange('referralContact', value)}
                                     disabled={readOnly || isSelfReferral || isDoctorReferral()}
+                                    sx={{
+                                        '& .MuiInputBase-root.Mui-disabled': {
+                                            backgroundColor: '#f5f5f5 !important'
+                                        },
+                                        '& .MuiInputBase-input.Mui-disabled': {
+                                            color: '#666666 !important',
+                                            WebkitTextFillColor: '#666666 !important'
+                                        },
+                                        '& .MuiInputBase-input.Mui-disabled::placeholder': {
+                                            color: '#666666 !important',
+                                            opacity: '0.5 !important'
+                                        }
+                                    }}
                                     variant="outlined"
                                     placeholder='Referral Contact'
                                     inputProps={{ maxLength: getFieldConfig('referralContact', 'visit')?.maxLength }}
@@ -1983,6 +2068,19 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     value={formData.referralEmail}
                                     onChange={(value) => handleInputChange('referralEmail', value)}
                                     disabled={readOnly || isSelfReferral || isDoctorReferral()}
+                                    sx={{
+                                        '& .MuiInputBase-root.Mui-disabled': {
+                                            backgroundColor: '#f5f5f5 !important'
+                                        },
+                                        '& .MuiInputBase-input.Mui-disabled': {
+                                            color: '#666666 !important',
+                                            WebkitTextFillColor: '#666666 !important'
+                                        },
+                                        '& .MuiInputBase-input.Mui-disabled::placeholder': {
+                                            color: '#666666 !important',
+                                            opacity: '0.5 !important'
+                                        }
+                                    }}
                                     variant="outlined"
                                     placeholder='Referral Email'
                                     inputProps={{ maxLength: getFieldConfig('referralEmail', 'visit')?.maxLength }}
@@ -2002,6 +2100,19 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     value={formData.referralAddress}
                                     onChange={(value) => handleInputChange('referralAddress', value)}
                                     disabled={readOnly || isSelfReferral || isDoctorReferral()}
+                                    sx={{
+                                        '& .MuiInputBase-root.Mui-disabled': {
+                                            backgroundColor: '#f5f5f5 !important'
+                                        },
+                                        '& .MuiInputBase-input.Mui-disabled': {
+                                            color: '#666666 !important',
+                                            WebkitTextFillColor: '#666666 !important'
+                                        },
+                                        '& .MuiInputBase-input.Mui-disabled::placeholder': {
+                                            color: '#666666 !important',
+                                            opacity: '0.5 !important'
+                                        }
+                                    }}
                                     variant="outlined"
                                     inputProps={{ maxLength: getFieldConfig('referralAddress', 'visit')?.maxLength }}
                                     placeholder='Referral Address'
@@ -2089,7 +2200,13 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                         value={formData.bmi}
                                         disabled={true} // BMI is always calculated
                                         variant="outlined"
-                                    // placeholder='BMI'
+                                        placeholder='BMI'
+                                        sx={{
+                                            '& .MuiInputBase-input.Mui-disabled::placeholder': {
+                                                color: '#666666 !important',
+                                                opacity: '0.5 !important'
+                                            }
+                                        }}
                                     />
                                 </Box>
                             </Grid>
@@ -2584,14 +2701,15 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     borderRadius: '4px',
                                     overflow: 'hidden'
                                 }}>
-                                    <table style={{ width: '100%', tableLayout: 'fixed' }}>
+                                    {/* Header Table (Static) */}
+                                    <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'separate', borderSpacing: 0 }}>
                                         <thead>
                                             <tr style={{ backgroundColor: '#1976d2' }}>
                                                 <th style={{
-                                                    padding: '12px !important',
+                                                    padding: '12px',
                                                     textAlign: 'left',
                                                     borderBottom: '1px solid #ddd',
-                                                    fontWeight: '100 !important',
+                                                    fontWeight: 'normal',
                                                     color: 'white',
                                                     width: '10%',
                                                     fontSize: '12px'
@@ -2599,10 +2717,10 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                     Sr.
                                                 </th>
                                                 <th style={{
-                                                    padding: '12px !important',
+                                                    padding: '12px',
                                                     textAlign: 'left',
                                                     borderBottom: '1px solid #ddd',
-                                                    fontWeight: '100 !important',
+                                                    fontWeight: 'normal',
                                                     color: 'white',
                                                     width: '30%',
                                                     fontSize: '12px'
@@ -2610,10 +2728,10 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                     Complaint Description
                                                 </th>
                                                 <th style={{
-                                                    padding: '12px !important',
+                                                    padding: '12px',
                                                     textAlign: 'left',
                                                     borderBottom: '1px solid #ddd',
-                                                    fontWeight: '100 !important',
+                                                    fontWeight: 'normal',
                                                     color: 'white',
                                                     width: '40%',
                                                     fontSize: '12px'
@@ -2621,84 +2739,99 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                     Duration / Comment
                                                 </th>
                                                 <th style={{
-                                                    padding: '12px !important',
+                                                    padding: '12px',
                                                     borderBottom: '1px solid #ddd',
-                                                    fontWeight: '100 !important',
+                                                    fontWeight: 'normal',
                                                     color: 'white',
                                                     width: '20%',
-                                                    fontSize: '12px'
-                                                }} className='text-center'>
+                                                    fontSize: '12px',
+                                                    textAlign: 'center'
+                                                }}>
                                                     Action
                                                 </th>
                                             </tr>
                                         </thead>
-                                        <tbody>
-                                            {complaintsRows.map((row, idx) => (
-                                                <tr key={row.id}>
-                                                    <td style={{
-                                                        padding: '12px',
-                                                        borderBottom: '1px solid #eee',
-                                                        color: 'black',
-                                                        height: '38px',
-                                                        fontSize: '12px'
-                                                    }}>
-                                                        {idx + 1}
-                                                    </td>
-                                                    <td style={{
-                                                        padding: '12px',
-                                                        borderBottom: '1px solid #eee',
-                                                        color: 'black',
-                                                        height: '38px',
-                                                        fontSize: '12px'
-                                                    }}>
-                                                        {row.label}
-                                                    </td>
-                                                    <td style={{ padding: '12px' }}>
-                                                        <ClearableTextField
-                                                            fullWidth
-                                                            size="small"
-                                                            value={row.comment}
-                                                            onChange={(value) => handleComplaintCommentChange(row.value, value)}
-                                                            disabled={readOnly}
-                                                            placeholder="Enter Duration/Comment"
-                                                            variant="outlined"
-                                                            inputProps={{ maxLength: getFieldConfig('complaintComment', 'visit')?.maxLength }}
-                                                            InputProps={{ disableUnderline: true }}
-                                                        />
-                                                    </td>
-                                                    <td style={{
-                                                        padding: '12px',
-                                                        borderBottom: '1px solid #eee',
-                                                        textAlign: 'center',
-                                                        height: '38px'
-                                                    }}>
-                                                        <button
-                                                            onClick={() => !readOnly && handleRemoveComplaint(row.value)}
-                                                            style={{
-                                                                background: 'none',
-                                                                border: 'none',
-                                                                cursor: 'pointer',
-                                                                color: '#f44336',
-                                                                padding: '6px',
-                                                                borderRadius: '4px',
-                                                                display: 'flex',
-                                                                alignItems: 'center',
-                                                                justifyContent: 'center'
-                                                            }}
-                                                            onMouseEnter={(e) => {
-                                                                e.currentTarget.style.backgroundColor = '#ffebee';
-                                                            }}
-                                                            onMouseLeave={(e) => {
-                                                                e.currentTarget.style.backgroundColor = 'transparent';
-                                                            }}
-                                                        >
-                                                            <Delete fontSize="small" style={{ color: 'black' }} />
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
                                     </table>
+
+                                    <div style={{ maxHeight: '160px', overflowY: 'auto' }}>
+                                        <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'separate', borderSpacing: 0 }}>
+                                            <tbody>
+                                                {complaintsRows.map((row, idx) => (
+                                                    <tr key={row.id}>
+                                                        <td style={{
+                                                            padding: '12px',
+                                                            borderBottom: '1px solid #eee',
+                                                            color: 'black',
+                                                            height: '38px',
+                                                            fontSize: '12px',
+                                                            width: '10%'
+                                                        }}>
+                                                            {idx + 1}
+                                                        </td>
+                                                        <td style={{
+                                                            padding: '12px',
+                                                            borderBottom: '1px solid #eee',
+                                                            color: 'black',
+                                                            height: '38px',
+                                                            fontSize: '12px',
+                                                            width: '30%'
+                                                        }}>
+                                                            {row.label}
+                                                        </td>
+                                                        <td style={{
+                                                            padding: '12px',
+                                                            width: '40%'
+                                                        }}>
+                                                            <ClearableTextField
+                                                                fullWidth
+                                                                size="small"
+                                                                value={row.comment}
+                                                                onChange={(value) => handleComplaintCommentChange(row.value, value)}
+                                                                disabled={readOnly}
+                                                                placeholder="Enter Duration/Comment"
+                                                                variant="outlined"
+                                                                inputProps={{ maxLength: getFieldConfig('complaintComment', 'visit')?.maxLength }}
+                                                                InputProps={{ disableUnderline: true }}
+                                                            />
+                                                        </td>
+                                                        <td style={{
+                                                            padding: '12px',
+                                                            borderBottom: '1px solid #eee',
+                                                            textAlign: 'center',
+                                                            height: '38px',
+                                                            width: '20%'
+                                                        }}>
+                                                            <button
+                                                                onClick={() => !readOnly && handleRemoveComplaint(row.value)}
+                                                                style={{
+                                                                    background: 'none',
+                                                                    border: 'none',
+                                                                    cursor: 'pointer',
+                                                                    color: '#f44336',
+                                                                    padding: '6px',
+                                                                    borderRadius: '4px',
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'center',
+                                                                    margin: '0 auto'
+                                                                }}
+                                                                onMouseEnter={(e) => {
+                                                                    e.currentTarget.style.backgroundColor = '#ffebee';
+                                                                }}
+                                                                onMouseLeave={(e) => {
+                                                                    e.currentTarget.style.backgroundColor = 'transparent';
+                                                                }}
+                                                                title="Remove"
+                                                                disabled={readOnly}
+                                                            >
+                                                                <Delete fontSize="small" style={{ color: 'black' }} />
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
                             )}
                         </Grid>

@@ -8,7 +8,8 @@ import prescriptionCategoryService, {
   PrescriptionCategory as PrescriptionCategoryApiModel,
 } from '../services/prescriptionCategoryService'
 import SearchInput from '../components/SearchInput'
-import { validateField } from '../utils/validationUtils'
+import ClearableTextField from '../components/ClearableTextField'
+import { validateField, getMaxLength } from '../utils/validationUtils'
 
 type CategoryRow = {
   id: string
@@ -24,6 +25,7 @@ export default function PrescriptionCategory() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [searchDraft, setSearchDraft] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
 
@@ -129,6 +131,7 @@ export default function PrescriptionCategory() {
 
   const resetForm = () => {
     setFormData({ categoryName: '', description: '' })
+    setValidationErrors({})
     setEditingId(null)
   }
 
@@ -259,6 +262,7 @@ export default function PrescriptionCategory() {
         .form-field {
           flex: 1;
           min-width: 240px;
+          position: relative;
         }
         .form-field label {
           display: block;
@@ -333,7 +337,7 @@ export default function PrescriptionCategory() {
         }
         .search-section {
           display: flex;
-          align-items: center;
+          align-items: flex-start;
           gap: 12px;
           margin-bottom: 20px;
           flex-wrap: nowrap;
@@ -527,52 +531,78 @@ export default function PrescriptionCategory() {
       <div className="form-row">
         <div className="form-field">
           <label>Category Name</label>
-          <input
-            type="text"
+          <ClearableTextField
+            fullWidth
+            size="small"
             placeholder="Category Name"
             value={formData.categoryName}
-            maxLength={60}
-            onChange={(event) => {
-              const val = event.target.value.toUpperCase();
-              const { allowed, error } = validateField('categoryName', val, undefined, undefined, 'prescriptionCategory');
+            onChange={(val) => {
+              const upperVal = val.toUpperCase();
+              const { allowed, error } = validateField('categoryName', upperVal, undefined, undefined, 'prescriptionCategory');
               if (allowed) {
-                setFormData((prev) => ({ ...prev, categoryName: val }));
+                setFormData((prev) => ({ ...prev, categoryName: upperVal }));
+              }
+              setValidationErrors(prev => ({ ...prev, categoryName: error }));
+            }}
+            disabled={!!editingId}
+            error={!!validationErrors.categoryName && !validationErrors.categoryName.includes('cannot exceed')}
+            helperText={null}
+            sx={{
+              '& .MuiInputBase-root': {
+                height: '40px',
+                backgroundColor: !!editingId ? '#f5f5f5 !important' : 'inherit'
               }
             }}
-            // When editing, keep category name (short name) fixed to avoid creating a new record
-            disabled={!!editingId}
-            style={{
-              borderColor: formData.categoryName.length === 60 ? 'red' : undefined
-            }}
           />
-          {formData.categoryName.length === 60 && (
-            <span style={{ color: '#d32f2f', fontSize: '11px' }}>Category Name cannot exceed 60 characters</span>
+          {validationErrors.categoryName && (
+            <span style={{
+              color: validationErrors.categoryName.includes('cannot exceed') ? '#666' : '#d32f2f',
+              fontSize: '0.75rem',
+              display: 'block',
+              position: 'relative',
+              zIndex: 1
+            }}>
+              {validationErrors.categoryName}
+            </span>
           )}
         </div>
         <div className="form-field">
           <label>Category Description</label>
-          <input
-            type="text"
+          <ClearableTextField
+            fullWidth
+            size="small"
             placeholder="Category Description"
             value={formData.description}
-            maxLength={300}
-            onChange={(event) => {
-              const val = event.target.value.toUpperCase();
-              const { allowed, error } = validateField('description', val, undefined, undefined, 'prescriptionCategory');
+            onChange={(val) => {
+              const upperVal = val.toUpperCase();
+              const { allowed, error } = validateField('description', upperVal, undefined, undefined, 'prescriptionCategory');
               if (allowed) {
-                setFormData((prev) => ({ ...prev, description: val }));
+                setFormData((prev) => ({ ...prev, description: upperVal }));
+              }
+              setValidationErrors(prev => ({ ...prev, description: error }));
+            }}
+            error={!!validationErrors.description && !validationErrors.description.includes('cannot exceed')}
+            helperText={null}
+            sx={{
+              '& .MuiInputBase-root': {
+                height: '40px'
               }
             }}
-            style={{
-              borderColor: formData.description.length === 300 ? 'red' : undefined
-            }}
           />
-          {formData.description.length === 300 && (
-            <span style={{ color: '#d32f2f', fontSize: '11px' }}>Category Description cannot exceed 300 characters</span>
+          {validationErrors.description && (
+            <span style={{
+              color: validationErrors.description.includes('cannot exceed') ? '#666' : '#d32f2f',
+              fontSize: '0.75rem',
+              display: 'block',
+              position: 'relative',
+              zIndex: 1
+            }}>
+              {validationErrors.description}
+            </span>
           )}
         </div>
-        <div className="form-actions">
-          <button className="btn-primary-custom" onClick={handleAddOrUpdate}>
+        <div className="form-actions" style={{ marginTop: '0', alignSelf: 'center' }}>
+          <button className="btn-primary-custom" onClick={handleAddOrUpdate} style={{ height: '40px' }}>
             <Add fontSize="small" />
             {editingId ? 'Update Category' : 'Add Category'}
           </button>

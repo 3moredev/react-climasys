@@ -197,12 +197,15 @@ const AddComplaintPopup: React.FC<AddComplaintPopupProps> = ({ open, onClose, on
                                         const { allowed, error } = validateField('shortDescription', val, undefined, undefined, 'complaint');
                                         if (allowed) {
                                             setShortDescription(val);
-                                            setErrors(prev => ({ ...prev, shortDescription: error }));
                                         }
+                                        setErrors(prev => ({ ...prev, shortDescription: error }));
                                     }}
                                     disabled={!!editData}
-                                    error={!!errors.shortDescription}
+                                    error={!!errors.shortDescription && !errors.shortDescription.toLowerCase().includes('exceed')}
                                     helperText={errors.shortDescription}
+                                    FormHelperTextProps={{
+                                        sx: { color: errors.shortDescription?.toLowerCase().includes('exceed') ? '#666 !important' : undefined }
+                                    }}
                                 />
                             </Box>
                         </Grid>
@@ -222,11 +225,14 @@ const AddComplaintPopup: React.FC<AddComplaintPopupProps> = ({ open, onClose, on
                                         const { allowed, error } = validateField('complaintDescription', val, undefined, undefined, 'complaint');
                                         if (allowed) {
                                             setComplaintDescription(val);
-                                            setErrors(prev => ({ ...prev, complaintDescription: error }));
                                         }
+                                        setErrors(prev => ({ ...prev, complaintDescription: error }));
                                     }}
-                                    error={!!errors.complaintDescription}
+                                    error={!!errors.complaintDescription && !errors.complaintDescription.toLowerCase().includes('exceed')}
                                     helperText={errors.complaintDescription}
+                                    FormHelperTextProps={{
+                                        sx: { color: errors.complaintDescription?.toLowerCase().includes('exceed') ? '#666 !important' : undefined }
+                                    }}
                                 />
                             </Box>
                         </Grid>
@@ -246,10 +252,14 @@ const AddComplaintPopup: React.FC<AddComplaintPopupProps> = ({ open, onClose, on
                                         const { allowed, error } = validateField('priority', val, undefined, undefined, 'complaint');
                                         if (allowed) {
                                             setPriority(val);
-                                            setErrors(prev => ({ ...prev, priority: error }));
                                         }
+                                        setErrors(prev => ({ ...prev, priority: error }));
                                     }}
+                                    error={!!errors.priority && !errors.priority.toLowerCase().includes('exceed')}
                                     helperText={errors.priority}
+                                    FormHelperTextProps={{
+                                        sx: { color: errors.priority?.toLowerCase().includes('exceed') ? '#666 !important' : undefined }
+                                    }}
                                 />
                             </Box>
                         </Grid>
