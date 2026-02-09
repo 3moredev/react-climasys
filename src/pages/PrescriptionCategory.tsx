@@ -541,8 +541,8 @@ export default function PrescriptionCategory() {
               const { allowed, error } = validateField('categoryName', upperVal, undefined, undefined, 'prescriptionCategory');
               if (allowed) {
                 setFormData((prev) => ({ ...prev, categoryName: upperVal }));
-                setValidationErrors(prev => ({ ...prev, categoryName: error }));
               }
+              setValidationErrors(prev => ({ ...prev, categoryName: error }));
             }}
             disabled={!!editingId}
             error={!!validationErrors.categoryName && !validationErrors.categoryName.includes('cannot exceed')}
@@ -556,11 +556,10 @@ export default function PrescriptionCategory() {
           />
           {validationErrors.categoryName && (
             <span style={{
-              color: validationErrors.categoryName.includes('cannot exceed') ? '#333333' : '#d32f2f',
+              color: validationErrors.categoryName.includes('cannot exceed') ? '#666' : '#d32f2f',
               fontSize: '0.75rem',
-              position: 'absolute',
-              bottom: '-20px',
-              left: '14px'
+              display: 'block',
+              marginTop: '4px'
             }}>
               {validationErrors.categoryName}
             </span>
@@ -578,8 +577,8 @@ export default function PrescriptionCategory() {
               const { allowed, error } = validateField('description', upperVal, undefined, undefined, 'prescriptionCategory');
               if (allowed) {
                 setFormData((prev) => ({ ...prev, description: upperVal }));
-                setValidationErrors(prev => ({ ...prev, description: error }));
               }
+              setValidationErrors(prev => ({ ...prev, description: error }));
             }}
             error={!!validationErrors.description && !validationErrors.description.includes('cannot exceed')}
             helperText={null}
@@ -591,11 +590,10 @@ export default function PrescriptionCategory() {
           />
           {validationErrors.description && (
             <span style={{
-              color: validationErrors.description.includes('cannot exceed') ? '#333333' : '#d32f2f',
+              color: validationErrors.description.includes('cannot exceed') ? '#666' : '#d32f2f',
               fontSize: '0.75rem',
-              position: 'absolute',
-              bottom: '-20px',
-              left: '14px'
+              display: 'block',
+              marginTop: '4px'
             }}>
               {validationErrors.description}
             </span>

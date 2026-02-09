@@ -191,12 +191,15 @@ const AddDiagnosisPopup: React.FC<AddDiagnosisPopupProps> = ({ open, onClose, on
                                         const { allowed, error } = validateField('shortDescription', val, undefined, undefined, 'diagnosis');
                                         if (allowed) {
                                             setShortDescription(val);
-                                            setErrors(prev => ({ ...prev, shortDescription: error }));
                                         }
+                                        setErrors(prev => ({ ...prev, shortDescription: error }));
                                     }}
                                     disabled={!!editData}
-                                    error={!!errors.shortDescription}
+                                    error={!!errors.shortDescription && !errors.shortDescription.toLowerCase().includes('exceed')}
                                     helperText={errors.shortDescription}
+                                    FormHelperTextProps={{
+                                        sx: { color: errors.shortDescription?.toLowerCase().includes('exceed') ? '#666 !important' : undefined }
+                                    }}
                                 />
                             </Box>
                         </Grid>
@@ -216,11 +219,14 @@ const AddDiagnosisPopup: React.FC<AddDiagnosisPopupProps> = ({ open, onClose, on
                                         const { allowed, error } = validateField('diagnosisDescription', val, undefined, undefined, 'diagnosis');
                                         if (allowed) {
                                             setDiagnosisDescription(val);
-                                            setErrors(prev => ({ ...prev, diagnosisDescription: error }));
                                         }
+                                        setErrors(prev => ({ ...prev, diagnosisDescription: error }));
                                     }}
-                                    error={!!errors.diagnosisDescription}
+                                    error={!!errors.diagnosisDescription && !errors.diagnosisDescription.toLowerCase().includes('exceed')}
                                     helperText={errors.diagnosisDescription}
+                                    FormHelperTextProps={{
+                                        sx: { color: errors.diagnosisDescription?.toLowerCase().includes('exceed') ? '#666 !important' : undefined }
+                                    }}
                                 />
                             </Box>
                         </Grid>
@@ -240,10 +246,14 @@ const AddDiagnosisPopup: React.FC<AddDiagnosisPopupProps> = ({ open, onClose, on
                                         const { allowed, error } = validateField('priority', val, undefined, undefined, 'diagnosis');
                                         if (allowed) {
                                             setPriority(val);
-                                            setErrors(prev => ({ ...prev, priority: error }));
                                         }
+                                        setErrors(prev => ({ ...prev, priority: error }));
                                     }}
+                                    error={!!errors.priority && !errors.priority.toLowerCase().includes('exceed')}
                                     helperText={errors.priority}
+                                    FormHelperTextProps={{
+                                        sx: { color: errors.priority?.toLowerCase().includes('exceed') ? '#666 !important' : undefined }
+                                    }}
                                 />
                             </Box>
                         </Grid>

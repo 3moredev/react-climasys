@@ -642,8 +642,8 @@ export default function PrescriptionSubCategory() {
               const { allowed, error } = validateField('subCategoryName', upperVal, undefined, undefined, 'prescriptionSubCategory');
               if (allowed) {
                 setFormData((prev) => ({ ...prev, subCategoryName: upperVal }));
-                setValidationErrors(prev => ({ ...prev, subCategoryName: error }));
               }
+              setValidationErrors(prev => ({ ...prev, subCategoryName: error }));
             }}
             disabled={!!editingId} // Disable if editing (based on ID presence logic often implies key fields locked) checks
             error={!!validationErrors.subCategoryName && !validationErrors.subCategoryName.includes('cannot exceed')}
@@ -657,11 +657,10 @@ export default function PrescriptionSubCategory() {
           />
           {validationErrors.subCategoryName && (
             <span style={{
-              color: validationErrors.subCategoryName.includes('cannot exceed') ? '#333333' : '#d32f2f',
+              color: validationErrors.subCategoryName.includes('cannot exceed') ? '#666' : '#d32f2f',
               fontSize: '0.75rem',
-              position: 'absolute',
-              bottom: '-20px',
-              left: '14px'
+              display: 'block',
+              marginTop: '4px'
             }}>
               {validationErrors.subCategoryName}
             </span>
