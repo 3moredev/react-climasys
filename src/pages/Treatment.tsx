@@ -294,7 +294,6 @@ export default function Treatment() {
     const [showVitalsTrend, setShowVitalsTrend] = useState<boolean>(false);
     const [showInstructionPopup, setShowInstructionPopup] = useState<boolean>(false);
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-    const [initialComplaintsFromApi, setInitialComplaintsFromApi] = useState<string | null>(null);
     const [billingError, setBillingError] = useState<string | null>(null);
     const [discountError, setDiscountError] = useState<string | null>(null);
     const [planAdvError, setPlanAdvError] = useState<string | null>(null);
@@ -661,7 +660,8 @@ export default function Treatment() {
         billed: '',
         discount: '',
         acBalance: '',
-        dues: ''
+        dues: '',
+        collected: ''
     });
 
     // Folder amount API response data
@@ -670,13 +670,6 @@ export default function Treatment() {
         totalAcBalance?: number;
         rows?: any[];
     } | null>(null);
-
-    // Attachments data
-    const [attachments, setAttachments] = useState<Attachment[]>([
-        { id: '1', name: 'AniruddhaTongaonkar.Pdf', type: 'pdf' },
-        { id: '2', name: 'Jyoti Shinde.docx', type: 'docx' },
-        { id: '3', name: 'Sachin Patankar.xlsx', type: 'xlsx' }
-    ]);
 
     // Existing documents for current visit (from backend)
     const [existingDocuments, setExistingDocuments] = useState<any[]>([]);
@@ -1619,10 +1612,14 @@ export default function Treatment() {
         return () => { cancelled = true; };
     }, [treatmentData?.doctorId, sessionData?.clinicId]);
 
+
     // Store master-lists billing data in a ref to use after billing options load
     const masterListsBillingRef = React.useRef<any[]>([]);
     // Store labTestsAsked from master-lists API
     const labTestsAskedRef = React.useRef<any[]>([]);
+    // Track if billing data has been set from master-lists (to prevent overwriting)
+    const billingDataSetFromMasterListsRef = React.useRef(false);
+
 
     // Load billing data from master-lists API
     React.useEffect(() => {
@@ -1669,9 +1666,29 @@ export default function Treatment() {
                 // Store in ref for later matching
                 if (Array.isArray(billingArray) && billingArray.length > 0) {
                     masterListsBillingRef.current = billingArray;
-                    console.log('Stored billing data from master-lists:', billingArray);
                 } else {
                     masterListsBillingRef.current = [];
+                }
+
+                // Extract and set billing data from uiFields
+                const uiFields = data?.data?.uiFields;
+                if (uiFields && !cancelled) {
+                    const billedRs = uiFields.billedRs ?? uiFields.billed ?? 0;
+                    const discountRs = uiFields.discountRs ?? uiFields.discount ?? 0;
+                    const collectedRs = uiFields.collectedRs ?? uiFields.collected ?? 0;
+                    const duesRs = uiFields.duesRs ?? uiFields.dues ?? 0;
+                    const acBalanceRs = uiFields.acBalanceRs ?? uiFields.acBalance ?? 0;
+
+                    setBillingData({
+                        billed: String(billedRs),
+                        discount: String(discountRs),
+                        collected: String(collectedRs),
+                        dues: String(duesRs),
+                        acBalance: String(acBalanceRs)
+                    });
+
+                    // Mark that billing data has been set from master-lists
+                    billingDataSetFromMasterListsRef.current = true;
                 }
 
                 // Extract labTestsAsked array from response
@@ -1718,33 +1735,12 @@ export default function Treatment() {
                     });
 
                     if (!cancelled) {
-                        console.log('=== TREATMENT SCREEN: Setting selectedInstructionGroups from master-lists API ===');
-                        console.log('Raw instructionGroupsArray from API:', instructionGroupsArray);
-                        console.log('Raw instructionsArray from API:', instructionsArray);
-                        console.log('Mapped instruction groups:', mappedInstructionGroups);
-                        console.log('Mapped groups count:', mappedInstructionGroups.length);
-                        mappedInstructionGroups.forEach((group, idx) => {
-                            console.log(`Mapped Group ${idx + 1}:`, {
-                                id: group.id,
-                                name: group.name,
-                                nameHindi: group.nameHindi,
-                                instructions: group.instructions,
-                                hasName: !!group.name,
-                                hasInstructions: !!group.instructions
-                            });
-                        });
                         // Normalize the mapped groups to ensure clean format
                         const normalizedMappedGroups = normalizeInstructionGroups(mappedInstructionGroups);
                         setSelectedInstructionGroups(normalizedMappedGroups);
-                        console.log('✅ selectedInstructionGroups state has been SET (normalized)');
-                        console.log('Normalized instruction groups:', JSON.stringify(normalizedMappedGroups, null, 2));
                     }
                 } else {
                     if (!cancelled) {
-                        console.log('=== TREATMENT SCREEN: instructionGroupsArray is EMPTY ===');
-                        console.log('instructionGroupsArray:', instructionGroupsArray);
-                        console.log('instructionsArray:', instructionsArray);
-                        console.warn('⚠️ No instruction groups found in API response, clearing selectedInstructionGroups');
                         setSelectedInstructionGroups([]);
                     }
                 }
@@ -1767,7 +1763,6 @@ export default function Treatment() {
         }
 
         const billingArray = masterListsBillingRef.current;
-        console.log('Matching billing items. Options:', billingDetailsOptions.length, 'Master-lists:', billingArray.length);
 
         // Match billing items from master-lists to existing billing options by fields
         const matchedIds: string[] = [];
@@ -1815,6 +1810,7 @@ export default function Treatment() {
             console.warn('No billing items matched for pre-selection');
         }
     }, [billingDetailsOptions]);
+
 
     // Load Previous Service Visit Dates for sidebar
     React.useEffect(() => {
@@ -2099,15 +2095,13 @@ export default function Treatment() {
                 }
 
                 const data = await response.json();
-                console.log('=== Patient Folder Amount API Response ===');
-                console.log('API URL:', `/api/fees/folder-amount?${params.toString()}`);
-                console.log('Response Data:', data);
-                console.log('==========================================');
-
                 if (!cancelled && data) {
                     setFolderAmountData(data);
-                    // Update A/C Balance with totalAcBalance
-                    if (data.totalAcBalance !== undefined && data.totalAcBalance !== null) {
+                    // Only update A/C Balance if billing data hasn't been set from master-lists
+                    // This prevents overwriting the complete billing data from master-lists
+                    if (!billingDataSetFromMasterListsRef.current &&
+                        data.totalAcBalance !== undefined &&
+                        data.totalAcBalance !== null) {
                         setBillingData(prev => ({
                             ...prev,
                             acBalance: String(data.totalAcBalance.toFixed(2))
@@ -2214,12 +2208,6 @@ export default function Treatment() {
 
     // Map previous visit data to form data (copied from Appointment page)
     const mapPreviousVisitToInitialData = (visit: any, patientName: string, appointmentRow?: any) => {
-        console.log('=== MAPPING VISIT DATA ===');
-        console.log('Raw visit object:', visit);
-        console.log('Visit keys:', Object.keys(visit || {}));
-        console.log('Patient name:', patientName);
-        console.log('Appointment row:', appointmentRow);
-
         const [firstName, ...rest] = String(patientName || '').trim().split(/\s+/);
         const lastName = rest.join(' ');
         const get = (obj: any, ...keys: string[]) => {
@@ -3055,86 +3043,6 @@ export default function Treatment() {
         return investigationAdded;
     };
 
-    // Function to collect all form fields into an array
-    const collectAllFormFields = () => {
-        const allFields = [
-            // Basic form data
-            { field: 'referralBy', value: formData.referralBy },
-            { field: 'visitType.inPerson', value: formData.visitType.inPerson },
-            { field: 'visitType.followUp', value: formData.visitType.followUp },
-            { field: 'allergy', value: formData.allergy },
-            { field: 'medicalHistoryText', value: formData.medicalHistoryText },
-            { field: 'surgicalHistory', value: formData.surgicalHistory },
-            { field: 'medicines', value: formData.medicines },
-            { field: 'visitComments', value: formData.visitComments },
-            { field: 'pc', value: formData.pc },
-
-            // Vitals
-            { field: 'height', value: formData.height },
-            { field: 'weight', value: formData.weight },
-            { field: 'bmi', value: formData.bmi },
-            { field: 'pulse', value: formData.pulse },
-            { field: 'bp', value: formData.bp },
-            { field: 'sugar', value: formData.sugar },
-            { field: 'tft', value: formData.tft },
-            { field: 'pallorHb', value: formData.pallorHb },
-
-            // Medical history checkboxes
-            { field: 'medicalHistory.hypertension', value: formData.medicalHistory.hypertension },
-            { field: 'medicalHistory.diabetes', value: formData.medicalHistory.diabetes },
-            { field: 'medicalHistory.cholesterol', value: formData.medicalHistory.cholesterol },
-            { field: 'medicalHistory.ihd', value: formData.medicalHistory.ihd },
-            { field: 'medicalHistory.asthma', value: formData.medicalHistory.asthma },
-            { field: 'medicalHistory.th', value: formData.medicalHistory.th },
-            { field: 'medicalHistory.smoking', value: formData.medicalHistory.smoking },
-            { field: 'medicalHistory.tobacco', value: formData.medicalHistory.tobacco },
-            { field: 'medicalHistory.alcohol', value: formData.medicalHistory.alcohol },
-
-            // Clinical data
-            { field: 'detailedHistory', value: formData.detailedHistory },
-            { field: 'examinationFindings', value: formData.examinationFindings },
-            { field: 'additionalComments', value: formData.additionalComments },
-            { field: 'procedurePerformed', value: formData.procedurePerformed },
-            { field: 'dressingBodyParts', value: formData.dressingBodyParts },
-
-            // Selected complaints
-            { field: 'selectedComplaints', value: selectedComplaints },
-            { field: 'complaintsRows', value: complaintsRows },
-
-            // Selected diagnoses
-            { field: 'selectedDiagnoses', value: selectedDiagnoses },
-            { field: 'diagnosisRows', value: diagnosisRows },
-
-            // Selected medicines
-            { field: 'selectedMedicines', value: selectedMedicines },
-            { field: 'medicineRows', value: medicineRows },
-
-            // Prescriptions
-            { field: 'prescriptionRows', value: prescriptionRows },
-
-            // Selected investigations
-            { field: 'selectedInvestigations', value: selectedInvestigations },
-            { field: 'investigationRows', value: investigationRows },
-
-            // Follow-up data
-            { field: 'followUpData.followUpType', value: followUpData.followUpType },
-            { field: 'followUpData.followUp', value: followUpData.followUp },
-
-            // Billing data
-            { field: 'billingData.billed', value: billingData.billed },
-            { field: 'billingData.discount', value: billingData.discount },
-
-            // Attachments
-            { field: 'attachments', value: attachments },
-
-            // Session data
-            { field: 'sessionData', value: sessionData },
-            { field: 'treatmentData', value: treatmentData }
-        ];
-
-        return allFields;
-    };
-
     // Function to convert date to YYYY-MM-DD format
     const toYyyyMmDd = (date: any): string => {
         if (!date) return new Date().toISOString().slice(0, 10);
@@ -3337,22 +3245,22 @@ export default function Treatment() {
             });
 
             // Patch billing fields based on appointment details
-            try {
-                const billedNum = parseFloat(String(normalized.billed || '')) || 0;
-                const discountNum = parseFloat(String(normalized.discount || '')) || 0;
-                const paidNum = parseFloat(String(normalized.feesPaid || '')) || 0;
-                const duesNum = Math.max(0, billedNum - discountNum - paidNum);
-                setBillingData(prev => ({
-                    ...prev,
-                    billed: billedNum ? String(billedNum) : (prev.billed || ''),
-                    discount: String(discountNum),
-                    dues: String(duesNum),
-                    acBalance: prev.acBalance // keep previous if not provided by API
-                }));
-                console.log('Patched billingData from appointment details:', { billed: billedNum, discount: discountNum, feesPaid: paidNum, dues: duesNum });
-            } catch (billingPatchError) {
-                console.warn('Could not patch billing data from appointment details:', billingPatchError);
-            }
+            // try {
+            //     const billedNum = parseFloat(String(normalized.billed || '')) || 0;
+            //     const discountNum = parseFloat(String(normalized.discount || '')) || 0;
+            //     const paidNum = parseFloat(String(normalized.feesPaid || '')) || 0;
+            //     const duesNum = Math.max(0, billedNum - discountNum - paidNum);
+            //     setBillingData(prev => ({
+            //         ...prev,
+            //         billed: billedNum ? String(billedNum) : (prev.billed || ''),
+            //         discount: String(discountNum),
+            //         dues: String(duesNum),
+            //         acBalance: prev.acBalance // keep previous if not provided by API
+            //     }));
+            //     console.log('Patched billingData from appointment details:', { billed: billedNum, discount: discountNum, feesPaid: paidNum, dues: duesNum });
+            // } catch (billingPatchError) {
+            //     console.warn('Could not patch billing data from appointment details:', billingPatchError);
+            // }
 
             // Patch followUpData with followUpComment from API
             if (normalized.followUpComment && normalized.followUpComment !== '') {
@@ -4651,8 +4559,8 @@ export default function Treatment() {
     };
 
     const handleBillingChange = (field: string, value: string) => {
-        // Strict blocking for discount field
-        if (field === 'discount' && value && !/^\d*\.?\d*$/.test(value)) {
+        // Strict blocking for discount field AND billed field
+        if ((field === 'discount' || field === 'billed') && value && !/^\d*\.?\d*$/.test(value)) {
             return; // Block non-numeric input
         }
 
@@ -4676,9 +4584,10 @@ export default function Treatment() {
 
             setDiscountError(newError);
 
-            // Calculate remaining amount after discount (Dues)
+            // Calculate remaining amount after discount and collection (Dues)
             const validDiscount = isNaN(discountNum) ? 0 : discountNum;
-            const remainingAmount = Math.max(0, billedNum - validDiscount);
+            const collectedNum = parseFloat(next.collected) || 0;
+            const remainingAmount = Math.max(0, billedNum - validDiscount - collectedNum);
             return { ...next, dues: String(remainingAmount) };
         });
     };
@@ -4932,7 +4841,13 @@ export default function Treatment() {
                                                 >
                                                     <span style={{ marginRight: '5px' }}>📄</span>
                                                     <span style={{ maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                        {(doc.documentName || `Document ${index + 1}`).split(/[/\\]/).pop()}
+                                                        {(() => {
+                                                            const fullPath = doc.documentName;
+                                                            // Split by forward or backward slash, filter out empty strings (e.g. trailing slash), and take the last part
+                                                            const parts = String(fullPath).split('/').pop();
+                                                            console.log('/part', parts);
+                                                            return parts || fullPath;
+                                                        })()}
                                                     </span>
                                                     {doc.fileSize && (
                                                         <span style={{
@@ -5113,7 +5028,7 @@ export default function Treatment() {
                                         <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: (isFormDisabled || inPersonDisabled) ? 'not-allowed' : 'pointer', fontSize: '12px', whiteSpace: 'nowrap' }}>
                                             <input
                                                 type="checkbox"
-                                                checked={inPersonChecked}
+                                                checked={true}
                                                 onChange={(e) => handleVisitTypeChange('inPerson', e.target.checked)}
                                                 disabled={true}
                                                 readOnly={inPersonDisabled}
@@ -7927,14 +7842,8 @@ export default function Treatment() {
             {/* Instruction Groups Popup */}
             <InstructionGroupsPopup
                 isOpen={showInstructionPopup}
-                onClose={() => {
-                    console.log('=== TREATMENT SCREEN: Instruction Popup CLOSED ===');
-                    console.log('selectedInstructionGroups after closing:', selectedInstructionGroups);
-                    console.log('selectedInstructionGroups length:', selectedInstructionGroups?.length || 0);
-                    console.log('selectedInstructionGroups is array:', Array.isArray(selectedInstructionGroups));
+                onClose={() => {                    
                     if (selectedInstructionGroups && selectedInstructionGroups.length > 0) {
-                        console.log('=== FINAL selectedInstructionGroups (clean format for backend) ===');
-                        console.log('selectedInstructionGroups content:', JSON.stringify(selectedInstructionGroups, null, 2));
                         selectedInstructionGroups.forEach((group, idx) => {
                             console.log(`Final Group ${idx + 1}:`, {
                                 id: group.id,
@@ -7957,8 +7866,6 @@ export default function Treatment() {
                     const normalizedGroups = normalizeInstructionGroups(groups || []);
 
                     if (normalizedGroups && normalizedGroups.length > 0) {
-                        console.log('=== NORMALIZED GROUPS (clean format) ===');
-                        console.log('Normalized groups content:', JSON.stringify(normalizedGroups, null, 2));
                         normalizedGroups.forEach((group, idx) => {
                             console.log(`Normalized Group ${idx + 1}:`, {
                                 id: group.id,
@@ -7977,11 +7884,7 @@ export default function Treatment() {
             />
             {/* Debug: Log when popup opens */}
             {
-                showInstructionPopup && (() => {
-                    console.log('=== TREATMENT SCREEN: Passing data to InstructionGroupsPopup ===');
-                    console.log('selectedInstructionGroups state:', selectedInstructionGroups);
-                    console.log('selectedInstructionGroups length:', selectedInstructionGroups?.length || 0);
-                    console.log('selectedInstructionGroups is array:', Array.isArray(selectedInstructionGroups));
+                showInstructionPopup && (() => {                
                     if (selectedInstructionGroups && selectedInstructionGroups.length > 0) {
                         console.log('selectedInstructionGroups content:', JSON.stringify(selectedInstructionGroups, null, 2));
                         selectedInstructionGroups.forEach((group, idx) => {
@@ -8137,7 +8040,10 @@ export default function Treatment() {
                 open={showBillingPopup}
                 onClose={() => setShowBillingPopup(false)}
                 isFormDisabled={isFormDisabled}
-                onSubmit={(totalAmount) => {
+                onSubmit={(totalAmount) => {                    
+                    if(isFormDisabled){
+                        return;
+                    }
                     setBillingData(prev => {
                         const discountNum = parseFloat(prev.discount) || 0;
                         const billedNum = Number(totalAmount) || 0;
@@ -8145,7 +8051,28 @@ export default function Treatment() {
                         return {
                             ...prev,
                             billed: billedNum.toFixed(2),
-                            // Keep acBalance as is - don't change it, it comes from API
+                            dues: acBal.toFixed(2)
+                        };
+                    });
+                }}
+                onTotalFeesChange={(total) => {                    
+                    if(isFormDisabled){
+                        return;
+                    }
+                    const billedNum = Number(total) || 0;
+                    const discountNum = parseFloat(billingData.discount) || 0;
+
+                    let newError: string | null = null;
+                    if (discountNum > 0 && discountNum > billedNum) {
+                        newError = 'Discount cannot be greater than billed amount';
+                    }
+                    setDiscountError(newError);
+
+                    setBillingData(prev => {
+                        const acBal = Math.max(0, billedNum - discountNum);
+                        return {
+                            ...prev,
+                            billed: billedNum.toFixed(2),
                             dues: acBal.toFixed(2)
                         };
                     });
@@ -8164,6 +8091,9 @@ export default function Treatment() {
                 patientVisitNo={treatmentData?.visitNumber}
                 shiftId={(sessionData as any)?.shiftId || 1}
                 useOverwrite={false}
+                discount={billingData.discount}
+                discountError={discountError}
+                setDiscountError={setDiscountError}
             />
 
             {
@@ -8206,12 +8136,6 @@ export default function Treatment() {
                 patientId={(() => {
                     const pid = selectedPatientForForm?.id || selectedPatientForForm?.patientId || treatmentData?.patientId;
                     const result = pid ? String(pid) : undefined;
-                    console.log('=== Treatment.tsx - AccountsPopup patientId calculation ===');
-                    console.log('selectedPatientForForm?.id:', selectedPatientForForm?.id);
-                    console.log('selectedPatientForForm?.patientId:', selectedPatientForForm?.patientId);
-                    console.log('treatmentData?.patientId:', treatmentData?.patientId);
-                    console.log('treatmentData:', treatmentData);
-                    console.log('Final patientId result:', result);
                     return result;
                 })()}
                 patientName={selectedPatientForForm?.name || treatmentData?.patientName}

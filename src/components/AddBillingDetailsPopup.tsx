@@ -79,11 +79,13 @@ const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
     defaultFee: string;
     sequenceNo: string;
     visitType: string;
+    details: string;
   }>({
     group: '',
     defaultFee: '',
     sequenceNo: '',
-    visitType: ''
+    visitType: '',
+    details: ''
   });
 
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
@@ -124,7 +126,8 @@ const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
       group: '',
       defaultFee: '',
       sequenceNo: '',
-      visitType: ''
+      visitType: '',
+      details: ''
     });
   }, [open, editData]);
 
@@ -235,7 +238,8 @@ const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
       group: '',
       defaultFee: '',
       sequenceNo: '',
-      visitType: ''
+      visitType: '',
+      details: ''
     };
 
     // Validate required fields
@@ -315,7 +319,8 @@ const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
       group: '',
       defaultFee: '',
       sequenceNo: '',
-      visitType: ''
+      visitType: '',
+      details: ''
     });
     onClose();
   };
@@ -337,7 +342,8 @@ const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
       group: '',
       defaultFee: '',
       sequenceNo: '',
-      visitType: ''
+      visitType: '',
+      details: ''
     });
   };
 
@@ -414,7 +420,7 @@ const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
               {/* Details */}
               <Box sx={{ mb: 2 }} className='mb-4'>
                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
-                  Details
+                  Details <span style={{ color: 'red' }}>*</span>
                 </Typography>
                 <TextField
                   fullWidth
@@ -425,8 +431,9 @@ const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
                   onChange={(e) => {
                     handleInputChange('details', e.target.value);
                   }}
-                  helperText={billingData.details.length === 150 ? 'Details cannot exceed 150 characters' : ''}
-                  FormHelperTextProps={{ style: { color: billingData.details.length === 150 ? '#d32f2f' : undefined } }}
+                  error={!!errors.details}
+                  helperText={errors.details || (billingData.details.length === 150 ? 'Details cannot exceed 150 characters' : '')}
+                  FormHelperTextProps={{ style: { color: errors.details || billingData.details.length === 150 ? '#d32f2f' : undefined } }}
                 />
               </Box>
 
