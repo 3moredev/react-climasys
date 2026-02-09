@@ -68,7 +68,7 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
 
     const handleDoctorNameChange = (value: string) => {
         // Only allow alphabets and spaces
-        const alphabeticValue = value.replace(/[^a-zA-Z\s]/g, '');
+        const alphabeticValue = value.replace(/[^a-zA-Z\s.'-]/g, '');
 
         const { allowed, error } = validateField('doctorName', alphabeticValue, undefined, undefined, 'referralDoctor');
         if (allowed) {

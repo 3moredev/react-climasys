@@ -1030,7 +1030,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
 
         // Strict Character Filtering at Source
         if (field === 'referralName') {
-            processedValue = value.replace(/[^a-zA-Z\s]/g, '');
+            processedValue = value.replace(/[^a-zA-Z\s.'-]/g, '');
         } else if (field === 'referralContact' || field === 'pulse') {
             processedValue = value.replace(/[^0-9]/g, '');
         } else if (field === 'height' || field === 'weight') {
@@ -1168,7 +1168,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
         const fieldConfig = getFieldConfig('referralName', 'visit');
 
         // Allow only alphabets and spaces
-        const cleanSearchTerm = searchTerm.replace(/[^a-zA-Z\s]/g, '');
+        const cleanSearchTerm = searchTerm.replace(/[^a-zA-Z\s.'-]/g, '');
 
         // Input blocking: Prevent typing beyond maxLength
         if (fieldConfig?.maxLength && cleanSearchTerm.length > fieldConfig.maxLength) {
@@ -1871,6 +1871,12 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                     setReferralNameSearch('');
                                                     setSelectedDoctor(null);
                                                     setReferralNameOptions([]);
+                                                }}
+                                                onBlur={() => {
+                                                    // When user clicks away, ensure the typed name is saved
+                                                    if (referralNameSearch && referralNameSearch !== formData.referralName) {
+                                                        handleInputChange('referralName', referralNameSearch);
+                                                    }
                                                 }}
                                                 disabled={readOnly || isSelfReferral}
                                                 sx={{
