@@ -46,6 +46,7 @@ type AppointmentRow = {
     clinicId?: string;
     actions: boolean;
     gender_description?: string;
+    referralName?: string;
 };
 
 export default function AppointmentTableEnhanced() {
@@ -213,7 +214,7 @@ export default function AppointmentTableEnhanced() {
             const patientName = composedName || patientNameRaw;
             const age = toNumberSafe(getField(row, ['AgeYearsIntRound', 'age_given', 'age', 'patientAge', 'patient_age'], 0));
             const gender = toStringSafe(getField(row, ['gender_description', 'gender', 'genderName', 'gender_name', 'patientGender', 'patient_gender'], ''));
-            const mobile = toStringSafe(getField(row, ['Mobile', 'mobileNumber', 'mobile_number', 'contact', 'phone', 'mobile'], ''));
+            const mobile = toStringSafe(getField(row, ['Mobile', 'mobile_1', 'Mobile_1', 'mobileNumber', 'mobilePhoneNumber', 'mobile_number', 'MobileNumber', 'contact', 'phone', 'mobile'], ''));
             const apptDate = toStringSafe(getField(row, ['Visit_Date', 'appointmentDate', 'appointment_date', 'visitDate', 'visit_date'], new Date().toISOString().split('T')[0]));
             const apptTime = toStringSafe(getField(row, ['Visit_Time', 'visit_time', 'appointmentTime', 'appointment_time', 'visitTime'], ''));
             const doctor = toStringSafe(getField(row, ['Doctor_Name', 'doctor_name', 'doctorName', 'provider', 'providerName'], 'Tongaonkar'));
@@ -222,7 +223,9 @@ export default function AppointmentTableEnhanced() {
             const onlineTime = toStringSafe(getField(row, ['Online_Appointment_Time', 'onlineAppointmentTime', 'online_time', 'onlineTime'], ''));
             const reportsAsked = !!getField(row, ['reportsAsked', 'reports_asked', 'reportsReceived', 'reports_received'], false);
             const visitNumber = toNumberSafe(getField(row, ['patient_visit_no', 'Patient_Visit_No', 'visitNumber', 'visit_number'], 1));
+            const referralName = toStringSafe(getField(row, ['referralName', 'referral_name', 'ReferralName', 'Referral_Name', 'Refer_Doctor_Details', 'referredBy', 'referred_by', 'Referred_By', 'referred_to', 'referalName', 'ReferalName'], ''));
             const shiftId = toNumberSafe(getField(row, ['shift_id', 'Shift_ID', 'shiftId'], 1));
+
             const clinicIdFromRow = toStringSafe(getField(row, ['clinic_id', 'Clinic_ID', 'clinicId'], ''));
             const genderDescription = toStringSafe(getField(row, ['gender_description', 'genderDescription', 'gender', 'sex'], ''));
 
@@ -281,6 +284,7 @@ export default function AppointmentTableEnhanced() {
             }
 
             return {
+                reports_received: reportsAsked,
                 sr: index + 1,
                 patient: patientName,
                 patientId: patientIdRaw,
@@ -299,7 +303,8 @@ export default function AppointmentTableEnhanced() {
                 visitNumber: visitNumber,
                 shiftId: shiftId,
                 actions: true,
-                gender_description: genderDescription
+                gender_description: genderDescription,
+                referralName: referralName
             };
         });
     };

@@ -424,7 +424,7 @@ export default function PrescriptionSubCategory() {
         }
         .search-section {
           display: flex;
-          align-items: center;
+          align-items: flex-start;
           gap: 12px;
           margin-bottom: 20px;
           flex-wrap: nowrap;
@@ -660,7 +660,8 @@ export default function PrescriptionSubCategory() {
               color: validationErrors.subCategoryName.includes('cannot exceed') ? '#666' : '#d32f2f',
               fontSize: '0.75rem',
               display: 'block',
-              marginTop: '4px'
+              position: 'relative',
+              zIndex: 1
             }}>
               {validationErrors.subCategoryName}
             </span>

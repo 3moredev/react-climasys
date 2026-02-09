@@ -23,7 +23,7 @@ interface AppointmentRow {
     appointmentId?: string;
     sr: number;
     patient: string;
-    patientId: number;
+    patientId: string;
     age: number;
     contact: string;
     time: string;
@@ -1056,6 +1056,8 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                 error = 'Height must be between 30 and 250 cm';
             } else if (field === 'weight' && (parseFloat(processedValue) < 1 || parseFloat(processedValue) > 250)) {
                 error = 'Weight must be between 1 and 250 kg';
+            } else if (field === 'pulse' && (parseFloat(processedValue) < 30 || parseFloat(processedValue) > 220)) {
+                error = 'Pulse must be between 30 and 220 /min';
             }
         }
 

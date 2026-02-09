@@ -38,9 +38,6 @@ const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(({
 
     return (
         <div className={`search-input-wrapper ${className}`} style={{ position: 'relative', display: 'flex', flexDirection: 'column' }}>
-            {/* Top spacer (Symmetric to error space to maintain vertical centering) */}
-            <div style={{ height: '1.25rem', visibility: 'hidden', pointerEvents: 'none' }} />
-
             <div style={{ position: 'relative', width: '100%' }}>
                 <input
                     type="text"
@@ -100,14 +97,20 @@ const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(({
                 )}
             </div>
 
-            {/* Error Message Space (Reserved to prevent displacement/overlap) */}
-            <div style={{ minHeight: '1.25rem' }}>
-                {value.length === 50 && (
-                    <FormHelperText sx={{ m: 0, mt: 0.5, fontSize: '0.75rem', pl: 0, color: '#333333' }}>
-                        Search cannot exceed 50 characters
-                    </FormHelperText>
-                )}
-            </div>
+            {/* Error Message Space (Reserved to shift layout) */}
+            {value.length === 50 && (
+                <FormHelperText sx={{
+                    m: 0,
+                    mt: 0.5,
+                    fontSize: '0.75rem',
+                    pl: 0,
+                    color: '#333333',
+                    position: 'relative',
+                    zIndex: 1
+                }}>
+                    Search cannot exceed 50 characters
+                </FormHelperText>
+            )}
         </div>
     );
 });

@@ -45,6 +45,8 @@ export type AppointmentRow = {
     created_on?: string;
     dob: string;
     labDetailsSubmitted?: boolean;
+    referralName?: string;
+    referBy?: string;
 };
 
 
@@ -341,7 +343,10 @@ export default function AppointmentTable() {
             const onlineTime = toStringSafe(getField(row, ['Online_Appointment_Time', 'onlineAppointmentTime', 'online_time', 'onlineTime'], ''));
             const reportsAsked = !!getField(row, ['reportsAsked', 'reports_asked', 'reportsReceived', 'reports_received'], false);
             const visitNumber = toNumberSafe(getField(row, ['patient_visit_no', 'Patient_Visit_No', 'visitNumber', 'visit_number'], 1));
+            const referralName = toStringSafe(getField(row, ['referralName', 'referral_name', 'ReferralName', 'Referral_Name', 'refer_doctor_details', 'Refer_Doctor_Details', 'referredBy', 'referred_by', 'Referred_By', 'referred_to', 'referalName', 'ReferalName'], ''));
+            const referBy = toStringSafe(getField(row, ['referBy', 'refer_by', 'refer_id', 'Refer_By', 'referred_by', 'referredBy'], ''));
             const shiftId = toNumberSafe(getField(row, ['shift_id', 'Shift_ID', 'shiftId'], 1));
+
             const clinicIdFromRow = toStringSafe(getField(row, ['clinic_id', 'Clinic_ID', 'clinicId'], ''));
             const genderDescription = toStringSafe(getField(row, ['gender_description', 'genderDescription', 'gender', 'sex'], ''));
             const visitDateKey = (apptDate || '').split('T')[0];
@@ -455,6 +460,8 @@ export default function AppointmentTable() {
                 visitDetailsSubmitted: visitDetailsSubmitted,
                 created_on: createdOn,
                 dob: dateOfBirth,
+                referralName: referralName,
+                referBy: referBy,
                 labDetailsSubmitted: labDetailsSubmitted,
             };
         });
@@ -2745,7 +2752,7 @@ export default function AppointmentTable() {
                 </div>
 
                 {/* Doctor-specific controls - No booking, only viewing and status updates */}
-                <div className="d-flex mb-3 align-items-center" style={{ gap: '8px', overflow: 'visible' }}>
+                <div className="d-flex mb-3 align-items-start" style={{ gap: '8px', overflow: 'visible' }}>
                     {/* Search for patients - Read only for doctors */}
                     <div className="position-relative" ref={searchRef}>
                         <SearchInput
@@ -3186,7 +3193,8 @@ export default function AppointmentTable() {
                                                                                 gender: a.gender,
                                                                                 contact: a.contact,
                                                                                 status: a.status,
-                                                                                statusId: mapStatusLabelToId(a.status)
+                                                                                statusId: mapStatusLabelToId(a.status),
+                                                                                referralName: a.referralName, referralCode: a.referBy
                                                                             }
                                                                         });
                                                                     }
@@ -3467,7 +3475,8 @@ export default function AppointmentTable() {
                                                                         gender: appointment.gender,
                                                                         contact: appointment.contact,
                                                                         status: appointment.status,
-                                                                        statusId: mapStatusLabelToId(appointment.status)
+                                                                        statusId: mapStatusLabelToId(appointment.status),
+                                                                        referralName: appointment.referralName, referralCode: appointment.referBy
                                                                     }
                                                                 });
                                                             }
@@ -4089,7 +4098,7 @@ export default function AppointmentTable() {
             {/* Primary row with controls will include CTAs */}
 
             {/* Search + Filter */}
-            <div className="d-flex mb-3 align-items-center" style={{ gap: '8px', overflow: 'visible' }}>
+            <div className="d-flex mb-3 align-items-start" style={{ gap: '8px', overflow: 'visible' }}>
                 <div className="position-relative" ref={searchRef}>
                     <SearchInput
                         value={searchTerm}
@@ -5219,7 +5228,8 @@ export default function AppointmentTable() {
                                                                                 gender: a.gender,
                                                                                 contact: a.contact,
                                                                                 status: a.status,
-                                                                                statusId: mapStatusLabelToId(a.status)
+                                                                                statusId: mapStatusLabelToId(a.status),
+                                                                                referralName: a.referralName, referralCode: a.referBy
                                                                             }
                                                                         });
                                                                     }
@@ -5970,7 +5980,8 @@ export default function AppointmentTable() {
                                                                         gender: appointment.gender,
                                                                         contact: appointment.contact,
                                                                         status: appointment.status,
-                                                                        statusId: mapStatusLabelToId(appointment.status)
+                                                                        statusId: mapStatusLabelToId(appointment.status),
+                                                                        referralName: appointment.referralName, referralCode: appointment.referBy
                                                                     }
                                                                 });
                                                             }
