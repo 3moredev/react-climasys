@@ -2813,10 +2813,16 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                                     justifyContent: 'center',
                                                                     margin: '0 auto'
                                                                 }}
+                                                                onMouseEnter={(e) => {
+                                                                    e.currentTarget.style.backgroundColor = '#ffebee';
+                                                                }}
+                                                                onMouseLeave={(e) => {
+                                                                    e.currentTarget.style.backgroundColor = 'transparent';
+                                                                }}
                                                                 title="Remove"
                                                                 disabled={readOnly}
                                                             >
-                                                                <Delete sx={{ fontSize: 20 }} />
+                                                                <Delete fontSize="small" style={{ color: 'black' }} />
                                                             </button>
                                                         </td>
                                                     </tr>

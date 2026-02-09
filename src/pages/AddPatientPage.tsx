@@ -975,9 +975,9 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
       if (field === 'mobileNumber' || field === 'referralContact') {
         processedValue = handleNumericInput(value)
       }
-      // Handle alphabets-only input for referralName
+      // Handle alphabets-only input for referralName (allowing dots, quotes, hyphens to match PatientVisitDetails)
       if (field === 'referralName') {
-        processedValue = value.replace(/[^a-zA-Z\s]/g, '')
+        processedValue = value.replace(/[^a-zA-Z\s.'-]/g, '')
         // Clear selectedDoctor and referral fields when referral name is cleared or changed
         if (!processedValue || processedValue.trim() === '' || (selectedDoctor && processedValue !== selectedDoctor.doctorName)) {
           setSelectedDoctor(null)
@@ -1033,12 +1033,25 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
 
   // Search referral names when typing
   const handleReferralNameSearch = async (searchTerm: string) => {
-    // Allow only alphabets and spaces
-    const cleanSearchTerm = searchTerm.replace(/[^a-zA-Z\s]/g, '')
+    // Ported regex from PatientVisitDetails.tsx to allow alphabets, spaces, dots, single quotes, and hyphens
+    const cleanSearchTerm = searchTerm.replace(/[^a-zA-Z\s.'-]/g, '')
 
     // Strict length check for Referral Name Search
     if (cleanSearchTerm.length > 50) return;
     setReferralNameSearch(cleanSearchTerm)
+
+    // Real-time Validation Result (matching PatientVisitDetails.tsx pattern)
+    // AddPatientPage uses setErrors instead of setValidationErrors
+    const validation = validateField('referralName', cleanSearchTerm);
+    if (validation.error) {
+      setErrors(prev => ({ ...prev, referralName: validation.error }));
+    } else {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors.referralName;
+        return newErrors;
+      });
+    }
 
     if (cleanSearchTerm.length < 2) {
       setReferralNameOptions([])
@@ -1047,21 +1060,17 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
 
     setIsSearchingReferral(true)
     try {
-      let doctors = allReferralDoctors
-
-      // If no doctors are cached, fetch them
-      if (doctors.length === 0) {
-        const { getReferralDoctors } = await import('../services/referralService')
-        doctors = await getReferralDoctors(1) // languageId = 1
-        setAllReferralDoctors(doctors)
-      }
+      // Use the referralService to fetch doctors (matching PatientVisitDetails.tsx pattern)
+      const { getReferralDoctors } = await import('../services/referralService')
+      const doctors = await getReferralDoctors(1) // languageId = 1
+      setAllReferralDoctors(doctors)
 
       // Filter doctors by name containing the search term
       const filteredDoctors = doctors.filter(doctor =>
         doctor.doctorName.toLowerCase().includes(cleanSearchTerm.toLowerCase())
       )
 
-      // Deduplicate results by name (case-insensitive)
+      // Deduplicate results by name (case-insensitive) - maintaining existing logic in AddPatientPage
       const uniqueDoctorsMap = new Map();
       filteredDoctors.forEach(doctor => {
         const nameLower = doctor.doctorName.toLowerCase().trim();
@@ -2984,188 +2993,180 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                   <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                     {isDoctorReferral() ? 'Doctor Name' : 'Referral Name'}
                   </Typography>
-                  {!!patientId ? (
-                    // Edit Mode: Restore original simple text field
-                    <ClearableTextField
-                      fullWidth
-                      placeholder={isDoctorReferral() ? 'Doctor Name' : 'Type Referral Name'}
-                      value={formData.referralName}
-                      onChange={(value) => handleInputChange('referralName', value)}
-                      disabled={loading || isSelfReferral || !!patientId}
-                      sx={{
-                        '& .MuiInputBase-root.Mui-disabled': {
-                          backgroundColor: '#f5f5f5 !important'
-                        }
-                      }}
-                    />
-                  ) : !isSelfReferral ? (
-                    isDoctorReferral() ? (
-                      <Autocomplete
-                        fullWidth
-                        inputValue={referralNameSearch}
-                        freeSolo
-                        disableClearable // We'll provide our own clear button
-                        forcePopupIcon={false} // Remove the dropdown arrow
-                        options={referralNameOptions}
-                        getOptionLabel={(option) => {
-                          if (typeof option === 'string') return option
-                          return option.name
-                        }}
-                        loading={isSearchingReferral}
-                        disabled={loading || isSelfReferral || !!patientId}
-                        value={referralNameOptions.find(o => o.name === formData.referralName) || formData.referralName || undefined}
-                        onInputChange={(_, newValue) => {
-                          handleReferralNameSearch(newValue)
-                          handleInputChange('referralName', newValue)
-                        }}
-                        onChange={(_, newValue) => {
-                          if (newValue && typeof newValue !== 'string') {
-                            const doctor = (newValue as any).fullData
-                            setSelectedDoctor(doctor)
-                            setFormData(prev => ({
-                              ...prev,
-                              referralName: newValue.name,
-                              referralContact: doctor?.doctorMob || '',
-                              referralEmail: doctor?.doctorMail || doctor?.doctorEmail || '',
-                              referralAddress: doctor?.doctorAddress || ''
-                            }))
-                            setReferralNameSearch(newValue.name)
-                          } else if (typeof newValue === 'string') {
-                            handleInputChange('referralName', newValue)
-                            setReferralNameSearch(newValue)
-                          } else {
-                            handleInputChange('referralName', '')
-                            setReferralNameSearch('')
-                            setSelectedDoctor(null)
-                            // Clear auto-populated referral fields
-                            setFormData(prev => ({
-                              ...prev,
-                              referralContact: '',
-                              referralEmail: '',
-                              referralAddress: ''
-                            }))
-                          }
-                        }}
-                        renderInput={(params) => (
-                          <TextField
-                            {...params}
-                            fullWidth
-                            placeholder={isDoctorReferral() ? 'Type Doctor Name' : 'Type Referral Name'}
-                            error={!!errors.referralName}
-                            helperText={errors.referralName}
-                            onKeyDown={(e) => {
-                              // Prevent any keyboard input when doctor is selected (except Tab for navigation)
-                              if (selectedDoctor && e.key !== 'Tab') {
-                                e.preventDefault();
-                              }
-                            }}
-                            sx={{
-                              '& .MuiInputBase-root.Mui-disabled': {
-                                backgroundColor: '#f5f5f5 !important'
-                              },
-                              '& .MuiInputBase-input.Mui-disabled::placeholder': {
-                                color: '#666666 !important',
-                                opacity: '0.5 !important'
-                              }
-                            }}
-                            InputProps={{
-                              ...params.InputProps,
-                              readOnly: !!selectedDoctor,
-                              endAdornment: (
-                                <InputAdornment position="end">
-                                  {isSearchingReferral && <CircularProgress color="inherit" size={20} sx={{ mr: 1 }} />}
-                                  {formData.referralName && !patientId && !formData.patientId && (
-                                    <Close
-                                      onClick={() => {
-                                        handleInputChange('referralName', '')
-                                        setReferralNameSearch('')
-                                        setSelectedDoctor(null)
-                                        setReferralNameOptions([])
-                                        // Clear auto-populated referral fields
-                                        setFormData(prev => ({
-                                          ...prev,
-                                          referralContact: '',
-                                          referralEmail: '',
-                                          referralAddress: ''
-                                        }))
-                                      }}
-                                      style={{
-                                        fontSize: '18px',
-                                        color: '#757575',
-                                        cursor: 'pointer',
-                                        marginLeft: '4px',
-                                        marginRight: '2px',
-                                        background: 'none',
-                                        border: 'none',
-                                        boxShadow: 'none',
-                                        display: 'block'
-                                      }}
-                                    />
-                                  )}
-                                  {!patientId && (
-                                    <Tooltip title="Add New Referral Doctor" PopperProps={{ style: { zIndex: 14000 } }}>
-                                      <IconButton
-                                        size="small"
-                                        onClick={() => setShowReferralPopup(true)}
-                                        sx={{
-                                          backgroundColor: '#1976d2',
-                                          color: 'white',
-                                          '&:hover': { backgroundColor: '#1565c0' },
-                                          width: 24,
-                                          height: 24,
-                                          borderRadius: '3px'
-                                        }}
-                                      >
-                                        <Add fontSize="small" />
-                                      </IconButton>
-                                    </Tooltip>
-                                  )}
-                                </InputAdornment>
-                              )
-                            }}
-                          />
-                        )}
-                        slotProps={{
-                          popper: {
-                            style: { zIndex: 11001 },
-                            placement: 'bottom-start',
-                            modifiers: [
-                              {
-                                name: 'offset',
-                                options: {
-                                  offset: [0, 4]
-                                }
-                              },
-                              {
-                                name: 'sameWidth',
-                                enabled: true,
-                                fn: ({ state }) => {
-                                  state.styles.popper.width = `${state.rects.reference.width}px`
-                                  return state
-                                },
-                                phase: 'beforeWrite',
-                                requires: ['computeStyles']
-                              }
-                            ]
-                          },
-                          paper: { sx: { zIndex: 11001, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' } }
-                        }}
-                      />
-                    ) : (
+                  {isDoctorReferral() ? (
+                    (formData.referralName && formData.referralName.trim() !== '') || selectedDoctor !== null ? (
                       <ClearableTextField
                         fullWidth
-                        placeholder={isDoctorReferral() ? 'Doctor Name' : 'Type Referral Name'}
+                        size="small"
                         value={formData.referralName}
                         onChange={(value) => handleInputChange('referralName', value)}
-                        disabled={loading || isSelfReferral || !!patientId}
+                        onClear={() => {
+                          handleInputChange('referralName', '');
+                          setReferralNameSearch('');
+                          setSelectedDoctor(null);
+                          setReferralNameOptions([]);
+                          // Clear auto-populated referral fields
+                          setFormData(prev => ({
+                            ...prev,
+                            referralContact: '',
+                            referralEmail: '',
+                            referralAddress: ''
+                          }))
+                        }}
+                        onKeyDown={(e) => {
+                          // Prevent any keyboard input when doctor is selected (except Tab for navigation)
+                          if (selectedDoctor && e.key !== 'Tab') {
+                            e.preventDefault();
+                          }
+                        }}
+                        disabled={loading || readOnly || isSelfReferral || (!!patientId && formData.referredBy !== 'D')}
                         sx={{
                           '& .MuiInputBase-root.Mui-disabled': {
                             backgroundColor: '#f5f5f5 !important'
+                          },
+                          '& .MuiInputBase-input.Mui-disabled': {
+                            color: '#666666 !important',
+                            WebkitTextFillColor: '#666666 !important'
                           }
                         }}
+                        variant="outlined"
+                        placeholder={isDoctorReferral() ? 'Type Doctor Name' : 'Type Referral Name'}
                         error={!!errors.referralName}
                         helperText={errors.referralName}
+                        InputProps={{
+                          endAdornment: (
+                            <InputAdornment position="end">
+                              <Tooltip title="Add New Referral Doctor" PopperProps={{ style: { zIndex: 14000 } }}>
+                                <IconButton
+                                  size="small"
+                                  onClick={() => setShowReferralPopup(true)}
+                                  disabled={loading || readOnly || isSelfReferral || (!!patientId && formData.referredBy !== 'D')}
+                                  sx={{
+                                    backgroundColor: (loading || readOnly || isSelfReferral) ? '#9e9e9e' : '#1976d2',
+                                    color: 'white',
+                                    width: 24,
+                                    height: 24,
+                                    padding: 0,
+                                    borderRadius: '3px',
+                                    '&:hover': {
+                                      backgroundColor: (loading || readOnly || isSelfReferral) ? '#9e9e9e' : '#1565c0',
+                                    }
+                                  }}
+                                >
+                                  <Add sx={{ fontSize: 16 }} />
+                                </IconButton>
+                              </Tooltip>
+                            </InputAdornment>
+                          )
+                        }}
                       />
+                    ) : (
+                      <Box position="relative">
+                        <ClearableTextField
+                          fullWidth
+                          size="small"
+                          placeholder={isDoctorReferral() ? 'Type Doctor Name' : 'Type Referral Name'}
+                          value={referralNameSearch}
+                          onChange={(value) => handleReferralNameSearch(value)}
+                          onClear={() => {
+                            handleInputChange('referralName', '');
+                            setReferralNameSearch('');
+                            setSelectedDoctor(null);
+                            setReferralNameOptions([]);
+                          }}
+                          onBlur={() => {
+                            // When user clicks away, ensure the typed name is saved
+                            if (referralNameSearch && referralNameSearch !== formData.referralName) {
+                              handleInputChange('referralName', referralNameSearch);
+                            }
+                          }}
+                          disabled={loading || readOnly || isSelfReferral || (!!patientId && formData.referredBy !== 'D')}
+                          sx={{
+                            '& .MuiInputBase-root.Mui-disabled': {
+                              backgroundColor: '#f5f5f5 !important'
+                            },
+                            '& .MuiInputBase-input.Mui-disabled::placeholder': {
+                              color: '#666666 !important',
+                              opacity: '0.5 !important'
+                            }
+                          }}
+                          variant="outlined"
+                          error={!!errors.referralName}
+                          helperText={errors.referralName}
+                          InputProps={{
+                            endAdornment: (
+                              <React.Fragment>
+                                {isSearchingReferral && <CircularProgress color="inherit" size={20} sx={{ mr: 1 }} />}
+                                <InputAdornment position="end">
+                                  <Tooltip title="Add New Referral Doctor" PopperProps={{ style: { zIndex: 14000 } }}>
+                                    <IconButton
+                                      size="small"
+                                      onClick={() => setShowReferralPopup(true)}
+                                      disabled={loading || readOnly || isSelfReferral || (!!patientId && formData.referredBy !== 'D')}
+                                      sx={{
+                                        backgroundColor: (loading || readOnly || isSelfReferral) ? '#9e9e9e' : '#1976d2',
+                                        color: 'white',
+                                        width: 24,
+                                        height: 24,
+                                        padding: 0,
+                                        borderRadius: '3px',
+                                        '&:hover': {
+                                          backgroundColor: (loading || readOnly || isSelfReferral) ? '#9e9e9e' : '#1565c0',
+                                        }
+                                      }}
+                                    >
+                                      <Add sx={{ fontSize: 16 }} />
+                                    </IconButton>
+                                  </Tooltip>
+                                </InputAdornment>
+                              </React.Fragment>
+                            )
+                          }}
+                        />
+                        {/* Search Results Dropdown */}
+                        {referralNameOptions.length > 0 && (
+                          <Box sx={{
+                            position: 'absolute',
+                            top: 'calc(100% + 4px)',
+                            left: 0,
+                            right: 0,
+                            backgroundColor: 'white',
+                            borderRadius: '4px',
+                            boxShadow: '0px 5px 5px -3px rgba(0,0,0,0.2), 0px 8px 10px 1px rgba(0,0,0,0.14), 0px 3px 14px 2px rgba(0,0,0,0.12)',
+                            zIndex: 11001,
+                            maxHeight: '200px',
+                            overflowY: 'auto'
+                          }}>
+                            {referralNameOptions.map((option) => (
+                              <Box
+                                key={option.id}
+                                onMouseDown={() => {
+                                  const doctor = option.fullData;
+                                  setSelectedDoctor(doctor);
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    referralName: option.name,
+                                    referralContact: doctor?.doctorMob || '',
+                                    referralEmail: doctor?.doctorMail || doctor?.doctorEmail || '',
+                                    referralAddress: doctor?.doctorAddress || ''
+                                  }));
+                                  setReferralNameSearch(option.name);
+                                  setReferralNameOptions([]);
+                                }}
+                                sx={{
+                                  padding: '8px 12px',
+                                  cursor: 'pointer',
+                                  fontSize: '14px',
+                                  borderBottom: '1px solid #f0f0f0',
+                                  '&:hover': { backgroundColor: '#f5f5f5' }
+                                }}
+                              >
+                                {option.name}
+                              </Box>
+                            ))}
+                          </Box>
+                        )}
+                      </Box>
                     )
                   ) : (
                     <ClearableTextField
@@ -3173,10 +3174,14 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                       placeholder={isDoctorReferral() ? 'Doctor Name' : 'Type Referral Name'}
                       value={formData.referralName}
                       onChange={(value) => handleInputChange('referralName', value)}
-                      disabled={loading || isSelfReferral || !!patientId}
+                      disabled={loading || readOnly || isSelfReferral || (!!patientId && formData.referredBy !== 'D')}
                       sx={{
                         '& .MuiInputBase-root.Mui-disabled': {
                           backgroundColor: '#f5f5f5 !important'
+                        },
+                        '& .MuiInputBase-input.Mui-disabled::placeholder': {
+                          color: '#666666 !important',
+                          opacity: '0.5 !important'
                         }
                       }}
                       error={!!errors.referralName}
