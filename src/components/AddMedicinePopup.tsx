@@ -92,8 +92,8 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
         const { allowed, error } = validateField(field, value, undefined, undefined, 'medicine');
         if (allowed) {
             setter(value);
-            setErrors(prev => ({ ...prev, [field]: error }));
         }
+        setErrors(prev => ({ ...prev, [field]: error }));
     };
 
     // Numeric-only helper for dose/priority inputs
@@ -334,8 +334,11 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                                     value={shortDescription}
                                     onChange={(e) => handleInputChange(setShortDescription, 'shortDescription', e.target.value.toUpperCase())}
                                     disabled={!!editData}
-                                    error={!!errors.shortDescription}
+                                    error={!!errors.shortDescription && !errors.shortDescription.toLowerCase().includes('exceed')}
                                     helperText={errors.shortDescription}
+                                    FormHelperTextProps={{
+                                        sx: { color: errors.shortDescription?.toLowerCase().includes('exceed') ? '#666 !important' : undefined }
+                                    }}
                                 />
                             </Box>
 
@@ -350,8 +353,11 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                                     size="small"
                                     value={medicineName}
                                     onChange={(e) => handleInputChange(setMedicineName, 'medicineName', e.target.value.toUpperCase())}
-                                    error={!!errors.medicineName}
+                                    error={!!errors.medicineName && !errors.medicineName.toLowerCase().includes('exceed')}
                                     helperText={errors.medicineName}
+                                    FormHelperTextProps={{
+                                        sx: { color: errors.medicineName?.toLowerCase().includes('exceed') ? '#666 !important' : undefined }
+                                    }}
                                 />
                             </Box>
 
@@ -367,8 +373,11 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                                     value={priority}
                                     onChange={(e) => handleInputChange(setPriority, 'priority', e.target.value)}
                                     inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
-                                    error={!!errors.priority}
+                                    error={!!errors.priority && !errors.priority.toLowerCase().includes('exceed')}
                                     helperText={errors.priority}
+                                    FormHelperTextProps={{
+                                        sx: { color: errors.priority?.toLowerCase().includes('exceed') ? '#666 !important' : undefined }
+                                    }}
                                 />
                             </Box>
 
@@ -383,6 +392,11 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                                     size="small"
                                     value={breakfast}
                                     onChange={(e) => handleNumericChange(setBreakfast, 'breakfast', e.target.value)}
+                                    error={!!errors.breakfast && !errors.breakfast.toLowerCase().includes('exceed')}
+                                    helperText={errors.breakfast}
+                                    FormHelperTextProps={{
+                                        sx: { color: errors.breakfast?.toLowerCase().includes('exceed') ? '#666 !important' : undefined }
+                                    }}
                                 />
                             </Box>
 
@@ -413,6 +427,11 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                                     size="small"
                                     value={lunch}
                                     onChange={(e) => handleNumericChange(setLunch, 'lunch', e.target.value)}
+                                    error={!!errors.lunch && !errors.lunch.toLowerCase().includes('exceed')}
+                                    helperText={errors.lunch}
+                                    FormHelperTextProps={{
+                                        sx: { color: errors.lunch?.toLowerCase().includes('exceed') ? '#666 !important' : undefined }
+                                    }}
                                 />
                             </Box>
 
@@ -427,6 +446,11 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                                     size="small"
                                     value={dinner}
                                     onChange={(e) => handleNumericChange(setDinner, 'dinner', e.target.value)}
+                                    error={!!errors.dinner && !errors.dinner.toLowerCase().includes('exceed')}
+                                    helperText={errors.dinner}
+                                    FormHelperTextProps={{
+                                        sx: { color: errors.dinner?.toLowerCase().includes('exceed') ? '#666 !important' : undefined }
+                                    }}
                                 />
                             </Box>
 
@@ -441,6 +465,11 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                                     size="small"
                                     value={days}
                                     onChange={(e) => handleNumericChange(setDays, 'days', e.target.value)}
+                                    error={!!errors.days && !errors.days.toLowerCase().includes('exceed')}
+                                    helperText={errors.days}
+                                    FormHelperTextProps={{
+                                        sx: { color: errors.days?.toLowerCase().includes('exceed') ? '#666 !important' : undefined }
+                                    }}
                                 />
                             </Box>
 
@@ -455,7 +484,11 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                                     size="small"
                                     value={instruction}
                                     onChange={(e) => handleInputChange(setInstruction, 'instruction', e.target.value.toUpperCase())}
-                                    helperText={instruction.length === 4000 ? 'Instruction cannot exceed 4000 characters' : ''}
+                                    error={!!errors.instruction && !errors.instruction.toLowerCase().includes('exceed')}
+                                    helperText={errors.instruction}
+                                    FormHelperTextProps={{
+                                        sx: { color: errors.instruction?.toLowerCase().includes('exceed') ? '#666 !important' : undefined }
+                                    }}
                                 />
                             </Box>
 

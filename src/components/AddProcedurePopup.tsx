@@ -351,12 +351,15 @@ const AddProcedurePopup: React.FC<AddProcedurePopupProps> = ({ open, onClose, on
                                         const { allowed, error } = validateField('procedureDescription', val, undefined, undefined, 'procedure');
                                         if (allowed) {
                                             setProcedureDescription(val);
-                                            setErrors(prev => ({ ...prev, procedureDescription: error }));
                                         }
+                                        setErrors(prev => ({ ...prev, procedureDescription: error }));
                                     }}
                                     disabled={loading}
-                                    error={!!errors.procedureDescription}
-                                    helperText={errors.procedureDescription || (procedureDescription.length === 100 ? 'Procedure Description cannot exceed 100 characters' : '')}
+                                    error={!!errors.procedureDescription && !errors.procedureDescription.toLowerCase().includes('exceed')}
+                                    helperText={errors.procedureDescription}
+                                    FormHelperTextProps={{
+                                        sx: { color: errors.procedureDescription?.toLowerCase().includes('exceed') ? '#666 !important' : undefined }
+                                    }}
                                 />
                             </Box>
                         </Grid>
@@ -376,13 +379,16 @@ const AddProcedurePopup: React.FC<AddProcedurePopupProps> = ({ open, onClose, on
                                         const { allowed, error } = validateField('priority', val, undefined, undefined, 'procedure');
                                         if (allowed) {
                                             setPriority(val);
-                                            setErrors(prev => ({ ...prev, priority: error }));
                                         }
+                                        setErrors(prev => ({ ...prev, priority: error }));
                                     }}
                                     disabled={loading}
                                     inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
-                                    error={!!errors.priority}
-                                    helperText={errors.priority || (priority.length === 10 ? 'Priority cannot exceed 10 characters' : '')}
+                                    error={!!errors.priority && !errors.priority.toLowerCase().includes('exceed')}
+                                    helperText={errors.priority}
+                                    FormHelperTextProps={{
+                                        sx: { color: errors.priority?.toLowerCase().includes('exceed') ? '#666 !important' : undefined }
+                                    }}
                                 />
                             </Box>
                         </Grid>
@@ -407,6 +413,7 @@ const AddProcedurePopup: React.FC<AddProcedurePopupProps> = ({ open, onClose, on
                                                 if (allowed) {
                                                     setFindingsDescription(val);
                                                 }
+                                                setErrors(prev => ({ ...prev, findingsDescription: error }));
                                             }}
                                             onKeyPress={(e) => {
                                                 if (e.key === 'Enter') {
@@ -414,7 +421,11 @@ const AddProcedurePopup: React.FC<AddProcedurePopupProps> = ({ open, onClose, on
                                                 }
                                             }}
                                             disabled={loading}
-                                            helperText={validateField('findingsDescription', findingsDescription, undefined, undefined, 'procedure').error}
+                                            error={!!errors.findingsDescription && !errors.findingsDescription?.toLowerCase().includes('exceed')}
+                                            helperText={errors.findingsDescription}
+                                            FormHelperTextProps={{
+                                                sx: { color: errors.findingsDescription?.toLowerCase().includes('exceed') ? '#666 !important' : undefined }
+                                            }}
                                         />
                                     </Grid>
                                     <Grid item>

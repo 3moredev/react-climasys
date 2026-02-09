@@ -1408,71 +1408,58 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                             display: 'flex',
                                             flexDirection: 'column'
                                         }}>
+                                            <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+                                                <thead>
+                                                    <tr style={{ backgroundColor: '#f5f5f5' }}>
+                                                        <th style={{
+                                                            padding: '12px',
+                                                            textAlign: 'left',
+                                                            borderBottom: '1px solid #ddd',
+                                                            fontWeight: '400',
+                                                            color: 'black',
+                                                            width: '30%'
+                                                        }}>
+                                                            Lab Test Name
+                                                        </th>
+                                                        <th style={{
+                                                            padding: '12px',
+                                                            textAlign: 'left',
+                                                            borderBottom: '1px solid #ddd',
+                                                            fontWeight: '400',
+                                                            color: 'black',
+                                                            width: '30%'
+                                                        }}>
+                                                            Parameter Name
+                                                        </th>
+                                                        <th style={{
+                                                            padding: '12px',
+                                                            textAlign: 'left',
+                                                            borderBottom: '1px solid #ddd',
+                                                            fontWeight: '400',
+                                                            color: 'black',
+                                                            width: '30%'
+                                                        }}>
+                                                            Value / Results <span style={{ color: 'red' }}>*</span>
+                                                        </th>
+                                                        <th style={{
+                                                            padding: '12px',
+                                                            textAlign: 'center',
+                                                            borderBottom: '1px solid #ddd',
+                                                            fontWeight: '400',
+                                                            color: 'black',
+                                                            width: '10%'
+                                                        }}>
+                                                            Action
+                                                        </th>
+                                                    </tr>
+                                                </thead>
+                                            </table>
+
                                             <div style={{
                                                 maxHeight: '300px',
                                                 overflowY: 'auto'
                                             }}>
                                                 <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
-                                                    <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
-                                                        <tr style={{ backgroundColor: '#f5f5f5' }}>
-                                                            <th style={{
-                                                                padding: '12px',
-                                                                textAlign: 'left',
-                                                                borderBottom: '1px solid #ddd',
-                                                                fontWeight: '400',
-                                                                color: 'black',
-                                                                width: '35%',
-                                                                position: 'sticky',
-                                                                top: 0,
-                                                                backgroundColor: '#f5f5f5',
-                                                                zIndex: 1
-                                                            }}>
-                                                                Lab Test Name
-                                                            </th>
-                                                            <th style={{
-                                                                padding: '12px',
-                                                                textAlign: 'left',
-                                                                borderBottom: '1px solid #ddd',
-                                                                fontWeight: '400',
-                                                                color: 'black',
-                                                                width: '190px',
-                                                                position: 'sticky',
-                                                                top: 0,
-                                                                backgroundColor: '#f5f5f5',
-                                                                zIndex: 1
-                                                            }}>
-                                                                Parameter Name
-                                                            </th>
-                                                            <th style={{
-                                                                padding: '12px',
-                                                                textAlign: 'left',
-                                                                borderBottom: '1px solid #ddd',
-                                                                fontWeight: '400',
-                                                                color: 'black',
-                                                                width: '120px',
-                                                                position: 'sticky',
-                                                                top: 0,
-                                                                backgroundColor: '#f5f5f5',
-                                                                zIndex: 1
-                                                            }}>
-                                                                Value / Results <span style={{ color: 'red' }}>*</span>
-                                                            </th>
-                                                            <th style={{
-                                                                padding: '12px',
-                                                                textAlign: 'center',
-                                                                borderBottom: '1px solid #ddd',
-                                                                fontWeight: '400',
-                                                                color: 'black',
-                                                                width: '80px',
-                                                                position: 'sticky',
-                                                                top: 0,
-                                                                backgroundColor: '#f5f5f5',
-                                                                zIndex: 1
-                                                            }}>
-                                                                Action
-                                                            </th>
-                                                        </tr>
-                                                    </thead>
                                                     <tbody>
                                                         {labTestResults.map((result) => (
                                                             <tr key={result.id}>
@@ -1481,7 +1468,8 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                                     borderBottom: '1px solid #eee',
                                                                     color: 'black',
                                                                     height: '38px',
-                                                                    fontSize: '14px'
+                                                                    fontSize: '14px',
+                                                                    width: '30%'
                                                                 }}>
                                                                     {result.labTestName}
                                                                 </td>
@@ -1490,11 +1478,12 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                                     borderBottom: '1px solid #eee',
                                                                     color: 'black',
                                                                     height: '38px',
-                                                                    fontSize: '14px'
+                                                                    fontSize: '14px',
+                                                                    width: '30%'
                                                                 }}>
                                                                     {result.parameterName}
                                                                 </td>
-                                                                <td style={{ padding: '16px', borderBottom: '1px solid #eee' }}>
+                                                                <td style={{ padding: '16px', borderBottom: '1px solid #eee', width: '30%' }}>
                                                                     <TextField
                                                                         fullWidth
                                                                         placeholder="Value / Results"
@@ -1512,7 +1501,8 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                                     padding: '16px',
                                                                     borderBottom: '1px solid #eee',
                                                                     textAlign: 'center',
-                                                                    height: '38px'
+                                                                    height: '38px',
+                                                                    width: '10%'
                                                                 }}>
                                                                     <button
                                                                         onClick={() => handleRemoveResult(result.id)}
@@ -1525,7 +1515,8 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                                             borderRadius: '4px',
                                                                             display: 'flex',
                                                                             alignItems: 'center',
-                                                                            justifyContent: 'center'
+                                                                            justifyContent: 'center',
+                                                                            margin: '0 auto'
                                                                         }}
                                                                         onMouseEnter={(e) => {
                                                                             e.currentTarget.style.backgroundColor = '#ffebee';

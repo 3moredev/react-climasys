@@ -42,7 +42,7 @@ export const validateField = (
 
     // Strict length check
     if (strValue.length > maxLength) {
-        return { allowed: false, error: '' };
+        return { allowed: false, error: `${fieldLabel} cannot exceed ${maxLength} characters` };
     }
 
     // Pattern check

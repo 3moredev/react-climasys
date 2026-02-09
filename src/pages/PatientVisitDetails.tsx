@@ -1048,7 +1048,16 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
         }
 
         // Real-time Validation Result
-        const { error } = validateField(field, processedValue, undefined, undefined, 'visit');
+        let { error } = validateField(field, processedValue, undefined, undefined, 'visit');
+
+        // Custom error message override for height and weight to include units
+        if (error) {
+            if (field === 'height' && (parseFloat(processedValue) < 30 || parseFloat(processedValue) > 250)) {
+                error = 'Height must be between 30 and 250 cm';
+            } else if (field === 'weight' && (parseFloat(processedValue) < 1 || parseFloat(processedValue) > 250)) {
+                error = 'Weight must be between 1 and 250 kg';
+            }
+        }
 
         setFormData(prev => {
             const newData = { ...prev, [field]: processedValue };
@@ -1065,6 +1074,13 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                 }
             }
 
+            // Clear referral contact fields when referral name is cleared or changed from selected doctor
+            if (field === 'referralName' && (!processedValue || processedValue.trim() === '' || (selectedDoctor && processedValue !== selectedDoctor.doctorName))) {
+                newData.referralContact = '';
+                newData.referralEmail = '';
+                newData.referralAddress = '';
+            }
+
             // Reset referral name search when referral type changes
             if (field === 'referralBy') {
                 newData.referralName = '';
@@ -1078,6 +1094,11 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
 
             return newData;
         });
+
+        // Clear selectedDoctor state if referralName input changes and doesn't match anymore
+        if (field === 'referralName' && selectedDoctor && processedValue !== selectedDoctor.doctorName) {
+            setSelectedDoctor(null);
+        }
 
         // Update validation errors state
         setValidationErrors(prev => {
@@ -1940,7 +1961,8 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                     {referralNameOptions.map((option) => (
                                                         <Box
                                                             key={option.id}
-                                                            onClick={() => {
+                                                            onMouseDown={() => {
+                                                                console.log('DEBUG: Doctor selected from list', option)
                                                                 setSelectedDoctor((option as any).fullData);
                                                                 setFormData(prev => ({
                                                                     ...prev,
@@ -2677,14 +2699,15 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     borderRadius: '4px',
                                     overflow: 'hidden'
                                 }}>
-                                    <table style={{ width: '100%', tableLayout: 'fixed' }}>
+                                    {/* Header Table (Static) */}
+                                    <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'separate', borderSpacing: 0 }}>
                                         <thead>
                                             <tr style={{ backgroundColor: '#1976d2' }}>
                                                 <th style={{
-                                                    padding: '12px !important',
+                                                    padding: '12px',
                                                     textAlign: 'left',
                                                     borderBottom: '1px solid #ddd',
-                                                    fontWeight: '100 !important',
+                                                    fontWeight: 'normal',
                                                     color: 'white',
                                                     width: '10%',
                                                     fontSize: '12px'
@@ -2692,10 +2715,10 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                     Sr.
                                                 </th>
                                                 <th style={{
-                                                    padding: '12px !important',
+                                                    padding: '12px',
                                                     textAlign: 'left',
                                                     borderBottom: '1px solid #ddd',
-                                                    fontWeight: '100 !important',
+                                                    fontWeight: 'normal',
                                                     color: 'white',
                                                     width: '30%',
                                                     fontSize: '12px'
@@ -2703,10 +2726,10 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                     Complaint Description
                                                 </th>
                                                 <th style={{
-                                                    padding: '12px !important',
+                                                    padding: '12px',
                                                     textAlign: 'left',
                                                     borderBottom: '1px solid #ddd',
-                                                    fontWeight: '100 !important',
+                                                    fontWeight: 'normal',
                                                     color: 'white',
                                                     width: '40%',
                                                     fontSize: '12px'
@@ -2714,84 +2737,93 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                     Duration / Comment
                                                 </th>
                                                 <th style={{
-                                                    padding: '12px !important',
+                                                    padding: '12px',
                                                     borderBottom: '1px solid #ddd',
-                                                    fontWeight: '100 !important',
+                                                    fontWeight: 'normal',
                                                     color: 'white',
                                                     width: '20%',
-                                                    fontSize: '12px'
-                                                }} className='text-center'>
+                                                    fontSize: '12px',
+                                                    textAlign: 'center'
+                                                }}>
                                                     Action
                                                 </th>
                                             </tr>
                                         </thead>
-                                        <tbody>
-                                            {complaintsRows.map((row, idx) => (
-                                                <tr key={row.id}>
-                                                    <td style={{
-                                                        padding: '12px',
-                                                        borderBottom: '1px solid #eee',
-                                                        color: 'black',
-                                                        height: '38px',
-                                                        fontSize: '12px'
-                                                    }}>
-                                                        {idx + 1}
-                                                    </td>
-                                                    <td style={{
-                                                        padding: '12px',
-                                                        borderBottom: '1px solid #eee',
-                                                        color: 'black',
-                                                        height: '38px',
-                                                        fontSize: '12px'
-                                                    }}>
-                                                        {row.label}
-                                                    </td>
-                                                    <td style={{ padding: '12px' }}>
-                                                        <ClearableTextField
-                                                            fullWidth
-                                                            size="small"
-                                                            value={row.comment}
-                                                            onChange={(value) => handleComplaintCommentChange(row.value, value)}
-                                                            disabled={readOnly}
-                                                            placeholder="Enter Duration/Comment"
-                                                            variant="outlined"
-                                                            inputProps={{ maxLength: getFieldConfig('complaintComment', 'visit')?.maxLength }}
-                                                            InputProps={{ disableUnderline: true }}
-                                                        />
-                                                    </td>
-                                                    <td style={{
-                                                        padding: '12px',
-                                                        borderBottom: '1px solid #eee',
-                                                        textAlign: 'center',
-                                                        height: '38px'
-                                                    }}>
-                                                        <button
-                                                            onClick={() => !readOnly && handleRemoveComplaint(row.value)}
-                                                            style={{
-                                                                background: 'none',
-                                                                border: 'none',
-                                                                cursor: 'pointer',
-                                                                color: '#f44336',
-                                                                padding: '6px',
-                                                                borderRadius: '4px',
-                                                                display: 'flex',
-                                                                alignItems: 'center',
-                                                                justifyContent: 'center'
-                                                            }}
-                                                            onMouseEnter={(e) => {
-                                                                e.currentTarget.style.backgroundColor = '#ffebee';
-                                                            }}
-                                                            onMouseLeave={(e) => {
-                                                                e.currentTarget.style.backgroundColor = 'transparent';
-                                                            }}
-                                                        >
-                                                            <Delete fontSize="small" style={{ color: 'black' }} />
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
                                     </table>
+
+                                    <div style={{ maxHeight: '160px', overflowY: 'auto' }}>
+                                        <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'separate', borderSpacing: 0 }}>
+                                            <tbody>
+                                                {complaintsRows.map((row, idx) => (
+                                                    <tr key={row.id}>
+                                                        <td style={{
+                                                            padding: '12px',
+                                                            borderBottom: '1px solid #eee',
+                                                            color: 'black',
+                                                            height: '38px',
+                                                            fontSize: '12px',
+                                                            width: '10%'
+                                                        }}>
+                                                            {idx + 1}
+                                                        </td>
+                                                        <td style={{
+                                                            padding: '12px',
+                                                            borderBottom: '1px solid #eee',
+                                                            color: 'black',
+                                                            height: '38px',
+                                                            fontSize: '12px',
+                                                            width: '30%'
+                                                        }}>
+                                                            {row.label}
+                                                        </td>
+                                                        <td style={{
+                                                            padding: '12px',
+                                                            width: '40%'
+                                                        }}>
+                                                            <ClearableTextField
+                                                                fullWidth
+                                                                size="small"
+                                                                value={row.comment}
+                                                                onChange={(value) => handleComplaintCommentChange(row.value, value)}
+                                                                disabled={readOnly}
+                                                                placeholder="Enter Duration/Comment"
+                                                                variant="outlined"
+                                                                inputProps={{ maxLength: getFieldConfig('complaintComment', 'visit')?.maxLength }}
+                                                                InputProps={{ disableUnderline: true }}
+                                                            />
+                                                        </td>
+                                                        <td style={{
+                                                            padding: '12px',
+                                                            borderBottom: '1px solid #eee',
+                                                            textAlign: 'center',
+                                                            height: '38px',
+                                                            width: '20%'
+                                                        }}>
+                                                            <button
+                                                                onClick={() => !readOnly && handleRemoveComplaint(row.value)}
+                                                                style={{
+                                                                    background: 'none',
+                                                                    border: 'none',
+                                                                    cursor: 'pointer',
+                                                                    color: '#f44336',
+                                                                    padding: '6px',
+                                                                    borderRadius: '4px',
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'center',
+                                                                    margin: '0 auto'
+                                                                }}
+                                                                title="Remove"
+                                                                disabled={readOnly}
+                                                            >
+                                                                <Delete sx={{ fontSize: 20 }} />
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
                             )}
                         </Grid>

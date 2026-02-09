@@ -200,8 +200,8 @@ const AddPrescriptionPopup: React.FC<AddPrescriptionPopupProps> = ({
             const { allowed, error } = validateField('marketedBy', val, undefined, undefined, 'prescriptionDetails');
             if (allowed) {
                 setPrescriptionData(prev => ({ ...prev, [field]: val }));
-                setErrors(prev => ({ ...prev, [field]: error }));
             }
+            setErrors(prev => ({ ...prev, [field]: error }));
             return;
         }
 
@@ -368,8 +368,11 @@ const AddPrescriptionPopup: React.FC<AddPrescriptionPopupProps> = ({
                                         if (errors.categoryName) setErrors(prev => ({ ...prev, categoryName: '' }));
                                     }}
                                     disabled={isEditing}
-                                    error={!!errors.categoryName}
+                                    error={!!errors.categoryName && !errors.categoryName.toLowerCase().includes('exceed')}
                                     helperText={errors.categoryName}
+                                    FormHelperTextProps={{
+                                        sx: { color: errors.categoryName?.toLowerCase().includes('exceed') ? '#666 !important' : undefined }
+                                    }}
                                     SelectProps={{
                                         displayEmpty: true,
                                         renderValue: (selected: any) => {
@@ -402,8 +405,11 @@ const AddPrescriptionPopup: React.FC<AddPrescriptionPopupProps> = ({
                                     value={prescriptionData.subCategoryName}
                                     onChange={(e) => handleInputChange('subCategoryName', e.target.value)}
                                     disabled={isEditing}
-                                    error={!!errors.subCategoryName}
+                                    error={!!errors.subCategoryName && !errors.subCategoryName.toLowerCase().includes('exceed')}
                                     helperText={errors.subCategoryName}
+                                    FormHelperTextProps={{
+                                        sx: { color: errors.subCategoryName?.toLowerCase().includes('exceed') ? '#666 !important' : undefined }
+                                    }}
                                     SelectProps={{
                                         displayEmpty: true,
                                         renderValue: (selected: any) => {
@@ -471,8 +477,11 @@ const AddPrescriptionPopup: React.FC<AddPrescriptionPopupProps> = ({
                                     size="small"
                                     value={prescriptionData.marketedBy}
                                     onChange={(e) => handleInputChange('marketedBy', e.target.value)}
-                                    error={!!errors.marketedBy}
-                                    helperText={errors.marketedBy || (prescriptionData.marketedBy.length === 200 ? 'Marketed By cannot exceed 200 characters' : '')}
+                                    error={!!errors.marketedBy && !errors.marketedBy.toLowerCase().includes('exceed')}
+                                    helperText={errors.marketedBy}
+                                    FormHelperTextProps={{
+                                        sx: { color: errors.marketedBy?.toLowerCase().includes('exceed') ? '#666 !important' : undefined }
+                                    }}
                                 />
                             </Box>
 
@@ -488,7 +497,11 @@ const AddPrescriptionPopup: React.FC<AddPrescriptionPopupProps> = ({
                                     size="small"
                                     value={prescriptionData.instruction}
                                     onChange={(e) => handleInputChange('instruction', e.target.value)}
-                                    helperText={prescriptionData.instruction.length === 4000 ? 'Instruction cannot exceed 4000 characters' : ''}
+                                    error={!!errors.instruction && !errors.instruction.toLowerCase().includes('exceed')}
+                                    helperText={errors.instruction}
+                                    FormHelperTextProps={{
+                                        sx: { color: errors.instruction?.toLowerCase().includes('exceed') ? '#666 !important' : undefined }
+                                    }}
                                 />
                                 <Typography variant="caption" sx={{ color: '#666', fontStyle: 'italic', display: 'block', mt: 0.5 }}>
                                     भोजनानंतर / AFTER MEAL, भोजनापूर्वी / BEFORE MEAL
