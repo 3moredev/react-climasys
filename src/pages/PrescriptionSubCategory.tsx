@@ -339,7 +339,7 @@ export default function PrescriptionSubCategory() {
         .form-row {
           display: flex;
           gap: 20px;
-          align-items: center;
+          align-items: flex-start;
           flex-wrap: wrap;
           margin-bottom: 20px;
         }
@@ -378,7 +378,7 @@ export default function PrescriptionSubCategory() {
           gap: 12px;
           align-items: center;
           white-space: nowrap;
-          margin-top: 16px;
+          margin-top: 26px;
           min-width: 240px;
         }
         .btn-primary-custom {

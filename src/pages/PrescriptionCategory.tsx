@@ -255,7 +255,7 @@ export default function PrescriptionCategory() {
         .form-row {
           display: flex;
           gap: 20px;
-          align-items: center;
+          align-items: flex-start;
           flex-wrap: wrap;
           margin-bottom: 20px;
         }
@@ -292,7 +292,7 @@ export default function PrescriptionCategory() {
           gap: 12px;
           align-items: center;
           white-space: nowrap;
-          margin-top: 16px;
+          margin-top: 26px;
           min-width: 240px;
         }
         .btn-primary-custom {
@@ -601,7 +601,7 @@ export default function PrescriptionCategory() {
             </span>
           )}
         </div>
-        <div className="form-actions" style={{ marginTop: '0', alignSelf: 'center' }}>
+        <div className="form-actions">
           <button className="btn-primary-custom" onClick={handleAddOrUpdate} style={{ height: '40px' }}>
             <Add fontSize="small" />
             {editingId ? 'Update Category' : 'Add Category'}
