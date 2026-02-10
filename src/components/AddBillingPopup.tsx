@@ -33,6 +33,10 @@ interface AddBillingPopupProps {
     useOverwrite?: boolean;
     followUp?: boolean; // Follow-up visit type flag
     onTotalFeesChange?: (totalFees: number) => void; // Callback to expose totalSelectedFees
+    discount?: number | string;
+    discountError?: string | null;
+    setDiscountError?: (error: string | null) => void;
+    disableAutoSelect?: boolean;
 }
 
 export default function AddBillingPopup({
@@ -55,6 +59,10 @@ export default function AddBillingPopup({
     useOverwrite,
     followUp,
     onTotalFeesChange,
+    discount,
+    discountError,
+    setDiscountError,
+    disableAutoSelect = false,
 }: AddBillingPopupProps) {
     // Local state fallbacks when parent does not control
     const [localSearch, setLocalSearch] = React.useState<string>('');
@@ -384,23 +392,10 @@ export default function AddBillingPopup({
     }, [totalSelectedFees, onTotalFeesChange]);
 
     // Auto-select Professional Fees based on followUp status
-    // Only run if master-lists matching hasn't already selected items
     React.useEffect(() => {
+        if (disableAutoSelect) return;
         if (effectiveOptions.length === 0) return;
-        if (followUp === undefined) return; // Only act when followUp is explicitly provided
-
-        // Don't auto-select if master-lists matching has already happened or should be skipped
-        // This prevents auto-selection on page refresh when master-lists data exists
-        if (hasMatchedBillingRef.current || shouldSkipAutoSelectionRef.current) {
-            console.log('Skipping Professional Fees auto-selection - master-lists matching already done or should skip');
-            return;
-        }
-
-        // Also skip if there are already selected items (from master-lists or user selection)
-        if (effectiveSelectedIds.length > 0) {
-            console.log('Skipping Professional Fees auto-selection - items already selected');
-            return;
-        }
+        if (followUp === undefined) return;
 
         // Find Professional Fees items
         const professionalFeesItems = effectiveOptions.filter(opt => {
@@ -411,10 +406,7 @@ export default function AddBillingPopup({
 
         if (professionalFeesItems.length === 0) return;
 
-        // Determine which subgroup to select
         const targetSubgroup = followUp ? 'Follow-up' : 'New';
-
-        // Find the matching item
         const targetItem = professionalFeesItems.find(opt => {
             const subgroupName = (opt.billing_subgroup_name || '').trim();
             return subgroupName === targetSubgroup;
@@ -422,42 +414,50 @@ export default function AddBillingPopup({
 
         if (!targetItem) return;
 
-        // Don't re-add if user has explicitly unchecked this item
+        // Don't re-add if user has explicitly unchecked this specific item
         if (uncheckedProfessionalFeesRef.current.has(targetItem.id)) {
             return;
         }
 
-        // Check if we need to update selections
-        const currentSelectedIds = effectiveSelectedIds;
-        const hasTargetItem = currentSelectedIds.includes(targetItem.id);
+        setEffectiveSelectedIds(prev => {
+            // Check if we currently have the "wrong" professional fee selected
+            const wrongSubgroup = followUp ? 'New' : 'Follow-up';
+            const wrongItem = professionalFeesItems.find(opt => {
+                const subgroupName = (opt.billing_subgroup_name || '').trim();
+                return subgroupName === wrongSubgroup;
+            });
 
-        // Check if any other Professional Fees items are selected
-        const hasOtherProfessionalFees = currentSelectedIds.some(id => {
-            const opt = effectiveOptions.find(o => o.id === id);
-            if (!opt) return false;
-            const groupName = (opt.billing_group_name || '').trim();
-            return groupName === 'Professional Fees' && opt.id !== targetItem.id;
+            const hasWrongItem = wrongItem && prev.includes(wrongItem.id);
+            const hasTargetItem = prev.includes(targetItem.id);
+
+            // If we have the target, do nothing
+            if (hasTargetItem) return prev;
+
+            // If we have the wrong one, swap it. 
+            // OR if we have NO professional fees selected (and haven't explicitly unchecked target), add it.
+            // But be careful not to override other random selections.
+
+            // Filter out ANY professional fees
+            const otherSelections = prev.filter(id => {
+                const opt = effectiveOptions.find(o => o.id === id);
+                if (!opt) return true; // keep unknown items
+                const groupName = (opt.billing_group_name || '').trim();
+                return groupName !== 'Professional Fees';
+            });
+
+            // If we had the wrong item selected, OR if we have no professional fees (and allow auto-select), add target
+            // To be less intrusive: Only swap if "wrong" is present, or if list is empty? 
+            // User requirement: "default selection ... should work on basis of follow-up checkbox"
+            // Implication: Toggle checkbox -> Toggle selection.
+
+            if (hasWrongItem || (prev.length === 0 && !hasMatchedBillingRef.current)) {
+                return [...otherSelections, targetItem.id];
+            }
+
+            return prev;
         });
 
-        // Only update if selection doesn't match what we want
-        if (!hasTargetItem || hasOtherProfessionalFees) {
-            setEffectiveSelectedIds(prev => {
-                // Remove all Professional Fees items first (except those user unchecked)
-                const withoutProfessionalFees = prev.filter(id => {
-                    const opt = effectiveOptions.find(o => o.id === id);
-                    if (!opt) return true;
-                    const groupName = (opt.billing_group_name || '').trim();
-                    return groupName !== 'Professional Fees';
-                });
-
-                // Add the target item if not already present and not unchecked by user
-                if (!withoutProfessionalFees.includes(targetItem.id) && !uncheckedProfessionalFeesRef.current.has(targetItem.id)) {
-                    return [...withoutProfessionalFees, targetItem.id];
-                }
-                return withoutProfessionalFees;
-            });
-        }
-    }, [followUp, effectiveOptions, effectiveSelectedIds]);
+    }, [followUp, effectiveOptions]); // Removed effectiveSelectedIds from dependency to avoid loops, used functional update
 
     // Clear error message when popup closes
     React.useEffect(() => {
@@ -466,6 +466,12 @@ export default function AddBillingPopup({
             setIsSubmitting(false);
             // Reset unchecked Professional Fees tracking when popup closes
             uncheckedProfessionalFeesRef.current.clear();
+
+            // Should we clear discountError? Maybe not if it belongs to parent logic.
+            // But if user cancels, maybe we should? 
+            // The user instruction "use setDiscountError" implies coupling.
+            // If I close popup, and I had a discount error... it persists on main screen.
+            // That seems correct as the invalid state might still exist if I didn't fix it.
         }
     }, [open]);
 
@@ -505,6 +511,17 @@ export default function AddBillingPopup({
 
         if (billingData.length === 0) {
             setErrorMessage('No valid billing items selected.');
+            return;
+        }
+
+        const discountVal = typeof discount === 'number' ? discount : parseFloat(discount as string || '0');
+        if (!isNaN(discountVal) && discountVal > 0 && totalSelectedFees < discountVal) {
+            const msg = `Billed amount (${totalSelectedFees}) cannot be less than discount (${discountVal})`;
+            if (setDiscountError) {
+                setDiscountError(msg);
+            } else {
+                setErrorMessage(msg);
+            }
             return;
         }
 
@@ -643,7 +660,7 @@ export default function AddBillingPopup({
                 <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
 
                     {/* Error message display */}
-                    {errorMessage && (
+                    {(errorMessage || discountError) && (
                         <div style={{
                             padding: '12px 16px',
                             backgroundColor: '#ffebee',
@@ -657,7 +674,7 @@ export default function AddBillingPopup({
                             gap: '8px'
                         }}>
                             <span style={{ fontSize: '18px' }}>⚠</span>
-                            <span>{errorMessage}</span>
+                            <span>{discountError || errorMessage}</span>
                         </div>
                     )}
 

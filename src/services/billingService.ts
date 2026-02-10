@@ -59,6 +59,7 @@ export interface BillingMasterDataRequest {
   detail?: string;
   defaultFee: number;
   doctorId: string;
+  clinicId: string;
   sequenceNo: number;
   isDefault: boolean;
   visitType: string;
@@ -89,21 +90,21 @@ export const billingService = {
       }
 
       console.log('Fetching billing details for doctor:', doctorId, 'clinic:', clinicId);
-      
+
       // TODO: Replace with actual API endpoint when available
       const response = await api.get(`/billing/details`, {
         params: { doctorId, clinicId }
       });
       console.log('Billing details response:', response.data);
-      
+
       const data = response.data || [];
       const billingDetailsList = Array.isArray(data) ? data : (data.billingDetails || data.data || []);
-      
+
       if (!Array.isArray(billingDetailsList) || billingDetailsList.length === 0) {
         console.warn('No billing details found in response.');
         return [];
       }
-      
+
       const billingDetails: BillingDetail[] = billingDetailsList.map((item: BillingDetailApiResponse) => ({
         id: item.ID || item.id,
         group: item.Group || item.group || '',
@@ -115,16 +116,16 @@ export const billingService = {
         isDefault: Boolean(item.Is_Default || item.isDefault || item.is_default || false),
         lunch: item.Lunch || item.lunch || ''
       }));
-      
+
       return billingDetails;
     } catch (error: any) {
       console.error('Billing details API Error:', error);
-      
+
       // Handle CORS and network errors
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
         throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
       }
-      
+
       // Handle HTTP errors
       if (error.response?.status === 400) {
         throw new Error('Invalid request. Please check your doctor and clinic IDs.');
@@ -135,17 +136,17 @@ export const billingService = {
       } else if (error.response?.status === 500) {
         throw new Error('Server error occurred while fetching billing details.');
       }
-      
+
       // Handle backend-specific errors
       if (error.response?.data?.error) {
         throw new Error(error.response.data.error);
       }
-      
+
       // If 404, return empty array for now (endpoint might not exist yet)
       if (error.response?.status === 404) {
         return [];
       }
-      
+
       throw new Error(error.response?.data?.message || 'Failed to fetch billing details');
     }
   },
@@ -171,7 +172,7 @@ export const billingService = {
       }
 
       console.log('Creating billing detail:', billingDetail);
-      
+
       const response = await api.post(`/billing/details`, {
         doctorId,
         doctor_id: doctorId,
@@ -199,9 +200,9 @@ export const billingService = {
         lunch: billingDetail.lunch || '',
         Lunch: billingDetail.lunch || ''
       });
-      
+
       console.log('Create billing detail response:', response.data);
-      
+
       const data = response.data || {};
       return {
         id: data.ID || data.id,
@@ -216,21 +217,21 @@ export const billingService = {
       };
     } catch (error: any) {
       console.error('Create billing detail API Error:', error);
-      
+
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
         throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
       }
-      
+
       if (error.response?.status === 400) {
         throw new Error(error.response.data?.message || 'Invalid billing detail data.');
       } else if (error.response?.status === 500) {
         throw new Error('Server error occurred while creating billing detail.');
       }
-      
+
       if (error.response?.data?.error) {
         throw new Error(error.response.data.error);
       }
-      
+
       throw new Error(error.response?.data?.message || 'Failed to create billing detail');
     }
   },
@@ -261,7 +262,7 @@ export const billingService = {
       }
 
       console.log('Updating billing detail:', id, billingDetail);
-      
+
       const response = await api.put(`/billing/details/${id}`, {
         doctorId,
         doctor_id: doctorId,
@@ -289,9 +290,9 @@ export const billingService = {
         lunch: billingDetail.lunch || '',
         Lunch: billingDetail.lunch || ''
       });
-      
+
       console.log('Update billing detail response:', response.data);
-      
+
       const data = response.data || {};
       return {
         id: data.ID || data.id || id,
@@ -306,11 +307,11 @@ export const billingService = {
       };
     } catch (error: any) {
       console.error('Update billing detail API Error:', error);
-      
+
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
         throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
       }
-      
+
       if (error.response?.status === 400) {
         throw new Error(error.response.data?.message || 'Invalid billing detail data.');
       } else if (error.response?.status === 404) {
@@ -318,11 +319,11 @@ export const billingService = {
       } else if (error.response?.status === 500) {
         throw new Error('Server error occurred while updating billing detail.');
       }
-      
+
       if (error.response?.data?.error) {
         throw new Error(error.response.data.error);
       }
-      
+
       throw new Error(error.response?.data?.message || 'Failed to update billing detail');
     }
   },
@@ -347,29 +348,29 @@ export const billingService = {
       }
 
       console.log('Deleting billing detail:', id);
-      
+
       await api.delete(`/billing/details/${id}`, {
         params: { doctorId, clinicId }
       });
-      
+
       console.log('Billing detail deleted successfully');
     } catch (error: any) {
       console.error('Delete billing detail API Error:', error);
-      
+
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
         throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
       }
-      
+
       if (error.response?.status === 404) {
         throw new Error('Billing detail not found.');
       } else if (error.response?.status === 500) {
         throw new Error('Server error occurred while deleting billing detail.');
       }
-      
+
       if (error.response?.data?.error) {
         throw new Error(error.response.data.error);
       }
-      
+
       throw new Error(error.response?.data?.message || 'Failed to delete billing detail');
     }
   },
@@ -386,19 +387,19 @@ export const billingService = {
       }
 
       console.log('Fetching billing categories for doctor:', doctorId);
-      
+
       const response = await api.get(`/billing/master-data/categories/${doctorId}`);
       console.log('Billing categories response:', response.data);
-      
+
       const data = response.data || [];
       return Array.isArray(data) ? data : [];
     } catch (error: any) {
       console.error('Billing categories API Error:', error);
-      
+
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
         throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
       }
-      
+
       if (error.response?.status === 400) {
         throw new Error('Invalid request. Please check your doctor ID.');
       } else if (error.response?.status === 404) {
@@ -407,15 +408,15 @@ export const billingService = {
       } else if (error.response?.status === 500) {
         throw new Error('Server error occurred while fetching billing categories.');
       }
-      
+
       if (error.response?.data?.error) {
         throw new Error(error.response.data.error);
       }
-      
+
       if (error.response?.status === 404) {
         return [];
       }
-      
+
       throw new Error(error.response?.data?.message || 'Failed to fetch billing categories');
     }
   },
@@ -436,21 +437,21 @@ export const billingService = {
       }
 
       console.log('Fetching billing sub-categories for group:', groupName, 'doctor:', doctorId);
-      
+
       const response = await api.get(`/billing/master-data/sub-categories`, {
         params: { groupName, doctorId }
       });
       console.log('Billing sub-categories response:', response.data);
-      
+
       const data = response.data || [];
       return Array.isArray(data) ? data : [];
     } catch (error: any) {
       console.error('Billing sub-categories API Error:', error);
-      
+
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
         throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
       }
-      
+
       if (error.response?.status === 400) {
         throw new Error('Invalid request. Please check your group name and doctor ID.');
       } else if (error.response?.status === 404) {
@@ -459,15 +460,15 @@ export const billingService = {
       } else if (error.response?.status === 500) {
         throw new Error('Server error occurred while fetching billing sub-categories.');
       }
-      
+
       if (error.response?.data?.error) {
         throw new Error(error.response.data.error);
       }
-      
+
       if (error.response?.status === 404) {
         return [];
       }
-      
+
       throw new Error(error.response?.data?.message || 'Failed to fetch billing sub-categories');
     }
   },
@@ -484,19 +485,19 @@ export const billingService = {
       }
 
       console.log('Fetching billing companies for doctor:', doctorId);
-      
+
       const response = await api.get(`/billing/master-data/companies/${doctorId}`);
       console.log('Billing companies response:', response.data);
-      
+
       const data = response.data || [];
       return Array.isArray(data) ? data : [];
     } catch (error: any) {
       console.error('Billing companies API Error:', error);
-      
+
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
         throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
       }
-      
+
       if (error.response?.status === 400) {
         throw new Error('Invalid request. Please check your doctor ID.');
       } else if (error.response?.status === 404) {
@@ -505,15 +506,15 @@ export const billingService = {
       } else if (error.response?.status === 500) {
         throw new Error('Server error occurred while fetching billing companies.');
       }
-      
+
       if (error.response?.data?.error) {
         throw new Error(error.response.data.error);
       }
-      
+
       if (error.response?.status === 404) {
         return [];
       }
-      
+
       throw new Error(error.response?.data?.message || 'Failed to fetch billing companies');
     }
   },
@@ -530,29 +531,29 @@ export const billingService = {
       }
 
       console.log('Deleting billing charges:', chargeId);
-      
+
       const response = await api.delete(`/billing/master-data/charges/${chargeId}`);
       console.log('Delete billing charges response:', response.data);
-      
+
       const data = response.data || [];
       return Array.isArray(data) ? data : [];
     } catch (error: any) {
       console.error('Delete billing charges API Error:', error);
-      
+
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
         throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
       }
-      
+
       if (error.response?.status === 404) {
         throw new Error('Billing charge not found.');
       } else if (error.response?.status === 500) {
         throw new Error('Server error occurred while deleting billing charges.');
       }
-      
+
       if (error.response?.data?.error) {
         throw new Error(error.response.data.error);
       }
-      
+
       throw new Error(error.response?.data?.message || 'Failed to delete billing charges');
     }
   },
@@ -569,29 +570,29 @@ export const billingService = {
       }
 
       console.log('Deleting bill keyword charges:', keywordChargeId);
-      
+
       const response = await api.delete(`/billing/master-data/keyword-charges/${keywordChargeId}`);
       console.log('Delete bill keyword charges response:', response.data);
-      
+
       const data = response.data || [];
       return Array.isArray(data) ? data : [];
     } catch (error: any) {
       console.error('Delete bill keyword charges API Error:', error);
-      
+
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
         throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
       }
-      
+
       if (error.response?.status === 404) {
         throw new Error('Bill keyword charge not found.');
       } else if (error.response?.status === 500) {
         throw new Error('Server error occurred while deleting bill keyword charges.');
       }
-      
+
       if (error.response?.data?.error) {
         throw new Error(error.response.data.error);
       }
-      
+
       throw new Error(error.response?.data?.message || 'Failed to delete bill keyword charges');
     }
   },
@@ -608,29 +609,29 @@ export const billingService = {
       }
 
       console.log('Deleting bill sub charges:', subChargeId);
-      
+
       const response = await api.delete(`/billing/master-data/sub-charges/${subChargeId}`);
       console.log('Delete bill sub charges response:', response.data);
-      
+
       const data = response.data || [];
       return Array.isArray(data) ? data : [];
     } catch (error: any) {
       console.error('Delete bill sub charges API Error:', error);
-      
+
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
         throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
       }
-      
+
       if (error.response?.status === 404) {
         throw new Error('Bill sub charge not found.');
       } else if (error.response?.status === 500) {
         throw new Error('Server error occurred while deleting bill sub charges.');
       }
-      
+
       if (error.response?.data?.error) {
         throw new Error(error.response.data.error);
       }
-      
+
       throw new Error(error.response?.data?.message || 'Failed to delete bill sub charges');
     }
   },
@@ -640,36 +641,41 @@ export const billingService = {
    * @param billingDetailId - Billing Detail ID
    * @returns Promise<Record<string, any>[]> - Result array
    */
-  async deleteMasterBillingDetail(billingDetailId: string | number): Promise<Record<string, any>[]> {
+  async deleteMasterBillingDetail(billingDetailId: string | number, doctorId: string): Promise<Record<string, any>[]> {
     try {
       if (!billingDetailId) {
         throw new Error('Billing Detail ID is required to delete master billing detail.');
       }
+      if (!doctorId) {
+        throw new Error('Doctor ID is required to delete master billing detail.');
+      }
 
-      console.log('Deleting master billing detail:', billingDetailId);
-      
-      const response = await api.delete(`/billing/master-data/billing-details/${billingDetailId}`);
+      console.log('Deleting master billing detail:', billingDetailId, 'for doctor:', doctorId);
+
+      const response = await api.delete(`/billing/master-data/billing-details/${billingDetailId}`, {
+        params: { doctorId }
+      });
       console.log('Delete master billing detail response:', response.data);
-      
+
       const data = response.data || [];
       return Array.isArray(data) ? data : [];
     } catch (error: any) {
       console.error('Delete master billing detail API Error:', error);
-      
+
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
         throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
       }
-      
+
       if (error.response?.status === 404) {
         throw new Error('Master billing detail not found.');
       } else if (error.response?.status === 500) {
         throw new Error('Server error occurred while deleting master billing detail.');
       }
-      
+
       if (error.response?.data?.error) {
         throw new Error(error.response.data.error);
       }
-      
+
       throw new Error(error.response?.data?.message || 'Failed to delete master billing detail');
     }
   },
@@ -686,29 +692,29 @@ export const billingService = {
       }
 
       console.log('Deleting master company:', companyId);
-      
+
       const response = await api.delete(`/billing/master-data/companies/${companyId}`);
       console.log('Delete master company response:', response.data);
-      
+
       const data = response.data || [];
       return Array.isArray(data) ? data : [];
     } catch (error: any) {
       console.error('Delete master company API Error:', error);
-      
+
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
         throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
       }
-      
+
       if (error.response?.status === 404) {
         throw new Error('Master company not found.');
       } else if (error.response?.status === 500) {
         throw new Error('Server error occurred while deleting master company.');
       }
-      
+
       if (error.response?.data?.error) {
         throw new Error(error.response.data.error);
       }
-      
+
       throw new Error(error.response?.data?.message || 'Failed to delete master company');
     }
   },
@@ -737,7 +743,7 @@ export const billingService = {
       }
 
       console.log('Inserting billing master data:', request);
-      
+
       const requestBody: any = {
         groupName: request.groupName,
         group_name: request.groupName,
@@ -755,6 +761,8 @@ export const billingService = {
         doctorId: request.doctorId,
         doctor_id: request.doctorId,
         doctor_ID: request.doctorId,
+        clinicId: request.clinicId,
+        clinic_id: request.clinicId,
         sequenceNo: request.sequenceNo,
         sequence_no: request.sequenceNo,
         Sequence_No: request.sequenceNo,
@@ -771,12 +779,12 @@ export const billingService = {
         requestBody.billing_data_table = request.billingDataTable;
         requestBody.p_var_Insert_Billing_Data = request.billingDataTable;
       }
-      
+
       const response = await api.post(`/billing/master-data`, requestBody);
       console.log('Insert billing master data response:', response.data);
-      
+
       const data = response.data || {};
-      
+
       if (Boolean(data.success)) {
         return {
           success: true,
@@ -788,26 +796,26 @@ export const billingService = {
       }
     } catch (error: any) {
       console.error('Insert billing master data API Error:', error);
-      
+
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
         throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
       }
-      
+
       if (error.response?.status === 400) {
         throw new Error(error.response.data?.message || error.response.data?.error || 'Invalid billing master data.');
       } else if (error.response?.status === 500) {
         throw new Error('Server error occurred while inserting billing master data.');
       }
-      
+
       if (error.response?.data?.error) {
         throw new Error(error.response.data.error);
       }
-      
+
       // If error message is already set, throw it
       if (error.message && !error.message.includes('Cannot connect') && !error.message.includes('Server error')) {
         throw error;
       }
-      
+
       throw new Error(error.response?.data?.message || 'Failed to insert billing master data');
     }
   },
@@ -836,7 +844,7 @@ export const billingService = {
       }
 
       console.log('Updating billing master data:', request);
-      
+
       const requestBody: any = {
         groupName: request.groupName,
         group_name: request.groupName,
@@ -870,12 +878,12 @@ export const billingService = {
         requestBody.billing_data_table = request.billingDataTable;
         requestBody.p_var_Insert_Billing_Data = request.billingDataTable;
       }
-      
+
       const response = await api.put(`/billing/master-data`, requestBody);
       console.log('Update billing master data response:', response.data);
-      
+
       const data = response.data || {};
-      
+
       if (Boolean(data.success)) {
         return {
           success: true,
@@ -887,26 +895,26 @@ export const billingService = {
       }
     } catch (error: any) {
       console.error('Update billing master data API Error:', error);
-      
+
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
         throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
       }
-      
+
       if (error.response?.status === 400) {
         throw new Error(error.response.data?.message || error.response.data?.error || 'Invalid billing master data.');
       } else if (error.response?.status === 500) {
         throw new Error('Server error occurred while updating billing master data.');
       }
-      
+
       if (error.response?.data?.error) {
         throw new Error(error.response.data.error);
       }
-      
+
       // If error message is already set, throw it
       if (error.message && !error.message.includes('Cannot connect') && !error.message.includes('Server error')) {
         throw error;
       }
-      
+
       throw new Error(error.response?.data?.message || 'Failed to update billing master data');
     }
   }
