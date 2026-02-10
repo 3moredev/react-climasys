@@ -159,35 +159,26 @@ const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
   const handleInputChange = async (field: keyof BillingDetailData, value: string | boolean) => {
     // Validation using validateField
     if (field === 'defaultFee' && typeof value === 'string') {
-      const { allowed, error } = validateField('defaultFee', value);
+      const { allowed, error } = validateField('defaultFee', value, undefined, undefined, 'billing');
       if (!allowed) return;
-      // We update state if allowed. error message is optional as we might not want to show error for every keystroke unless invalid (validateField returns allowed=false for mismatch)
-      // But wait, validateField returns allowed=false if regex fails.
-      // So we just return.
-      // What about errors state? We can set it if we want to show "Invalid format". 
-      // But typically we prevent typing.
       setBillingData(prev => ({ ...prev, [field]: value }));
-      if (errors.defaultFee) setErrors(prev => ({ ...prev, defaultFee: '' }));
+      setErrors(prev => ({ ...prev, defaultFee: error }));
       return;
     }
 
     if (field === 'sequenceNo' && typeof value === 'string') {
-      const { allowed, error } = validateField('sequenceNo', value);
+      const { allowed, error } = validateField('sequenceNo', value, undefined, undefined, 'billing');
       if (!allowed) return;
       setBillingData(prev => ({ ...prev, [field]: value }));
-      if (errors.sequenceNo) setErrors(prev => ({ ...prev, sequenceNo: '' }));
+      setErrors(prev => ({ ...prev, sequenceNo: error }));
       return;
     }
 
     if (field === 'details' && typeof value === 'string') {
-      const { allowed, error } = validateField('details', value);
+      const { allowed, error } = validateField('details', value, undefined, undefined, 'billing');
       if (allowed) {
         setBillingData(prev => ({ ...prev, [field]: value }));
-        // We can set error for details if length reached (validateField returns error string if max length matched? No, only if exceeded but then allowed is false. Wait, my code in validationUtils returns error string if length === max)
-        // validationUtils: if (value.length === maxLength) error = ...
-        // So if allowed is true, error might be set.
-        // But if I want to prevent typing beyond max, allowed handles it.
-        // If I want to show "max length reached", I can use the error.
+        setErrors(prev => ({ ...prev, details: error }));
       }
       return;
     }
@@ -245,6 +236,10 @@ const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
     // Validate required fields
     if (!billingData.group.trim()) {
       newErrors.group = 'Group is required';
+      hasError = true;
+    }
+    if (!billingData.details.trim()) {
+      newErrors.details = 'Details is required';
       hasError = true;
     }
     if (!billingData.defaultFee.toString().trim()) {
@@ -435,9 +430,16 @@ const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
                   onChange={(e) => {
                     handleInputChange('details', e.target.value);
                   }}
-                  error={!!errors.details}
-                  helperText={errors.details || (billingData.details.length === 150 ? 'Details cannot exceed 150 characters' : '')}
-                  FormHelperTextProps={{ style: { color: errors.details || billingData.details.length === 150 ? '#d32f2f' : undefined } }}
+                  error={!!errors.details && !errors.details.includes('cannot exceed')}
+                  helperText={errors.details}
+                  FormHelperTextProps={{
+                    sx: {
+                      color: errors.details?.includes('cannot exceed') ? 'gray !important' : '#d32f2f',
+                      position: 'absolute',
+                      bottom: '-18px',
+                      left: 0
+                    }
+                  }}
                 />
               </Box>
 
@@ -555,12 +557,17 @@ const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
                   size="small"
                   value={billingData.defaultFee}
                   onChange={(e) => handleInputChange('defaultFee', e.target.value)}
-                  error={!!errors.defaultFee}
+                  error={!!errors.defaultFee && !errors.defaultFee.includes('cannot exceed')}
                   helperText={errors.defaultFee}
                   inputProps={{ inputMode: 'numeric' }}
                   sx={{ position: 'relative' }}
                   FormHelperTextProps={{
-                    sx: { position: 'absolute', bottom: '-18px', left: 0 }
+                    sx: {
+                      color: errors.defaultFee?.includes('cannot exceed') ? 'gray !important' : '#d32f2f',
+                      position: 'absolute',
+                      bottom: '-18px',
+                      left: 0
+                    }
                   }}
                 />
               </Box>
@@ -577,12 +584,17 @@ const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
                   size="small"
                   value={billingData.sequenceNo}
                   onChange={(e) => handleInputChange('sequenceNo', e.target.value)}
-                  error={!!errors.sequenceNo}
+                  error={!!errors.sequenceNo && !errors.sequenceNo.includes('cannot exceed')}
                   helperText={errors.sequenceNo}
                   inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
                   sx={{ position: 'relative' }}
                   FormHelperTextProps={{
-                    sx: { position: 'absolute', bottom: '-18px', left: 0 }
+                    sx: {
+                      color: errors.sequenceNo?.includes('cannot exceed') ? 'gray !important' : '#d32f2f',
+                      position: 'absolute',
+                      bottom: '-18px',
+                      left: 0
+                    }
                   }}
                 />
               </Box>
