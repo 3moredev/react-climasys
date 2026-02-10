@@ -2372,15 +2372,16 @@ export default function AppointmentTable() {
         /* Fixed column widths: 10% for Sr, Age, Online, Action; 20% for Patient Name, Contact, Provider, Status, Last Visit */
         .appointments-table th.sr-col, .appointments-table td.sr-col { width: 2%; }
         .appointments-table th.name-col, .appointments-table td.name-col { width: 10%; }
-        .appointments-table th.gender-col, .appointments-table td.gender-col { width: 6%; }
+        .appointments-table th.gender-col, .appointments-table td.gender-col { width: 5%; }
         .appointments-table th.age-col, .appointments-table td.age-col { width: 3%; }
         .appointments-table th.contact-col, .appointments-table td.contact-col { width: 8%; }
         .appointments-table th.time-col, .appointments-table td.time-col { width:3%; }
-        .appointments-table th.provider-col, .appointments-table td.provider-col { width: 15%; }
+        .appointments-table th.refer-col, .appointments-table td.refer-col { width: 10%; }
+        .appointments-table th.provider-col, .appointments-table td.provider-col { width: 12%; }
         .appointments-table th.online-col, .appointments-table td.online-cell { width: 6%; }
         .appointments-table td.online-cell .form-control { width: 70px !important; min-width: 40px !important; }
-        .appointments-table th.status-col, .appointments-table td.status-col { width: 14%; }
-        .appointments-table th.last-col, .appointments-table td.last-col { width: 15%; }
+        .appointments-table th.status-col, .appointments-table td.status-col { width: 12%; }
+        .appointments-table th.last-col, .appointments-table td.last-col { width: 12%; }
         .appointments-table th.action-col, .appointments-table td.action-col { width: 10%; }
         /* Borderless table */
         .appointments-table, .appointments-table th, .appointments-table td { border: 0 !important; }
@@ -2981,6 +2982,7 @@ export default function AppointmentTable() {
                                             <th className="age-col text-start">Age</th>
                                             <th className="contact-col text-start">Contact</th>
                                             <th className="time-col text-start">Time</th>
+                                            <th className="refer-col text-start">Referred By</th>
                                             <th className="provider-col text-start">Provider</th>
                                             <th className="online-col text-start">Online</th>
                                             <th className="status-col text-start">Status</th>
@@ -3011,6 +3013,9 @@ export default function AppointmentTable() {
                                                     <td className="age-col">{getAgeString(a.dob)}</td>
                                                     <td className="contact-col">{(a.contact || '').toString().slice(0, 12)}</td>
                                                     <td className="time-col">{extractTime(a.time)}</td>
+                                                    <td className="refer-col">
+                                                        {a.referBy === 'S' || a.referBy === 'Self' || a.referralName === 'Self' ? 'Self' : (a.referralName || '-')}
+                                                    </td>
                                                     <td className="provider-col">{formatProviderLabel(a.provider)}</td>
                                                     <td className="online-cell">
                                                         <input
@@ -3779,15 +3784,16 @@ export default function AppointmentTable() {
         /* Fixed column widths: 10% for Sr, Age, Online, Action; 20% for Patient Name, Contact, Provider, Status, Last Visit */
         .appointments-table th.sr-col, .appointments-table td.sr-col { width: 2%; }
         .appointments-table th.name-col, .appointments-table td.name-col { width: 10%; }
-        .appointments-table th.gender-col, .appointments-table td.gender-col { width: 6%; }
+        .appointments-table th.gender-col, .appointments-table td.gender-col { width: 5%; }
         .appointments-table th.age-col, .appointments-table td.age-col { width: 3%; }
         .appointments-table th.contact-col, .appointments-table td.contact-col { width: 8%; }
         .appointments-table th.time-col, .appointments-table td.time-col { width:3%; }
-        .appointments-table th.provider-col, .appointments-table td.provider-col { width: 15%; }
+        .appointments-table th.refer-col, .appointments-table td.refer-col { width: 10%; }
+        .appointments-table th.provider-col, .appointments-table td.provider-col { width: 12%; }
         .appointments-table th.online-col, .appointments-table td.online-cell { width: 6%; }
         .appointments-table td.online-cell .form-control { width: 70px !important; min-width: 40px !important; }
-        .appointments-table th.status-col, .appointments-table td.status-col { width: 14%; }
-        .appointments-table th.last-col, .appointments-table td.last-col { width: 15%; }
+        .appointments-table th.status-col, .appointments-table td.status-col { width: 12%; }
+        .appointments-table th.last-col, .appointments-table td.last-col { width: 12%; }
         .appointments-table th.action-col, .appointments-table td.action-col { width: 10%; }
         /* Borderless table */
         .appointments-table, .appointments-table th, .appointments-table td { border: 0 !important; }
@@ -4402,6 +4408,7 @@ export default function AppointmentTable() {
                                         <th className="age-col text-start">Age</th>
                                         <th className="contact-col text-start">Contact</th>
                                         <th className="time-col text-start">Time</th>
+                                        <th className="refer-col text-start">Referred By</th>
                                         <th className="provider-col text-start">Provider</th>
                                         <th className="online-col text-start">Online</th>
                                         <th className="status-col text-start">Status</th>
@@ -4442,6 +4449,9 @@ export default function AppointmentTable() {
                                                 <td className="age-col">{getAgeString(a.dob)}</td>
                                                 <td className="contact-col">{(a.contact || '').toString().slice(0, 12)}</td>
                                                 <td className="time-col">{extractTime(a.time)}</td>
+                                                <td className="refer-col">
+                                                    {a.referBy === 'S' || a.referBy === 'Self' || a.referralName === 'Self' ? 'Self' : (a.referralName || '-')}
+                                                </td>
                                                 <td className="provider-col">
                                                     <select
                                                         className="form-select form-select-sm"

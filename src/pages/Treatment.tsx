@@ -185,6 +185,8 @@ interface TreatmentData {
     referralCode?: string;
 }
 
+
+
 interface PreviousVisit {
     id: string;
     date: string;
@@ -691,7 +693,11 @@ export default function Treatment() {
             } else {
                 setExistingDocuments([]);
             }
-        } catch (e) {
+        } catch (e: any) {
+            console.error("Failed to load existing documents:", e);
+            if (e.response && e.response.data) {
+                console.error("Error details:", e.response.data);
+            }
             setExistingDocuments([]);
         } finally {
             setIsLoadingDocuments(false);
@@ -1253,13 +1259,17 @@ export default function Treatment() {
             };
             setTreatmentData(normalizedData);
 
-            // Initialize referralBy from state if present
-            if (normalizedData.referralName) {
-                setFormData(prev => ({
-                    ...prev,
-                    referralBy: normalizedData.referralName
-                }));
-            }
+            // Initialize referral fields from state if present
+            setFormData(prev => ({
+                ...prev,
+                referralBy: normalizedData.referralCode || normalizedData.referBy || prev.referralBy || '',
+                referralName: normalizedData.referralName || prev.referralName || '',
+                referralContact: normalizedData.referralContact || prev.referralContact || '',
+                referralEmail: normalizedData.referralEmail || prev.referralEmail || '',
+                referralAddress: normalizedData.referralAddress || prev.referralAddress || ''
+            }));
+
+
         }
     }, [location.state]);
 
@@ -1281,52 +1291,7 @@ export default function Treatment() {
         };
     }, []);
 
-    // Fetch patient master record to ensure referral info is correct (backfilling if appointment data is incomplete)
-    React.useEffect(() => {
-        const patientId = treatmentData?.patientId;
-        if (!patientId) return;
 
-        async function fetchMasterReferral() {
-            try {
-                const patient = await patientService.getPatient(String(patientId));
-                if (patient) {
-                    // In patient record, refer_doctor_details is the common field name
-                    const masterReferralName = (patient.refer_doctor_details || patient.referralName || '').trim();
-                    const referId = patient.refer_id || '';
-
-                    // If master record has a referral name, and current referral is "Self" or empty, update it
-                    // Only update if referId is not 'S' (Self)
-                    if (masterReferralName && referId !== 'S') {
-                        console.log('Found master referral info:', masterReferralName);
-
-                        setTreatmentData(prev => {
-                            if (prev && (!prev.referralName || prev.referralName === 'Self')) {
-                                return { ...prev, referralName: masterReferralName, referralCode: referId };
-                            }
-                            if (prev && !prev.referralCode) {
-                                return { ...prev, referralCode: referId };
-                            }
-                            return prev;
-                        });
-
-                        setFormData(prev => {
-                            if (prev.referralBy === 'Self' || !prev.referralBy) {
-                                return { ...prev, referralBy: masterReferralName };
-                            }
-                            return prev;
-                        });
-                    }
-                }
-            } catch (error) {
-                console.error('Error fetching master referral info:', error);
-            }
-        }
-
-        // We only do this if it's currently showing Self or empty
-        if (!treatmentData?.referralName || treatmentData?.referralName === 'Self' || formData.referralBy === 'Self') {
-            fetchMasterReferral();
-        }
-    }, [treatmentData?.patientId]);
 
     // Check if form should be disabled (status is "Waiting for Medicine" or "Complete")
     const isFormDisabled = React.useMemo(() => {
@@ -1381,18 +1346,25 @@ export default function Treatment() {
 
     // Sync referralBy from treatmentData (initial or patched) to formData
     React.useEffect(() => {
-        if (treatmentData?.referralName) {
+        if (treatmentData?.patientId) {
             setFormData(prev => {
-                if (prev.referralBy !== treatmentData.referralName) {
+                const newReferralBy = treatmentData.referralCode || treatmentData.referralBy || prev.referralBy || '';
+                // Only update if something changed
+                if (prev.referralBy !== newReferralBy || prev.referralName !== treatmentData.referralName) {
                     return {
                         ...prev,
-                        referralBy: treatmentData.referralName
+                        referralBy: newReferralBy,
+                        referralName: treatmentData.referralName || '',
+                        referralContact: treatmentData.referralContact || '',
+                        referralEmail: treatmentData.referralEmail || '',
+                        referralAddress: treatmentData.referralAddress || ''
                     };
                 }
                 return prev;
             });
         }
-    }, [treatmentData?.referralName]);
+    }, [treatmentData?.patientId, treatmentData?.referralName, treatmentData?.referralCode, treatmentData?.referralBy, treatmentData?.referralContact, treatmentData?.referralEmail, treatmentData?.referralAddress]);
+
 
     // Check if Addendum button should be enabled (for "Waiting for Medicine" and "Complete")
     const isAddendumEnabled = React.useMemo(() => {
@@ -2528,7 +2500,6 @@ export default function Treatment() {
     };
 
     const handleInputChange = (field: string, value: any) => {
-        const fieldConfig = getFieldConfig(field, 'visit');
         let processedValue = value;
 
         // Strict Character Filtering at Source (Matching PatientVisitDetails.tsx)
@@ -2543,30 +2514,31 @@ export default function Treatment() {
             }
         }
 
-        // Input blocking: Prevent typing beyond maxLength
-        if (fieldConfig?.maxLength && processedValue && processedValue.length > fieldConfig.maxLength) {
+        // Validate the field early
+        let { allowed, error } = validateField(field, processedValue, undefined, undefined, 'visit');
+
+        // Input blocking: Prevent typing beyond maxLength, but still set the validation error to trigger gray message
+        if (!allowed) {
+            setErrors(prev => ({ ...prev, [field]: error }));
             return;
         }
 
-        // Validate the field
-        let validation = validateField(field, processedValue, undefined, undefined, 'visit');
-
         // Custom error message override for height and weight to match PatientVisitDetails.tsx
-        if (validation.error) {
+        if (error) {
             const numValue = parseFloat(processedValue);
             if (field === 'height' && (numValue < 30 || numValue > 250)) {
-                validation.error = 'Height must be between 30 and 250 cm';
+                error = 'Height must be between 30 and 250';
             } else if (field === 'weight' && (numValue < 1 || numValue > 250)) {
-                validation.error = 'Weight must be between 1 and 250 kg';
+                error = 'Weight must be between 1 and 250';
             } else if (field === 'pulse' && (numValue < 30 || numValue > 220)) {
-                validation.error = 'Pulse must be between 30 and 220 /min';
+                error = 'Pulse must be between 30 and 220';
             }
         }
 
         setErrors(prev => {
             const newErrors = { ...prev };
-            if (validation.error) {
-                newErrors[field] = validation.error;
+            if (error) {
+                newErrors[field] = error;
             } else {
                 delete newErrors[field];
             }
@@ -3273,7 +3245,16 @@ export default function Treatment() {
                     appointmentData.referredBy ||
                     appointmentData.referred_by || ''
             };
-            console.log('Normalized appointment fields:', normalized);
+
+            // Sync treatmentData with fetched details so header display is correct
+            setTreatmentData(prev => ({
+                ...prev,
+                ...normalized,
+                // Ensure referBy/referralCode is preserved
+                referralCode: normalized.referralCode,
+                referralName: normalized.referralName,
+                referBy: normalized.referralCode // canonical field name often used
+            }));
 
             setFormData(prev => {
                 const next: any = { ...prev };
@@ -3894,6 +3875,15 @@ export default function Treatment() {
             // Explicit Character Length Validation
             const validationErrors: string[] = [];
 
+            // Check the real-time errors state first (from handleInputChange)
+            const errorKeys = Object.keys(errors);
+            if (errorKeys.length > 0) {
+                setSnackbarMessage('Please fill all required fields');
+                setSnackbarOpen(true);
+                setIsSubmitting(false);
+                return;
+            }
+
             const checkLength = (value: any, maxLength: number, fieldName: string) => {
                 if (value && String(value).length > maxLength) {
                     validationErrors.push(`${fieldName} exceeds maximum length of ${maxLength} characters`);
@@ -4374,13 +4364,23 @@ export default function Treatment() {
 
     // Specific handlers for save and submit
     const handleTreatmentSave = async () => {
+        const billedNum = parseFloat(billingData.billed) || 0;
+        if (billedNum <= 0) {
+            setBillingError('Billed (Rs) is required');
+            setSnackbarMessage('Please fill all required fields');
+            setSnackbarOpen(true);
+            return;
+        }
+        setBillingError(null);
         await handleTreatmentAction(false); // false = save
     };
 
     const handleTreatmentSubmit = async () => {
         const billedNum = parseFloat(billingData.billed) || 0;
         if (billedNum <= 0) {
-            setBillingError('Please enter billed amount');
+            setBillingError('Billed (Rs) is required');
+            setSnackbarMessage('Please fill all required fields');
+            setSnackbarOpen(true);
             return;
         }
         setBillingError(null);
@@ -5202,17 +5202,76 @@ export default function Treatment() {
                                                 fontWeight: 500
                                             }}>
                                                 {(() => {
-                                                    const code = treatmentData?.referralCode || (treatmentData?.referralName === 'Self' ? 'S' : '');
-                                                    const name = treatmentData?.referralName;
-                                                    const opt = referByOptions.find(o => String(o.id) === String(code));
-                                                    const categoryName = opt?.name || (code === 'S' || name === 'Self' ? 'Self' : '');
+                                                    // Robust extraction of code/ID (e.g., "D", "S", "1")
+                                                    let rawCode = treatmentData?.referralCode ||
+                                                        treatmentData?.referBy ||
+                                                        treatmentData?.refer_by ||
+                                                        (treatmentData?.referralName === '');
 
-                                                    if (!categoryName) {
+
+
+                                                    // Normalize code (trim, uppercase)
+                                                    const code = String(rawCode || '').trim().toUpperCase();
+
+                                                    const name = treatmentData?.referralName || formData.referralName;
+
+
+                                                    // Static mapping for known codes (robust fallback)
+                                                    const staticMap: Record<string, string> = {
+                                                        'D': 'Doctor',
+                                                        'S': 'Self',
+                                                        'O': 'Other',
+                                                        'F': 'Family-Friend',
+                                                        'I': 'Internet'
+                                                    };
+                                                    if (code && staticMap[code]) {
+                                                        return staticMap[code];
+                                                    }
+
+                                                    if (!referByOptions || referByOptions.length === 0) {
+                                                        // Fallback to name if available and not 'Self' (already handled)
+                                                        if (name && name !== 'Self') return name;
+                                                        // If code is descriptive (len > 1), show it (e.g. "Doctor")
+                                                        if (rawCode && String(rawCode).length > 1) return rawCode;
                                                         return '';
                                                     }
 
-                                                    return `${categoryName}`;
+                                                    // Helper to extract ID string safely
+                                                    const getOptId = (opt: any) => {
+                                                        if (typeof opt.id === 'object' && opt.id !== null) {
+                                                            return String(opt.id.referId || opt.id.id || '').toUpperCase();
+                                                        }
+                                                        return String(opt.id).toUpperCase();
+                                                    };
+
+                                                    // 1. Try to find option by ID (exact match)
+                                                    const optById = referByOptions.find(o => getOptId(o) === code);
+                                                    if (optById) {
+                                                        return optById.name || (optById as any).referByDescription || '';
+                                                    }
+
+                                                    // 2. Try to find option by Name (case-insensitive)
+                                                    const optByName = referByOptions.find(o =>
+                                                        o.name.toLowerCase() === code.toLowerCase() ||
+                                                        o.name.toLowerCase() === String(name).toLowerCase()
+                                                    );
+                                                    if (optByName) {
+                                                        return optByName.name || (optByName as any).referByDescription || '';
+                                                    }
+
+                                                    // 3. Fallback: If code is a descriptive string allow it
+                                                    if (rawCode && String(rawCode).length > 2) {
+                                                        return rawCode;
+                                                    }
+
+                                                    // 4. Ultimate fallback name
+                                                    if (name) {
+                                                        return name;
+                                                    }
+
+                                                    return '';
                                                 })()}
+
                                             </span>
                                         </div>
                                         <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: (isFormDisabled || inPersonDisabled) ? 'not-allowed' : 'pointer', fontSize: '12px', whiteSpace: 'nowrap' }}>
@@ -5235,6 +5294,7 @@ export default function Treatment() {
                                             Follow-up
                                         </label>
                                     </div>
+
                                 </div>
                             </div>
 
@@ -5303,7 +5363,7 @@ export default function Treatment() {
                                                 { key: 'height', label: 'Height (Cm)' },
                                                 { key: 'weight', label: 'Weight (Kg)' },
                                                 { key: 'bmi', label: 'BMI' },
-                                                { key: 'pulse', label: 'Pulse (min)' },
+                                                { key: 'pulse', label: 'Pulse (/min)' },
                                                 { key: 'bp', label: 'BP' },
                                                 { key: 'sugar', label: 'Sugar' },
                                                 { key: 'tft', label: 'TFT' },
@@ -5317,20 +5377,9 @@ export default function Treatment() {
                                                         </label>
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                                                             <ClearableTextField
-                                                                type={isNumberField ? "number" : "text"}
                                                                 value={formData[key as keyof typeof formData] as string}
                                                                 onChange={(value) => {
-                                                                    if (isNumberField) {
-                                                                        const maxLength = getFieldConfig(key, 'visit')?.maxLength;
-                                                                        if (maxLength && value.length > maxLength) return;
-
-                                                                        // Allow empty string or non-negative numbers
-                                                                        if (value === '' || (!isNaN(parseFloat(value)) && parseFloat(value) >= 0)) {
-                                                                            handleInputChange(key, value);
-                                                                        }
-                                                                    } else {
-                                                                        handleInputChange(key, value);
-                                                                    }
+                                                                    handleInputChange(key, value);
                                                                 }}
                                                                 onKeyDown={(e) => {
                                                                     if (isNumberField) {
@@ -5353,9 +5402,7 @@ export default function Treatment() {
                                                                 error={!!errors[key]}
                                                                 helperText={errors[key]}
                                                                 inputProps={{
-                                                                    min: isNumberField ? "0" : undefined,
-                                                                    step: isNumberField ? (key === 'pulse' ? "1" : "0.1") : undefined,
-                                                                    maxLength: getFieldConfig(key, 'visit')?.maxLength
+                                                                    // Removed maxLength to allow validation logic to trigger at/above limit
                                                                 }}
                                                                 sx={{
                                                                     flex: 1,
@@ -8072,7 +8119,7 @@ export default function Treatment() {
             {/* Instruction Groups Popup */}
             <InstructionGroupsPopup
                 isOpen={showInstructionPopup}
-                onClose={() => {                    
+                onClose={() => {
                     if (selectedInstructionGroups && selectedInstructionGroups.length > 0) {
                         selectedInstructionGroups.forEach((group, idx) => {
                             console.log(`Final Group ${idx + 1}:`, {
@@ -8114,7 +8161,7 @@ export default function Treatment() {
             />
             {/* Debug: Log when popup opens */}
             {
-                showInstructionPopup && (() => {                
+                showInstructionPopup && (() => {
                     if (selectedInstructionGroups && selectedInstructionGroups.length > 0) {
                         console.log('selectedInstructionGroups content:', JSON.stringify(selectedInstructionGroups, null, 2));
                         selectedInstructionGroups.forEach((group, idx) => {
@@ -8271,8 +8318,8 @@ export default function Treatment() {
                 open={showBillingPopup}
                 onClose={() => setShowBillingPopup(false)}
                 isFormDisabled={isFormDisabled}
-                onSubmit={(totalAmount) => {                    
-                    if(isFormDisabled){
+                onSubmit={(totalAmount) => {
+                    if (isFormDisabled) {
                         return;
                     }
                     setBillingData(prev => {
@@ -8286,8 +8333,8 @@ export default function Treatment() {
                         };
                     });
                 }}
-                onTotalFeesChange={(total) => {                    
-                    if(isFormDisabled){
+                onTotalFeesChange={(total) => {
+                    if (isFormDisabled) {
                         return;
                     }
                     const billedNum = Number(total) || 0;
@@ -8419,14 +8466,18 @@ export default function Treatment() {
                 autoHideDuration={2000}
                 onClose={() => {
                     setSnackbarOpen(false);
-                    setSnackbarMessage('');
                 }}
                 message={snackbarMessage}
                 anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
                 sx={{
                     zIndex: 99999, // Ensure snackbar appears above everything
                     '& .MuiSnackbarContent-root': {
-                        backgroundColor: snackbarMessage.toLowerCase().includes('error') || snackbarMessage.toLowerCase().includes('failed') || snackbarMessage.toLowerCase().includes('already added') ? '#f44336' : '#4caf50',
+                        backgroundColor: snackbarMessage.toLowerCase().includes('error') ||
+                            snackbarMessage.toLowerCase().includes('failed') ||
+                            snackbarMessage.toLowerCase().includes('already added') ||
+                            snackbarMessage.toLowerCase().includes('required') ||
+                            snackbarMessage.toLowerCase().includes('must be') ||
+                            snackbarMessage.toLowerCase().includes('cannot exceed') ? '#f44336' : '#4caf50',
                         color: 'white',
                         fontWeight: 'bold'
                     }
