@@ -810,6 +810,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                 const matchExists = referByOptions.some(o => String(o.id) === referIdStr);
                                 patched.referralBy = matchExists ? referIdStr : '';
                             }
+
                             // Patch referral name and contact fields from API if it's a doctor referral
                             // Always set these from API when available (they were saved when doctor was selected)
                             if (patched.referralBy === 'D' || normalized.referByRaw === 'D') {
@@ -1042,22 +1043,23 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
             }
         }
 
-        // Input blocking: Prevent typing beyond maxLength
-        if (fieldConfig?.maxLength && processedValue && processedValue.length > fieldConfig.maxLength) {
+        // Real-time Validation Result
+        let { allowed, error } = validateField(field, processedValue, undefined, undefined, 'visit');
+
+        // Input blocking: Prevent typing beyond maxLength, but still set the validation error
+        if (!allowed) {
+            setValidationErrors(prev => ({ ...prev, [field]: error }));
             return;
         }
-
-        // Real-time Validation Result
-        let { error } = validateField(field, processedValue, undefined, undefined, 'visit');
 
         // Custom error message override for height and weight to include units
         if (error) {
             if (field === 'height' && (parseFloat(processedValue) < 30 || parseFloat(processedValue) > 250)) {
-                error = 'Height must be between 30 and 250 cm';
+                error = 'Height must be between 30 and 250';
             } else if (field === 'weight' && (parseFloat(processedValue) < 1 || parseFloat(processedValue) > 250)) {
-                error = 'Weight must be between 1 and 250 kg';
+                error = 'Weight must be between 1 and 250';
             } else if (field === 'pulse' && (parseFloat(processedValue) < 30 || parseFloat(processedValue) > 220)) {
-                error = 'Pulse must be between 30 and 220 /min';
+                error = 'Pulse must be between 30 and 220';
             }
         }
 
@@ -1265,7 +1267,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
         if (formData.height) {
             const val = parseFloat(formData.height);
             if (isNaN(val) || val < 30 || val > 250) {
-                errors.height = 'Height must be between 30 and 250 cm';
+                errors.height = 'Height must be between 30 and 250';
             }
         }
 
@@ -1273,7 +1275,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
         if (formData.weight) {
             const val = parseFloat(formData.weight);
             if (isNaN(val) || val < 1 || val > 250) {
-                errors.weight = 'Weight must be between 1 and 250 kg';
+                errors.weight = 'Weight must be between 1 and 250';
             }
         }
 
@@ -1442,7 +1444,11 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                 paymentRemark: '',
                 attendedById: 0,
                 followUp: visitType.followUpType,
+                paymentRemark: '',
+                attendedById: 0,
+                followUp: visitType.followUpType,
                 followUpFlag: visitType.followUp,
+
                 currentComplaint: complaintsRows.map(row => {
                     const cleanLabel = row.label.trim();
                     const cleanComment = row.comment.trim();
@@ -1499,6 +1505,10 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
             if (nullFields.length > 0) {
                 throw new Error(`Required fields are missing: ${nullFields.join(', ')}`);
             }
+
+            console.log('DEBUG: Submitting visitData:', visitData);
+            console.log('DEBUG: formData.referralBy:', formData.referralBy);
+            // console.log('DEBUG: referByOptions:', referByOptions);
 
             const result = await visitService.saveComprehensiveVisitData(visitData);
 
@@ -2135,7 +2145,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     disabled={readOnly}
                                     variant="outlined"
                                     inputProps={{
-                                        maxLength: getFieldConfig('pulse', 'visit')?.maxLength
+                                        // Removed maxLength to allow validation logic to trigger at/above limit
                                     }}
                                     error={!!validationErrors.pulse}
                                     helperText={validationErrors.pulse}
@@ -2160,7 +2170,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                         disabled={readOnly}
                                         variant="outlined"
                                         inputProps={{
-                                            maxLength: getFieldConfig('height', 'visit')?.maxLength
+                                            // Removed maxLength to allow validation logic to trigger at/above limit
                                         }}
                                         placeholder='Height'
                                         error={!!validationErrors.height}
@@ -2182,7 +2192,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                         disabled={readOnly}
                                         variant="outlined"
                                         inputProps={{
-                                            maxLength: getFieldConfig('weight', 'visit')?.maxLength
+                                            // Removed maxLength to allow validation logic to trigger at/above limit
                                         }}
                                         error={!!validationErrors.weight}
                                         helperText={validationErrors.weight}
