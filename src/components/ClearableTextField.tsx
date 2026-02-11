@@ -53,8 +53,10 @@ const ClearableTextField: React.FC<ClearableTextFieldProps> = ({
             value={value}
             onChange={(e) => onChange(e.target.value)}
             FormHelperTextProps={{
+                ...(otherProps.FormHelperTextProps as any),
                 sx: {
-                    color: shouldUseGrayError ? '#333333 !important' : undefined
+                    ...(otherProps.FormHelperTextProps?.sx as any),
+                    color: shouldUseGrayError ? '#757575 !important' : (otherProps.FormHelperTextProps?.sx as any)?.color
                 }
             }}
             sx={{

@@ -65,9 +65,9 @@ export const VISIT_FIELDS = {
     doctorEmail: { maxLength: 60, fieldName: 'Referral email', type: 'email' as const },
 
     // Vitals
-    pulse: { maxLength: 5, fieldName: 'Pulse', type: 'number' as const, min: 30, max: 220 },
-    height: { maxLength: 10, fieldName: 'Height', type: 'number' as const, pattern: /^\d*\.?\d*$/, min: 30, max: 250 },
-    weight: { maxLength: 10, fieldName: 'Weight', type: 'number' as const, pattern: /^\d*\.?\d*$/, min: 1, max: 250 },
+    pulse: { maxLength: 3, fieldName: 'Pulse', type: 'number' as const, min: 30, max: 220 },
+    height: { maxLength: 3, fieldName: 'Height', type: 'number' as const, pattern: /^\d*\.?\d*$/, min: 30, max: 250 },
+    weight: { maxLength: 5, fieldName: 'Weight', type: 'number' as const, pattern: /^\d*\.?\d*$/, min: 1, max: 250 },
     bloodPressure: { maxLength: 10, fieldName: 'Blood pressure', type: 'text' as const },
     bp: { maxLength: 10, fieldName: 'Blood pressure', type: 'text' as const }, // Frontend alias
     sugar: { maxLength: 25, fieldName: 'Sugar', type: 'text' as const },

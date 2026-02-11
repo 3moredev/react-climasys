@@ -267,92 +267,28 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                 const areaStateId = areaWithCityId.stateId
                 let matchingCity: { id: string; name: string; stateId?: string } | null = null
 
-                // First, try to get stateName directly from area details (this includes stateName from state_translations.state_name)
-                let stateNameFromArea: string | null = null
-                if (areaStateId) {
-                  try {
-                    const areaDetails = await getAreaDetails(areaName, 1)
-                    if (areaDetails?.stateName) {
-                      stateNameFromArea = areaDetails.stateName
-                    }
-                  } catch (e) {
-                    console.warn('Could not get area details for stateName:', e)
-                  }
-                }
-
-                // Step 1: Fetch city using area's cityId (must match exactly)
-                if (areaCityId) {
-                  const searchTerms = ['a', 'e', 'i', 'o', 'u', 'p', 'm', 'd']
-
-                  for (const term of searchTerms) {
-                    try {
-                      const results = await searchCities(term)
-                      matchingCity = results.find(city => {
-                        const matches = city.id === areaCityId ||
-                          city.id?.toUpperCase() === areaCityId.toUpperCase() ||
-                          String(city.id) === String(areaCityId)
-                        return matches
-                      }) || null
-                      if (matchingCity) {
-                        break
-                      }
-                    } catch (e) {
-                      console.warn(`Search failed for term "${term}":`, e)
-                    }
-                  }
-
-                  if (matchingCity) {
-                    // Update city in form data
-                    setFormData(prev => ({ ...prev, city: matchingCity!.name }))
-                    setCityInput(matchingCity.name)
-                  } else {
-                    console.warn('⚠️ Could not find city for area cityId:', areaCityId)
-                  }
-                }
-
                 // Step 2: Fetch state using area's stateId (must match exactly from database)
-                // Priority: 1) stateName from area details (state_translations.state_name), 2) from getStates, 3) fallback to city
+                // Priority: 1) from getStates, 2) fallback to city
                 if (areaStateId) {
                   try {
-                    // First, use stateName from area details if available (this comes from state_translations.state_name)
-                    if (stateNameFromArea) {
-                      setFormData(prev => ({ ...prev, state: stateNameFromArea }))
-                      // Delay setting state ID to ensure city ID is set first (prevents race condition in useEffect)
-                      setTimeout(() => setSelectedStateId(areaStateId), 100)
+                    const allStates = await getStates()
+                    const matchingState = allStates.find(state => {
+                      const matches = state.id === areaStateId ||
+                        state.id?.toUpperCase() === areaStateId.toUpperCase() ||
+                        String(state.id) === String(areaStateId)
+                      return matches
+                    })
+                    if (matchingState && matchingState.name && matchingState.name !== matchingState.id) {
+                      setFormData(prev => ({ ...prev, state: matchingState.name }))
+                      setTimeout(() => setSelectedStateId(matchingState.id), 100)
                     } else {
-                      // Fallback: try to get from getStates
-                      const allStates = await getStates()
-                      const matchingState = allStates.find(state => {
-                        const matches = state.id === areaStateId ||
-                          state.id?.toUpperCase() === areaStateId.toUpperCase() ||
-                          String(state.id) === String(areaStateId)
-                        return matches
-                      })
-                      if (matchingState && matchingState.name && matchingState.name !== matchingState.id) {
-                        setFormData(prev => ({ ...prev, state: matchingState.name }))
-                        setTimeout(() => setSelectedStateId(matchingState.id), 100)
-                      } else {
-                        console.warn('⚠️ Could not find state name for area stateId:', areaStateId)
-                        // Fallback: try to get state from city if available
-                        if (matchingCity?.stateId) {
-                          const cityStateId = matchingCity.stateId
-                          const cityStateMatch = allStates.find(state => {
-                            const matches = state.id === cityStateId ||
-                              state.id?.toUpperCase() === cityStateId.toUpperCase() ||
-                              String(state.id) === String(cityStateId)
-                            return matches
-                          })
-                          if (cityStateMatch && cityStateMatch.name && cityStateMatch.name !== cityStateMatch.id) {
-                            setFormData(prev => ({ ...prev, state: cityStateMatch.name }))
-                            setTimeout(() => setSelectedStateId(cityStateMatch.id), 100)
-                          }
-                        }
-                      }
+                      console.warn('⚠️ Could not find state name for area stateId:', areaStateId)
                     }
                   } catch (e) {
                     console.error('Error fetching state for loaded area:', e)
                   }
-                } else if (matchingCity?.stateId) {
+                }
+                else if (matchingCity?.stateId) {
                   // Fallback: use city's stateId if area doesn't have stateId
                   try {
                     const allStates = await getStates()
@@ -836,18 +772,23 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
 
           // If formData.city exists, try to match it
           if (formData.city) {
-            const matchingCity = processedCities.find(c => c.name === formData.city || c.id === formData.city)
+            const matchingCity = processedCities.find(c =>
+              c.name?.toLowerCase() === formData.city?.toLowerCase() ||
+              c.id === formData.city ||
+              String(c.id) === String(selectedCityId)
+            )
+
             if (matchingCity) {
-              setCityInput(matchingCity.name)
-              setSelectedCityId(matchingCity.id)
-            } else if (selectedCityId) {
-              // Critical Fix: If selected city (e.g. from patient load) is NOT in the state's city list 
-              // (e.g. due to state mismatch in DB 'OTH' vs 'MAH'), we must manually add it back to options
-              // so it doesn't disappear or become invalid.
+              // Only update if name doesn't match (prevents loops)
+              if (cityInput !== matchingCity.name) setCityInput(matchingCity.name)
+              if (selectedCityId !== matchingCity.id) setSelectedCityId(matchingCity.id)
+            } else if (selectedCityId || formData.city) {
+              // Critical Fix: If selected city is NOT in the state's city list 
+              // we must manually add it back to options so it doesn't disappear.
               const nameToUse = formData.city || cityInput || ''
               if (nameToUse) {
                 processedCities.push({
-                  id: selectedCityId,
+                  id: selectedCityId || 'TEMP',
                   name: nameToUse,
                   stateId: selectedStateId || undefined
                 })
@@ -2015,10 +1956,16 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     State <span style={{ color: 'red' }}>*</span>
                   </Typography>
                   <Autocomplete
-                    options={stateOptions}
+                    options={(() => {
+                      let ops = [...stateOptions];
+                      if (formData.state && !ops.find(o => o.name === formData.state || o.id === formData.state)) {
+                        ops.push({ id: formData.state, name: formData.state });
+                      }
+                      return ops;
+                    })()}
                     disabled={loading || readOnly}
                     getOptionLabel={(opt) => opt.name || ''}
-                    value={stateOptions.find(o => o.name === formData.state || o.id === formData.state) || undefined}
+                    value={stateOptions.find(o => o.name === formData.state || o.id === formData.state) || (formData.state ? { id: formData.state, name: formData.state } : undefined)}
                     inputValue={stateInput}
                     popupIcon={null}
                     forcePopupIcon={false}
@@ -2185,12 +2132,28 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                     City <span style={{ color: 'red' }}>*</span>
                   </Typography>
                   <Autocomplete
-                    options={cityOptions.filter(opt =>
-                      opt &&
-                      typeof opt === 'object' &&
-                      opt.name &&
-                      (!selectedAreaCityId || String(opt.id) === String(selectedAreaCityId))
-                    )}
+                    options={(() => {
+                      let filtered = cityOptions.filter(opt =>
+                        opt &&
+                        typeof opt === 'object' &&
+                        opt.name &&
+                        (!selectedAreaCityId || String(opt.id) === String(selectedAreaCityId) || opt.name?.toLowerCase() === formData.city?.toLowerCase())
+                      );
+                      // Safety: Always ensure the current city from formData is in options list 
+                      // to prevent Autocomplete from clearing it while loading or due to strict filtering
+                      if (formData.city) {
+                        const exists = filtered.find(o => o.name?.toLowerCase() === formData.city?.toLowerCase());
+                        if (!exists) {
+                          const originalCity = cityOptions.find(o => o.name?.toLowerCase() === formData.city?.toLowerCase());
+                          if (originalCity) {
+                            filtered.push(originalCity);
+                          } else {
+                            filtered.push({ id: selectedCityId || 'TEMP', name: formData.city });
+                          }
+                        }
+                      }
+                      return filtered;
+                    })()}
                     popupIcon={null}
                     forcePopupIcon={false}
                     loading={cityLoading}
@@ -2211,7 +2174,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         </li>
                       )
                     }}
-                    value={cityOptions.find(o => o && o.name?.toLowerCase() === formData.city?.toLowerCase()) || undefined}
+                    value={cityOptions.find(o => o && o.name?.toLowerCase() === formData.city?.toLowerCase()) || (formData.city ? { id: selectedCityId || 'TEMP', name: formData.city } : null)}
                     inputValue={cityInput}
                     onInputChange={(_, newInput, reason) => {
                       setCityInput(newInput)
@@ -2367,35 +2330,51 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                   </Typography>
                   <Autocomplete
                     freeSolo
-                    options={areaOptions}
-                    loading={areaLoading}
-                    disabled={loading || readOnly || !selectedCityId}
+                    options={(() => {
+                      let ops = [...areaOptions];
+                      // Safety: Always ensure the current area from formData is in options list
+                      if (formData.area) {
+                        const exists = ops.find(o => o.name?.toLowerCase() === formData.area?.toLowerCase());
+                        if (!exists) {
+                          ops.push({ id: `temp-${formData.area}`, name: formData.area });
+                        }
+                      }
+                      return ops;
+                    })()}
                     getOptionKey={(opt) => {
                       if (typeof opt === 'string') return opt
-                      return `${opt.id}-${opt.name}` // Use ID and name to ensure uniqueness
+                      return `${opt.id}-${opt.name}`
                     }}
                     getOptionLabel={(opt) => {
                       if (typeof opt === 'string') return opt
                       return opt.name || ''
                     }}
-                    value={formData.area && areaInput === formData.area ? (areaOptions.find(o => o.name === formData.area) || formData.area) : undefined}
+                    renderOption={(props, option) => {
+                      return (
+                        <li {...props} key={option.id}>
+                          {option.name}
+                        </li>
+                      )
+                    }}
+                    value={areaOptions.find(o => o.name === formData.area) || (formData.area ? { id: 'val', name: formData.area } : null)}
                     inputValue={areaInput || ''}
                     onInputChange={(event, newInput, reason) => {
                       setAreaInput(newInput || '')
                       // Clear formData.area when user clears the input or when input doesn't match selected area
                       if (reason === 'clear' || !newInput) {
-                        handleInputChange('area', '')
-                        setAreaOpen(false)
-                        setSelectedAreaCityId(null)
+                        // Only clear if it was an explicit user clear action
+                        if (event && (reason === 'clear' || reason === 'input')) {
+                          handleInputChange('area', '')
+                          setAreaOpen(false)
+                          setSelectedAreaCityId(null)
+                        }
                       } else if (newInput && newInput.trim().length > 0) {
                         // If user is editing and input doesn't match the selected area, clear the selected area
-                        // This prevents re-selection when backspacing
-                        if (formData.area && newInput.trim() !== formData.area.trim()) {
+                        // BUT only if they are actually typing (event is present)
+                        if (event && formData.area && newInput.trim() !== formData.area.trim()) {
                           handleInputChange('area', '')
                           setSelectedAreaCityId(null)
                         }
-                        // Allow dropdown to open when user is typing
-                        // The useEffect will handle opening when results arrive
                       }
                     }}
                     onChange={(event, newValue, reason) => {
@@ -2471,162 +2450,55 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         // Fetch and populate City and State based on area's cityId and stateId from database (must match exactly)
                         const fetchCityAndStateForArea = async () => {
                           try {
-                            const { searchCities, getStates, getAreaDetails } = await import('../services/referenceService')
+                            const { searchCities, getStates } = await import('../services/referenceService')
                             let matchingCity: { id: string; name: string; stateId?: string } | null = null
 
-                            // First, try to get stateName directly from area details (this includes stateName from state_translations)
-                            let stateNameFromArea: string | null = null
-                            if (areaStateId) {
-                              try {
-                                const areaDetails = await getAreaDetails(newValue.name, 1)
-                                if (areaDetails?.stateName) {
-                                  stateNameFromArea = areaDetails.stateName
-                                }
-                              } catch (e) {
-                                console.warn('Could not get area details for stateName:', e)
-                              }
-                            }
-
-                            // Step 1: Fetch City using area's cityId (must match exactly)
                             if (areaCityId) {
-
-                              // Try searching with the cityId directly first
                               try {
                                 const directResults = await searchCities(areaCityId)
                                 matchingCity = directResults.find(city => {
-                                  const matches = city.id === areaCityId ||
+                                  return city.id === areaCityId ||
                                     city.id?.toUpperCase() === areaCityId.toUpperCase() ||
                                     String(city.id) === String(areaCityId)
-                                  return matches
                                 }) || null
-
                               } catch (e) {
                                 console.warn(`Direct cityId search failed:`, e)
                               }
 
-                              // If not found, try comprehensive search
-                              if (!matchingCity) {
-                                const searchTerms = ['a', 'e', 'i', 'o', 'u', 'p', 'm', 'd', 'pu', 'mu', 'de']
-                                const allCitiesSet = new Set<string>()
-                                const allCities: Array<{ id: string; name: string; stateId?: string }> = []
-
-                                for (const term of searchTerms) {
-                                  try {
-                                    const results = await searchCities(term)
-                                    results.forEach(city => {
-                                      const key = `${city.id}-${city.name}`
-                                      if (!allCitiesSet.has(key)) {
-                                        allCitiesSet.add(key)
-                                        allCities.push(city)
-                                      }
-                                    })
-                                  } catch (e) {
-                                    console.warn(`Search failed for term "${term}":`, e)
-                                  }
-                                }
-
-                                matchingCity = allCities.find(city => {
-                                  const matches = city.id === areaCityId ||
-                                    city.id?.toUpperCase() === areaCityId.toUpperCase() ||
-                                    String(city.id) === String(areaCityId)
-                                  return matches
-                                }) || null
-
-
-                              }
-
                               if (matchingCity) {
-                                // Populate city
                                 handleInputChange('city', matchingCity.name)
                                 setCityInput(matchingCity.name)
                               } else {
-                                console.warn('⚠️ Could not find city for area cityId:', areaCityId)
                                 handleInputChange('city', '')
                                 setCityInput('')
                               }
-                            } else {
-                              handleInputChange('city', '')
-                              setCityInput('')
                             }
 
-                            // Step 2: Fetch State using area's stateId (must match exactly from database)
-                            // Priority: 1) stateName from area details (state_translations.state_name), 2) from getStates, 3) fallback to city
                             if (areaStateId) {
                               const isOthers = (name: string) => ['OTH', 'OTHERS', 'OTHER'].includes(name.toUpperCase())
                               const currentState = formData.state
 
-                              // Function to safely update state
-                              const safeSetState = (newState: string) => {
-                                // If current state is valid (e.g. Maharashtra) and new state is "Others", DON'T update
-                                if (currentState && !isOthers(currentState) && isOthers(newState)) {
-                                  console.log(`🛡️ Preventing state overwrite: Keeping "${currentState}" instead of "${newState}"`)
-                                  return
-                                }
-                                handleInputChange('state', newState)
-                              }
-
                               try {
-                                // First, use stateName from area details if available
-                                if (stateNameFromArea) {
-                                  safeSetState(stateNameFromArea)
-                                } else {
-                                  // Fallback: try to get from getStates
-                                  const allStates = await getStates()
-                                  const matchingState = allStates.find(state => {
-                                    const matches = state.id === areaStateId ||
-                                      state.id?.toUpperCase() === areaStateId.toUpperCase() ||
-                                      String(state.id) === String(areaStateId)
-                                    return matches
-                                  })
-                                  if (matchingState && matchingState.name && matchingState.name !== matchingState.id) {
-                                    safeSetState(matchingState.name)
-                                  } else {
-                                    // Fallback: try to get state from city if available
-                                    if (matchingCity?.stateId) {
-                                      const cityStateId = matchingCity.stateId
-                                      const cityStateMatch = allStates.find(state => {
-                                        const matches = state.id === cityStateId ||
-                                          state.id?.toUpperCase() === cityStateId.toUpperCase() ||
-                                          String(state.id) === String(cityStateId)
-                                        return matches
-                                      })
-                                      if (cityStateMatch && cityStateMatch.name && cityStateMatch.name !== cityStateMatch.id) {
-                                        safeSetState(cityStateMatch.name)
-                                      }
-                                    }
+                                const allStates = await getStates()
+                                const matchingState = allStates.find(state => {
+                                  return state.id === areaStateId ||
+                                    state.id?.toUpperCase() === areaStateId.toUpperCase() ||
+                                    String(state.id) === String(areaStateId)
+                                })
+                                if (matchingState && matchingState.name && matchingState.name !== matchingState.id) {
+                                  const newState = matchingState.name
+                                  if (!(currentState && !isOthers(currentState) && isOthers(newState))) {
+                                    handleInputChange('state', newState)
                                   }
                                 }
                               } catch (e) {
-                                console.error('Error fetching state for area:', e)
-                              }
-                            } else {
-                              // Fallback: try to get state from city if area doesn't have stateId
-                              if (matchingCity?.stateId) {
-                                try {
-                                  const allStates = await getStates()
-                                  const cityStateId = matchingCity.stateId
-                                  const matchingState = allStates.find(state => {
-                                    const matches = state.id === cityStateId ||
-                                      state.id?.toUpperCase() === cityStateId.toUpperCase() ||
-                                      String(state.id) === String(cityStateId)
-                                    return matches
-                                  })
-                                  if (matchingState && matchingState.name && matchingState.name !== matchingState.id) {
-                                    handleInputChange('state', matchingState.name)
-                                  }
-                                } catch (e) {
-                                  console.error('Error fetching state from city:', e)
-                                }
-                              } else {
-                                // Keep existing if valid, else default
-                                if (!formData.state) handleInputChange('state', 'Maharashtra')
+                                console.error('Error fetching state from getStates:', e)
                               }
                             }
                           } catch (e) {
                             console.error('Error fetching city and state for area:', e)
                             handleInputChange('city', '')
                             setCityInput('')
-                            if (!formData.state) handleInputChange('state', 'Maharashtra')
                           }
                         }
                         fetchCityAndStateForArea()
@@ -2644,6 +2516,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                       }
                     }}
                     filterOptions={(options) => options}
+                    disabled={loading || readOnly || !selectedCityId}
                     open={areaOpen && areaOptions.length > 0 && !areaLoading}
                     onOpen={() => {
                       setAreaOpen(true)
