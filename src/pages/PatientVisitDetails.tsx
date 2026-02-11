@@ -1816,26 +1816,48 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                         </Grid>
                         <Grid item xs={12} sm={6} md={2}>
                             {isDoctorReferral() ? (
-                                (formData.referralName && formData.referralName.trim() !== '') || selectedDoctor !== null ? (
-                                    <Box sx={{ mb: 2 }}>
-                                        <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
-                                            {isDoctorReferral() ? 'Doctor Name' : 'Referral Name'}
-                                        </Typography>
+                                <Box sx={{ mb: 2 }}>
+                                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
+                                        {isDoctorReferral() ? 'Doctor Name' : 'Referral Name'}
+                                    </Typography>
+                                    <Box position="relative">
                                         <ClearableTextField
                                             fullWidth
                                             size="small"
-                                            value={formData.referralName}
-                                            onChange={(value) => handleInputChange('referralName', value)}
+                                            placeholder={isDoctorReferral() ? 'Type Doctor Name' : 'Type Referral Name'}
+                                            value={selectedDoctor ? formData.referralName : referralNameSearch}
+                                            onChange={(value) => {
+                                                if (selectedDoctor) {
+                                                    handleInputChange('referralName', value);
+                                                } else {
+                                                    handleReferralNameSearch(value);
+                                                }
+                                            }}
                                             onClear={() => {
                                                 handleInputChange('referralName', '');
                                                 setReferralNameSearch('');
                                                 setSelectedDoctor(null);
                                                 setReferralNameOptions([]);
                                             }}
+                                            onBlur={() => {
+                                                // When user clicks away, ensure the typed name is saved
+                                                if (!selectedDoctor && referralNameSearch && referralNameSearch !== formData.referralName) {
+                                                    handleInputChange('referralName', referralNameSearch);
+                                                }
+                                            }}
                                             onKeyDown={(e) => {
-                                                // Prevent any keyboard input when doctor is selected (except Tab for navigation)
-                                                if (selectedDoctor && e.key !== 'Tab') {
-                                                    e.preventDefault();
+                                                // Allow Tab for navigation
+                                                if (e.key === 'Tab') return;
+
+                                                // If doctor is selected and user starts typing or presses Backspace
+                                                if (selectedDoctor && (e.key.length === 1 || e.key === 'Backspace')) {
+                                                    // Clear the selection state and start a new search
+                                                    const initialSearch = e.key.length === 1 ? e.key : '';
+
+                                                    setSelectedDoctor(null);
+                                                    setReferralNameSearch(initialSearch);
+                                                    handleInputChange('referralName', '');
+                                                    setReferralNameOptions([]);
                                                 }
                                             }}
                                             disabled={readOnly || isSelfReferral}
@@ -1849,16 +1871,17 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                 },
                                                 '& .MuiInputBase-input.Mui-disabled::placeholder': {
                                                     color: '#666666 !important',
-                                                    opacity: '0.5 !important'
+                                                    opacity: '0.5 !important',
+                                                    WebkitTextFillColor: '#666666 !important'
                                                 }
                                             }}
                                             variant="outlined"
-                                            placeholder={isDoctorReferral() ? 'Type Doctor Name' : 'Type Referral Name'}
                                             error={!!validationErrors.referralName}
                                             helperText={validationErrors.referralName}
                                             InputProps={{
                                                 endAdornment: (
                                                     <React.Fragment>
+                                                        {!selectedDoctor && isSearchingReferral && <CircularProgress color="inherit" size={20} sx={{ mr: 1 }} />}
                                                         <InputAdornment position="end">
                                                             <IconButton
                                                                 size="small"
@@ -1883,122 +1906,51 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                 )
                                             }}
                                         />
+                                        {/* Search Results Dropdown */}
+                                        {!selectedDoctor && referralNameOptions.length > 0 && (
+                                            <Box sx={{
+                                                position: 'absolute',
+                                                top: 'calc(100% + 4px)',
+                                                left: 0,
+                                                right: 0,
+                                                backgroundColor: 'white',
+                                                borderRadius: '4px',
+                                                boxShadow: '0px 5px 5px -3px rgba(0,0,0,0.2), 0px 8px 10px 1px rgba(0,0,0,0.14), 0px 3px 14px 2px rgba(0,0,0,0.12)',
+                                                zIndex: 1000,
+                                                maxHeight: '200px',
+                                                overflowY: 'auto'
+                                            }}>
+                                                {referralNameOptions.map((option) => (
+                                                    <Box
+                                                        key={option.id}
+                                                        onMouseDown={() => {
+                                                            console.log('DEBUG: Doctor selected from list', option)
+                                                            setSelectedDoctor((option as any).fullData);
+                                                            setFormData(prev => ({
+                                                                ...prev,
+                                                                referralName: option.name,
+                                                                referralContact: (option as any).fullData?.doctorMob || '',
+                                                                referralEmail: (option as any).fullData?.doctorMail || '',
+                                                                referralAddress: (option as any).fullData?.doctorAddress || ''
+                                                            }));
+                                                            setReferralNameSearch(option.name);
+                                                            setReferralNameOptions([]);
+                                                        }}
+                                                        sx={{
+                                                            padding: '8px 12px',
+                                                            cursor: 'pointer',
+                                                            fontSize: '14px',
+                                                            borderBottom: '1px solid #f0f0f0',
+                                                            '&:hover': { backgroundColor: '#f5f5f5' }
+                                                        }}
+                                                    >
+                                                        {option.name}
+                                                    </Box>
+                                                ))}
+                                            </Box>
+                                        )}
                                     </Box>
-                                ) : (
-                                    <Box sx={{ mb: 2 }}>
-                                        <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
-                                            {isDoctorReferral() ? 'Doctor Name' : 'Referral Name'}
-                                        </Typography>
-                                        <Box position="relative">
-                                            <ClearableTextField
-                                                fullWidth
-                                                size="small"
-                                                placeholder={isDoctorReferral() ? 'Type Doctor Name' : 'Type Referral Name'}
-                                                value={referralNameSearch}
-                                                onChange={(value) => handleReferralNameSearch(value)}
-                                                onClear={() => {
-                                                    handleInputChange('referralName', '');
-                                                    setReferralNameSearch('');
-                                                    setSelectedDoctor(null);
-                                                    setReferralNameOptions([]);
-                                                }}
-                                                onBlur={() => {
-                                                    // When user clicks away, ensure the typed name is saved
-                                                    if (referralNameSearch && referralNameSearch !== formData.referralName) {
-                                                        handleInputChange('referralName', referralNameSearch);
-                                                    }
-                                                }}
-                                                disabled={readOnly || isSelfReferral}
-                                                sx={{
-                                                    '& .MuiInputBase-root.Mui-disabled': {
-                                                        backgroundColor: '#f5f5f5 !important'
-                                                    },
-                                                    '& .MuiInputBase-input.Mui-disabled': {
-                                                        color: '#666666 !important',
-                                                        WebkitTextFillColor: '#666666 !important'
-                                                    },
-                                                    '& .MuiInputBase-input.Mui-disabled::placeholder': {
-                                                        color: '#666666 !important',
-                                                        opacity: '0.5 !important'
-                                                    }
-                                                }}
-                                                variant="outlined"
-                                                error={!!validationErrors.referralName}
-                                                helperText={validationErrors.referralName}
-                                                InputProps={{
-                                                    endAdornment: (
-                                                        <React.Fragment>
-                                                            {isSearchingReferral && <CircularProgress color="inherit" size={20} sx={{ mr: 1 }} />}
-                                                            <InputAdornment position="end">
-                                                                <IconButton
-                                                                    size="small"
-                                                                    onClick={() => !readOnly && !isSelfReferral && setShowReferralPopup(true)}
-                                                                    disabled={readOnly || isSelfReferral}
-                                                                    title="Add New Referral Doctor"
-                                                                    sx={{
-                                                                        backgroundColor: readOnly ? '#9e9e9e' : '#1976d2',
-                                                                        color: 'white',
-                                                                        width: 24,
-                                                                        height: 24,
-                                                                        padding: 0,
-                                                                        '&:hover': {
-                                                                            backgroundColor: readOnly ? '#9e9e9e' : '#1565c0',
-                                                                        }
-                                                                    }}
-                                                                >
-                                                                    <Add sx={{ fontSize: 16 }} />
-                                                                </IconButton>
-                                                            </InputAdornment>
-                                                        </React.Fragment>
-                                                    )
-                                                }}
-                                            />
-                                            {/* Search Results Dropdown */}
-                                            {referralNameOptions.length > 0 && (
-                                                <Box sx={{
-                                                    position: 'absolute',
-                                                    top: 'calc(100% + 4px)',
-                                                    left: 0,
-                                                    right: 0,
-                                                    backgroundColor: 'white',
-                                                    borderRadius: '4px',
-                                                    boxShadow: '0px 5px 5px -3px rgba(0,0,0,0.2), 0px 8px 10px 1px rgba(0,0,0,0.14), 0px 3px 14px 2px rgba(0,0,0,0.12)',
-                                                    zIndex: 1000,
-                                                    maxHeight: '200px',
-                                                    overflowY: 'auto'
-                                                }}>
-                                                    {referralNameOptions.map((option) => (
-                                                        <Box
-                                                            key={option.id}
-                                                            onMouseDown={() => {
-                                                                console.log('DEBUG: Doctor selected from list', option)
-                                                                setSelectedDoctor((option as any).fullData);
-                                                                setFormData(prev => ({
-                                                                    ...prev,
-                                                                    referralName: option.name,
-                                                                    referralContact: (option as any).fullData?.doctorMob || '',
-                                                                    referralEmail: (option as any).fullData?.doctorMail || '',
-                                                                    referralAddress: (option as any).fullData?.doctorAddress || ''
-                                                                }));
-                                                                setReferralNameSearch(option.name);
-                                                                setReferralNameOptions([]);
-                                                            }}
-                                                            sx={{
-                                                                padding: '8px 12px',
-                                                                cursor: 'pointer',
-                                                                fontSize: '14px',
-                                                                borderBottom: '1px solid #f0f0f0',
-                                                                '&:hover': { backgroundColor: '#f5f5f5' }
-                                                            }}
-                                                        >
-                                                            {option.name}
-                                                        </Box>
-                                                    ))}
-                                                </Box>
-                                            )}
-                                        </Box>
-                                    </Box>
-                                )
+                                </Box>
                             ) : (
                                 <Box sx={{ mb: 2 }}>
                                     <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>

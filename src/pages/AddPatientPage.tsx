@@ -2054,6 +2054,24 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         placeholder="Select State"
                         error={!!errors.state && String(errors.state).toLowerCase().includes('required')}
                         helperText={errors.state}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Tab') return;
+                          if (selectedStateId && (e.key.length === 1 || e.key === 'Backspace')) {
+                            e.preventDefault();
+                            const initialInput = e.key.length === 1 ? e.key : '';
+                            setSelectedStateId(null);
+                            handleInputChange('state', initialInput);
+                            setStateInput(initialInput);
+                            // Clear city and area too
+                            handleInputChange('city', '');
+                            setCityInput('');
+                            setSelectedCityId(null);
+                            handleInputChange('area', '');
+                            setAreaInput('');
+                            setAreaOptions([]);
+                            setSelectedAreaCityId(null);
+                          }
+                        }}
                         disabled={loading || readOnly}
                         sx={{
                           '& .MuiInputBase-root': {
@@ -2259,6 +2277,21 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         {...params}
                         fullWidth
                         placeholder={selectedStateId ? "Search City" : "Select State first"}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Tab') return;
+                          if (selectedCityId && (e.key.length === 1 || e.key === 'Backspace')) {
+                            e.preventDefault();
+                            const initialInput = e.key.length === 1 ? e.key : '';
+                            setSelectedCityId(null);
+                            handleInputChange('city', initialInput);
+                            setCityInput(initialInput);
+                            // Clear area too
+                            handleInputChange('area', '');
+                            setAreaInput('');
+                            setAreaOptions([]);
+                            setSelectedAreaCityId(null);
+                          }
+                        }}
                         disabled={loading || readOnly || !selectedStateId}
                         sx={{
                           '& .MuiInputBase-root': {
@@ -2573,9 +2606,17 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                         error={!!errors.area && String(errors.area).toLowerCase().includes('required')}
                         helperText={errors.area}
                         onKeyDown={(e) => {
-                          // Prevent any keyboard input when area is selected (except Tab for navigation)
-                          if (selectedAreaCityId && e.key !== 'Tab') {
+                          // Allow Tab for navigation
+                          if (e.key === 'Tab') return;
+
+                          // If area is selected and user starts typing or presses Backspace
+                          if (selectedAreaCityId && (e.key.length === 1 || e.key === 'Backspace')) {
+                            // Clear selection state and start a fresh search
                             e.preventDefault();
+                            const initialInput = e.key.length === 1 ? e.key : '';
+                            setSelectedAreaCityId(null);
+                            handleInputChange('area', initialInput);
+                            setAreaInput(initialInput);
                           }
                         }}
                         sx={{
@@ -2887,9 +2928,37 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                           }))
                         }}
                         onKeyDown={(e) => {
-                          // Prevent any keyboard input when doctor is selected (except Tab for navigation)
-                          if (selectedDoctor && e.key !== 'Tab') {
-                            e.preventDefault();
+                          // Allow Tab for navigation
+                          if (e.key === 'Tab') return;
+
+                          // If doctor is selected and user starts typing or presses Backspace
+                          if (selectedDoctor && (e.key.length === 1 || e.key === 'Backspace')) {
+                            // Don't prevent default, but clear the selection state
+                            // handleInputChange('referralName', ''); // Will be handled by the new search input
+
+                            // If it's a character key, start the next search with it
+                            const initialSearch = e.key.length === 1 ? e.key : '';
+
+                            setReferralNameSearch(initialSearch);
+                            setSelectedDoctor(null);
+                            handleInputChange('referralName', '');
+                            setReferralNameOptions([]);
+
+                            // Clear auto-populated referral fields
+                            setFormData(prev => ({
+                              ...prev,
+                              referralContact: '',
+                              referralEmail: '',
+                              referralAddress: ''
+                            }))
+
+                            // If it's a printable char, we want to let the next render's input catch it
+                            // OR we can just let it through if we were using the same component.
+                            // Since we might switch branches, we might need a small delay or trust the state change.
+                          } else if (selectedDoctor) {
+                            // For other keys like Shift, Ctrl, etc. when selected, we might want to prevent default 
+                            // if it would cause weird behavior, but usually it's fine.
+                            // e.preventDefault(); 
                           }
                         }}
                         disabled={loading || readOnly || isSelfReferral || (!!patientId && formData.referredBy !== 'D')}
