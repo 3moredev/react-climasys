@@ -3,7 +3,6 @@ import { Close, Delete } from '@mui/icons-material';
 import { useSession } from '../store/hooks/useSession';
 import {
     Snackbar,
-    TextField,
     Button,
     Dialog,
     DialogTitle,
@@ -16,6 +15,7 @@ import {
     Alert
 } from '@mui/material';
 import { validateField, getMaxLength } from '../utils/validationUtils';
+import ClearableTextField from '../components/ClearableTextField';
 
 export interface LabTestRow {
     id: string;
@@ -258,13 +258,13 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
                                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className="mb-0">
                                     Lab Test Name <span style={{ color: 'red' }}>*</span>
                                 </Typography>
-                                <TextField
+                                <ClearableTextField
                                     fullWidth
                                     placeholder="Lab Test Name"
                                     variant="outlined"
                                     size="small"
                                     value={testLabData.labTestName}
-                                    onChange={(e) => handleInputChange('labTestName', e.target.value)}
+                                    onChange={(val) => handleInputChange('labTestName', val.toUpperCase())}
                                     error={!!errors.labTestName}
                                     helperText={errors.labTestName || (testLabData.labTestName.length === 80 ? 'Lab Test Name cannot exceed 80 characters' : '')}
                                 />
@@ -275,13 +275,13 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
                                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className="mb-0">
                                     Priority <span style={{ color: 'red' }}>*</span>
                                 </Typography>
-                                <TextField
+                                <ClearableTextField
                                     fullWidth
                                     placeholder="Priority"
                                     variant="outlined"
                                     size="small"
                                     value={testLabData.priority}
-                                    onChange={(e) => handleInputChange('priority', e.target.value)}
+                                    onChange={(val) => handleInputChange('priority', val)}
                                     inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
                                     error={!!errors.priority}
                                     helperText={errors.priority || (testLabData.priority.length === 10 ? 'Priority cannot exceed 10 characters' : '')}
@@ -295,21 +295,22 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
                                         <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }} className="mb-0">
                                             Parameter Name <span style={{ color: 'red' }}>*</span>
                                         </Typography>
-                                        <TextField
+                                        <ClearableTextField
                                             fullWidth
                                             placeholder="Parameter Name"
                                             variant="outlined"
                                             size="small"
                                             value={testLabData.parameterName}
                                             inputProps={{ maxLength: getMaxLength('parameterName', 'labMaster') }}
-                                            onChange={(e) => {
-                                                const { allowed, error } = validateField('parameterName', e.target.value, undefined, undefined, 'labMaster');
+                                            onChange={(val) => {
+                                                const capitalized = val.toUpperCase();
+                                                const { allowed, error } = validateField('parameterName', capitalized, undefined, undefined, 'labMaster');
                                                 if (allowed) {
-                                                    handleInputChange('parameterName', e.target.value);
+                                                    handleInputChange('parameterName', capitalized);
                                                     setErrors(prev => ({ ...prev, parameterName: error }));
                                                 }
                                             }}
-                                            onKeyPress={(e) => {
+                                            onKeyDown={(e) => {
                                                 if (e.key === 'Enter') {
                                                     handleAddParameter();
                                                 }

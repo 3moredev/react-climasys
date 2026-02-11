@@ -901,7 +901,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
       'referralName', 'referralAddress', 'referralEmail', 'mobileNumber', 'referralContact'];
 
     if (textFields.includes(field)) {
-      const validation = validateField(field, value);
+      const validation = validateField(field, value, undefined, undefined, 'patient');
       if (!validation.allowed) return;
     }
 
@@ -956,7 +956,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
       'referralName', 'referralAddress', 'referralEmail', 'mobileNumber', 'referralContact'];
 
     if (validatedFields.includes(field)) {
-      const { error } = validateField(field, value);
+      const { error } = validateField(field, value, undefined, undefined, 'patient');
       if (error) {
         setErrors(prev => ({ ...prev, [field]: error }));
       } else {

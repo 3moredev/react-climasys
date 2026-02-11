@@ -4715,9 +4715,8 @@ export default function Treatment() {
             let newError: string | null = null;
 
             if (field === 'discount') {
-                const { error: lengthError } = validateField('discount', value, 10, 'Discount', 'billing');
-                if (lengthError) {
-                    newError = lengthError;
+                if (value.length > 3) {
+                    newError = 'Discount (Rs) cannot exceed 3 characters';
                 } else if (value && isNaN(Number(value))) {
                     // Should be caught by blocking above, but fallback
                     newError = 'Discount must be a valid number';
@@ -5476,25 +5475,19 @@ export default function Treatment() {
                                                     }}>
                                                         {/* Search Field inside dropdown */}
                                                         <div style={{ padding: '6px' }}>
-                                                            <input
-                                                                type="text"
+                                                            <ClearableTextField
+                                                                fullWidth
+                                                                size="small"
                                                                 value={complaintSearch}
-                                                                onChange={(e) => setComplaintSearch(e.target.value)}
+                                                                onChange={(val) => setComplaintSearch(val)}
                                                                 placeholder="Search complaints"
-                                                                style={{
-                                                                    width: '100%',
-                                                                    height: '28px',
-                                                                    padding: '4px 8px',
-                                                                    border: '1px solid #B7B7B7',
-                                                                    borderRadius: '4px',
-                                                                    fontSize: '12px',
-                                                                    outline: 'none'
-                                                                }}
-                                                                onFocus={(e) => {
-                                                                    (e.target as HTMLInputElement).style.borderColor = '#1E88E5';
-                                                                }}
-                                                                onBlur={(e) => {
-                                                                    (e.target as HTMLInputElement).style.borderColor = '#B7B7B7';
+                                                                variant="outlined"
+                                                                sx={{
+                                                                    '& .MuiOutlinedInput-root': {
+                                                                        height: '32px',
+                                                                        borderRadius: '4px',
+                                                                        fontSize: '12px'
+                                                                    }
                                                                 }}
                                                             />
                                                         </div>
@@ -5696,24 +5689,25 @@ export default function Treatment() {
                                                         <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '12px' }} className="px-3">{index + 1}</td>
                                                         <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '12px' }} className="px-3">{row.label}</td>
                                                         <td style={{ borderRight: '1px solid #e0e0e0' }} className="px-1 py-1">
-                                                            <input
-                                                                type="text"
+                                                            <ClearableTextField
+                                                                fullWidth
+                                                                size="small"
                                                                 value={row.comment}
-                                                                onChange={(e) => handleComplaintCommentChange(row.value, e.target.value)}
+                                                                onChange={(val) => handleComplaintCommentChange(row.value, val)}
                                                                 disabled={isFormDisabled}
                                                                 placeholder="Enter duration/comment"
-                                                                className="duration-comment-input duration-comment-table-input"
-                                                                style={{
-                                                                    width: '100%',
-                                                                    padding: '8px 10px',
-                                                                    border: 'none',
-                                                                    borderRadius: 0,
-                                                                    outline: 'none',
-                                                                    backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
-                                                                    boxShadow: 'none',
-                                                                    fontSize: '11px',
-                                                                    color: isFormDisabled ? '#666' : '#333',
-                                                                    cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                                                sx={{
+                                                                    '& .MuiOutlinedInput-root': {
+                                                                        borderRadius: 0,
+                                                                        backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
+                                                                        fontSize: '11px',
+                                                                        '& fieldset': { border: 'none' }
+                                                                    },
+                                                                    '& .MuiInputBase-input': {
+                                                                        padding: '8px 10px',
+                                                                        color: isFormDisabled ? '#666' : '#333',
+                                                                        cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                                                    }
                                                                 }}
                                                             />
                                                         </td>
@@ -6042,25 +6036,19 @@ export default function Treatment() {
                                                 overflow: 'hidden'
                                             }}>
                                                 <div style={{ padding: '6px' }}>
-                                                    <input
-                                                        type="text"
-                                                        placeholder="Search diagnoses..."
+                                                    <ClearableTextField
+                                                        fullWidth
+                                                        size="small"
                                                         value={diagnosisSearch}
-                                                        onChange={(e) => setDiagnosisSearch(e.target.value)}
-                                                        style={{
-                                                            width: '100%',
-                                                            height: '28px',
-                                                            padding: '4px 8px',
-                                                            border: '1px solid #B7B7B7',
-                                                            borderRadius: '4px',
-                                                            fontSize: '12px',
-                                                            outline: 'none'
-                                                        }}
-                                                        onFocus={(e) => {
-                                                            (e.target as HTMLInputElement).style.borderColor = '#1E88E5';
-                                                        }}
-                                                        onBlur={(e) => {
-                                                            (e.target as HTMLInputElement).style.borderColor = '#B7B7B7';
+                                                        onChange={(val) => setDiagnosisSearch(val)}
+                                                        placeholder="Search diagnoses"
+                                                        variant="outlined"
+                                                        sx={{
+                                                            '& .MuiOutlinedInput-root': {
+                                                                height: '32px',
+                                                                borderRadius: '4px',
+                                                                fontSize: '12px'
+                                                            }
                                                         }}
                                                     />
                                                 </div>
@@ -6357,25 +6345,19 @@ export default function Treatment() {
                                             }}>
                                                 {/* Search Field inside dropdown */}
                                                 <div style={{ padding: '6px' }}>
-                                                    <input
-                                                        type="text"
+                                                    <ClearableTextField
+                                                        fullWidth
+                                                        size="small"
                                                         value={medicineSearch}
-                                                        onChange={(e) => setMedicineSearch(e.target.value)}
+                                                        onChange={(val) => setMedicineSearch(val)}
                                                         placeholder="Search medicines"
-                                                        style={{
-                                                            width: '100%',
-                                                            height: '28px',
-                                                            padding: '4px 8px',
-                                                            border: '1px solid #B7B7B7',
-                                                            borderRadius: '4px',
-                                                            fontSize: '12px',
-                                                            outline: 'none'
-                                                        }}
-                                                        onFocus={(e) => {
-                                                            (e.target as HTMLInputElement).style.borderColor = '#1E88E5';
-                                                        }}
-                                                        onBlur={(e) => {
-                                                            (e.target as HTMLInputElement).style.borderColor = '#B7B7B7';
+                                                        variant="outlined"
+                                                        sx={{
+                                                            '& .MuiOutlinedInput-root': {
+                                                                height: '32px',
+                                                                borderRadius: '4px',
+                                                                fontSize: '12px'
+                                                            }
                                                         }}
                                                     />
                                                 </div>
@@ -6621,77 +6603,86 @@ export default function Treatment() {
                                                             />
                                                         </td>
                                                         <td style={{ borderRight: '1px solid #e0e0e0' }} className="px-1 py-1">
-                                                            <input
-                                                                type="text"
+                                                            <ClearableTextField
+                                                                size="small"
                                                                 value={row.d}
-                                                                inputMode="numeric"
-                                                                pattern="[0-9]*"
-                                                                onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
-                                                                onChange={(e) => handleMedicineFieldChange(row.id, 'd', e.target.value.replace(/\D/g, ''))}
+                                                                onChange={(val) => handleMedicineFieldChange(row.id, 'd', val.replace(/\D/g, ''))}
                                                                 disabled={isFormDisabled}
-                                                                className="medicine-table-input"
-                                                                style={{
-                                                                    width: '100%',
-                                                                    height: '100%',
-                                                                    padding: '8px 6px',
-                                                                    border: 'none',
-                                                                    borderRadius: 0,
-                                                                    outline: 'none',
-                                                                    backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
-                                                                    boxShadow: 'none',
-                                                                    fontSize: '11px',
-                                                                    textAlign: 'center',
-                                                                    color: isFormDisabled ? '#666' : '#333',
-                                                                    cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                                                inputProps={{
+                                                                    inputMode: 'numeric',
+                                                                    pattern: '[0-9]*',
+                                                                    maxLength: 10
+                                                                }}
+                                                                onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
+                                                                sx={{
+                                                                    '& .MuiOutlinedInput-root': {
+                                                                        height: '100%',
+                                                                        borderRadius: 0,
+                                                                        backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
+                                                                        fontSize: '11px',
+                                                                        '& fieldset': { border: 'none' }
+                                                                    },
+                                                                    '& .MuiInputBase-input': {
+                                                                        padding: '8px 6px',
+                                                                        textAlign: 'center',
+                                                                        color: isFormDisabled ? '#666' : '#333',
+                                                                        cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                                                    }
                                                                 }}
                                                             />
                                                         </td>
                                                         <td style={{ borderRight: '1px solid #e0e0e0' }} className="px-1 py-1">
-                                                            <input
-                                                                type="text"
+                                                            <ClearableTextField
+                                                                size="small"
                                                                 value={row.days}
-                                                                inputMode="numeric"
-                                                                pattern="[0-9]*"
-                                                                onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
-                                                                onChange={(e) => handleMedicineFieldChange(row.id, 'days', e.target.value.replace(/\D/g, ''))}
+                                                                onChange={(val) => handleMedicineFieldChange(row.id, 'days', val.replace(/\D/g, ''))}
                                                                 disabled={isFormDisabled}
-                                                                className="medicine-table-input"
-                                                                style={{
-                                                                    width: '100%',
-                                                                    height: '100%',
-                                                                    padding: '8px 6px',
-                                                                    border: 'none',
-                                                                    borderRadius: 0,
-                                                                    outline: 'none',
-                                                                    backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
-                                                                    boxShadow: 'none',
-                                                                    fontSize: '11px',
-                                                                    textAlign: 'center',
-                                                                    color: isFormDisabled ? '#666' : '#333',
-                                                                    cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                                                inputProps={{
+                                                                    inputMode: 'numeric',
+                                                                    pattern: '[0-9]*',
+                                                                    maxLength: 10
+                                                                }}
+                                                                onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
+                                                                sx={{
+                                                                    '& .MuiOutlinedInput-root': {
+                                                                        height: '100%',
+                                                                        borderRadius: 0,
+                                                                        backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
+                                                                        fontSize: '11px',
+                                                                        '& fieldset': { border: 'none' }
+                                                                    },
+                                                                    '& .MuiInputBase-input': {
+                                                                        padding: '8px 6px',
+                                                                        textAlign: 'center',
+                                                                        color: isFormDisabled ? '#666' : '#333',
+                                                                        cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                                                    }
                                                                 }}
                                                             />
                                                         </td>
                                                         <td style={{ borderRight: '1px solid #e0e0e0' }} className="px-1 py-1">
-                                                            <input
-                                                                type="text"
+                                                            <ClearableTextField
+                                                                size="small"
                                                                 value={row.instruction}
-                                                                onChange={(e) => handleMedicineInstructionChange(row.id, e.target.value)}
+                                                                onChange={(val) => handleMedicineInstructionChange(row.id, val)}
                                                                 disabled={isFormDisabled}
                                                                 placeholder="Enter instruction"
-                                                                className="medicine-table-input"
-                                                                style={{
-                                                                    width: '100%',
-                                                                    height: '100%',
-                                                                    padding: '8px 10px',
-                                                                    border: 'none',
-                                                                    borderRadius: 0,
-                                                                    outline: 'none',
-                                                                    backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
-                                                                    boxShadow: 'none',
-                                                                    fontSize: '11px',
-                                                                    color: isFormDisabled ? '#666' : '#333',
-                                                                    cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                                                inputProps={{
+                                                                    maxLength: 4000
+                                                                }}
+                                                                sx={{
+                                                                    '& .MuiOutlinedInput-root': {
+                                                                        height: '100%',
+                                                                        borderRadius: 0,
+                                                                        backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
+                                                                        fontSize: '11px',
+                                                                        '& fieldset': { border: 'none' }
+                                                                    },
+                                                                    '& .MuiInputBase-input': {
+                                                                        padding: '8px 10px',
+                                                                        color: isFormDisabled ? '#666' : '#333',
+                                                                        cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                                                    }
                                                                 }}
                                                             />
                                                         </td>
@@ -6741,12 +6732,12 @@ export default function Treatment() {
 
                                 <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
                                     <div style={{ position: 'relative', flex: 1 }}>
-                                        <input
-                                            type="text"
+                                        <ClearableTextField
+                                            fullWidth
+                                            size="small"
                                             value={prescriptionInput}
-                                            onChange={(e) => {
+                                            onChange={(val) => {
                                                 if (!isFormDisabled) {
-                                                    const val = e.target.value;
                                                     setPrescriptionInput(val);
                                                     if (val.length >= 200) {
                                                         setPrescriptionError('Prescription cannot exceed 200 characters');
@@ -6756,31 +6747,26 @@ export default function Treatment() {
                                                 }
                                             }}
                                             disabled={isFormDisabled}
-                                            maxLength={200}
                                             placeholder="Enter Brand Name / Prescription (Max 200 chars)"
-                                            style={{
-                                                flex: 1,
-                                                padding: '6px 10px',
-                                                border: '1px solid #B7B7B7',
-                                                borderRadius: '4px',
-                                                fontSize: '13px',
-                                                // backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
-                                                color: isFormDisabled ? '#666' : '#333',
-                                                cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                            variant="outlined"
+                                            inputProps={{
+                                                maxLength: 200
                                             }}
+                                            sx={{
+                                                '& .MuiOutlinedInput-root': {
+                                                    height: '32px',
+                                                    borderRadius: '4px',
+                                                    fontSize: '13px',
+                                                    backgroundColor: isFormDisabled ? '#f5f5f5' : 'white'
+                                                },
+                                                '& .MuiInputBase-input': {
+                                                    color: isFormDisabled ? '#666' : '#333',
+                                                    cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                                }
+                                            }}
+                                            error={!!prescriptionError}
+                                            helperText={prescriptionError}
                                         />
-                                        {prescriptionError && (
-                                            <div style={{
-                                                color: (prescriptionError.includes('cannot exceed') || prescriptionError.includes('exceeds')) ? '#333333' : 'red',
-                                                fontSize: '12px',
-                                                marginTop: '4px',
-                                                position: 'absolute',
-                                                bottom: '-18px',
-                                                left: 0
-                                            }}>
-                                                {prescriptionError}
-                                            </div>
-                                        )}
                                     </div>
                                     <button
                                         type="button"
@@ -7228,25 +7214,19 @@ export default function Treatment() {
                                                 overflow: 'hidden'
                                             }}>
                                                 <div style={{ padding: '6px' }}>
-                                                    <input
-                                                        type="text"
-                                                        placeholder="Search investigations..."
+                                                    <ClearableTextField
+                                                        fullWidth
+                                                        size="small"
                                                         value={investigationSearch}
-                                                        onChange={(e) => setInvestigationSearch(e.target.value)}
-                                                        style={{
-                                                            width: '100%',
-                                                            height: '28px',
-                                                            padding: '4px 8px',
-                                                            border: '1px solid #B7B7B7',
-                                                            borderRadius: '4px',
-                                                            fontSize: '12px',
-                                                            outline: 'none'
-                                                        }}
-                                                        onFocus={(e) => {
-                                                            (e.target as HTMLInputElement).style.borderColor = '#1E88E5';
-                                                        }}
-                                                        onBlur={(e) => {
-                                                            (e.target as HTMLInputElement).style.borderColor = '#B7B7B7';
+                                                        onChange={(val) => setInvestigationSearch(val)}
+                                                        placeholder="Search investigations"
+                                                        variant="outlined"
+                                                        sx={{
+                                                            '& .MuiOutlinedInput-root': {
+                                                                height: '32px',
+                                                                borderRadius: '4px',
+                                                                fontSize: '12px'
+                                                            }
                                                         }}
                                                     />
                                                 </div>
@@ -7554,68 +7534,65 @@ export default function Treatment() {
                                         <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
                                             Follow up
                                         </label>
-                                        <input
-                                            type="text"
+                                        <ClearableTextField
+                                            fullWidth
+                                            size="small"
                                             value={followUpData.followUp}
-                                            onChange={(e) => handleFollowUpChange('followUp', e.target.value)}
+                                            onChange={(val) => handleFollowUpChange('followUp', val)}
                                             disabled={isFormDisabled}
-                                            maxLength={100}
-                                            style={{
-                                                width: '100%',
-                                                padding: '6px 10px',
-                                                border: followUpError ? '1px solid red' : '1px solid #ccc',
-                                                borderRadius: '4px',
-                                                fontSize: '13px',
-                                                backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
-                                                color: isFormDisabled ? '#666' : '#333',
-                                                cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                            inputProps={{
+                                                maxLength: 100
                                             }}
+                                            placeholder="Enter follow up"
+                                            variant="outlined"
+                                            sx={{
+                                                '& .MuiOutlinedInput-root': {
+                                                    borderRadius: '4px',
+                                                    fontSize: '13px',
+                                                    backgroundColor: isFormDisabled ? '#f5f5f5' : 'white'
+                                                },
+                                                '& .MuiInputBase-input': {
+                                                    color: isFormDisabled ? '#666' : '#333',
+                                                    cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                                }
+                                            }}
+                                            error={!!followUpError}
+                                            helperText={followUpError}
                                         />
-                                        {followUpError && (
-                                            <div style={{
-                                                color: (followUpError.includes('cannot exceed') || followUpError.includes('exceeds')) ? '#333333' : 'red',
-                                                fontSize: '12px',
-                                                marginTop: '4px'
-                                            }}>
-                                                {followUpError}
-                                            </div>
-                                        )}
                                     </div>
                                     <div>
                                         <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
                                             Remark Comments
                                         </label>
-                                        <textarea
-                                            value={followUpData.remarkComments}
-                                            onChange={(e) => handleFollowUpChange('remarkComments', e.target.value)}
-                                            disabled={isFormDisabled}
+                                        <ClearableTextField
+                                            multiline
                                             rows={1}
-                                            maxLength={1000}
-                                            style={{
-                                                width: '100%',
-                                                padding: '6px 10px',
-                                                border: remarkCommentsError ? '1px solid red' : '1px solid #ccc',
-                                                borderRadius: '4px',
-                                                fontSize: '13px',
-                                                resize: 'none',
-                                                height: '32px',
-                                                minHeight: '32px',
-                                                maxHeight: '32px',
-                                                overflow: 'hidden',
-                                                backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
-                                                color: isFormDisabled ? '#666' : '#333',
-                                                cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                            fullWidth
+                                            value={followUpData.remarkComments}
+                                            onChange={(val) => handleFollowUpChange('remarkComments', val)}
+                                            disabled={isFormDisabled}
+                                            inputProps={{
+                                                maxLength: 1000
                                             }}
+                                            placeholder="Enter remark comments"
+                                            variant="outlined"
+                                            size="small"
+                                            sx={{
+                                                '& .MuiOutlinedInput-root': {
+                                                    borderRadius: '4px',
+                                                    fontSize: '13px',
+                                                    backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
+                                                    minHeight: '32px',
+                                                    maxHeight: '32px'
+                                                },
+                                                '& .MuiInputBase-input': {
+                                                    color: isFormDisabled ? '#666' : '#333',
+                                                    cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                                }
+                                            }}
+                                            error={!!remarkCommentsError}
+                                            helperText={remarkCommentsError}
                                         />
-                                        {remarkCommentsError && (
-                                            <div style={{
-                                                color: (remarkCommentsError.includes('cannot exceed') || remarkCommentsError.includes('exceeds')) ? '#333333' : 'red',
-                                                fontSize: '12px',
-                                                marginTop: '4px'
-                                            }}>
-                                                {remarkCommentsError}
-                                            </div>
-                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -7627,33 +7604,33 @@ export default function Treatment() {
                                         Plan / Adv
                                     </label>
                                 </div>
-                                <textarea
+                                <ClearableTextField
+                                    multiline
+                                    rows={2}
+                                    fullWidth
+                                    value={followUpData.planAdv}
+                                    onChange={(val) => handleFollowUpChange('planAdv', val)}
                                     disabled={isFormDisabled}
-                                    style={{
-                                        width: '100%',
-                                        height: '60px',
-                                        padding: '8px 12px',
-                                        border: planAdvError ? '1px solid red' : '1px solid #ccc',
-                                        borderRadius: '4px',
-                                        resize: 'none',
-                                        fontSize: '13px',
-                                        backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
-                                        cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                    inputProps={{
+                                        maxLength: 1000
                                     }}
                                     placeholder="Enter Plan/Advice"
-                                    value={followUpData.planAdv}
-                                    maxLength={1000}
-                                    onChange={(e) => handleFollowUpChange('planAdv', e.target.value)}
+                                    variant="outlined"
+                                    size="small"
+                                    sx={{
+                                        '& .MuiOutlinedInput-root': {
+                                            borderRadius: '4px',
+                                            fontSize: '13px',
+                                            backgroundColor: isFormDisabled ? '#f5f5f5' : 'white'
+                                        },
+                                        '& .MuiInputBase-input': {
+                                            color: isFormDisabled ? '#666' : '#333',
+                                            cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                        }
+                                    }}
+                                    error={!!planAdvError}
+                                    helperText={planAdvError}
                                 />
-                                {planAdvError && (
-                                    <div style={{
-                                        color: (planAdvError.includes('cannot exceed') || planAdvError.includes('exceeds')) ? '#333333' : 'red',
-                                        fontSize: '12px',
-                                        marginTop: '4px'
-                                    }}>
-                                        {planAdvError}
-                                    </div>
-                                )}
                             </div>
 
 
@@ -7691,7 +7668,8 @@ export default function Treatment() {
                                                 style={{
                                                     position: 'absolute',
                                                     right: 6,
-                                                    top: '20%',
+                                                    top: '50%',
+                                                    transform: 'translateY(-50%)',
                                                     display: 'inline-flex',
                                                     alignItems: 'center',
                                                     justifyContent: 'center',
@@ -7708,7 +7686,8 @@ export default function Treatment() {
                                                     boxSizing: 'border-box',
                                                     outline: 'none',
                                                     boxShadow: 'none',
-                                                    transition: 'none'
+                                                    transition: 'none',
+                                                    zIndex: 1
                                                 }}
                                                 disabled={isFormDisabled}
                                                 onMouseDown={(e) => {
@@ -7729,61 +7708,58 @@ export default function Treatment() {
                                             Discount (Rs)
                                         </label>
                                         <div style={{ position: 'relative' }}>
-                                            <input
-                                                type="text"
+                                            <ClearableTextField
+                                                fullWidth
+                                                size="small"
                                                 value={billingData.discount}
-                                                onChange={(e) => handleBillingChange('discount', e.target.value)}
+                                                onChange={(val) => handleBillingChange('discount', val)}
                                                 disabled={isFormDisabled}
-                                                maxLength={10}
-                                                placeholder="0.00"
-                                                style={{
-                                                    width: '100%',
-                                                    padding: '6px 10px',
-                                                    border: discountError ? '1px solid red' : '1px solid #ccc',
-                                                    borderRadius: '4px',
-                                                    fontSize: '13px',
-                                                    backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
-                                                    color: isFormDisabled ? '#666' : '#333',
-                                                    cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                                inputProps={{
+                                                    maxLength: 4
                                                 }}
+                                                placeholder="0.00"
+                                                variant="outlined"
+                                                sx={{
+                                                    '& .MuiOutlinedInput-root': {
+                                                        borderRadius: '4px',
+                                                        fontSize: '13px',
+                                                        backgroundColor: isFormDisabled ? '#f5f5f5' : 'white'
+                                                    },
+                                                    '& .MuiInputBase-input': {
+                                                        color: isFormDisabled ? '#666' : '#333',
+                                                        cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                                    }
+                                                }}
+                                                error={!!discountError}
+                                                helperText={discountError}
                                             />
-                                            {discountError && (
-                                                <div style={{
-                                                    position: 'absolute',
-                                                    top: '100%',
-                                                    left: 0,
-                                                    width: '100%',
-                                                    color: (discountError.includes('cannot exceed') || discountError.includes('exceeds')) ? '#333333' : '#d32f2f',
-                                                    fontSize: '12px',
-                                                    marginTop: '2px',
-                                                    textAlign: 'left',
-                                                    zIndex: 10
-                                                }}>
-                                                    {discountError}
-                                                </div>
-                                            )}
                                         </div>
                                     </div>
                                     <div>
                                         <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
                                             Dues (Rs)
                                         </label>
-                                        <input
-                                            type="text"
+                                        <ClearableTextField
+                                            fullWidth
+                                            size="small"
                                             value={billingData.dues}
-                                            onChange={(e) => handleBillingChange('dues', e.target.value)}
+                                            onChange={(val) => handleBillingChange('dues', val)}
                                             disabled
-                                            maxLength={10}
+                                            inputProps={{
+                                                maxLength: 10
+                                            }}
                                             placeholder="0.00"
-                                            style={{
-                                                width: '100%',
-                                                padding: '6px 10px',
-                                                border: '1px solid #ccc',
-                                                borderRadius: '4px',
-                                                fontSize: '13px',
-                                                backgroundColor: '#f5f5f5',
-                                                color: '#666',
-                                                cursor: 'not-allowed'
+                                            variant="outlined"
+                                            sx={{
+                                                '& .MuiOutlinedInput-root': {
+                                                    borderRadius: '4px',
+                                                    fontSize: '13px',
+                                                    backgroundColor: '#f5f5f5'
+                                                },
+                                                '& .MuiInputBase-input': {
+                                                    color: '#666',
+                                                    cursor: 'not-allowed'
+                                                }
                                             }}
                                         />
                                     </div>
@@ -7803,30 +7779,33 @@ export default function Treatment() {
                                             >Payment History</span>
                                         </label>
                                         <div style={{ position: 'relative', width: '100%' }}>
-                                            <input
-                                                type="text"
+                                            <ClearableTextField
+                                                fullWidth
+                                                size="small"
                                                 value={Math.abs(parseFloat(billingData.acBalance) || 0).toFixed(2)}
-                                                onChange={(e) => handleBillingChange('acBalance', e.target.value)}
+                                                onChange={(val) => handleBillingChange('acBalance', val)}
                                                 disabled
                                                 placeholder="0.00"
-                                                style={{
-                                                    width: '100%',
-                                                    padding: '6px 10px',
-                                                    paddingRight: folderAmountData?.totalAcBalance !== undefined &&
-                                                        folderAmountData?.totalAcBalance !== null &&
-                                                        folderAmountData?.rows &&
-                                                        folderAmountData.rows.length > 0 ? '120px' : '10px',
-                                                    border: '1px solid #ccc',
-                                                    borderRadius: '4px',
-                                                    fontSize: '13px',
-                                                    backgroundColor: '#f5f5f5',
-                                                    color: folderAmountData?.totalAcBalance !== undefined &&
-                                                        folderAmountData?.totalAcBalance !== null &&
-                                                        folderAmountData?.rows &&
-                                                        folderAmountData.rows.length > 0
-                                                        ? (folderAmountData.totalAcBalance < 0 ? '#d32f2f' : '#2e7d32')
-                                                        : '#666',
-                                                    cursor: 'not-allowed'
+                                                variant="outlined"
+                                                sx={{
+                                                    '& .MuiOutlinedInput-root': {
+                                                        borderRadius: '4px',
+                                                        fontSize: '13px',
+                                                        backgroundColor: '#f5f5f5',
+                                                        paddingRight: folderAmountData?.totalAcBalance !== undefined &&
+                                                            folderAmountData?.totalAcBalance !== null &&
+                                                            folderAmountData?.rows &&
+                                                            folderAmountData.rows.length > 0 ? '120px' : '10px'
+                                                    },
+                                                    '& .MuiInputBase-input': {
+                                                        color: folderAmountData?.totalAcBalance !== undefined &&
+                                                            folderAmountData?.totalAcBalance !== null &&
+                                                            folderAmountData?.rows &&
+                                                            folderAmountData.rows.length > 0
+                                                            ? (folderAmountData.totalAcBalance < 0 ? '#d32f2f' : '#2e7d32')
+                                                            : '#666',
+                                                        cursor: 'not-allowed'
+                                                    }
                                                 }}
                                             />
                                             {folderAmountData?.totalAcBalance !== undefined &&
@@ -8212,24 +8191,33 @@ export default function Treatment() {
 
                             <div style={{ padding: 16 }}>
                                 <div style={{ fontWeight: 600, color: '#2e7d32', marginBottom: 8 }}>Addendum:</div>
-                                <textarea
+                                <ClearableTextField
+                                    multiline
+                                    rows={5}
+                                    fullWidth
                                     value={addendumText}
-                                    onChange={(e) => {
-                                        const text = e.target.value.slice(0, 1000);
+                                    onChange={(val) => {
+                                        const text = val.slice(0, 1000);
                                         setAddendumText(text);
                                     }}
                                     placeholder="Type addendum..."
-                                    style={{
-                                        width: '100%',
-                                        height: 140,
-                                        border: '1px solid #cfd8dc',
-                                        borderRadius: 6,
-                                        padding: 10,
-                                        fontSize: 13,
-                                        outline: 'none'
+                                    variant="outlined"
+                                    size="small"
+                                    inputProps={{
+                                        maxLength: 1000
                                     }}
+                                    sx={{
+                                        '& .MuiOutlinedInput-root': {
+                                            borderRadius: 6,
+                                            fontSize: 13,
+                                            backgroundColor: 'white'
+                                        },
+                                        '& .MuiInputBase-input': {
+                                            color: '#333'
+                                        }
+                                    }}
+                                    helperText="Maximum 1000 character"
                                 />
-                                <div style={{ color: '#607d8b', fontSize: 11, marginTop: 6 }}>Maximum 1000 character</div>
 
                                 <div style={{ display: 'flex', gap: 8, marginTop: 14, justifyContent: 'flex-end' }}>
                                     <button

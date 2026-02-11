@@ -9,6 +9,7 @@ import { advanceCollectionService, AdvanceCollectionRequest, AdvanceCollectionDe
 import { patientService, Patient } from "../services/patientService";
 import { SessionInfo } from "../services/sessionService";
 import { admissionService, InsuranceCompany } from "../services/admissionService";
+import ClearableTextField from "./ClearableTextField";
 
 interface AdvanceCollectionDialogProps {
   open: boolean;
@@ -1166,18 +1167,20 @@ function HorizontalField({
             />
           </div>
         ) : (
-          <input
-            type="text"
-            className="form-control"
+          <ClearableTextField
+            fullWidth
+            variant="outlined"
+            size="small"
             value={value || ""}
-            onChange={(e) => onChange(e.target.value)}
+            onChange={onChange}
             disabled={disabled}
-            maxLength={maxLength}
-            style={{
-              border: "1px solid #ced4da",
-              borderRadius: "4px",
-              padding: "6px 12px",
-              fontSize: "14px"
+            inputProps={{ maxLength: maxLength }}
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                borderRadius: "4px",
+                fontSize: "14px",
+                backgroundColor: disabled ? "#e9ecef" : "white",
+              }
             }}
           />
         )}

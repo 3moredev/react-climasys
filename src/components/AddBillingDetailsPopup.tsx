@@ -20,6 +20,7 @@ import {
 import { billingService } from '../services/billingService';
 import { useSession } from '../store/hooks/useSession';
 import { validateField } from '../utils/validationUtils';
+import ClearableTextField from '../components/ClearableTextField';
 
 export interface BillingDetailData {
   group: string;
@@ -390,13 +391,13 @@ const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                   Group <span style={{ color: 'red' }}>*</span>
                 </Typography>
-                <TextField
+                <ClearableTextField
                   select
                   fullWidth
                   variant="outlined"
                   size="small"
                   value={billingData.group}
-                  onChange={(e) => handleInputChange('group', e.target.value)}
+                  onChange={(val) => handleInputChange('group', val)}
                   error={!!errors.group}
                   helperText={errors.group}
                   sx={{ position: 'relative' }}
@@ -419,7 +420,7 @@ const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
                       {option.label}
                     </MenuItem>
                   ))}
-                </TextField>
+                </ClearableTextField>
               </Box>
 
               {/* Details */}
@@ -427,22 +428,22 @@ const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                   Details <span style={{ color: 'red' }}>*</span>
                 </Typography>
-                <TextField
+                <ClearableTextField
                   fullWidth
                   placeholder="Details"
                   variant="outlined"
                   size="small"
                   value={billingData.details}
-                  onChange={(e) => {
-                    handleInputChange('details', e.target.value);
+                  onChange={(val) => {
+                    handleInputChange('details', val);
                   }}
                   error={!!errors.details && !errors.details.includes('cannot exceed')}
                   helperText={errors.details}
                   FormHelperTextProps={{
                     sx: {
                       color: errors.details?.includes('cannot exceed') ? 'gray !important' : '#d32f2f',
-                      position: 'absolute',
-                      bottom: '-18px',
+                      position: 'relative',
+                      bottom: '0px',
                       left: 0
                     }
                   }}
@@ -454,13 +455,13 @@ const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                   Visit Type <span style={{ color: 'red' }}>*</span>
                 </Typography>
-                <TextField
+                <ClearableTextField
                   select
                   fullWidth
                   variant="outlined"
                   size="small"
                   value={billingData.visitType}
-                  onChange={(e) => handleInputChange('visitType', e.target.value)}
+                  onChange={(val) => handleInputChange('visitType', val)}
                   error={!!errors.visitType}
                   helperText={errors.visitType}
                   sx={{ position: 'relative' }}
@@ -483,7 +484,7 @@ const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
                       {option.label}
                     </MenuItem>
                   ))}
-                </TextField>
+                </ClearableTextField>
               </Box>
 
               {/* Is Default Checkbox */}
@@ -508,13 +509,13 @@ const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                   Sub-Group
                 </Typography>
-                <TextField
+                <ClearableTextField
                   select
                   fullWidth
                   variant="outlined"
                   size="small"
                   value={billingData.subGroup}
-                  onChange={(e) => handleInputChange('subGroup', e.target.value)}
+                  onChange={(val) => handleInputChange('subGroup', val)}
                   disabled={!billingData.group || loadingSubCategories}
                   sx={{ position: 'relative' }}
                   FormHelperTextProps={{
@@ -548,7 +549,7 @@ const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
                       </MenuItem>
                     );
                   }).filter(Boolean)}
-                </TextField>
+                </ClearableTextField>
               </Box>
 
               {/* Default Fee */}
@@ -556,22 +557,21 @@ const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                   Default Fee (Rs) <span style={{ color: 'red' }}>*</span>
                 </Typography>
-                <TextField
+                <ClearableTextField
                   fullWidth
                   placeholder="Default Fee"
                   variant="outlined"
                   size="small"
                   value={billingData.defaultFee}
-                  onChange={(e) => handleInputChange('defaultFee', e.target.value)}
+                  onChange={(val) => handleInputChange('defaultFee', val)}
                   error={!!errors.defaultFee && !errors.defaultFee.includes('cannot exceed')}
                   helperText={errors.defaultFee}
                   inputProps={{ inputMode: 'numeric' }}
-                  sx={{ position: 'relative' }}
                   FormHelperTextProps={{
                     sx: {
                       color: errors.defaultFee?.includes('cannot exceed') ? 'gray !important' : '#d32f2f',
-                      position: 'absolute',
-                      bottom: '-18px',
+                      position: 'relative',
+                      bottom: '0px',
                       left: 0
                     }
                   }}
@@ -583,22 +583,21 @@ const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                   Sequence No <span style={{ color: 'red' }}>*</span>
                 </Typography>
-                <TextField
+                <ClearableTextField
                   fullWidth
                   placeholder="Sequence No"
                   variant="outlined"
                   size="small"
                   value={billingData.sequenceNo}
-                  onChange={(e) => handleInputChange('sequenceNo', e.target.value)}
+                  onChange={(val) => handleInputChange('sequenceNo', val)}
                   error={!!errors.sequenceNo && !errors.sequenceNo.includes('cannot exceed')}
                   helperText={errors.sequenceNo}
                   inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
-                  sx={{ position: 'relative' }}
                   FormHelperTextProps={{
                     sx: {
                       color: errors.sequenceNo?.includes('cannot exceed') ? 'gray !important' : '#d32f2f',
-                      position: 'absolute',
-                      bottom: '-18px',
+                      position: 'relative',
+                      bottom: '0px',
                       left: 0
                     }
                   }}

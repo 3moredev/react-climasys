@@ -4408,7 +4408,6 @@ export default function AppointmentTable() {
                                         <th className="age-col text-start">Age</th>
                                         <th className="contact-col text-start">Contact</th>
                                         <th className="time-col text-start">Time</th>
-                                        <th className="refer-col text-start">Referred By</th>
                                         <th className="provider-col text-start">Provider</th>
                                         <th className="online-col text-start">Online</th>
                                         <th className="status-col text-start">Status</th>
@@ -4449,9 +4448,6 @@ export default function AppointmentTable() {
                                                 <td className="age-col">{getAgeString(a.dob)}</td>
                                                 <td className="contact-col">{(a.contact || '').toString().slice(0, 12)}</td>
                                                 <td className="time-col">{extractTime(a.time)}</td>
-                                                <td className="refer-col">
-                                                    {a.referBy === 'S' || a.referBy === 'Self' || a.referralName === 'Self' ? 'Self' : (a.referralName || '-')}
-                                                </td>
                                                 <td className="provider-col">
                                                     <select
                                                         className="form-select form-select-sm"
