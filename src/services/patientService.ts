@@ -21,6 +21,9 @@ export interface Patient {
   age_given: string;
   reports_received: boolean;
   doctor_id: string;
+  refer_id?: string;
+  refer_doctor_details?: string;
+  referralName?: string;
 
 }
 
@@ -116,6 +119,7 @@ export interface SaveMedicineOverwriteRequest {
   paymentRemark?: string;
   discount?: number;
   reason?: string;
+  inPerson?: boolean;
 }
 
 export interface SaveMedicineOverwriteResponse {

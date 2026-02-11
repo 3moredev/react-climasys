@@ -181,6 +181,7 @@ interface TreatmentData {
     gender?: string;
     contact?: string;
     statusId?: number;
+    status?: string;
     referralName?: string;
     referralCode?: string;
 }
@@ -764,16 +765,6 @@ export default function Treatment() {
         const headerImageUrl = getHeaderImageUrl();
         // Get current date and time
         const now = new Date();
-        const dateStr = now.toLocaleDateString('en-GB', {
-            day: '2-digit',
-            month: '2-digit',
-            year: '2-digit'
-        });
-        const timeStr = now.toLocaleTimeString('en-US', {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: true
-        });
 
         // Format visit date
         const visitDate = treatmentData?.visitNumber
@@ -938,17 +929,10 @@ export default function Treatment() {
         const handleLabResultsPrint = () => {
             // Use ref to get labTestsAsked from API (instead of popup data)
             const currentLabTestsAsked = labTestsAskedRef.current;
-            console.log('🔍 handleLabResultsPrint called');
-            console.log('🔍 labResultsPrinted:', labResultsPrinted);
-            console.log('🔍 currentLabTestsAsked (from ref):', currentLabTestsAsked);
-            console.log('🔍 currentLabTestsAsked length:', currentLabTestsAsked?.length);
-            console.log('🔍 currentLabTestsAsked is array:', Array.isArray(currentLabTestsAsked));
-
             if (!labResultsPrinted) {
                 // Check if labTestsAsked exist using ref
                 if (currentLabTestsAsked && Array.isArray(currentLabTestsAsked) && currentLabTestsAsked.length > 0) {
                     labResultsPrinted = true;
-                    console.log('✅ Triggering lab test results print with', currentLabTestsAsked.length, 'lab tests...');
                     // Delay to ensure first print dialog is fully closed
                     setTimeout(() => {
                         try {
@@ -988,7 +972,6 @@ export default function Treatment() {
 
                     // Method 1: Listen for afterprint event
                     const handleAfterPrint = () => {
-                        console.log('✅ afterprint event detected');
                         cleanup();
                         handleLabResultsPrint();
                     };
@@ -1064,17 +1047,11 @@ export default function Treatment() {
     const printLabTestResults = () => {
         // Use ref to get labTestsAsked from API (instead of popup data)
         const currentLabTestsAsked = labTestsAskedRef.current;
-        console.log('🔍 printLabTestResults called');
-        console.log('🔍 currentLabTestsAsked (from ref):', currentLabTestsAsked);
-        console.log('🔍 currentLabTestsAsked length:', currentLabTestsAsked?.length);
-        console.log('🔍 currentLabTestsAsked is array:', Array.isArray(currentLabTestsAsked));
 
         if (!currentLabTestsAsked || !Array.isArray(currentLabTestsAsked) || currentLabTestsAsked.length === 0) {
             console.log('❌ No lab tests asked to print - invalid or empty data');
             return;
         }
-
-        console.log('✅ Starting lab test results print with', currentLabTestsAsked.length, 'lab tests...');
 
         // Format visit date (same as prescription print)
         const visitDate = treatmentData?.visitNumber
@@ -1257,7 +1234,7 @@ export default function Treatment() {
             if (normalizedData.referralName) {
                 setFormData(prev => ({
                     ...prev,
-                    referralBy: normalizedData.referralName
+                    referralBy: normalizedData.referralName || ''
                 }));
             }
         }
@@ -1386,7 +1363,7 @@ export default function Treatment() {
                 if (prev.referralBy !== treatmentData.referralName) {
                     return {
                         ...prev,
-                        referralBy: treatmentData.referralName
+                        referralBy: treatmentData.referralName || ''
                     };
                 }
                 return prev;
@@ -4012,7 +3989,7 @@ export default function Treatment() {
                 allergyDetails: formData.allergy,
                 observation: formData.procedurePerformed || '',
                 dressingBodyParts: formData.dressingBodyParts || '',
-                inPerson: inPersonChecked, // Use computed value to ensure it matches status
+                inPerson: formData.visitType.inPerson, // Use form state value
                 symptomComment: formData.detailedHistory,
                 reason: '',
                 impression: formData.additionalComments,
@@ -8072,7 +8049,7 @@ export default function Treatment() {
             {/* Instruction Groups Popup */}
             <InstructionGroupsPopup
                 isOpen={showInstructionPopup}
-                onClose={() => {                    
+                onClose={() => {
                     if (selectedInstructionGroups && selectedInstructionGroups.length > 0) {
                         selectedInstructionGroups.forEach((group, idx) => {
                             console.log(`Final Group ${idx + 1}:`, {
@@ -8114,7 +8091,7 @@ export default function Treatment() {
             />
             {/* Debug: Log when popup opens */}
             {
-                showInstructionPopup && (() => {                
+                showInstructionPopup && (() => {
                     if (selectedInstructionGroups && selectedInstructionGroups.length > 0) {
                         console.log('selectedInstructionGroups content:', JSON.stringify(selectedInstructionGroups, null, 2));
                         selectedInstructionGroups.forEach((group, idx) => {
@@ -8271,8 +8248,8 @@ export default function Treatment() {
                 open={showBillingPopup}
                 onClose={() => setShowBillingPopup(false)}
                 isFormDisabled={isFormDisabled}
-                onSubmit={(totalAmount) => {                    
-                    if(isFormDisabled){
+                onSubmit={(totalAmount) => {
+                    if (isFormDisabled) {
                         return;
                     }
                     setBillingData(prev => {
@@ -8286,8 +8263,8 @@ export default function Treatment() {
                         };
                     });
                 }}
-                onTotalFeesChange={(total) => {                    
-                    if(isFormDisabled){
+                onTotalFeesChange={(total) => {
+                    if (isFormDisabled) {
                         return;
                     }
                     const billedNum = Number(total) || 0;
