@@ -1444,9 +1444,6 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                 paymentRemark: '',
                 attendedById: 0,
                 followUp: visitType.followUpType,
-                paymentRemark: '',
-                attendedById: 0,
-                followUp: visitType.followUpType,
                 followUpFlag: visitType.followUp,
 
                 currentComplaint: complaintsRows.map(row => {

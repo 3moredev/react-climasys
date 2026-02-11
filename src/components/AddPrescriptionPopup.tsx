@@ -469,11 +469,8 @@ const AddPrescriptionPopup: React.FC<AddPrescriptionPopupProps> = ({
 
                             {/* Brand Name */}
                             <Box sx={{ mb: 2 }} className='mb-4'>
-                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold', display: 'flex', justifyContent: 'space-between' }} className='mb-0'>
-                                    <span>Brand Name <span style={{ color: 'red' }}>*</span></span>
-                                    <span style={{ fontSize: '11px', color: '#666', fontWeight: 'normal' }}>
-                                        {prescriptionData.brandName.length}/{getFieldConfig('brandName', 'prescriptionDetails')?.maxLength || 200}
-                                    </span>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
+                                    Brand Name <span style={{ color: 'red' }}>*</span>
                                 </Typography>
                                 <TextField
                                     fullWidth
@@ -498,11 +495,8 @@ const AddPrescriptionPopup: React.FC<AddPrescriptionPopupProps> = ({
 
                             {/* Medicine Name */}
                             <Box sx={{ mb: 2 }} className='mb-4'>
-                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold', display: 'flex', justifyContent: 'space-between' }} className='mb-0'>
-                                    <span>Medicine Name <span style={{ color: 'red' }}>*</span></span>
-                                    <span style={{ fontSize: '11px', color: '#666', fontWeight: 'normal' }}>
-                                        {prescriptionData.genericName.length}/{getFieldConfig('genericName', 'prescriptionDetails')?.maxLength || 200}
-                                    </span>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
+                                    Medicine Name <span style={{ color: 'red' }}>*</span>
                                 </Typography>
                                 <TextField
                                     fullWidth
@@ -527,11 +521,8 @@ const AddPrescriptionPopup: React.FC<AddPrescriptionPopupProps> = ({
 
                             {/* Marketed By */}
                             <Box sx={{ mb: 2 }} className='mb-4'>
-                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold', display: 'flex', justifyContent: 'space-between' }} className='mb-0'>
-                                    <span>Marketed By</span>
-                                    <span style={{ fontSize: '11px', color: '#666', fontWeight: 'normal' }}>
-                                        {prescriptionData.marketedBy.length}/{getFieldConfig('marketedBy', 'prescriptionDetails')?.maxLength || 200}
-                                    </span>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
+                                    Marketed By
                                 </Typography>
                                 <TextField
                                     fullWidth
@@ -555,11 +546,8 @@ const AddPrescriptionPopup: React.FC<AddPrescriptionPopupProps> = ({
 
                             {/* Instruction */}
                             <Box sx={{ mb: 2 }} className='mb-4'>
-                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold', display: 'flex', justifyContent: 'space-between' }} className='mb-0'>
-                                    <span>Instruction</span>
-                                    <span style={{ fontSize: '11px', color: '#666', fontWeight: 'normal' }}>
-                                        {prescriptionData.instruction.length}/{getFieldConfig('instruction', 'prescriptionDetails')?.maxLength || 4000}
-                                    </span>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
+                                    Instruction
                                 </Typography>
                                 <TextField
                                     fullWidth
