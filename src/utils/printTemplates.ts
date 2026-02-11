@@ -200,7 +200,9 @@ export const buildPrescriptionPrintHTML = ({
             Complaint: ${medicalDetails.complaints}<br/>
             Examination Finding: ${medicalDetails.examinationFindings}<br/>
             Diagnosis: ${medicalDetails.diagnosis}<br/>
-            Pulse: ${medicalDetails.pulse} BP: ${medicalDetails.bp} Sugar: ${medicalDetails.sugar}
+            Pulse: ${medicalDetails.pulse}<br/>
+            BP: ${medicalDetails.bp}<br/>
+            Sugar: ${medicalDetails.sugar}
         </div>
 
         <div class="prescription-section">

@@ -225,7 +225,7 @@ export default function Treatment() {
     const [formData, setFormData] = useState({
         referralBy: 'Self',
         visitType: {
-            inPerson: true,
+            inPerson: true, // Always true and disabled (not user-editable) in Billing page
             followUp: false,
         },
         medicalHistory: {
@@ -2692,7 +2692,8 @@ export default function Treatment() {
                     paymentById: parseInt(billingData.paymentBy) || undefined,
                     paymentRemark: billingData.paymentRemark || undefined,
                     discount: visitData.discount,
-                    reason: billingData.reason || undefined
+                    reason: billingData.reason || undefined,
+                    inPerson: true
                 };
                 result = await patientService.saveMedicineOverwrite(overwriteRequest);
             } else {
@@ -3269,10 +3270,9 @@ export default function Treatment() {
                                         { key: 'medicalHistoryText', label: 'Medical History' },
                                         { key: 'surgicalHistory', label: 'Surgical History' },
                                         { key: 'medicines', label: 'Medicines' },
-                                        { key: 'visitComments', label: 'Visit Comments' },
-                                        { key: 'pc', label: 'PC' }
+                                        { key: 'visitComments', label: 'Visit Comments' }
                                     ].map(({ key, label }) => (
-                                        <div key={key} className="col-2" style={{ marginBottom: '12px' }}>
+                                        <div key={key} style={{ width: '20%', paddingLeft: '12px', paddingRight: '12px', marginBottom: '12px' }}>
                                             <Box>
                                                 <Typography
                                                     variant="body2"

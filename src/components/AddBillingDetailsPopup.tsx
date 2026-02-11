@@ -280,7 +280,13 @@ const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
     setIsSaving(true);
 
     try {
-      await onSave(billingData);
+      // Include clinicId from session in the billing data
+      const billingDataWithClinic = {
+        ...billingData,
+        clinicId: session.clinicId
+      };
+
+      await onSave(billingDataWithClinic);
       setSnackbar({
         open: true,
         message: editData ? 'Billing detail updated successfully!' : 'Billing detail created successfully!',

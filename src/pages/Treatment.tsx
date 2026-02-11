@@ -181,6 +181,7 @@ interface TreatmentData {
     gender?: string;
     contact?: string;
     statusId?: number;
+    status?: string;
     referralName?: string;
     referralCode?: string;
 }
@@ -770,16 +771,6 @@ export default function Treatment() {
         const headerImageUrl = getHeaderImageUrl();
         // Get current date and time
         const now = new Date();
-        const dateStr = now.toLocaleDateString('en-GB', {
-            day: '2-digit',
-            month: '2-digit',
-            year: '2-digit'
-        });
-        const timeStr = now.toLocaleTimeString('en-US', {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: true
-        });
 
         // Format visit date
         const visitDate = treatmentData?.visitNumber
@@ -944,17 +935,10 @@ export default function Treatment() {
         const handleLabResultsPrint = () => {
             // Use ref to get labTestsAsked from API (instead of popup data)
             const currentLabTestsAsked = labTestsAskedRef.current;
-            console.log('🔍 handleLabResultsPrint called');
-            console.log('🔍 labResultsPrinted:', labResultsPrinted);
-            console.log('🔍 currentLabTestsAsked (from ref):', currentLabTestsAsked);
-            console.log('🔍 currentLabTestsAsked length:', currentLabTestsAsked?.length);
-            console.log('🔍 currentLabTestsAsked is array:', Array.isArray(currentLabTestsAsked));
-
             if (!labResultsPrinted) {
                 // Check if labTestsAsked exist using ref
                 if (currentLabTestsAsked && Array.isArray(currentLabTestsAsked) && currentLabTestsAsked.length > 0) {
                     labResultsPrinted = true;
-                    console.log('✅ Triggering lab test results print with', currentLabTestsAsked.length, 'lab tests...');
                     // Delay to ensure first print dialog is fully closed
                     setTimeout(() => {
                         try {
@@ -994,7 +978,6 @@ export default function Treatment() {
 
                     // Method 1: Listen for afterprint event
                     const handleAfterPrint = () => {
-                        console.log('✅ afterprint event detected');
                         cleanup();
                         handleLabResultsPrint();
                     };
@@ -1070,17 +1053,11 @@ export default function Treatment() {
     const printLabTestResults = () => {
         // Use ref to get labTestsAsked from API (instead of popup data)
         const currentLabTestsAsked = labTestsAskedRef.current;
-        console.log('🔍 printLabTestResults called');
-        console.log('🔍 currentLabTestsAsked (from ref):', currentLabTestsAsked);
-        console.log('🔍 currentLabTestsAsked length:', currentLabTestsAsked?.length);
-        console.log('🔍 currentLabTestsAsked is array:', Array.isArray(currentLabTestsAsked));
 
         if (!currentLabTestsAsked || !Array.isArray(currentLabTestsAsked) || currentLabTestsAsked.length === 0) {
             console.log('❌ No lab tests asked to print - invalid or empty data');
             return;
         }
-
-        console.log('✅ Starting lab test results print with', currentLabTestsAsked.length, 'lab tests...');
 
         // Format visit date (same as prescription print)
         const visitDate = treatmentData?.visitNumber
@@ -1259,17 +1236,13 @@ export default function Treatment() {
             };
             setTreatmentData(normalizedData);
 
-            // Initialize referral fields from state if present
-            setFormData(prev => ({
-                ...prev,
-                referralBy: normalizedData.referralCode || normalizedData.referBy || prev.referralBy || '',
-                referralName: normalizedData.referralName || prev.referralName || '',
-                referralContact: normalizedData.referralContact || prev.referralContact || '',
-                referralEmail: normalizedData.referralEmail || prev.referralEmail || '',
-                referralAddress: normalizedData.referralAddress || prev.referralAddress || ''
-            }));
-
-
+            // Initialize referralBy from state if present
+            if (normalizedData.referralName) {
+                setFormData(prev => ({
+                    ...prev,
+                    referralBy: normalizedData.referralName || ''
+                }));
+            }
         }
     }, [location.state]);
 
@@ -1348,22 +1321,18 @@ export default function Treatment() {
     React.useEffect(() => {
         if (treatmentData?.patientId) {
             setFormData(prev => {
-                const newReferralBy = treatmentData.referralCode || treatmentData.referralBy || prev.referralBy || '';
+                const newReferralBy = treatmentData.referralCode || treatmentData.referralName || prev.referralBy || '';
                 // Only update if something changed
-                if (prev.referralBy !== newReferralBy || prev.referralName !== treatmentData.referralName) {
+                if (prev.referralBy !== newReferralBy || prev.referralBy !== treatmentData.referralName) {
                     return {
                         ...prev,
-                        referralBy: newReferralBy,
-                        referralName: treatmentData.referralName || '',
-                        referralContact: treatmentData.referralContact || '',
-                        referralEmail: treatmentData.referralEmail || '',
-                        referralAddress: treatmentData.referralAddress || ''
+                        referralBy: treatmentData.referralName || ''
                     };
                 }
                 return prev;
             });
         }
-    }, [treatmentData?.patientId, treatmentData?.referralName, treatmentData?.referralCode, treatmentData?.referralBy, treatmentData?.referralContact, treatmentData?.referralEmail, treatmentData?.referralAddress]);
+    }, [treatmentData?.patientId, treatmentData?.referralName, treatmentData?.referralCode]);
 
 
     // Check if Addendum button should be enabled (for "Waiting for Medicine" and "Complete")
@@ -4002,7 +3971,7 @@ export default function Treatment() {
                 allergyDetails: formData.allergy,
                 observation: formData.procedurePerformed || '',
                 dressingBodyParts: formData.dressingBodyParts || '',
-                inPerson: inPersonChecked, // Use computed value to ensure it matches status
+                inPerson: formData.visitType.inPerson, // Use form state value
                 symptomComment: formData.detailedHistory,
                 reason: '',
                 impression: formData.additionalComments,
@@ -5204,8 +5173,7 @@ export default function Treatment() {
                                                 {(() => {
                                                     // Robust extraction of code/ID (e.g., "D", "S", "1")
                                                     let rawCode = treatmentData?.referralCode ||
-                                                        treatmentData?.referBy ||
-                                                        treatmentData?.refer_by ||
+                                                        treatmentData?.referralName ||
                                                         (treatmentData?.referralName === '');
 
 
@@ -5213,7 +5181,7 @@ export default function Treatment() {
                                                     // Normalize code (trim, uppercase)
                                                     const code = String(rawCode || '').trim().toUpperCase();
 
-                                                    const name = treatmentData?.referralName || formData.referralName;
+                                                    const name = treatmentData?.referralName || formData.referralBy;
 
 
                                                     // Static mapping for known codes (robust fallback)
