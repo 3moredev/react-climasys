@@ -187,8 +187,13 @@ export default function ManageBillingDetails() {
       setIsDeleting(true);
       setError(null);
 
-      const compositeId = `${billing.group}*${billing.subGroup}*${billing.details}`;
-      await billingService.deleteMasterBillingDetail(encodeURIComponent(compositeId), doctorIdToUse);
+      // Pass individual fields instead of composite ID
+      await billingService.deleteMasterBillingDetail(
+        billing.group || '',
+        billing.subGroup || '',
+        billing.details || '',
+        doctorIdToUse
+      );
 
       setSnackbarMessage('Billing detail deleted successfully');
       setShowSnackbar(true);

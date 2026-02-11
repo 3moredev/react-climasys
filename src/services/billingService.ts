@@ -638,22 +638,41 @@ export const billingService = {
 
   /**
    * Delete master billing detail
-   * @param billingDetailId - Billing Detail ID
+   * @param billingGroupName - Billing group name
+   * @param billingSubgroupName - Billing subgroup name
+   * @param billingDetails - Billing details
+   * @param doctorId - Doctor ID
    * @returns Promise<Record<string, any>[]> - Result array
    */
-  async deleteMasterBillingDetail(billingDetailId: string | number, doctorId: string): Promise<Record<string, any>[]> {
+  async deleteMasterBillingDetail(
+    billingGroupName: string,
+    billingSubgroupName: string,
+    billingDetails: string,
+    doctorId: string
+  ): Promise<Record<string, any>[]> {
     try {
-      if (!billingDetailId) {
-        throw new Error('Billing Detail ID is required to delete master billing detail.');
+      if (!billingGroupName) {
+        throw new Error('Billing group name is required to delete master billing detail.');
+      }
+      if (!billingSubgroupName) {
+        throw new Error('Billing subgroup name is required to delete master billing detail.');
+      }
+      if (!billingDetails) {
+        throw new Error('Billing details is required to delete master billing detail.');
       }
       if (!doctorId) {
         throw new Error('Doctor ID is required to delete master billing detail.');
       }
 
-      console.log('Deleting master billing detail:', billingDetailId, 'for doctor:', doctorId);
+      console.log('Deleting master billing detail:', { billingGroupName, billingSubgroupName, billingDetails, doctorId });
 
-      const response = await api.delete(`/billing/master-data/billing-details/${billingDetailId}`, {
-        params: { doctorId }
+      const response = await api.delete(`/billing/master-data/billing-details`, {
+        data: {
+          billingGroupName,
+          billingSubgroupName,
+          billingDetails,
+          doctorId
+        }
       });
       console.log('Delete master billing detail response:', response.data);
 
