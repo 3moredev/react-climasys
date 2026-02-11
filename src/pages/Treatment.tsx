@@ -5176,7 +5176,7 @@ export default function Treatment() {
                                         }}
                                         title={treatmentData?.patientId ? 'Click to view patient details' : ''}
                                     >
-                                        {treatmentData?.patientName || 'Amit Kalamkar'} / {treatmentData?.gender || 'Male'} / {treatmentData?.age || 48} Y / {treatmentData?.contact || 'N/A'}
+                                        {treatmentData?.patientName || 'Patient'} / {treatmentData?.gender || 'N/A'} / {treatmentData?.age ? `${treatmentData.age} Y` : 'N/A'} / {treatmentData?.contact || 'N/A'}
                                     </div>
                                     {/* <PatientNameDisplay onClick={() => {
                                         if (treatmentData?.patientId) {
@@ -8239,7 +8239,7 @@ export default function Treatment() {
                                 fontSize: 16,
                                 textDecoration: 'underline'
                             }}>
-                                {treatmentData?.patientName || 'Patient'} / {treatmentData?.gender || ''} / {treatmentData?.age ? `${treatmentData.age} Y` : ''} / {treatmentData?.contact || 'N/A'}
+                                {treatmentData?.patientName || 'Patient'} / {treatmentData?.gender || 'N/A'} / {treatmentData?.age ? `${treatmentData.age} Y` : 'N/A'} / {treatmentData?.contact || 'N/A'}
                             </div>
 
                             <div style={{ padding: 16 }}>
