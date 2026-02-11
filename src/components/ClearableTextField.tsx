@@ -1,6 +1,6 @@
 import React from 'react';
-import { TextField, InputAdornment, IconButton, TextFieldProps } from '@mui/material';
-import { Close } from '@mui/icons-material';
+import { TextField, TextFieldProps } from '@mui/material';
+import { Close as CloseIcon } from '@mui/icons-material';
 
 interface ClearableTextFieldProps extends Omit<TextFieldProps, 'onChange'> {
     value: string;
@@ -26,19 +26,11 @@ const ClearableTextField: React.FC<ClearableTextFieldProps> = ({
     const isReadOnly = disabled || !!InputProps?.readOnly;
 
     const helperText = otherProps.helperText as string;
-    const isBlockingError = typeof helperText === 'string' && (
-        helperText.toLowerCase().includes('required') ||
-        helperText.toLowerCase().includes('must be') ||
-        helperText.toLowerCase().includes('invalid') ||
-        helperText.toLowerCase().includes('digits') ||
-        helperText.toLowerCase().includes('minimum') ||
-        helperText.toLowerCase().includes('maximum') ||
-        helperText.toLowerCase().includes('digits')
-    );
     // If it's just a length warning (e.g. "cannot exceed", "exceeds maximum"), it can remain gray.
     const isLengthWarning = typeof helperText === 'string' && (
-        helperText.toLowerCase().includes('cannot exceed') ||
-        helperText.toLowerCase().includes('exceeds maximum')
+        helperText.toLowerCase().includes('exceed') ||
+        helperText.toLowerCase().includes('character limit') ||
+        helperText.toLowerCase().includes('max length')
     );
 
     // Any error that is not just a length warning should be red.
@@ -48,7 +40,7 @@ const ClearableTextField: React.FC<ClearableTextFieldProps> = ({
     return (
         <TextField
             {...otherProps}
-            error={effectiveError} // Override error prop to control border color
+            error={effectiveError}
             disabled={disabled}
             value={value}
             onChange={(e) => onChange(e.target.value)}
@@ -56,10 +48,23 @@ const ClearableTextField: React.FC<ClearableTextFieldProps> = ({
                 ...(otherProps.FormHelperTextProps as any),
                 sx: {
                     ...(otherProps.FormHelperTextProps?.sx as any),
-                    color: shouldUseGrayError ? '#757575 !important' : (otherProps.FormHelperTextProps?.sx as any)?.color
+                    color: shouldUseGrayError ? '#757575 !important' : (otherProps.FormHelperTextProps?.sx as any)?.color,
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    margin: 0,
+                    marginTop: '1px',
+                    whiteSpace: 'normal',
+                    maxWidth: '100%',
+                    lineHeight: '1.2',
+                    fontSize: '11px',
+                    zIndex: 2,
+                    pointerEvents: 'none'
                 }
             }}
             sx={{
+                position: 'relative',
+                marginBottom: '18px', // Balanced space for error message + breathing room
                 '& .MuiInputBase-root': {
                     paddingRight: '6px !important',
                     backgroundColor: isReadOnly ? '#f5f5f5 !important' : 'inherit',
@@ -72,7 +77,7 @@ const ClearableTextField: React.FC<ClearableTextFieldProps> = ({
                 '&:hover .MuiOutlinedInput-notchedOutline': {
                     borderColor: shouldUseGrayError ? '#424242 !important' : undefined
                 },
-                ...(otherProps.sx || {}), // Apply external styles first
+                ...((otherProps.sx as any) || {}),
                 '& .MuiInputBase-input': {
                     border: 'none !important',
                     boxShadow: 'none !important',
@@ -94,7 +99,7 @@ const ClearableTextField: React.FC<ClearableTextFieldProps> = ({
                 endAdornment: (
                     <React.Fragment>
                         {value && !isReadOnly && (
-                            <Close
+                            <CloseIcon
                                 onClick={handleClear}
                                 style={{
                                     fontSize: '18px',

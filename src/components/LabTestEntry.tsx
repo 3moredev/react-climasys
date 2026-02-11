@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import PatientNameDisplay from './PatientNameDisplay';
 import { Close, Add, Delete } from '@mui/icons-material';
 import { TextField, InputAdornment, Grid, Box, Typography, DialogContent, FormHelperText } from '@mui/material';
+import ClearableTextField from './ClearableTextField';
 import { validateField } from '../utils/validationUtils';
 import dayjs from 'dayjs';
 import { patientService } from '../services/patientService';
@@ -1064,11 +1065,11 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                     <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
                                                         Lab Name <span style={{ color: 'red' }}>*</span>
                                                     </Typography>
-                                                    <TextField
+                                                    <ClearableTextField
                                                         fullWidth
                                                         placeholder="Lab Name"
                                                         value={formData.labName}
-                                                        onChange={(e) => handleInputChange('labName', e.target.value)}
+                                                        onChange={(val) => handleInputChange('labName', val)}
                                                         error={!!errors.labName}
                                                         helperText={errors.labName}
                                                         required
@@ -1084,11 +1085,11 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                     <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
                                                         Lab Doctor Name <span style={{ color: 'red' }}>*</span>
                                                     </Typography>
-                                                    <TextField
+                                                    <ClearableTextField
                                                         fullWidth
                                                         placeholder="Doctor Name"
                                                         value={formData.labDoctorName}
-                                                        onChange={(e) => handleInputChange('labDoctorName', e.target.value)}
+                                                        onChange={(val) => handleInputChange('labDoctorName', val)}
                                                         error={!!errors.labDoctorName}
                                                         helperText={errors.labDoctorName}
                                                         required
@@ -1220,25 +1221,22 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                     marginTop: '4px'
                                                 }}>
                                                     <div style={{ padding: '6px' }}>
-                                                        <input
-                                                            type="text"
+                                                        <ClearableTextField
+                                                            fullWidth
                                                             value={labTestSearch}
-                                                            onChange={(e) => setLabTestSearch(e.target.value)}
+                                                            onChange={setLabTestSearch}
                                                             placeholder="Search lab tests"
-                                                            style={{
-                                                                width: '100%',
-                                                                height: '28px',
-                                                                padding: '4px 8px',
-                                                                border: '1px solid #B7B7B7',
-                                                                borderRadius: '4px',
-                                                                fontSize: '12px',
-                                                                outline: 'none'
-                                                            }}
-                                                            onFocus={(e) => {
-                                                                e.target.style.borderColor = '#1E88E5';
-                                                            }}
-                                                            onBlur={(e) => {
-                                                                e.target.style.borderColor = '#B7B7B7';
+                                                            variant="outlined"
+                                                            size="small"
+                                                            sx={{
+                                                                '& .MuiOutlinedInput-root': {
+                                                                    height: '32px',
+                                                                    fontSize: '12px',
+                                                                    borderRadius: '4px'
+                                                                },
+                                                                '& .MuiInputBase-input': {
+                                                                    padding: '4px 8px'
+                                                                }
                                                             }}
                                                         />
                                                     </div>
@@ -1484,11 +1482,11 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                                     {result.parameterName}
                                                                 </td>
                                                                 <td style={{ padding: '16px', borderBottom: '1px solid #eee', width: '30%' }}>
-                                                                    <TextField
+                                                                    <ClearableTextField
                                                                         fullWidth
                                                                         placeholder="Value / Results"
                                                                         value={result.value}
-                                                                        onChange={(e) => handleResultChange(result.id, 'value', e.target.value)}
+                                                                        onChange={(val) => handleResultChange(result.id, 'value', val)}
                                                                         required
                                                                         error={resultErrors.has(result.id)}
                                                                         helperText={resultErrors.has(result.id) ? 'Value is required' : ''}

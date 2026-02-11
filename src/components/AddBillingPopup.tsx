@@ -1,5 +1,7 @@
 import React from "react";
-import SearchInput from "./SearchInput";
+import ClearableTextField from "./ClearableTextField";
+import { InputAdornment } from "@mui/material";
+import { Search } from "@mui/icons-material";
 
 
 export interface BillingDetailOption {
@@ -702,12 +704,21 @@ export default function AddBillingPopup({
 
                     {/* Search Field */}
                     <div className="position-relative mb-2" style={{ maxWidth: '400px' }}>
-                        <SearchInput
+                        <ClearableTextField
+                            fullWidth
+                            placeholder="Search charge name..."
+                            variant="outlined"
+                            size="small"
                             value={effectiveSearch}
                             onChange={(val) => setEffectiveSearch(val)}
                             onClear={() => setEffectiveSearch('')}
-                            placeholder="Search charge name..."
-                            className="w-100"
+                            InputProps={{
+                                startAdornment: (
+                                    <InputAdornment position="start">
+                                        <Search sx={{ color: '#666', fontSize: '20px' }} />
+                                    </InputAdornment>
+                                ),
+                            }}
                         />
                     </div>
 
