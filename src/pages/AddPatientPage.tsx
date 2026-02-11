@@ -2516,6 +2516,7 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                       }
                     }}
                     filterOptions={(options) => options}
+                    disabled={loading || readOnly || !selectedCityId}
                     open={areaOpen && areaOptions.length > 0 && !areaLoading}
                     onOpen={() => {
                       setAreaOpen(true)

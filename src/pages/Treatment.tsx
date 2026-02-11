@@ -5,7 +5,7 @@ import { visitService, ComprehensiveVisitDataRequest } from '../services/visitSe
 import { sessionService, SessionInfo } from "../services/sessionService";
 import { DocumentService } from "../services/documentService";
 import { Delete, Edit, Add, Info, TrendingUp, Download as DownloadIcon, Close } from '@mui/icons-material';
-import { Snackbar } from '@mui/material';
+import { Snackbar, Typography } from '@mui/material';
 import { complaintService, ComplaintOption } from "../services/complaintService";
 import { medicineService, MedicineOption } from "../services/medicineService";
 import { diagnosisService, DiagnosisOption } from "../services/diagnosisService";
@@ -5791,14 +5791,15 @@ export default function Treatment() {
                             <div style={{ marginBottom: '15px' }}>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr' as const, gap: '12px' }}>
                                     <div>
-                                        <div style={{ marginBottom: '4px' }}>
-                                            <label style={{ fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                                Detailed History
-                                            </label>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                                            <label style={{ fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Detailed History</label>
+                                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px' }}>
+                                                {(formData.detailedHistory || '').length}/{getFieldConfig('detailedHistory', 'visit')?.maxLength || 1000}
+                                            </Typography>
                                         </div>
                                         <textarea
                                             value={formData.detailedHistory}
-                                            onChange={(e) => handleInputChange('detailedHistory', e.target.value)}
+                                            onChange={(e) => handleInputChange('detailedHistory', e.target.value.slice(0, getFieldConfig('detailedHistory', 'visit')?.maxLength || 1000))}
                                             disabled={isFormDisabled}
                                             rows={3}
                                             maxLength={getFieldConfig('detailedHistory', 'visit')?.maxLength}
@@ -5825,14 +5826,15 @@ export default function Treatment() {
                                         )}
                                     </div>
                                     <div>
-                                        <div style={{ marginBottom: '4px' }}>
-                                            <label style={{ fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                                Examination Findings
-                                            </label>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                                            <label style={{ fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Examination Findings</label>
+                                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px' }}>
+                                                {(formData.importantFindings || '').length}/{getFieldConfig('importantFindings', 'visit')?.maxLength || 1000}
+                                            </Typography>
                                         </div>
                                         <textarea
                                             value={formData.importantFindings}
-                                            onChange={(e) => handleInputChange('importantFindings', e.target.value)}
+                                            onChange={(e) => handleInputChange('importantFindings', e.target.value.slice(0, getFieldConfig('importantFindings', 'visit')?.maxLength || 1000))}
                                             disabled={isFormDisabled}
                                             rows={3}
                                             maxLength={getFieldConfig('importantFindings', 'visit')?.maxLength}
@@ -5859,14 +5861,15 @@ export default function Treatment() {
                                         )}
                                     </div>
                                     <div>
-                                        <div style={{ marginBottom: '4px' }}>
-                                            <label style={{ fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                                Additional Comments
-                                            </label>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                                            <label style={{ fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Additional Comments</label>
+                                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px' }}>
+                                                {(formData.additionalComments || '').length}/{getFieldConfig('additionalComments', 'visit')?.maxLength || 1000}
+                                            </Typography>
                                         </div>
                                         <textarea
                                             value={formData.additionalComments}
-                                            onChange={(e) => handleInputChange('additionalComments', e.target.value)}
+                                            onChange={(e) => handleInputChange('additionalComments', e.target.value.slice(0, getFieldConfig('additionalComments', 'visit')?.maxLength || 1000))}
                                             disabled={isFormDisabled}
                                             rows={3}
                                             maxLength={getFieldConfig('additionalComments', 'visit')?.maxLength}
@@ -5899,14 +5902,15 @@ export default function Treatment() {
                             <div style={{ marginBottom: '15px' }}>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr' as const, gap: '12px' }}>
                                     <div>
-                                        <div style={{ marginBottom: '4px' }}>
-                                            <label style={{ fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                                Procedure Performed
-                                            </label>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                                            <label style={{ fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Procedure Performed</label>
+                                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px' }}>
+                                                {(formData.procedurePerformed || '').length}/{getFieldConfig('procedurePerformed', 'visit')?.maxLength || 1000}
+                                            </Typography>
                                         </div>
                                         <textarea
                                             value={formData.procedurePerformed}
-                                            onChange={(e) => handleInputChange('procedurePerformed', e.target.value)}
+                                            onChange={(e) => handleInputChange('procedurePerformed', e.target.value.slice(0, getFieldConfig('procedurePerformed', 'visit')?.maxLength || 1000))}
                                             disabled={isFormDisabled}
                                             rows={3}
                                             maxLength={getFieldConfig('procedurePerformed', 'visit')?.maxLength}
@@ -5933,14 +5937,15 @@ export default function Treatment() {
                                         )}
                                     </div>
                                     <div>
-                                        <div style={{ marginBottom: '4px' }}>
-                                            <label style={{ fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                                Dressing (body parts)
-                                            </label>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                                            <label style={{ fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Dressing (body parts)</label>
+                                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px' }}>
+                                                {(formData.dressingBodyParts || '').length}/{getFieldConfig('dressingBodyParts', 'visit')?.maxLength || 1000}
+                                            </Typography>
                                         </div>
                                         <textarea
                                             value={formData.dressingBodyParts}
-                                            onChange={(e) => handleInputChange('dressingBodyParts', e.target.value)}
+                                            onChange={(e) => handleInputChange('dressingBodyParts', e.target.value.slice(0, getFieldConfig('dressingBodyParts', 'visit')?.maxLength || 1000))}
                                             disabled={isFormDisabled}
                                             rows={3}
                                             maxLength={getFieldConfig('dressingBodyParts', 'visit')?.maxLength}
