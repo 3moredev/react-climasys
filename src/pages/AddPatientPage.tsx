@@ -3100,7 +3100,8 @@ export default function AddPatientPage({ open, onClose, onSave, doctorId, clinic
                                   cursor: 'pointer',
                                   fontSize: '14px',
                                   borderBottom: '1px solid #f0f0f0',
-                                  '&:hover': { backgroundColor: '#f5f5f5' }
+                                  '&:hover': { backgroundColor: '#eeeeee' },
+                                  '&:active': { backgroundColor: '#e0e0e0' }
                                 }}
                               >
                                 {option.name}

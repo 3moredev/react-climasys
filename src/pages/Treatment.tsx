@@ -5,7 +5,7 @@ import { visitService, ComprehensiveVisitDataRequest } from '../services/visitSe
 import { sessionService, SessionInfo } from "../services/sessionService";
 import { DocumentService } from "../services/documentService";
 import { Delete, Edit, Add, Info, TrendingUp, Download as DownloadIcon, Close } from '@mui/icons-material';
-import { Snackbar, Typography } from '@mui/material';
+import { Snackbar, Typography, MenuItem } from '@mui/material';
 import { complaintService, ComplaintOption } from "../services/complaintService";
 import { medicineService, MedicineOption } from "../services/medicineService";
 import { diagnosisService, DiagnosisOption } from "../services/diagnosisService";
@@ -4820,17 +4820,17 @@ export default function Treatment() {
                                             style={{
                                                 padding: '10px 15px',
                                                 borderBottom: '1px solid #e0e0e0',
-                                                backgroundColor: index % 2 === 0 ? '#e3f2fd' : 'white',
+                                                backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white',
                                                 cursor: 'pointer',
                                                 fontSize: '13px',
                                                 transition: 'background-color 0.2s ease'
                                             }}
                                             onClick={() => handlePreviousVisitClick(visit)}
                                             onMouseEnter={(e) => {
-                                                e.currentTarget.style.backgroundColor = '#bbdefb';
+                                                e.currentTarget.style.backgroundColor = '#eeeeee';
                                             }}
                                             onMouseLeave={(e) => {
-                                                e.currentTarget.style.backgroundColor = index % 2 === 0 ? '#e3f2fd' : 'white';
+                                                e.currentTarget.style.backgroundColor = index % 2 === 0 ? '#f8f9fa' : 'white';
                                             }}
                                         >
                                             <div style={{ fontWeight: '500', color: '#333' }}>
@@ -6128,7 +6128,7 @@ export default function Treatment() {
                                                                         cursor: isAdded ? 'not-allowed' : 'pointer',
                                                                         fontSize: '12px',
                                                                         border: 'none',
-                                                                        backgroundColor: isAdded ? '#f5f5f5' : 'transparent',
+                                                                        backgroundColor: (checked || isAdded) ? '#eeeeee' : 'transparent',
                                                                         borderRadius: '3px',
                                                                         fontWeight: 400,
                                                                         minWidth: 0,
@@ -6429,7 +6429,7 @@ export default function Treatment() {
                                                                         cursor: isAdded ? 'not-allowed' : 'pointer',
                                                                         fontSize: '12px',
                                                                         border: 'none',
-                                                                        backgroundColor: isAdded ? '#f5f5f5' : 'transparent',
+                                                                        backgroundColor: (checked || isAdded) ? '#eeeeee' : 'transparent',
                                                                         borderRadius: '3px',
                                                                         fontWeight: 400,
                                                                         minWidth: 0,
@@ -7296,7 +7296,7 @@ export default function Treatment() {
                                                                         cursor: isAdded ? 'not-allowed' : 'pointer',
                                                                         fontSize: '12px',
                                                                         border: 'none',
-                                                                        backgroundColor: isAdded ? '#f5f5f5' : 'transparent',
+                                                                        backgroundColor: (checked || isAdded) ? '#eeeeee' : 'transparent',
                                                                         borderRadius: '3px',
                                                                         fontWeight: 400,
                                                                         color: isAdded ? '#999' : '#333',
@@ -7499,36 +7499,62 @@ export default function Treatment() {
                                         <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
                                             Follow-up Type
                                         </label>
-                                        <select
+                                        <ClearableTextField
+                                            select
+                                            fullWidth
+                                            size="small"
                                             value={followUpData.followUpType}
-                                            onChange={(e) => handleFollowUpChange('followUpType', e.target.value)}
+                                            onChange={(val) => handleFollowUpChange('followUpType', val)}
                                             disabled={followUpTypesLoading || isFormDisabled}
-                                            style={{
-                                                width: '100%',
-                                                padding: '6px 10px',
-                                                border: '1px solid #ccc',
-                                                borderRadius: '4px',
-                                                fontSize: '13px',
-                                                height: '32px',
-                                                opacity: (followUpTypesLoading || isFormDisabled) ? 0.6 : 1,
-                                                backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
-                                                cursor: isFormDisabled ? 'not-allowed' : 'pointer'
+                                            sx={{
+                                                '& .MuiInputBase-root': {
+                                                    fontSize: '13px',
+                                                    height: '32px',
+                                                    backgroundColor: isFormDisabled ? '#f5f5f5 !important' : 'white !important',
+                                                    cursor: isFormDisabled ? 'not-allowed !important' : 'pointer'
+                                                },
+                                                '& .MuiSelect-select': {
+                                                    padding: '6px 10px !important'
+                                                },
+                                                marginBottom: '0px'
+                                            }}
+                                            SelectProps={{
+                                                displayEmpty: true,
+                                                renderValue: (selected) => {
+                                                    if (selected === "" || selected === undefined || selected === null) {
+                                                        return <span style={{ color: '#aaa' }}>{followUpTypesLoading ? 'Loading...' : 'Select Follow-up Type'}</span>;
+                                                    }
+                                                    const option = followUpTypesOptions.find(opt => String(opt.id) === String(selected));
+                                                    return option ? option.followUpDescription : selected;
+                                                },
+                                                MenuProps: {
+                                                    PaperProps: {
+                                                        sx: {
+                                                            '& .MuiMenuItem-root.Mui-selected': {
+                                                                backgroundColor: '#eeeeee !important',
+                                                                '&:hover': {
+                                                                    backgroundColor: '#e0e0e0 !important',
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
                                             }}
                                         >
-                                            <option value="">
-                                                {followUpTypesLoading ? 'Loading...' : 'Select Follow-up Type'}
-                                            </option>
+                                            <MenuItem value="" sx={{ display: 'none' }}>
+                                                Select Follow-up Type
+                                            </MenuItem>
                                             {followUpTypesOptions.map((option) => (
-                                                <option key={option.id} value={option.id}>
+                                                <MenuItem key={option.id} value={option.id}>
                                                     {option.followUpDescription}
-                                                </option>
+                                                </MenuItem>
                                             ))}
                                             {followUpTypesError && (
-                                                <option value="" disabled>
+                                                <MenuItem value="" disabled>
                                                     Error: {followUpTypesError}
-                                                </option>
+                                                </MenuItem>
                                             )}
-                                        </select>
+                                        </ClearableTextField>
                                     </div>
                                     <div>
                                         <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>

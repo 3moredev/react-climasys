@@ -2917,17 +2917,17 @@ export default function Treatment() {
                                             style={{
                                                 padding: '10px 15px',
                                                 borderBottom: '1px solid #e0e0e0',
-                                                backgroundColor: index % 2 === 0 ? '#e3f2fd' : 'white',
+                                                backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white',
                                                 cursor: 'pointer',
                                                 fontSize: '13px',
                                                 transition: 'background-color 0.2s ease'
                                             }}
                                             onClick={() => handlePreviousVisitClick(visit)}
                                             onMouseEnter={(e) => {
-                                                e.currentTarget.style.backgroundColor = '#bbdefb';
+                                                e.currentTarget.style.backgroundColor = '#eeeeee';
                                             }}
                                             onMouseLeave={(e) => {
-                                                e.currentTarget.style.backgroundColor = index % 2 === 0 ? '#e3f2fd' : 'white';
+                                                e.currentTarget.style.backgroundColor = index % 2 === 0 ? '#f8f9fa' : 'white';
                                             }}
                                         >
                                             <div style={{ fontWeight: '500', color: '#333' }}>
@@ -3900,11 +3900,12 @@ export default function Treatment() {
                                             placeholder="Billed Amount"
                                             onClear={() => handleBillingChange('billed', '')}
                                             sx={{
+                                                marginBottom: 0,
                                                 '& .MuiInputBase-root': {
                                                     fontSize: '13px',
                                                     backgroundColor: '#f5f5f5',
                                                     color: '#666',
-                                                    paddingRight: '34px'
+                                                    paddingRight: '34px !important'
                                                 },
                                                 '& .MuiOutlinedInput-notchedOutline': {
                                                     borderColor: billingError ? 'red !important' : '#ccc'
@@ -3971,7 +3972,7 @@ export default function Treatment() {
                                         sx={{
                                             '& .MuiInputBase-root': {
                                                 fontSize: '12px',
-                                                background: isFormDisabled ? '#D5D5D8' : 'white',
+                                                background: isFormDisabled ? 'white' : 'white',
                                                 cursor: isFormDisabled ? 'not-allowed' : 'text',
                                                 color: isFormDisabled ? '#666' : '#333'
                                             }
@@ -4138,9 +4139,23 @@ export default function Treatment() {
                                         sx={{
                                             '& .MuiInputBase-root': {
                                                 fontSize: '12px',
-                                                background: isFormDisabled ? '#D5D5D8' : 'white',
+                                                background: 'white',
                                                 cursor: isFormDisabled ? 'not-allowed' : 'pointer',
                                                 color: isFormDisabled ? '#666' : '#333'
+                                            }
+                                        }}
+                                        SelectProps={{
+                                            MenuProps: {
+                                                PaperProps: {
+                                                    sx: {
+                                                        '& .MuiMenuItem-root.Mui-selected': {
+                                                            backgroundColor: '#eeeeee !important',
+                                                            '&:hover': {
+                                                                backgroundColor: '#e0e0e0 !important',
+                                                            }
+                                                        }
+                                                    }
+                                                }
                                             }
                                         }}
                                     >
@@ -4169,7 +4184,7 @@ export default function Treatment() {
                                         sx={{
                                             '& .MuiInputBase-root': {
                                                 fontSize: '12px',
-                                                background: isFormDisabled ? '#D5D5D8' : 'white',
+                                                background: 'white',
                                                 cursor: isFormDisabled ? 'not-allowed' : 'text',
                                                 color: isFormDisabled ? '#666' : '#333'
                                             }
