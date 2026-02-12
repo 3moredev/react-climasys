@@ -523,7 +523,7 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                                         <tr key={index} style={{
                                             borderBottom: '1px solid #e0e0e0',
                                             backgroundColor: service.selected
-                                                ? '#e3f2fd'
+                                                ? '#eeeeee'
                                                 : (index % 2 === 0 ? '#f8f9fa' : 'white')
                                         }}>
                                             <td style={{

@@ -2515,7 +2515,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                                                 cursor: readOnly ? 'not-allowed' : 'pointer',
                                                                                 fontSize: '12px',
                                                                                 border: 'none',
-                                                                                backgroundColor: checked ? '#e3f2fd' : 'transparent',
+                                                                                backgroundColor: checked ? '#eeeeee' : 'transparent',
                                                                                 borderRadius: '3px',
                                                                                 fontWeight: checked ? '600' : '400',
                                                                                 opacity: readOnly ? 0.6 : 1,

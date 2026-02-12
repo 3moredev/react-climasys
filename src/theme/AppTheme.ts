@@ -107,7 +107,31 @@ const AppTheme = createTheme({
                     }
                 }
             }
-        }
+        },
+        MuiMenuItem: {
+            styleOverrides: {
+                root: {
+                    '&.Mui-selected': {
+                        backgroundColor: '#eeeeee !important',
+                        '&:hover': {
+                            backgroundColor: '#e0e0e0 !important',
+                        },
+                    },
+                },
+            },
+        },
+        MuiAutocomplete: {
+            styleOverrides: {
+                option: {
+                    '&[aria-selected="true"]': {
+                        backgroundColor: '#eeeeee !important',
+                        '&:hover': {
+                            backgroundColor: '#e0e0e0 !important',
+                        },
+                    },
+                },
+            },
+        },
     }
 });
 

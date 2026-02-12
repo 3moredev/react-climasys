@@ -1308,7 +1308,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                                             cursor: isAdded ? 'not-allowed' : 'pointer',
                                                                             fontSize: '13px',
                                                                             borderBottom: '1px solid #f9f9f9',
-                                                                            backgroundColor: isAdded ? '#f5f5f5' : 'transparent',
+                                                                            backgroundColor: isChecked ? '#eeeeee' : 'transparent',
                                                                             fontWeight: 400,
                                                                             opacity: isAdded ? 0.6 : 1,
                                                                             color: isAdded ? '#999' : '#333'

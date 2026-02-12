@@ -2809,10 +2809,16 @@ export default function AppointmentTable() {
                                             <div
                                                 key={patient.id}
                                                 className="p-3 border-bottom cursor-pointer"
-                                                style={{ cursor: "pointer" }}
+                                                style={{
+                                                    cursor: "pointer",
+                                                    backgroundColor: selectedPatients.some(p => p.id === patient.id) ? "#eeeeee" : "white"
+                                                }}
                                                 onClick={() => handlePatientSelect(patient)}
-                                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#f8f9fa"}
-                                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "white"}
+                                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#eeeeee"}
+                                                onMouseLeave={(e) => {
+                                                    const isSelected = selectedPatients.some(p => p.id === patient.id);
+                                                    e.currentTarget.style.backgroundColor = isSelected ? "#eeeeee" : "white";
+                                                }}
                                             >
                                                 <div className="fw-bold d-flex align-items-center">
                                                     <i className="fas fa-user me-2 text-primary"></i>
@@ -4155,10 +4161,16 @@ export default function AppointmentTable() {
                                         <div
                                             key={patient.id}
                                             className="p-3 border-bottom cursor-pointer"
-                                            style={{ cursor: "pointer" }}
+                                            style={{
+                                                cursor: "pointer",
+                                                backgroundColor: selectedPatients.some(p => p.id === patient.id) ? "#eeeeee" : "white"
+                                            }}
                                             onClick={() => handlePatientSelect(patient)}
-                                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#f8f9fa"}
-                                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "white"}
+                                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#eeeeee"}
+                                            onMouseLeave={(e) => {
+                                                const isSelected = selectedPatients.some(p => p.id === patient.id);
+                                                e.currentTarget.style.backgroundColor = isSelected ? "#eeeeee" : "white";
+                                            }}
                                         >
                                             <div className="fw-bold d-flex align-items-center">
                                                 <i className="fas fa-user me-2 text-primary"></i>
