@@ -173,10 +173,27 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
 
     const handleComplaintCommentChange = (rowValue: string, text: string) => {
         const config = getFieldConfig('complaintComment', 'visit');
-        if (config?.maxLength && text.length > config.maxLength) {
+        const maxLength = config?.maxLength || 500;
+
+        // Use the same logic as handleInputChange for consistency
+        const { allowed, error } = validateField('complaintComment', text, maxLength, 'Duration/Comment', 'visit');
+
+        if (!allowed) {
+            setValidationErrors(prev => ({ ...prev, [`complaintComment_${rowValue}`]: error }));
             return;
         }
+
         setComplaintsRows(prev => prev.map(r => r.value === rowValue ? { ...r, comment: text } : r));
+
+        setValidationErrors(prev => {
+            const next = { ...prev };
+            if (error) {
+                next[`complaintComment_${rowValue}`] = error;
+            } else {
+                delete next[`complaintComment_${rowValue}`];
+            }
+            return next;
+        });
     };
 
     const handleRemoveComplaint = (rowValue: string) => {
@@ -2280,7 +2297,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                         id="textarea-autosize"
                                         style={{
                                             border: validationErrors.pastSurgicalHistory
-                                                ? '1px solid #d32f2f'
+                                                ? (validationErrors.pastSurgicalHistory.toLowerCase().includes('exceed') ? '1px solid #616161' : '1px solid #d32f2f')
                                                 : '1px solid #b7b7b7',
                                             borderRadius: '8px',
                                             padding: '8px',
@@ -2291,8 +2308,11 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     {validationErrors.pastSurgicalHistory && (
                                         <Typography
                                             variant="caption"
-                                            color="error"
-                                            sx={{ mt: 0.5, display: 'block' }}
+                                            sx={{
+                                                mt: 0.5,
+                                                display: 'block',
+                                                color: validationErrors.pastSurgicalHistory.toLowerCase().includes('exceed') ? '#757575' : '#d32f2f'
+                                            }}
                                         >
                                             {validationErrors.pastSurgicalHistory}
                                         </Typography>
@@ -2590,11 +2610,11 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                 <textarea
                                     rows={2}
                                     value={formData.visitComments}
-                                    onChange={(e) => handleInputChange('visitComments', e.target.value)}
+                                    onChange={(e) => handleInputChange('visitComments', e.target.value.slice(0, getFieldConfig('visitComments', 'visit')?.maxLength || 1000))}
                                     disabled={readOnly}
                                     style={{
                                         border: validationErrors.visitComments
-                                            ? '1px solid #d32f2f'
+                                            ? (validationErrors.visitComments.toLowerCase().includes('exceed') ? '1px solid #616161' : '1px solid #d32f2f')
                                             : '1px solid #b7b7b7',
                                         borderRadius: '8px',
                                         padding: '8px',
@@ -2605,8 +2625,11 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                 {validationErrors.visitComments && (
                                     <Typography
                                         variant="caption"
-                                        color="error"
-                                        sx={{ mt: 0.5, display: 'block' }}
+                                        sx={{
+                                            mt: 0.5,
+                                            display: 'block',
+                                            color: validationErrors.visitComments.toLowerCase().includes('exceed') ? '#757575' : '#d32f2f'
+                                        }}
                                     >
                                         {validationErrors.visitComments}
                                     </Typography>
@@ -2627,11 +2650,11 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                 <textarea
                                     rows={2}
                                     value={formData.currentMedicines}
-                                    onChange={(e) => handleInputChange('currentMedicines', e.target.value)}
+                                    onChange={(e) => handleInputChange('currentMedicines', e.target.value.slice(0, getFieldConfig('currentMedicines', 'visit')?.maxLength || 1000))}
                                     disabled={readOnly}
                                     style={{
                                         border: validationErrors.currentMedicines
-                                            ? '1px solid #d32f2f'
+                                            ? (validationErrors.currentMedicines.toLowerCase().includes('exceed') ? '1px solid #616161' : '1px solid #d32f2f')
                                             : '1px solid #b7b7b7',
                                         borderRadius: '8px',
                                         padding: '8px',
@@ -2642,8 +2665,11 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                 {validationErrors.currentMedicines && (
                                     <Typography
                                         variant="caption"
-                                        color="error"
-                                        sx={{ mt: 0.5, display: 'block' }}
+                                        sx={{
+                                            mt: 0.5,
+                                            display: 'block',
+                                            color: validationErrors.currentMedicines.toLowerCase().includes('exceed') ? '#757575' : '#d32f2f'
+                                        }}
                                     >
                                         {validationErrors.currentMedicines}
                                     </Typography>
@@ -2749,6 +2775,8 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                                 disabled={readOnly}
                                                                 placeholder="Enter Duration/Comment"
                                                                 variant="outlined"
+                                                                error={!!validationErrors[`complaintComment_${row.value}`]}
+                                                                helperText={validationErrors[`complaintComment_${row.value}`]}
                                                                 inputProps={{ maxLength: getFieldConfig('complaintComment', 'visit')?.maxLength }}
                                                                 InputProps={{ disableUnderline: true }}
                                                             />

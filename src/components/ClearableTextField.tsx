@@ -30,7 +30,8 @@ const ClearableTextField: React.FC<ClearableTextFieldProps> = ({
     const isLengthWarning = typeof helperText === 'string' && (
         helperText.toLowerCase().includes('exceed') ||
         helperText.toLowerCase().includes('character limit') ||
-        helperText.toLowerCase().includes('max length')
+        helperText.toLowerCase().includes('max length') ||
+        helperText.toLowerCase().includes('limit reached')
     );
 
     // Any error that is not just a length warning should be red.

@@ -495,8 +495,15 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
             const validation = validateField(field, processedValue, undefined, undefined, 'lab');
 
             if (validation.allowed) {
-                setFormData(prev => ({ ...prev, [field]: processedValue }));
-                if (validation.error) {
+                // Apply maxLength constraint
+                const maxLength = (field === 'labDoctorName' || field === 'labName') ? 200 : 1000;
+                const cappedValue = processedValue.slice(0, maxLength);
+
+                setFormData(prev => ({ ...prev, [field]: cappedValue }));
+
+                if (cappedValue.length >= maxLength) {
+                    setErrors(prev => ({ ...prev, [field]: `${field === 'labName' ? 'Lab Name' : (field === 'labDoctorName' ? 'Doctor Name' : 'Comment')} exceeds maximum length of ${maxLength} characters` }));
+                } else if (validation.error) {
                     setErrors(prev => ({ ...prev, [field]: validation.error }));
                 } else {
                     setErrors(prev => {
@@ -1075,6 +1082,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                         required
                                                         variant="outlined"
                                                         size="small"
+                                                        inputProps={{ maxLength: 200 }}
                                                         sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
                                                     />
                                                 </Box>
@@ -1095,6 +1103,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                         required
                                                         variant="outlined"
                                                         size="small"
+                                                        inputProps={{ maxLength: 200 }}
                                                         sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
                                                     />
                                                 </Box>
@@ -1145,12 +1154,23 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                 rows={3}
                                                 placeholder="Comment"
                                                 value={formData.comment}
-                                                onChange={(e) => handleInputChange('comment', e.target.value)}
+                                                onChange={(e) => handleInputChange('comment', e.target.value.slice(0, 1000))}
                                                 maxLength={1000}
+                                                style={{
+                                                    width: '100%',
+                                                    padding: '8px',
+                                                    borderRadius: '8px',
+                                                    border: errors.comment
+                                                        ? (errors.comment.toLowerCase().includes('exceed') ? '1px solid #616161' : '1px solid #d32f2f')
+                                                        : '1px solid #ccc',
+                                                    outline: 'none',
+                                                    fontFamily: 'inherit',
+                                                    fontSize: '14px'
+                                                }}
                                             />
                                             {errors.comment && (
                                                 <Typography variant="caption" sx={{
-                                                    color: (errors.comment && !errors.comment.toLowerCase().includes('required')) ? '#f44336' : '#f44336',
+                                                    color: errors.comment.toLowerCase().includes('exceed') ? '#757575' : '#d32f2f',
                                                     mt: 0.5,
                                                     display: 'block'
                                                 }}>
@@ -1488,10 +1508,11 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                                         value={result.value}
                                                                         onChange={(val) => handleResultChange(result.id, 'value', val)}
                                                                         required
-                                                                        error={resultErrors.has(result.id)}
-                                                                        helperText={resultErrors.has(result.id) ? 'Value is required' : ''}
+                                                                        error={resultErrors.has(result.id) || (result.value || '').length >= 2000}
+                                                                        helperText={resultErrors.has(result.id) ? 'Value is required' : ((result.value || '').length >= 2000 ? 'Value exceeds maximum length of 2000 characters' : '')}
                                                                         variant="outlined"
                                                                         size="small"
+                                                                        inputProps={{ maxLength: 2000 }}
                                                                         sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
                                                                     />
                                                                 </td>
