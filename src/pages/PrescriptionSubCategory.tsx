@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { Add, Delete, Edit, Refresh, Search } from '@mui/icons-material'
-import { Snackbar } from '@mui/material'
+import { Snackbar, Select, MenuItem } from '@mui/material'
 import { doctorService, Doctor } from '../services/doctorService'
 import { useSession } from '../store/hooks/useSession'
 import prescriptionSubCategoryService, {
@@ -618,17 +618,67 @@ export default function PrescriptionSubCategory() {
       <div className="form-row">
         <div className="form-field">
           <label>Category Name</label>
-          <select
+          <Select
             value={formData.categoryName}
             onChange={(event) => setFormData((prev) => ({ ...prev, categoryName: event.target.value }))}
+            displayEmpty
+            fullWidth
+            size="small"
+            sx={{
+              height: 40,
+              backgroundColor: '#FFFFFF',
+              color: formData.categoryName ? '#212121' : '#666c75',
+              '& .MuiSelect-select': {
+                padding: '10px 12px',
+                fontSize: '13px',
+                fontFamily: "'Roboto', sans-serif",
+                textAlign: 'left',
+              },
+              '& .MuiOutlinedInput-notchedOutline': {
+                borderColor: '#ced4da',
+              },
+              '&:hover .MuiOutlinedInput-notchedOutline': {
+                borderColor: '#b2b2b2',
+              },
+              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                borderColor: '#1976d2',
+                borderWidth: '1px',
+              },
+            }}
+            MenuProps={{
+              anchorOrigin: {
+                vertical: 'bottom',
+                horizontal: 'left',
+              },
+              transformOrigin: {
+                vertical: 'top',
+                horizontal: 'left',
+              },
+              PaperProps: {
+                sx: {
+                  marginTop: '4px',
+                  '& .MuiMenuItem-root': {
+                    '&:hover': {
+                      backgroundColor: '#e0e0e0',
+                    },
+                    '&.Mui-selected': {
+                      backgroundColor: '#e0e0e0',
+                      '&:hover': {
+                        backgroundColor: '#e0e0e0',
+                      },
+                    },
+                  },
+                }
+              }
+            }}
           >
-            <option value="">Select Category</option>
+            <MenuItem value="">Select Category</MenuItem>
             {categoryOptions.map((option) => (
-              <option key={option} value={option}>
+              <MenuItem key={option} value={option}>
                 {option}
-              </option>
+              </MenuItem>
             ))}
-          </select>
+          </Select>
         </div>
         <div className="form-field">
           <label>SubCategory Name</label>
@@ -700,24 +750,64 @@ export default function PrescriptionSubCategory() {
         {userId !== 7 && (
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ fontSize: '0.9rem', color: '#666', whiteSpace: 'nowrap' }}>For Provider</span>
-            <select
+            <Select
               className="provider-select"
               value={selectedDoctorId}
               onChange={(event) => setSelectedDoctorId(event.target.value)}
               disabled={loadingDoctors || doctors.length === 0}
+              displayEmpty
+              size="small"
+              sx={{
+                height: 38,
+                backgroundColor: '#FFFFFF',
+                width: 300,
+                color: selectedDoctorId ? '#212121' : '#666c75',
+                '& .MuiSelect-select': {
+                  padding: '6px 12px',
+                  fontSize: '0.9rem',
+                  fontFamily: "'Roboto', sans-serif",
+                  textAlign: 'left',
+                }
+              }}
+              MenuProps={{
+                anchorOrigin: {
+                  vertical: 'bottom',
+                  horizontal: 'left',
+                },
+                transformOrigin: {
+                  vertical: 'top',
+                  horizontal: 'left',
+                },
+                PaperProps: {
+                  sx: {
+                    marginTop: '4px',
+                    '& .MuiMenuItem-root': {
+                      '&:hover': {
+                        backgroundColor: '#e0e0e0',
+                      },
+                      '&.Mui-selected': {
+                        backgroundColor: '#e0e0e0',
+                        '&:hover': {
+                          backgroundColor: '#e0e0e0',
+                        },
+                      },
+                    },
+                  }
+                }
+              }}
             >
               {loadingDoctors ? (
-                <option value="">Loading doctors...</option>
+                <MenuItem value="" disabled>Loading doctors...</MenuItem>
               ) : doctors.length === 0 ? (
-                <option value="">No doctors available</option>
+                <MenuItem value="" disabled>No doctors available</MenuItem>
               ) : (
                 doctors.map((doctor) => (
-                  <option key={doctor.id} value={doctor.id}>
+                  <MenuItem key={doctor.id} value={doctor.id}>
                     {doctor.name || doctor.id}
-                  </option>
+                  </MenuItem>
                 ))
               )}
-            </select>
+            </Select>
           </div>
         )}
       </div>
