@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { List, CreditCard, MoreVert, Add as AddIcon, Save, Delete, Info, FastForward, Close, ChatBubbleOutline, Phone, SwapHoriz, ShoppingCart } from "@mui/icons-material";
-import { Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button, CircularProgress, IconButton, Tooltip } from "@mui/material";
+import { Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button, CircularProgress, IconButton, Tooltip, FormControl, Select, MenuItem } from "@mui/material";
 import { appointmentService, Appointment, AppointmentRequest, TodayAppointmentsResponse, getDoctorStatusReference, getStatusOptionsByClinic } from "../services/appointmentService";
 import { doctorService, DoctorDetail, Doctor } from "../services/doctorService";
 import { patientService, Patient, formatVisitDateTime, getVisitStatusText } from "../services/patientService";
@@ -4271,30 +4271,59 @@ export default function AppointmentTable() {
 
                 {/* 5) Status dropdown */}
                 {/* Status filter dropdown (filters list/card by selected status) */}
-                <select
-                    className="form-select"
-                    value={filterStatus}
-                    onChange={(e) => {
-                        setFilterStatus(e.target.value);
-                        setSearchTerm("");
-                        setSearchResults([]);
-                        setShowDropdown(false);
-                    }}
-                    style={{ height: '38px', width: '200px', color: filterStatus ? '#212121' : '#6c757d', padding: '6px 12px', lineHeight: '1.5', fontSize: '1rem' }}
-                >
-                    <option value="">ALL</option>
-                    {(() => {
-                        const filteredStatuses = (availableStatuses.length ? availableStatuses : [
-                            'WAITING', 'WITH DOCTOR', 'CONSULT ON CALL', 'CHECK OUT', 'SAVE', 'COMPLETE', 'PRESCRIPTION/COLLECTION'
-                        ]).filter(status => {
-                            const statusId = mapStatusLabelToId(status);
-                            return statusId === 1 || statusId === 2 || statusId === 3 || statusId === 4 || statusId === 5; // show key workflow statuses
-                        });
-                        return filteredStatuses.map(s => (
-                            <option key={s} value={s}>{s}</option>
-                        ));
-                    })()}
-                </select>
+                <FormControl sx={{ minWidth: 200, height: 38 }}>
+                    <Select
+                        value={filterStatus}
+                        onChange={(e) => {
+                            setFilterStatus(e.target.value as string);
+                            setSearchTerm("");
+                            setSearchResults([]);
+                            setShowDropdown(false);
+                        }}
+                        displayEmpty
+                        size="small"
+                        sx={{
+                            height: 38,
+                            backgroundColor: '#FFFFFF',
+                            color: filterStatus ? '#212121' : '#6c757d',
+                            '& .MuiSelect-select': {
+                                padding: '6px 12px',
+                                fontSize: '1rem',
+                                fontFamily: "'Roboto', sans-serif",
+                                fontWeight: 500,
+                                textAlign: 'left',
+                            }
+                        }}
+                        MenuProps={{
+                            anchorOrigin: {
+                                vertical: 'bottom',
+                                horizontal: 'left',
+                            },
+                            transformOrigin: {
+                                vertical: 'top',
+                                horizontal: 'left',
+                            },
+                            PaperProps: {
+                                sx: {
+                                    marginTop: '4px',
+                                }
+                            }
+                        }}
+                    >
+                        <MenuItem value="">ALL</MenuItem>
+                        {(() => {
+                            const filteredStatuses = (availableStatuses.length ? availableStatuses : [
+                                'WAITING', 'WITH DOCTOR', 'CONSULT ON CALL', 'CHECK OUT', 'SAVE', 'COMPLETE', 'PRESCRIPTION/COLLECTION'
+                            ]).filter(status => {
+                                const statusId = mapStatusLabelToId(status);
+                                return statusId === 1 || statusId === 2 || statusId === 3 || statusId === 4 || statusId === 5; // show key workflow statuses
+                            });
+                            return filteredStatuses.map(s => (
+                                <MenuItem key={s} value={s}>{s}</MenuItem>
+                            ));
+                        })()}
+                    </Select>
+                </FormControl>
 
                 {/* 6) List/Card toggle */}
                 <div
