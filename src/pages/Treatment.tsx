@@ -5473,15 +5473,21 @@ export default function Treatment() {
                                                         zIndex: 1000,
                                                         marginTop: '4px'
                                                     }}>
-                                                        {/* Search Field inside dropdown */}
                                                         <div style={{ padding: '6px' }}>
                                                             <ClearableTextField
                                                                 fullWidth
                                                                 size="small"
                                                                 value={complaintSearch}
-                                                                onChange={(val) => setComplaintSearch(val)}
+                                                                onChange={(val) => {
+                                                                    // Cap at 100 characters
+                                                                    if (val.length <= 100) {
+                                                                        setComplaintSearch(val);
+                                                                    }
+                                                                }}
                                                                 placeholder="Search complaints"
                                                                 variant="outlined"
+                                                                error={complaintSearch.length >= 100}
+                                                                helperText={complaintSearch.length >= 100 ? 'Search term cannot exceed 100 characters' : ''}
                                                                 sx={{
                                                                     '& .MuiOutlinedInput-root': {
                                                                         height: '32px',
@@ -5562,7 +5568,7 @@ export default function Treatment() {
                                                                                 cursor: isAdded ? 'not-allowed' : 'pointer',
                                                                                 fontSize: '12px',
                                                                                 border: 'none',
-                                                                                backgroundColor: isAdded ? '#f5f5f5' : 'transparent',
+                                                                                backgroundColor: (checked || isAdded) ? '#eeeeee' : 'transparent',
                                                                                 borderRadius: '3px',
                                                                                 fontWeight: 400,
                                                                                 minWidth: 0,
@@ -6747,7 +6753,7 @@ export default function Treatment() {
                                                 }
                                             }}
                                             disabled={isFormDisabled}
-                                            placeholder="Enter Brand Name / Prescription (Max 200 chars)"
+                                            placeholder="Enter Brand Name / Prescription"
                                             variant="outlined"
                                             inputProps={{
                                                 maxLength: 200
