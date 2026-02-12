@@ -137,7 +137,7 @@ export const VISIT_FIELDS = {
     referralEmail: { maxLength: 60, fieldName: 'Referral email', type: 'email' as const },
     referralAddress: { maxLength: 150, fieldName: 'Referral address', type: 'text' as const },
     pastSurgicalHistory: { maxLength: 1000, fieldName: 'Past surgical history', type: 'textarea' as const },
-    complaintComment: { maxLength: 200, fieldName: 'Duration/Comment', type: 'text' as const },
+    complaintComment: { maxLength: 500, fieldName: 'Duration/Comment', type: 'text' as const },
     complaintSearch: { maxLength: 100, fieldName: 'Complaint Search', type: 'text' as const },
 } as const;
 
