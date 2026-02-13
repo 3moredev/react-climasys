@@ -7506,6 +7506,7 @@ export default function Treatment() {
                                             Follow-up Type
                                         </label>
                                         <ClearableTextField
+                                            disableClearable
                                             select
                                             fullWidth
                                             size="small"

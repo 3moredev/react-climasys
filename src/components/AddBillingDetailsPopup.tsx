@@ -392,6 +392,7 @@ const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
                   Group <span style={{ color: 'red' }}>*</span>
                 </Typography>
                 <ClearableTextField
+                  disableClearable
                   select
                   fullWidth
                   variant="outlined"
@@ -456,6 +457,7 @@ const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
                   Visit Type <span style={{ color: 'red' }}>*</span>
                 </Typography>
                 <ClearableTextField
+                  disableClearable
                   select
                   fullWidth
                   variant="outlined"
@@ -510,6 +512,7 @@ const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
                   Sub-Group
                 </Typography>
                 <ClearableTextField
+                  disableClearable
                   select
                   fullWidth
                   variant="outlined"
