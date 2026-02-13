@@ -683,6 +683,7 @@ export default function PrescriptionSubCategory() {
         <div className="form-field">
           <label>SubCategory Name</label>
           <ClearableTextField
+            disableClearable
             fullWidth
             size="small"
             placeholder="SubCategory Name"

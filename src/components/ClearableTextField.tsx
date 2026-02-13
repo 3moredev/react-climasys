@@ -6,6 +6,7 @@ interface ClearableTextFieldProps extends Omit<TextFieldProps, 'onChange'> {
     value: string;
     onChange: (value: string) => void;
     onClear?: () => void;
+    disableClearable?: boolean;
 }
 
 const ClearableTextField: React.FC<ClearableTextFieldProps> = ({
@@ -14,8 +15,10 @@ const ClearableTextField: React.FC<ClearableTextFieldProps> = ({
     onClear,
     InputProps,
     disabled,
+    disableClearable,
     ...otherProps
 }) => {
+
     const handleClear = () => {
         onChange('');
         if (onClear) {
@@ -99,7 +102,7 @@ const ClearableTextField: React.FC<ClearableTextFieldProps> = ({
                 ...InputProps,
                 endAdornment: (
                     <React.Fragment>
-                        {value && !isReadOnly && (
+                        {value && !isReadOnly && !disableClearable && (
                             <CloseIcon
                                 onClick={handleClear}
                                 style={{

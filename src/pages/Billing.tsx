@@ -4134,6 +4134,7 @@ export default function Treatment() {
                                         value={billingData.paymentBy}
                                         onChange={(val) => handleBillingChange('paymentBy', val)}
                                         disabled={isFormDisabled}
+                                        disableClearable
                                         error={!!paymentByError}
                                         helperText={paymentByError}
                                         sx={{
