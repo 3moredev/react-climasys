@@ -100,7 +100,7 @@ export const procedureService = {
       
       // Handle HTTP errors
       if (error.response?.status === 400) {
-        throw new Error('Invalid search request. Please check your search parameters.');
+        throw new Error('Invalid search. Please check your search details and try again.');
       } else if (error.response?.status === 404) {
         throw new Error('Search endpoint not found. Please check your backend configuration.');
       } else if (error.response?.status === 500) {
