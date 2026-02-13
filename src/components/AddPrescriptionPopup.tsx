@@ -382,6 +382,7 @@ const AddPrescriptionPopup: React.FC<AddPrescriptionPopupProps> = ({
                                     Category Name <span style={{ color: 'red' }}>*</span>
                                 </Typography>
                                 <ClearableTextField
+                                    disableClearable
                                     select
                                     fullWidth
                                     variant="outlined"
@@ -432,6 +433,7 @@ const AddPrescriptionPopup: React.FC<AddPrescriptionPopupProps> = ({
                                     SubCategory Name <span style={{ color: 'red' }}>*</span>
                                 </Typography>
                                 <ClearableTextField
+                                    disableClearable
                                     select
                                     fullWidth
                                     variant="outlined"

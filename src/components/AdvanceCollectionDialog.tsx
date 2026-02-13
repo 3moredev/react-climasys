@@ -826,6 +826,7 @@ export default function AdvanceCollectionDialog({
                 optionValues={paymentByOptions.map(opt => String(opt.value)) as string[]}
                 value={String(formData.paymentBy)}
                 onChange={(v) => handleInputChange("paymentBy", parseInt(v, 10) || 0)}
+                disableClearable
               />
             </div>
           </div>
@@ -1044,6 +1045,7 @@ function HorizontalField({
   disabled?: boolean;
   maxLength?: number;
   required?: boolean;
+  disableClearable?: boolean;
 }) {
   return (
     <div className="row align-items-center mb-3">
@@ -1083,6 +1085,7 @@ function HorizontalField({
             value={value || ""}
             onChange={onChange}
             disabled={disabled}
+            disableClearable={disableClearable}
             sx={{
               "& .MuiInputBase-root": {
                 fontSize: "14px",
