@@ -4210,41 +4210,62 @@ export default function AppointmentTable() {
                 {/* 2) Provider (enabled with all doctors) - Changes filter appointments by selected doctor */}
                 {/* Hide dropdown for doctors since they can only see their own appointments */}
                 {!isDoctor && (
-                    <select
-                        className="form-select"
+                    <Select
                         value={selectedDoctorId || ''}
                         onChange={(e) => {
                             console.log('Doctor dropdown changed to:', e.target.value);
-                            setSelectedDoctorId(e.target.value);
+                            setSelectedDoctorId(e.target.value as string);
                             setSearchTerm("");
                             setSearchResults([]);
                             setShowDropdown(false);
                         }}
+                        displayEmpty
                         disabled={loadingDoctors}
-                        key={`doctor-select-${allDoctors.length}-${selectedDoctorId}`} // Force re-render when doctors or selection changes
-                        style={{
+                        variant="outlined"
+                        size="small"
+                        sx={{
                             height: 38,
                             width: 255,
                             color: '#212121',
                             backgroundColor: loadingDoctors ? '#ECEFF1' : '#FFFFFF',
-                            padding: '6px 12px',
-                            lineHeight: '1.5',
                             fontSize: '1rem',
-                            flex: '0 0 255px'
+                            flex: '0 0 255px',
+                            '& .MuiSelect-select': {
+                                padding: '6px 12px',
+                                textAlign: 'left'
+                            },
+                            '& .MuiOutlinedInput-notchedOutline': {
+                                borderColor: '#ced4da' // Match Bootstrap border
+                            }
+                        }}
+                        MenuProps={{
+                            PaperProps: {
+                                sx: {
+                                    '& .MuiMenuItem-root.Mui-selected': {
+                                        backgroundColor: '#eeeeee !important',
+                                    },
+                                    '& .MuiMenuItem-root:hover': {
+                                        backgroundColor: '#eeeeee',
+                                    },
+                                    '& .MuiMenuItem-root.Mui-selected:hover': {
+                                        backgroundColor: '#eeeeee',
+                                    }
+                                }
+                            }
                         }}
                     >
                         {loadingDoctors ? (
-                            <option value="">Loading doctors...</option>
+                            <MenuItem value="">Loading doctors...</MenuItem>
                         ) : allDoctors.length > 0 ? (
                             allDoctors.map((doctor) => (
-                                <option key={doctor.id} value={doctor.id}>
+                                <MenuItem key={doctor.id} value={doctor.id}>
                                     {formatProviderLabel(doctor.name)}
-                                </option>
+                                </MenuItem>
                             ))
                         ) : (
-                            <option value="">No doctors available</option>
+                            <MenuItem value="">No doctors available</MenuItem>
                         )}
-                    </select>
+                    </Select>
                 )}
 
                 {/* 3) Book and 4) Add buttons */}
@@ -4490,15 +4511,62 @@ export default function AppointmentTable() {
                                                 <td className="contact-col">{(a.contact || '').toString().slice(0, 12)}</td>
                                                 <td className="time-col">{extractTime(a.time)}</td>
                                                 <td className="provider-col">
-                                                    <select
-                                                        className="form-select form-select-sm"
-                                                        value={a.provider || getDoctorLabelById(selectedDoctorId) || ''}
-                                                        onChange={(e) => handleProviderChange(originalIndex, e.target.value)}
+                                                    <Select
+                                                        value={getDoctorLabelById(a.doctorId) || getDoctorLabelById(a.provider) || a.provider || getDoctorLabelById(selectedDoctorId) || ''}
+                                                        onChange={(e) => handleProviderChange(originalIndex, e.target.value as string)}
+                                                        displayEmpty
+                                                        renderValue={(selected) => {
+                                                            if (!selected) {
+                                                                return <em style={{ color: '#999' }}>Select Provider</em>;
+                                                            }
+                                                            return selected;
+                                                        }}
+                                                        variant="outlined"
+                                                        size="small"
+                                                        sx={{
+                                                            height: '30px', // Slightly taller for better alignment
+                                                            width: '100%',  // Fill the cell
+                                                            fontSize: '0.85rem',
+                                                            backgroundColor: '#fff',
+                                                            borderRadius: '4px',
+                                                            '& .MuiSelect-select': {
+                                                                padding: '4px 24px 4px 8px', // Better vertical centering
+                                                                display: 'flex',
+                                                                alignItems: 'center'
+                                                            },
+                                                            '& .MuiOutlinedInput-notchedOutline': {
+                                                                borderColor: '#ced4da'
+                                                            },
+                                                            '&:hover .MuiOutlinedInput-notchedOutline': {
+                                                                borderColor: '#ced4da'
+                                                            },
+                                                            '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                                                borderColor: '#86b7fe',
+                                                                borderWidth: '1px'
+                                                            }
+                                                        }}
+                                                        MenuProps={{
+                                                            PaperProps: {
+                                                                sx: {
+                                                                    marginTop: '4px',
+                                                                    zIndex: 3000,
+                                                                    '& .MuiMenuItem-root.Mui-selected': {
+                                                                        backgroundColor: '#eeeeee !important',
+                                                                    },
+                                                                    '& .MuiMenuItem-root:hover': {
+                                                                        backgroundColor: '#eeeeee',
+                                                                    },
+                                                                    '& .MuiMenuItem-root.Mui-selected:hover': {
+                                                                        backgroundColor: '#eeeeee',
+                                                                    }
+                                                                }
+                                                            }
+                                                        }}
                                                     >
                                                         {getProviderOptionsWithSelectedFirst().map(opt => (
-                                                            <option key={opt.id} value={opt.label}>{opt.label}</option>
+                                                            <MenuItem key={opt.id} value={opt.label} sx={{ fontSize: '0.85rem' }}>{opt.label}</MenuItem>
                                                         ))}
-                                                    </select>
+                                                    </Select>
                                                 </td>
                                                 <td className="online-cell">
                                                     <input
@@ -4643,7 +4711,7 @@ export default function AppointmentTable() {
                                                                             backgroundColor: "#fff",
                                                                             textAlign: "left",
                                                                         }}
-                                                                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#f5f5f5")}
+                                                                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#eeeeee")}
                                                                         onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#fff")}
                                                                     >
                                                                         {status}
@@ -5477,7 +5545,7 @@ export default function AppointmentTable() {
                                                                             backgroundColor: '#fff',
                                                                             textAlign: 'left',
                                                                         }}
-                                                                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f5f5f5')}
+                                                                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#eeeeee')}
                                                                         onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#fff')}
                                                                     >
                                                                         {status}
@@ -5529,16 +5597,56 @@ export default function AppointmentTable() {
                                                 </div>
                                                 <div className="kv"><span className="k">Gender:</span><span className="v">{appointment.gender}</span></div>
                                                 <div className="kv"><span className="k">Provider:</span><span className="v">
-                                                    <select
-                                                        className="form-select"
-                                                        value={appointment.provider || getDoctorLabelById(selectedDoctorId) || ''}
+                                                    <Select
+                                                        value={getDoctorLabelById(appointment.doctorId) || getDoctorLabelById(appointment.provider) || appointment.provider || getDoctorLabelById(selectedDoctorId) || ''}
                                                         onChange={(e) => handleProviderChange(originalIndex, e.target.value)}
-                                                        style={{ width: '161px', height: '28px', padding: '2px', fontSize: 11 }}
+                                                        displayEmpty
+                                                        variant="standard"
+                                                        disableUnderline
+                                                        sx={{
+                                                            width: '161px',
+                                                            height: '28px',
+                                                            fontSize: '11px',
+                                                            '.MuiSelect-select': {
+                                                                padding: '4px 24px 4px 8px',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                            },
+                                                            backgroundColor: 'white',
+                                                            border: '1px solid #dee2e6',
+                                                            borderRadius: '0.375rem',
+                                                            '&:hover': {
+                                                                borderColor: '#86b7fe',
+                                                            },
+                                                        }}
+                                                        MenuProps={{
+                                                            PaperProps: {
+                                                                sx: {
+                                                                    zIndex: 3000,
+                                                                    '& .MuiMenuItem-root': {
+                                                                        fontSize: '13px',
+                                                                        fontFamily: "'Roboto', sans-serif",
+                                                                        padding: '8px 16px',
+                                                                        '&:hover': {
+                                                                            backgroundColor: '#eeeeee',
+                                                                        },
+                                                                        '&.Mui-selected': {
+                                                                            backgroundColor: '#eeeeee',
+                                                                            '&:hover': {
+                                                                                backgroundColor: '#eeeeee', // Keep same color on hover when selected
+                                                                            },
+                                                                        },
+                                                                    },
+                                                                },
+                                                            },
+                                                        }}
                                                     >
-                                                        {getProviderOptionsWithSelectedFirst().map(opt => (
-                                                            <option key={opt.id} value={opt.label}>{opt.label}</option>
+                                                        {getProviderOptionsWithSelectedFirst().map((opt) => (
+                                                            <MenuItem key={opt.id} value={opt.label}>
+                                                                {opt.label}
+                                                            </MenuItem>
                                                         ))}
-                                                    </select>
+                                                    </Select>
                                                 </span></div>
                                                 <div className="kv"><span className="k">Time:</span><span className="v">{extractTime(appointment.time)}</span></div>
                                             </div>
@@ -6099,16 +6207,45 @@ export default function AppointmentTable() {
                                 </span>
                                 <div className="page-size-selector">
                                     <span>Show:</span>
-                                    <select
-                                        className="page-size-select"
+                                    <Select
                                         value={pageSize}
                                         onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                                        variant="outlined"
+                                        size="small"
+                                        sx={{
+                                            height: '30px',
+                                            backgroundColor: '#fff',
+                                            fontSize: '0.9rem',
+                                            '& .MuiSelect-select': {
+                                                padding: '4px 32px 4px 8px', // Adjust padding for text and arrow
+                                                display: 'flex',
+                                                alignItems: 'center'
+                                            },
+                                            '& .MuiOutlinedInput-notchedOutline': {
+                                                borderColor: '#ddd'
+                                            }
+                                        }}
+                                        MenuProps={{
+                                            PaperProps: {
+                                                sx: {
+                                                    '& .MuiMenuItem-root.Mui-selected': {
+                                                        backgroundColor: '#eeeeee !important',
+                                                    },
+                                                    '& .MuiMenuItem-root:hover': {
+                                                        backgroundColor: '#eeeeee',
+                                                    },
+                                                    '& .MuiMenuItem-root.Mui-selected:hover': {
+                                                        backgroundColor: '#eeeeee',
+                                                    }
+                                                }
+                                            }
+                                        }}
                                     >
-                                        <option value={5}>5</option>
-                                        <option value={10}>10</option>
-                                        <option value={20}>20</option>
-                                        <option value={50}>50</option>
-                                    </select>
+                                        <MenuItem value={5}>5</MenuItem>
+                                        <MenuItem value={10}>10</MenuItem>
+                                        <MenuItem value={20}>20</MenuItem>
+                                        <MenuItem value={50}>50</MenuItem>
+                                    </Select>
                                     <span style={{ whiteSpace: 'nowrap' }}>per page</span>
                                 </div>
                             </div>

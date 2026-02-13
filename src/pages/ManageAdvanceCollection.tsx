@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { Edit } from "@mui/icons-material";
+import { Select, MenuItem } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import SearchInput from "../components/SearchInput";
 import { patientService, Patient } from "../services/patientService";
@@ -1642,16 +1643,45 @@ export default function ManageAdvanceCollection() {
                             </span>
                             <div className="page-size-selector">
                                 <span>Show:</span>
-                                <select
-                                    className="page-size-select"
+                                <Select
                                     value={pageSize}
                                     onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                                    variant="outlined"
+                                    size="small"
+                                    sx={{
+                                        height: '30px',
+                                        backgroundColor: '#fff',
+                                        fontSize: '0.9rem',
+                                        '& .MuiSelect-select': {
+                                            padding: '4px 32px 4px 8px',
+                                            display: 'flex',
+                                            alignItems: 'center'
+                                        },
+                                        '& .MuiOutlinedInput-notchedOutline': {
+                                            borderColor: '#ddd'
+                                        }
+                                    }}
+                                    MenuProps={{
+                                        PaperProps: {
+                                            sx: {
+                                                '& .MuiMenuItem-root.Mui-selected': {
+                                                    backgroundColor: '#eeeeee !important',
+                                                },
+                                                '& .MuiMenuItem-root:hover': {
+                                                    backgroundColor: '#eeeeee',
+                                                },
+                                                '& .MuiMenuItem-root.Mui-selected:hover': {
+                                                    backgroundColor: '#eeeeee',
+                                                }
+                                            }
+                                        }
+                                    }}
                                 >
-                                    <option value={5}>5</option>
-                                    <option value={10}>10</option>
-                                    <option value={20}>20</option>
-                                    <option value={50}>50</option>
-                                </select>
+                                    <MenuItem value={5}>5</MenuItem>
+                                    <MenuItem value={10}>10</MenuItem>
+                                    <MenuItem value={20}>20</MenuItem>
+                                    <MenuItem value={50}>50</MenuItem>
+                                </Select>
                                 <span style={{ whiteSpace: 'nowrap' }}>per page</span>
                             </div>
                         </div>
