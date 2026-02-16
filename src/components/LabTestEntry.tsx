@@ -1450,7 +1450,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                             Parameter Name
                                                         </th>
                                                         <th style={{
-                                                            padding: '12px',
+                                                            padding: '12px 10px',
                                                             textAlign: 'left',
                                                             borderBottom: '1px solid #ddd',
                                                             fontWeight: '400',
@@ -1482,26 +1482,26 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                         {labTestResults.map((result) => (
                                                             <tr key={result.id}>
                                                                 <td style={{
-                                                                    padding: '16px',
+                                                                    padding: '12px 16px',
                                                                     borderBottom: '1px solid #eee',
                                                                     color: 'black',
-                                                                    height: '38px',
                                                                     fontSize: '14px',
-                                                                    width: '30%'
+                                                                    width: '30%',
+                                                                    verticalAlign: 'top'
                                                                 }}>
                                                                     {result.labTestName}
                                                                 </td>
                                                                 <td style={{
-                                                                    padding: '16px',
+                                                                    padding: '12px 16px',
                                                                     borderBottom: '1px solid #eee',
                                                                     color: 'black',
-                                                                    height: '38px',
                                                                     fontSize: '14px',
-                                                                    width: '30%'
+                                                                    width: '30%',
+                                                                    verticalAlign: 'top'
                                                                 }}>
                                                                     {result.parameterName}
                                                                 </td>
-                                                                <td style={{ padding: '16px', borderBottom: '1px solid #eee', width: '30%' }}>
+                                                                <td style={{ borderBottom: '1px solid #eee', width: '30%', padding: '4px 0px', verticalAlign: 'top' }}>
                                                                     <ClearableTextField
                                                                         fullWidth
                                                                         placeholder="Value / Results"
@@ -1509,19 +1509,43 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                                         onChange={(val) => handleResultChange(result.id, 'value', val)}
                                                                         required
                                                                         error={resultErrors.has(result.id) || (result.value || '').length >= 2000}
-                                                                        helperText={resultErrors.has(result.id) ? 'Value is required' : ((result.value || '').length >= 2000 ? 'Value exceeds maximum length of 2000 characters' : '')}
+                                                                        helperText={
+                                                                            (result.value || '').length >= 2000
+                                                                                ? 'Value exceeds maximum length of 2000 characters'
+                                                                                : (resultErrors.has(result.id) ? 'Value is required' : '')
+                                                                        }
                                                                         variant="outlined"
                                                                         size="small"
                                                                         inputProps={{ maxLength: 2000 }}
-                                                                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
+                                                                        sx={{
+                                                                            marginBottom: 0,
+                                                                            '& .MuiOutlinedInput-root': {
+                                                                                height: '32px',
+                                                                                borderRadius: 0,
+                                                                                backgroundColor: 'transparent',
+                                                                                fontSize: '13px',
+                                                                                '& fieldset': { border: 'none' }
+                                                                            },
+                                                                            '& .MuiFormHelperText-root': {
+                                                                                fontSize: '9px',
+                                                                                margin: '0',
+                                                                                padding: '2px 4px 0 4px',
+                                                                                color: (result.value || '').length === 2000 ? '#666' : '#d32f2f',
+                                                                                position: 'static !important'
+                                                                            },
+                                                                            '& .MuiInputBase-input': {
+                                                                                padding: '8px 10px',
+                                                                                color: '#333'
+                                                                            }
+                                                                        }}
                                                                     />
                                                                 </td>
                                                                 <td style={{
-                                                                    padding: '16px',
+                                                                    padding: '12px 16px',
                                                                     borderBottom: '1px solid #eee',
                                                                     textAlign: 'center',
-                                                                    height: '38px',
-                                                                    width: '10%'
+                                                                    width: '10%',
+                                                                    verticalAlign: 'top'
                                                                 }}>
                                                                     <button
                                                                         onClick={() => handleRemoveResult(result.id)}

@@ -2747,9 +2747,9 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                             padding: '12px',
                                                             borderBottom: '1px solid #eee',
                                                             color: 'black',
-                                                            height: '38px',
                                                             fontSize: '12px',
-                                                            width: '10%'
+                                                            width: '10%',
+                                                            verticalAlign: 'top'
                                                         }}>
                                                             {idx + 1}
                                                         </td>
@@ -2757,15 +2757,16 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                             padding: '12px',
                                                             borderBottom: '1px solid #eee',
                                                             color: 'black',
-                                                            height: '38px',
                                                             fontSize: '12px',
-                                                            width: '30%'
+                                                            width: '30%',
+                                                            verticalAlign: 'top'
                                                         }}>
                                                             {row.label}
                                                         </td>
                                                         <td style={{
-                                                            padding: '12px',
-                                                            width: '40%'
+                                                            width: '40%',
+                                                            padding: '4px 0px',
+                                                            verticalAlign: 'top'
                                                         }}>
                                                             <ClearableTextField
                                                                 fullWidth
@@ -2775,18 +2776,37 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                                 disabled={readOnly}
                                                                 placeholder="Enter Duration/Comment"
                                                                 variant="outlined"
-                                                                error={!!validationErrors[`complaintComment_${row.value}`]}
-                                                                helperText={validationErrors[`complaintComment_${row.value}`]}
-                                                                inputProps={{ maxLength: getFieldConfig('complaintComment', 'visit')?.maxLength }}
-                                                                InputProps={{ disableUnderline: true }}
+                                                                error={!!validationErrors[`complaintComment_${row.value}`] || (row.comment || '').length >= 500}
+                                                                helperText={(row.comment || '').length >= 500 ? 'Comment cannot exceed 500 characters' : (validationErrors[`complaintComment_${row.value}`] || '')}
+                                                                inputProps={{ maxLength: 500 }}
+                                                                sx={{
+                                                                    marginBottom: 0,
+                                                                    '& .MuiOutlinedInput-root': {
+                                                                        height: '32px',
+                                                                        borderRadius: 0,
+                                                                        backgroundColor: readOnly ? '#f5f5f5' : 'transparent',
+                                                                        fontSize: '11px',
+                                                                        '& fieldset': { border: 'none' }
+                                                                    },
+                                                                    '& .MuiFormHelperText-root': {
+                                                                        fontSize: '9px',
+                                                                        padding: '2px 4px 0 4px',
+                                                                        color: (row.comment || '').length === 500 ? '#666' : '#d32f2f',
+                                                                        position: 'static !important'
+                                                                    },
+                                                                    '& .MuiInputBase-input': {
+                                                                        padding: '8px 10px',
+                                                                        color: readOnly ? '#666' : '#333'
+                                                                    }
+                                                                }}
                                                             />
                                                         </td>
                                                         <td style={{
                                                             padding: '12px',
                                                             borderBottom: '1px solid #eee',
                                                             textAlign: 'center',
-                                                            height: '38px',
-                                                            width: '20%'
+                                                            width: '20%',
+                                                            verticalAlign: 'top'
                                                         }}>
                                                             <button
                                                                 onClick={() => !readOnly && handleRemoveComplaint(row.value)}
