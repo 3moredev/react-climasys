@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { useNavigate, useLocation } from "react-router-dom";
+import PatientNameDisplay from '../components/PatientNameDisplay';
 import { visitService, ComprehensiveVisitDataRequest } from '../services/visitService';
 import { sessionService, SessionInfo } from "../services/sessionService";
 import { Download as DownloadIcon } from '@mui/icons-material';
@@ -225,7 +226,7 @@ export default function Treatment() {
     const [formData, setFormData] = useState({
         referralBy: 'Self',
         visitType: {
-            inPerson: true, // Always true and disabled (not user-editable) in Billing page
+            inPerson: true, // Will be overwritten by API response
             followUp: false,
         },
         medicalHistory: {
@@ -1087,7 +1088,15 @@ export default function Treatment() {
                                 dressingBodyParts: dressingCombined || prev.dressingBodyParts,
                                 visitType: {
                                     ...prev.visitType,
-                                    inPerson: vitals.in_person !== undefined ? Boolean(vitals.in_person) : prev.visitType.inPerson
+                                    // Backend-driven inPerson value.
+                                    // If vitals.in_person is present (0 or 1), use it.
+                                    // Otherwise fallback to existing value or true.
+                                    inPerson: (() => {
+                                        console.log('DEBUG: Billing useEffect vitals.in_person:', vitals.in_person, 'type:', typeof vitals.in_person);
+                                        return vitals.in_person !== undefined
+                                            ? Boolean(Number(vitals.in_person))
+                                            : (prev.visitType.inPerson !== undefined ? prev.visitType.inPerson : true);
+                                    })()
                                     // followUp will be set separately based on previous visits
                                 },
                                 medicalHistory: {
@@ -2693,7 +2702,7 @@ export default function Treatment() {
                     paymentRemark: billingData.paymentRemark || undefined,
                     discount: visitData.discount,
                     reason: billingData.reason || undefined,
-                    inPerson: true
+                    inPerson: formData.visitType.inPerson
                 };
                 result = await patientService.saveMedicineOverwrite(overwriteRequest);
             } else {
@@ -3184,7 +3193,13 @@ export default function Treatment() {
                                     justifyContent: 'space-between',
                                     alignItems: 'center'
                                 }}>
-                                    <div
+                                    <PatientNameDisplay
+                                        patientData={{
+                                            patient: treatmentData?.patientName,
+                                            gender: treatmentData?.gender,
+                                            age: treatmentData?.age,
+                                            contact: treatmentData?.contact
+                                        }}
                                         onClick={() => {
                                             if (treatmentData?.patientId) {
                                                 setShowQuickRegistration(true);
@@ -3198,9 +3213,7 @@ export default function Treatment() {
                                             textDecoration: treatmentData?.patientId ? 'underline' : 'none'
                                         }}
                                         title={treatmentData?.patientId ? 'Click to view patient details' : ''}
-                                    >
-                                        {treatmentData?.patientName || 'Amit Kalamkar'} / {treatmentData?.gender || 'Male'} / {treatmentData?.age || 48} Y / {treatmentData?.contact || 'N/A'}
-                                    </div>
+                                    />
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                             <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px', whiteSpace: 'nowrap' }}>Referred By:</label>
