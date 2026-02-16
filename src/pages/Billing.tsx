@@ -2927,7 +2927,7 @@ export default function Treatment() {
                                         padding: '20px',
                                         textAlign: 'center',
                                         color: '#666',
-                                        fontSize: '12px'
+                                        fontSize: '13px'
                                     }}>
                                         Loading previous visits...
                                     </div>
@@ -2952,7 +2952,7 @@ export default function Treatment() {
                                             }}
                                         >
                                             <div style={{ fontWeight: '500', color: '#333' }}>
-                                                <div style={{ fontSize: '12px', fontWeight: 'bold' }}>
+                                                <div style={{ fontSize: '13px', fontWeight: 'bold' }}>
                                                     <a
                                                         href="#"
                                                         onClick={(e) => {
@@ -2986,7 +2986,7 @@ export default function Treatment() {
                                         padding: '20px',
                                         textAlign: 'center',
                                         color: '#d32f2f',
-                                        fontSize: '12px',
+                                        fontSize: '13px',
                                         backgroundColor: '#ffebee',
                                         border: '1px solid #ffcdd2',
                                         borderRadius: '4px',
@@ -3015,7 +3015,7 @@ export default function Treatment() {
                                         padding: '20px',
                                         textAlign: 'center',
                                         color: '#666',
-                                        fontSize: '12px'
+                                        fontSize: '13px'
                                     }}>
                                         No previous visits found
                                     </div>
@@ -3041,7 +3041,7 @@ export default function Treatment() {
                                         alignItems: 'center',
                                         gap: '8px',
                                         color: '#2e7d32',
-                                        fontSize: '12px'
+                                        fontSize: '13px'
                                     }}>
                                         <div style={{
                                             width: '12px',
@@ -3056,7 +3056,7 @@ export default function Treatment() {
                                 )}
 
                                 {!isLoadingDocuments && existingDocuments.length === 0 && (
-                                    <div style={{ color: '#666', fontSize: '12px' }}>
+                                    <div style={{ color: '#666', fontSize: '13px' }}>
                                         No documents found for this visit
                                     </div>
                                 )}
@@ -3076,7 +3076,7 @@ export default function Treatment() {
                                                     backgroundColor: '#e8f5e8',
                                                     borderRadius: '6px',
                                                     border: '1px solid #c8e6c9',
-                                                    fontSize: '12px',
+                                                    fontSize: '13px',
                                                     fontFamily: "'Roboto', sans-serif",
                                                     fontWeight: 500,
                                                     color: '#2e7d32',
@@ -3179,7 +3179,7 @@ export default function Treatment() {
                                         padding: '10px 15px',
                                         textAlign: 'center',
                                         color: '#666',
-                                        fontSize: '12px'
+                                        fontSize: '13px'
                                     }}>
                                         Loading...
                                     </div>
@@ -3188,7 +3188,7 @@ export default function Treatment() {
                                         padding: '10px 15px',
                                         textAlign: 'center',
                                         color: '#d32f2f',
-                                        fontSize: '12px',
+                                        fontSize: '13px',
                                         backgroundColor: '#ffebee',
                                         border: '1px solid #ffcdd2',
                                         margin: '8px'
@@ -3200,7 +3200,7 @@ export default function Treatment() {
                                         padding: '10px 15px',
                                         textAlign: 'center',
                                         color: '#666',
-                                        fontSize: '12px'
+                                        fontSize: '13px'
                                     }}>
                                         No past services
                                     </div>
@@ -3272,12 +3272,12 @@ export default function Treatment() {
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                             <label style={{ fontWeight: 'bold', color: '#333', fontSize: '13px', whiteSpace: 'nowrap' }}>Referred By:</label>
                                             <span style={{
-                                                fontSize: '12px',
+                                                fontSize: '13px',
                                                 color: '#333',
                                                 fontWeight: 500
                                             }}>Self</span>
                                         </div>
-                                        <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'not-allowed', fontSize: '12px', whiteSpace: 'nowrap' }}>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'not-allowed', fontSize: '13px', whiteSpace: 'nowrap' }}>
                                             <input
                                                 type="checkbox"
                                                 checked={formData.visitType.inPerson}
@@ -3287,7 +3287,7 @@ export default function Treatment() {
                                             />
                                             In-Person
                                         </label>
-                                        <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'not-allowed', fontSize: '12px', whiteSpace: 'nowrap' }}>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'not-allowed', fontSize: '13px', whiteSpace: 'nowrap' }}>
                                             <input
                                                 type="checkbox"
                                                 checked={formData.visitType.followUp}
@@ -3361,6 +3361,7 @@ export default function Treatment() {
                                                     sx={{
                                                         '& .MuiInputBase-root': {
                                                             fontSize: '13px',
+                                                height: '38px',
                                                             backgroundColor: '#D5D5D8'
                                                         }
                                                     }}
@@ -3384,7 +3385,7 @@ export default function Treatment() {
                                 {isDetailsOpen && (
                                     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', marginTop: 8 }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                            <label style={{ fontSize: '12px', color: '#555', whiteSpace: 'nowrap' }}>Height (Cm)</label>
+                                            <label style={{ fontSize: '13px', color: '#555', whiteSpace: 'nowrap' }}>Height (Cm)</label>
                                             <ClearableTextField
                                                 size="small"
                                                 disabled
@@ -3393,7 +3394,8 @@ export default function Treatment() {
                                                 sx={{
                                                     width: 90,
                                                     '& .MuiInputBase-root': {
-                                                        fontSize: '12px',
+                                                        fontSize: '13px',
+                                                height: '38px',
                                                         backgroundColor: '#D5D5D8',
                                                         padding: '4px 0'
                                                     },
@@ -3404,7 +3406,7 @@ export default function Treatment() {
                                             />
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                            <label style={{ fontSize: '12px', color: '#555', whiteSpace: 'nowrap' }}>Weight (Kg)</label>
+                                            <label style={{ fontSize: '13px', color: '#555', whiteSpace: 'nowrap' }}>Weight (Kg)</label>
                                             <ClearableTextField
                                                 size="small"
                                                 disabled
@@ -3413,7 +3415,8 @@ export default function Treatment() {
                                                 sx={{
                                                     width: 90,
                                                     '& .MuiInputBase-root': {
-                                                        fontSize: '12px',
+                                                        fontSize: '13px',
+                                                height: '38px',
                                                         backgroundColor: '#D5D5D8',
                                                         padding: '4px 0'
                                                     },
@@ -3424,7 +3427,7 @@ export default function Treatment() {
                                             />
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                            <label style={{ fontSize: '12px', color: '#555', whiteSpace: 'nowrap' }}>BMI</label>
+                                            <label style={{ fontSize: '13px', color: '#555', whiteSpace: 'nowrap' }}>BMI</label>
                                             <ClearableTextField
                                                 size="small"
                                                 disabled
@@ -3433,7 +3436,8 @@ export default function Treatment() {
                                                 sx={{
                                                     width: 90,
                                                     '& .MuiInputBase-root': {
-                                                        fontSize: '12px',
+                                                        fontSize: '13px',
+                                                height: '38px',
                                                         backgroundColor: '#D5D5D8',
                                                         padding: '4px 0'
                                                     },
@@ -3444,7 +3448,7 @@ export default function Treatment() {
                                             />
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                            <label style={{ fontSize: '12px', color: '#555', whiteSpace: 'nowrap' }}>Pulse (min)</label>
+                                            <label style={{ fontSize: '13px', color: '#555', whiteSpace: 'nowrap' }}>Pulse (min)</label>
                                             <ClearableTextField
                                                 size="small"
                                                 disabled
@@ -3453,7 +3457,8 @@ export default function Treatment() {
                                                 sx={{
                                                     width: 90,
                                                     '& .MuiInputBase-root': {
-                                                        fontSize: '12px',
+                                                        fontSize: '13px',
+                                                height: '38px',
                                                         backgroundColor: '#D5D5D8',
                                                         padding: '4px 0'
                                                     },
@@ -3464,7 +3469,7 @@ export default function Treatment() {
                                             />
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                            <label style={{ fontSize: '12px', color: '#555', whiteSpace: 'nowrap' }}>BP</label>
+                                            <label style={{ fontSize: '13px', color: '#555', whiteSpace: 'nowrap' }}>BP</label>
                                             <ClearableTextField
                                                 size="small"
                                                 disabled
@@ -3473,7 +3478,8 @@ export default function Treatment() {
                                                 sx={{
                                                     width: 90,
                                                     '& .MuiInputBase-root': {
-                                                        fontSize: '12px',
+                                                        fontSize: '13px',
+                                                height: '38px',
                                                         backgroundColor: '#D5D5D8',
                                                         padding: '4px 0'
                                                     },
@@ -3484,7 +3490,7 @@ export default function Treatment() {
                                             />
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                            <label style={{ fontSize: '12px', color: '#555', whiteSpace: 'nowrap' }}>Sugar</label>
+                                            <label style={{ fontSize: '13px', color: '#555', whiteSpace: 'nowrap' }}>Sugar</label>
                                             <ClearableTextField
                                                 size="small"
                                                 disabled
@@ -3493,7 +3499,8 @@ export default function Treatment() {
                                                 sx={{
                                                     width: 90,
                                                     '& .MuiInputBase-root': {
-                                                        fontSize: '12px',
+                                                        fontSize: '13px',
+                                                height: '38px',
                                                         backgroundColor: '#D5D5D8',
                                                         padding: '4px 0'
                                                     },
@@ -3504,7 +3511,7 @@ export default function Treatment() {
                                             />
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                            <label style={{ fontSize: '12px', color: '#555', whiteSpace: 'nowrap' }}>TFT</label>
+                                            <label style={{ fontSize: '13px', color: '#555', whiteSpace: 'nowrap' }}>TFT</label>
                                             <ClearableTextField
                                                 size="small"
                                                 disabled
@@ -3513,7 +3520,8 @@ export default function Treatment() {
                                                 sx={{
                                                     width: 90,
                                                     '& .MuiInputBase-root': {
-                                                        fontSize: '12px',
+                                                        fontSize: '13px',
+                                                height: '38px',
                                                         backgroundColor: '#D5D5D8',
                                                         padding: '4px 0'
                                                     },
@@ -3524,7 +3532,7 @@ export default function Treatment() {
                                             />
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                            <label style={{ fontSize: '12px', color: '#555', whiteSpace: 'nowrap' }}>Pallor/HB</label>
+                                            <label style={{ fontSize: '13px', color: '#555', whiteSpace: 'nowrap' }}>Pallor/HB</label>
                                             <ClearableTextField
                                                 size="small"
                                                 disabled
@@ -3533,7 +3541,8 @@ export default function Treatment() {
                                                 sx={{
                                                     width: 90,
                                                     '& .MuiInputBase-root': {
-                                                        fontSize: '12px',
+                                                        fontSize: '13px',
+                                                height: '38px',
                                                         backgroundColor: '#D5D5D8',
                                                         padding: '4px 0'
                                                     },
@@ -3928,6 +3937,7 @@ export default function Treatment() {
                                                 marginBottom: 0,
                                                 '& .MuiInputBase-root': {
                                                     fontSize: '13px',
+                                                    height: '38px',
                                                     backgroundColor: '#f5f5f5',
                                                     color: '#666',
                                                     paddingRight: '34px !important'
@@ -3976,7 +3986,7 @@ export default function Treatment() {
                                         </button>
                                     </div>
                                     {billingError && (
-                                        <div style={{ color: 'red', fontSize: '12px', marginTop: '4px', marginLeft: 0, textAlign: 'left' }}>
+                                        <div style={{ color: 'red', fontSize: '13px', marginTop: '4px', marginLeft: 0, textAlign: 'left' }}>
                                             {billingError}
                                         </div>
                                     )}
@@ -3998,7 +4008,8 @@ export default function Treatment() {
                                         }}
                                         sx={{
                                             '& .MuiInputBase-root': {
-                                                fontSize: '12px',
+                                                fontSize: '13px',
+                                                height: '38px',
                                                 background: isFormDisabled ? 'white' : 'white',
                                                 cursor: isFormDisabled ? 'not-allowed' : 'text',
                                                 color: isFormDisabled ? '#666' : '#333'
@@ -4018,7 +4029,8 @@ export default function Treatment() {
                                         onClear={() => handleBillingChange('dues', '')}
                                         sx={{
                                             '& .MuiInputBase-root': {
-                                                fontSize: '12px',
+                                                fontSize: '13px',
+                                                height: '38px',
                                                 background: '#D5D5D8'
                                             }
                                         }}
@@ -4051,6 +4063,7 @@ export default function Treatment() {
                                             sx={{
                                                 '& .MuiInputBase-root': {
                                                     fontSize: '13px',
+                                                    height: '38px',
                                                     backgroundColor: '#f5f5f5',
                                                     color: folderAmountData?.totalAcBalance !== undefined &&
                                                         folderAmountData?.totalAcBalance !== null &&
@@ -4096,7 +4109,8 @@ export default function Treatment() {
                                         onChange={() => { }}
                                         sx={{
                                             '& .MuiInputBase-root': {
-                                                fontSize: '12px',
+                                                fontSize: '13px',
+                                                height: '38px',
                                                 background: '#D5D5D8'
                                             }
                                         }}
@@ -4121,7 +4135,8 @@ export default function Treatment() {
                                         sx={{
                                             marginBottom: '18px',
                                             '& .MuiInputBase-root': {
-                                                fontSize: '12px',
+                                                fontSize: '13px',
+                                                height: '38px',
                                                 background: isFormDisabled ? '#D5D5D8' : 'white',
                                                 cursor: isFormDisabled ? 'not-allowed' : 'text',
                                                 color: isFormDisabled ? '#666' : '#333'
@@ -4145,7 +4160,8 @@ export default function Treatment() {
                                         sx={{
                                             marginBottom: '18px',
                                             '& .MuiInputBase-root': {
-                                                fontSize: '12px',
+                                                fontSize: '13px',
+                                                height: '38px',
                                                 background: isFormDisabled ? '#D5D5D8' : 'white',
                                                 cursor: isFormDisabled ? 'not-allowed' : 'text',
                                                 color: isFormDisabled ? '#666' : '#333'
@@ -4169,7 +4185,8 @@ export default function Treatment() {
                                         sx={{
                                             marginBottom: '18px',
                                             '& .MuiInputBase-root': {
-                                                fontSize: '12px',
+                                                fontSize: '13px',
+                                                height: '38px',
                                                 background: 'white',
                                                 cursor: isFormDisabled ? 'not-allowed' : 'pointer',
                                                 color: isFormDisabled ? '#666' : '#333'
@@ -4215,7 +4232,8 @@ export default function Treatment() {
                                         sx={{
                                             marginBottom: '18px',
                                             '& .MuiInputBase-root': {
-                                                fontSize: '12px',
+                                                fontSize: '13px',
+                                                height: '38px',
                                                 background: 'white',
                                                 cursor: isFormDisabled ? 'not-allowed' : 'text',
                                                 color: isFormDisabled ? '#666' : '#333'
@@ -4234,7 +4252,8 @@ export default function Treatment() {
                                         onChange={() => { }}
                                         sx={{
                                             '& .MuiInputBase-root': {
-                                                fontSize: '12px',
+                                                fontSize: '13px',
+                                                height: '38px',
                                                 background: '#D5D5D8'
                                             }
                                         }}
@@ -4253,7 +4272,7 @@ export default function Treatment() {
                                         padding: '8px 12px',
                                         borderRadius: '4px',
                                         cursor: !isFormDisabled ? 'not-allowed' : 'pointer',
-                                        fontSize: '12px',
+                                        fontSize: '13px',
                                         opacity: !isFormDisabled ? 0.7 : 1
                                     }}
                                     onClick={handlePrintReceiptClick}>
@@ -4270,7 +4289,7 @@ export default function Treatment() {
                                         padding: '8px 12px',
                                         borderRadius: '4px',
                                         cursor: 'pointer',
-                                        fontSize: '12px',
+                                        fontSize: '13px',
                                         opacity: 1,
                                         zIndex: 11,
                                         position: 'relative',
@@ -4299,7 +4318,7 @@ export default function Treatment() {
                                         padding: '8px 12px',
                                         borderRadius: '4px',
                                         cursor: 'pointer',
-                                        fontSize: '12px',
+                                        fontSize: '13px',
                                         opacity: 1
                                     }}
                                 >
@@ -4316,7 +4335,7 @@ export default function Treatment() {
                                         padding: '8px 12px',
                                         borderRadius: '4px',
                                         cursor: (isSubmitting || hasSubmittedSuccessfully || isFormDisabled) ? 'not-allowed' : 'pointer',
-                                        fontSize: '12px',
+                                        fontSize: '13px',
                                         opacity: (isSubmitting || hasSubmittedSuccessfully || isFormDisabled) ? 0.7 : 1
                                     }}
                                 >
