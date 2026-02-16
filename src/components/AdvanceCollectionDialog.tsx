@@ -1025,9 +1025,10 @@ function HorizontalField({
   onDatePickerChange,
   datePickerValue,
   datePickerRef,
-  disabled = false,
-  maxLength,
   required = false,
+  error = false,
+  helperText = '',
+  disableClearable = false,
 }: {
   label: string;
   value?: any;
@@ -1045,6 +1046,8 @@ function HorizontalField({
   disabled?: boolean;
   maxLength?: number;
   required?: boolean;
+  error?: boolean;
+  helperText?: string;
   disableClearable?: boolean;
 }) {
   return (
@@ -1093,8 +1096,10 @@ function HorizontalField({
                 backgroundColor: "white !important",
                 cursor: disabled ? 'not-allowed !important' : 'pointer'
               },
-              marginBottom: '0px'
+              marginBottom: '18px'
             }}
+            error={error}
+            helperText={helperText}
             SelectProps={{
               MenuProps: {
                 PaperProps: {
@@ -1200,8 +1205,11 @@ function HorizontalField({
                 borderRadius: "4px",
                 fontSize: "14px",
                 backgroundColor: disabled ? "#e9ecef" : "white",
-              }
+              },
+              marginBottom: '18px'
             }}
+            error={error}
+            helperText={helperText}
           />
         )}
       </div>

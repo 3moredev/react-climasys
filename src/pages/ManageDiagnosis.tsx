@@ -356,11 +356,11 @@ export default function ManageDiagnosis() {
         }
         .search-section {
           display: flex;
-          align-items: flex-start;
+          align-items: center;
           gap: 12px;
           margin-bottom: 20px;
           flex-wrap: nowrap;
-          overflow-x: auto;
+          padding-bottom: 18px;
         }
         .search-input-wrapper {
           position: relative;

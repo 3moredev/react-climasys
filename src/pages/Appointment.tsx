@@ -2753,7 +2753,7 @@ export default function AppointmentTable() {
                 </div>
 
                 {/* Doctor-specific controls - No booking, only viewing and status updates */}
-                <div className="d-flex mb-3 align-items-start" style={{ gap: '8px', overflow: 'visible' }}>
+                <div className="d-flex mb-3 align-items-center" style={{ gap: '8px', paddingBottom: '18px' }}>
                     {/* Search for patients - Read only for doctors */}
                     <div className="position-relative" ref={searchRef}>
                         <SearchInput
@@ -2766,6 +2766,8 @@ export default function AppointmentTable() {
                             placeholder="Search by Patient ID/Name/ContactNumber"
                             ref={searchInputRef}
                             autoFocus={isDoctor}
+                            error={!!searchError}
+                            helperText={searchError}
                             onBlur={() => {
                                 // Keep search ready for continuous typing in doctor screen
                                 if (isDoctor) {
@@ -4110,7 +4112,7 @@ export default function AppointmentTable() {
             {/* Primary row with controls will include CTAs */}
 
             {/* Search + Filter */}
-            <div className="d-flex mb-3 align-items-start" style={{ gap: '8px', overflow: 'visible' }}>
+            <div className="d-flex mb-3 align-items-center" style={{ gap: '8px', paddingBottom: '18px' }}>
                 <div className="position-relative" ref={searchRef}>
                     <SearchInput
                         value={searchTerm}
@@ -4121,6 +4123,8 @@ export default function AppointmentTable() {
                         }}
                         placeholder="Search by Patient ID/Name/ContactNumber"
                         ref={searchInputRef}
+                        error={!!searchError}
+                        helperText={searchError}
                         inputStyle={{
                             borderWidth: "2px",
                             height: "38px",

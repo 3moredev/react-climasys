@@ -4106,6 +4106,7 @@ export default function Treatment() {
                                         helperText={collectedError}
                                         inputProps={{ maxLength: 11 }}
                                         sx={{
+                                            marginBottom: '18px',
                                             '& .MuiInputBase-root': {
                                                 fontSize: '12px',
                                                 background: isFormDisabled ? '#D5D5D8' : 'white',
@@ -4129,6 +4130,7 @@ export default function Treatment() {
                                         helperText={reasonError}
                                         inputProps={{ maxLength: 201 }}
                                         sx={{
+                                            marginBottom: '18px',
                                             '& .MuiInputBase-root': {
                                                 fontSize: '12px',
                                                 background: isFormDisabled ? '#D5D5D8' : 'white',
@@ -4152,6 +4154,7 @@ export default function Treatment() {
                                         error={!!paymentByError}
                                         helperText={paymentByError}
                                         sx={{
+                                            marginBottom: '18px',
                                             '& .MuiInputBase-root': {
                                                 fontSize: '12px',
                                                 background: 'white',
@@ -4197,6 +4200,7 @@ export default function Treatment() {
                                         helperText={paymentRemarkError}
                                         inputProps={{ maxLength: 201 }}
                                         sx={{
+                                            marginBottom: '18px',
                                             '& .MuiInputBase-root': {
                                                 fontSize: '12px',
                                                 background: 'white',

@@ -400,14 +400,6 @@ const AddPrescriptionPopup: React.FC<AddPrescriptionPopupProps> = ({
                                     disabled={isEditing}
                                     error={!!errors.categoryName && !errors.categoryName.toLowerCase().includes('exceed')}
                                     helperText={errors.categoryName}
-                                    FormHelperTextProps={{
-                                        sx: {
-                                            position: 'absolute',
-                                            bottom: '-18px',
-                                            left: 0,
-                                            color: errors.categoryName?.toLowerCase().includes('exceed') ? '#333333 !important' : undefined
-                                        }
-                                    }}
                                     SelectProps={{
                                         displayEmpty: true,
                                         renderValue: (selected: any) => {
@@ -443,14 +435,6 @@ const AddPrescriptionPopup: React.FC<AddPrescriptionPopupProps> = ({
                                     disabled={isEditing}
                                     error={!!errors.subCategoryName && !errors.subCategoryName.toLowerCase().includes('exceed')}
                                     helperText={errors.subCategoryName}
-                                    FormHelperTextProps={{
-                                        sx: {
-                                            position: 'absolute',
-                                            bottom: '-18px',
-                                            left: 0,
-                                            color: errors.subCategoryName?.toLowerCase().includes('exceed') ? '#333333 !important' : undefined
-                                        }
-                                    }}
                                     SelectProps={{
                                         displayEmpty: true,
                                         renderValue: (selected: any) => {
@@ -485,14 +469,6 @@ const AddPrescriptionPopup: React.FC<AddPrescriptionPopupProps> = ({
                                     disabled={isEditing}
                                     error={!!errors.brandName && !errors.brandName.toLowerCase().includes('exceed')}
                                     helperText={errors.brandName}
-                                    FormHelperTextProps={{
-                                        sx: {
-                                            position: 'relative',
-                                            bottom: '0px',
-                                            left: 0,
-                                            color: errors.brandName?.toLowerCase().includes('exceed') ? '#333333 !important' : undefined
-                                        }
-                                    }}
                                 />
                             </Box>
 
@@ -511,14 +487,6 @@ const AddPrescriptionPopup: React.FC<AddPrescriptionPopupProps> = ({
                                     disabled={isEditing}
                                     error={!!errors.genericName && !errors.genericName.toLowerCase().includes('exceed')}
                                     helperText={errors.genericName}
-                                    FormHelperTextProps={{
-                                        sx: {
-                                            position: 'relative',
-                                            bottom: '0px',
-                                            left: 0,
-                                            color: errors.genericName?.toLowerCase().includes('exceed') ? '#333333 !important' : undefined
-                                        }
-                                    }}
                                 />
                             </Box>
 
@@ -536,14 +504,6 @@ const AddPrescriptionPopup: React.FC<AddPrescriptionPopupProps> = ({
                                     onChange={(val) => handleInputChange('marketedBy', val)}
                                     error={!!errors.marketedBy && !errors.marketedBy.toLowerCase().includes('exceed')}
                                     helperText={errors.marketedBy}
-                                    FormHelperTextProps={{
-                                        sx: {
-                                            position: 'relative',
-                                            bottom: '0px',
-                                            left: 0,
-                                            color: errors.marketedBy?.toLowerCase().includes('exceed') ? '#333333 !important' : undefined
-                                        }
-                                    }}
                                 />
                             </Box>
 
@@ -561,14 +521,6 @@ const AddPrescriptionPopup: React.FC<AddPrescriptionPopupProps> = ({
                                     onChange={(val) => handleInputChange('instruction', val)}
                                     error={!!errors.instruction && !errors.instruction.toLowerCase().includes('exceed')}
                                     helperText={errors.instruction}
-                                    FormHelperTextProps={{
-                                        sx: {
-                                            position: 'relative',
-                                            bottom: '0px',
-                                            left: 0,
-                                            color: errors.instruction?.toLowerCase().includes('exceed') ? '#333333 !important' : undefined
-                                        }
-                                    }}
                                 />
                                 <Typography variant="caption" sx={{ color: '#666', fontStyle: 'italic', display: 'block', mt: 0.5 }}>
                                     भोजनानंतर / AFTER MEAL, भोजनापूर्वी / BEFORE MEAL
@@ -592,14 +544,6 @@ const AddPrescriptionPopup: React.FC<AddPrescriptionPopupProps> = ({
                                     onChange={(val) => handleNumericChange('breakfast', val)}
                                     error={!!errors.breakfast && !errors.breakfast.toLowerCase().includes('exceed')}
                                     helperText={errors.breakfast}
-                                    FormHelperTextProps={{
-                                        sx: {
-                                            position: 'relative',
-                                            bottom: '0px',
-                                            left: 0,
-                                            color: errors.breakfast?.toLowerCase().includes('exceed') ? '#333333 !important' : undefined
-                                        }
-                                    }}
                                 />
                             </Box>
 
@@ -617,14 +561,6 @@ const AddPrescriptionPopup: React.FC<AddPrescriptionPopupProps> = ({
                                     onChange={(val) => handleNumericChange('lunch', val)}
                                     error={!!errors.lunch && !errors.lunch.toLowerCase().includes('exceed')}
                                     helperText={errors.lunch}
-                                    FormHelperTextProps={{
-                                        sx: {
-                                            position: 'relative',
-                                            bottom: '0px',
-                                            left: 0,
-                                            color: errors.lunch?.toLowerCase().includes('exceed') ? '#333333 !important' : undefined
-                                        }
-                                    }}
                                 />
                             </Box>
 
@@ -642,14 +578,6 @@ const AddPrescriptionPopup: React.FC<AddPrescriptionPopupProps> = ({
                                     onChange={(val) => handleNumericChange('dinner', val)}
                                     error={!!errors.dinner && !errors.dinner.toLowerCase().includes('exceed')}
                                     helperText={errors.dinner}
-                                    FormHelperTextProps={{
-                                        sx: {
-                                            position: 'relative',
-                                            bottom: '0px',
-                                            left: 0,
-                                            color: errors.dinner?.toLowerCase().includes('exceed') ? '#333333 !important' : undefined
-                                        }
-                                    }}
                                 />
                             </Box>
 
@@ -667,14 +595,6 @@ const AddPrescriptionPopup: React.FC<AddPrescriptionPopupProps> = ({
                                     onChange={(val) => handleNumericChange('days', val)}
                                     error={!!errors.days && !errors.days.toLowerCase().includes('exceed')}
                                     helperText={errors.days}
-                                    FormHelperTextProps={{
-                                        sx: {
-                                            position: 'relative',
-                                            bottom: '0px',
-                                            left: 0,
-                                            color: errors.days?.toLowerCase().includes('exceed') ? '#333333 !important' : undefined
-                                        }
-                                    }}
                                 />
                             </Box>
 
@@ -693,14 +613,6 @@ const AddPrescriptionPopup: React.FC<AddPrescriptionPopupProps> = ({
                                     error={!!errors.priority && !errors.priority.toLowerCase().includes('exceed')}
                                     helperText={errors.priority}
                                     inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
-                                    FormHelperTextProps={{
-                                        sx: {
-                                            position: 'relative',
-                                            bottom: '0px',
-                                            left: 0,
-                                            color: errors.priority?.toLowerCase().includes('exceed') ? '#333333 !important' : undefined
-                                        }
-                                    }}
                                 />
                             </Box>
 

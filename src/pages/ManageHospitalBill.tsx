@@ -303,7 +303,7 @@ export default function ManageHospitalBill() {
                 }}>
                     Patient ID / Patient Name / IPD Number
                 </label>
-                <div className="d-flex align-items-center" style={{ gap: '8px', overflow: 'visible' }}>
+                <div className="d-flex align-items-center" style={{ gap: '8px', paddingBottom: '18px' }}>
                     <div className="position-relative" ref={searchRef} style={{ flex: 1, maxWidth: '500px' }}>
                         <SearchInput
                             value={searchTerm}

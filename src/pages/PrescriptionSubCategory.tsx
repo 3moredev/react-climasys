@@ -424,11 +424,11 @@ export default function PrescriptionSubCategory() {
         }
         .search-section {
           display: flex;
-          align-items: flex-start;
+          align-items: center;
           gap: 12px;
           margin-bottom: 20px;
           flex-wrap: nowrap;
-          overflow-x: auto;
+          padding-bottom: 18px;
         }
         .search-input-wrapper {
           position: relative;
@@ -697,8 +697,8 @@ export default function PrescriptionSubCategory() {
               setValidationErrors(prev => ({ ...prev, subCategoryName: error }));
             }}
             disabled={!!editingId} // Disable if editing (based on ID presence logic often implies key fields locked) checks
-            error={!!validationErrors.subCategoryName && !validationErrors.subCategoryName.includes('cannot exceed')}
-            helperText={null}
+            error={!!validationErrors.subCategoryName}
+            helperText={validationErrors.subCategoryName}
             sx={{
               '& .MuiInputBase-root': {
                 height: '40px',
@@ -706,17 +706,6 @@ export default function PrescriptionSubCategory() {
               }
             }}
           />
-          {validationErrors.subCategoryName && (
-            <span style={{
-              color: validationErrors.subCategoryName.includes('cannot exceed') ? '#666' : '#d32f2f',
-              fontSize: '0.75rem',
-              display: 'block',
-              position: 'relative',
-              zIndex: 1
-            }}>
-              {validationErrors.subCategoryName}
-            </span>
-          )}
         </div>
         <div className="form-actions">
           <button className="btn-primary-custom" onClick={handleAddOrUpdate}>

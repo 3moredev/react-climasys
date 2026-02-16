@@ -384,11 +384,11 @@ export default function ManageBillingDetails() {
         }
         .search-section {
           display: flex;
-          align-items: flex-start;
+          align-items: center;
           gap: 12px;
           margin-bottom: 20px;
           flex-wrap: nowrap;
-          overflow-x: auto;
+          padding-bottom: 18px;
         }
         .search-input-wrapper {
           position: relative;
@@ -776,7 +776,7 @@ export default function ManageBillingDetails() {
               onClick={() => handlePageChange(currentPage - 1)}
               disabled={currentPage === 1}
             >
-              &lt;&lt;
+              Previous
             </button>
 
             {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
@@ -808,7 +808,7 @@ export default function ManageBillingDetails() {
               onClick={() => handlePageChange(currentPage + 1)}
               disabled={currentPage === totalPages}
             >
-              &gt;&gt;
+              Next
             </button>
           </div>
         </div>
