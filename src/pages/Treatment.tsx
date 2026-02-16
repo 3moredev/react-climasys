@@ -5535,74 +5535,77 @@ export default function Treatment() {
                             </div>
 
                             {/* Vitals Row */}
+                            {/* Vitals Row */}
                             <div style={{ marginBottom: '15px' }}>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'stretch' }}>
-                                    <div style={{ flex: '1 1 700px', minWidth: '260px' }}>
-                                        <div className="row g-3">
-                                            {[
-                                                { key: 'height', label: 'Height (Cm)' },
-                                                { key: 'weight', label: 'Weight (Kg)' },
-                                                { key: 'bmi', label: 'BMI' },
-                                                { key: 'pulse', label: 'Pulse (/min)' },
-                                                { key: 'bp', label: 'BP' },
-                                                { key: 'sugar', label: 'Sugar' },
-                                                { key: 'tft', label: 'TFT' },
-                                                { key: 'pallorHb', label: 'Pallor/HB' }
-                                            ].map(({ key, label }) => {
-                                                const isNumberField = key === 'pulse' || key === 'height' || key === 'weight';
-                                                return (
-                                                    <div key={key} className="col-6 col-md">
-                                                        <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                                            {label}
-                                                        </label>
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                                            <ClearableTextField
-                                                                value={formData[key as keyof typeof formData] as string}
-                                                                onChange={(value) => {
-                                                                    handleInputChange(key, value);
-                                                                }}
-                                                                onKeyDown={(e) => {
-                                                                    if (isNumberField) {
-                                                                        // Prevent minus key from being entered
-                                                                        if (e.key === '-' || e.key === 'e' || e.key === 'E' || e.key === '+') {
-                                                                            e.preventDefault();
-                                                                        }
-                                                                    }
-                                                                }}
-                                                                onBlur={(e) => {
-                                                                    if (isNumberField) {
-                                                                        // Ensure value is not negative on blur
-                                                                        const numValue = parseFloat(e.target.value);
-                                                                        if (isNaN(numValue) || numValue < 0) {
-                                                                            handleInputChange(key, '');
-                                                                        }
-                                                                    }
-                                                                }}
-                                                                disabled={key === 'bmi' || isFormDisabled}
-                                                                error={!!errors[key]}
-                                                                helperText={errors[key]}
-                                                                inputProps={{
-                                                                    // Removed maxLength to allow validation logic to trigger at/above limit
-                                                                }}
-                                                                sx={{
-                                                                    flex: 1,
-                                                                    '& .MuiInputBase-root': {
-                                                                        height: '38px',
-                                                                        fontSize: '13px'
-                                                                    },
-                                                                    '& .MuiInputBase-input': {
-                                                                        padding: '6px 10px',
-                                                                        fontSize: '13px',
-                                                                    }
-                                                                }}
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-                                    <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+                                <div className="row g-3">
+                                    {[
+                                        { key: 'height', label: 'Height (Cm)' },
+                                        { key: 'weight', label: 'Weight (Kg)' },
+                                        { key: 'bmi', label: 'BMI' },
+                                        { key: 'pulse', label: 'Pulse (/min)' },
+                                        { key: 'bp', label: 'BP' },
+                                        { key: 'sugar', label: 'Sugar' },
+                                        { key: 'tft', label: 'TFT' },
+                                        { key: 'pallorHb', label: 'Pallor/HB' }
+                                    ].map(({ key, label }) => {
+                                        const isNumberField = key === 'pulse' || key === 'height' || key === 'weight';
+                                        return (
+                                            <div key={key} className="col-6 col-md">
+                                                <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                                                    {label}
+                                                </label>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                                    <ClearableTextField
+                                                        value={formData[key as keyof typeof formData] as string}
+                                                        onChange={(value) => {
+                                                            handleInputChange(key, value);
+                                                        }}
+                                                        onKeyDown={(e) => {
+                                                            if (isNumberField) {
+                                                                // Prevent minus key from being entered
+                                                                if (e.key === '-' || e.key === 'e' || e.key === 'E' || e.key === '+') {
+                                                                    e.preventDefault();
+                                                                }
+                                                            }
+                                                        }}
+                                                        onBlur={(e) => {
+                                                            if (isNumberField) {
+                                                                // Ensure value is not negative on blur
+                                                                const numValue = parseFloat(e.target.value);
+                                                                if (isNaN(numValue) || numValue < 0) {
+                                                                    handleInputChange(key, '');
+                                                                }
+                                                            }
+                                                        }}
+                                                        disabled={key === 'bmi' || isFormDisabled}
+                                                        error={!!errors[key]}
+                                                        helperText={errors[key]}
+                                                        inputProps={{
+                                                            // Removed maxLength to allow validation logic to trigger at/above limit
+                                                        }}
+                                                        sx={{
+                                                            flex: 1,
+                                                            '& .MuiInputBase-root': {
+                                                                height: '38px',
+                                                                fontSize: '13px'
+                                                            },
+                                                            '& .MuiInputBase-input': {
+                                                                padding: '6px 10px',
+                                                                fontSize: '13px',
+                                                            }
+                                                        }}
+                                                    />
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+
+                                    {/* Trend Button - Now part of the grid for better alignment */}
+                                    <div className="col-6 col-md-auto">
+                                        {/* Spacer label to align button with inputs */}
+                                        <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', fontSize: '13px', visibility: 'hidden' }}>
+                                            &nbsp;
+                                        </label>
                                         <button
                                             type="button"
                                             disabled={isFormDisabled}
@@ -5618,7 +5621,8 @@ export default function Treatment() {
                                                 fontWeight: '500',
                                                 height: '38px',
                                                 transition: 'background-color 0.2s',
-                                                whiteSpace: 'nowrap'
+                                                whiteSpace: 'nowrap',
+                                                width: '100%' // Full width on small screens, auto on md+
                                             }}
                                             onMouseEnter={(e) => {
                                                 if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1565c0';
@@ -6025,8 +6029,9 @@ export default function Treatment() {
                                         {errors.detailedHistory && (
                                             <div style={{
                                                 color: errors.detailedHistory.includes('cannot exceed') ? '#333333' : '#d32f2f',
-                                                fontSize: '13px',
-                                                marginTop: '3px'
+                                                fontSize: '11px',
+                                                marginTop: '4px',
+                                                lineHeight: '1.2'
                                             }}>
                                                 {errors.detailedHistory}
                                             </div>
@@ -6060,8 +6065,9 @@ export default function Treatment() {
                                         {errors.importantFindings && (
                                             <div style={{
                                                 color: errors.importantFindings.includes('cannot exceed') ? '#333333' : '#d32f2f',
-                                                fontSize: '13px',
-                                                marginTop: '3px'
+                                                fontSize: '11px',
+                                                marginTop: '4px',
+                                                lineHeight: '1.2'
                                             }}>
                                                 {errors.importantFindings}
                                             </div>
@@ -6095,8 +6101,9 @@ export default function Treatment() {
                                         {errors.additionalComments && (
                                             <div style={{
                                                 color: errors.additionalComments.includes('cannot exceed') ? '#333333' : '#d32f2f',
-                                                fontSize: '13px',
-                                                marginTop: '3px'
+                                                fontSize: '11px',
+                                                marginTop: '4px',
+                                                lineHeight: '1.2'
                                             }}>
                                                 {errors.additionalComments}
                                             </div>
@@ -6136,8 +6143,9 @@ export default function Treatment() {
                                         {errors.procedurePerformed && (
                                             <div style={{
                                                 color: errors.procedurePerformed.includes('cannot exceed') ? '#333333' : '#d32f2f',
-                                                fontSize: '13px',
-                                                marginTop: '3px'
+                                                fontSize: '11px',
+                                                marginTop: '4px',
+                                                lineHeight: '1.2'
                                             }}>
                                                 {errors.procedurePerformed}
                                             </div>
@@ -6171,8 +6179,9 @@ export default function Treatment() {
                                         {errors.dressingBodyParts && (
                                             <div style={{
                                                 color: errors.dressingBodyParts.includes('cannot exceed') ? '#333333' : '#d32f2f',
-                                                fontSize: '13px',
-                                                marginTop: '3px'
+                                                fontSize: '11px',
+                                                marginTop: '4px',
+                                                lineHeight: '1.2'
                                             }}>
                                                 {errors.dressingBodyParts}
                                             </div>
