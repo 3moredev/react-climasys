@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
+import dayjs from "dayjs";
 import { useNavigate, useLocation } from "react-router-dom";
 import { visitService, ComprehensiveVisitDataRequest } from '../services/visitService';
 import { sessionService, SessionInfo } from "../services/sessionService";
@@ -28,6 +29,7 @@ import AccountsPopup from "../components/AccountsPopup";
 import LabTrendPopup from "../components/LabTrendPopup";
 import VitalsTrendPopup from "../components/VitalsTrendPopup";
 import AddPatientPage from "./AddPatientPage";
+import PatientNameDisplay from "../components/PatientNameDisplay";
 import { buildPrescriptionPrintHTML, buildLabTestsPrintHTML, getHeaderImageUrl } from "../utils/printTemplates";
 import prescriptionDetailsService, {
     PrescriptionTemplate as PrescriptionTemplateApiModel,
@@ -184,6 +186,8 @@ interface TreatmentData {
     status?: string;
     referralName?: string;
     referralCode?: string;
+    dateOfBirth?: string;
+    inPerson?: boolean;
 }
 
 
@@ -789,7 +793,20 @@ export default function Treatment() {
         // Get patient info
         const patientName = escapeHtml(treatmentData?.patientName || '');
         const gender = escapeHtml(treatmentData?.gender || '');
-        const age = treatmentData?.age ? `${treatmentData.age}` : '';
+
+        // Calculate age string from DOB if available
+        let age = '';
+        if (treatmentData?.dateOfBirth) {
+            const birthDate = dayjs(treatmentData.dateOfBirth);
+            if (birthDate.isValid()) {
+                const years = dayjs().diff(birthDate, 'year');
+                age = years > 0 ? `${years} Y` : `${dayjs().diff(birthDate, 'month')} M`;
+            }
+        }
+        if (!age && treatmentData?.age) {
+            age = `${treatmentData.age} Y`; // Fallback to Years if only age is available
+        }
+
         const patientId = escapeHtml(treatmentData?.patientId || '');
         const contact = escapeHtml(treatmentData?.contact || '-');
         const weight = escapeHtml(formData.weight || '-');
@@ -1247,6 +1264,19 @@ export default function Treatment() {
         }
     }, [location.state]);
 
+    // Fetch full patient details to get DOB for accurate age display
+    useEffect(() => {
+        if (treatmentData?.patientId && !treatmentData.dateOfBirth) {
+            patientService.getPatient(treatmentData.patientId)
+                .then(patient => {
+                    if (patient.date_of_birth) {
+                        setTreatmentData(prev => prev ? ({ ...prev, dateOfBirth: patient.date_of_birth }) : null);
+                    }
+                })
+                .catch(err => console.error("Failed to fetch patient details:", err));
+        }
+    }, [treatmentData?.patientId]);
+
     // Load referral options from API
     React.useEffect(() => {
         let cancelled = false;
@@ -1281,14 +1311,31 @@ export default function Treatment() {
     // Determine In-Person checkbox state based on status
     const inPersonChecked = React.useMemo(() => {
         if (!treatmentData?.status) return true; // Default to true if no status
+
         const status = String(treatmentData.status).trim().toUpperCase();
+        // New logic: Only auto-calculate for active statuses (WAITING, WITH DOCTOR, CONSULT ON CALL)
+        // For completed/submitted statuses (WAITING FOR MEDICINE, COMPLETE), respect the backend value
+
+        const isSubmitted = status === 'WAITING FOR MEDICINE' ||
+            status === 'WAITINGFOR MEDICINE' ||
+            status === 'WAITINGFORMEDICINE' ||
+            status === 'COMPLETE' ||
+            status === 'COMPLETED';
+
+        if (isSubmitted) {
+            // If submitted, use the value from backend (treatmentData.inPerson)
+            // If treatmentData.inPerson is undefined, fallback to true but this should come from backend
+            console.log('DEBUG: Treatment inPersonChecked (submitted)', { status, inPerson: treatmentData.inPerson });
+            return treatmentData.inPerson !== undefined ? treatmentData.inPerson : true;
+        }
+
         const normalizedStatus = status === 'ON CALL' ? 'CONSULT ON CALL' : status;
         // If status is "CONSULT ON CALL" or other non-in-person statuses, set to false
         if (normalizedStatus === 'CONSULT ON CALL' || (normalizedStatus !== 'WAITING' && normalizedStatus !== 'WITH DOCTOR')) {
             return false;
         }
         return true; // Default to true for WAITING or WITH DOCTOR
-    }, [treatmentData?.status]);
+    }, [treatmentData?.status, treatmentData?.inPerson]);
 
     // Determine if In-Person checkbox should be disabled based on status
     const inPersonDisabled = React.useMemo(() => {
@@ -3319,11 +3366,10 @@ export default function Treatment() {
                     const normalizedStatus = String(status).trim().toUpperCase();
                     const finalStatus = normalizedStatus === 'ON CALL' ? 'CONSULT ON CALL' : normalizedStatus;
 
-                    // Only patch inPerson if status is "SAVED" or "WAITING FOR MEDICINE"
-                    const shouldPatchInPerson = finalStatus === 'SAVE' ||
-                        finalStatus === 'WAITING FOR MEDICINE' ||
-                        finalStatus === 'WAITINGFOR MEDICINE' ||
-                        finalStatus === 'WAITINGFORMEDICINE';
+                    // Only patch inPerson if status is "SAVED"
+                    // logic change: DO NOT patch if status is WAITING FOR MEDICINE, as that means
+                    // the visit is already submitted and we should trust the visit data, not appointment data
+                    const shouldPatchInPerson = finalStatus === 'SAVE';
 
                     if (shouldPatchInPerson && typeof normalized.inPerson === 'boolean') {
                         // Patch with the actual value from API (true or false)
@@ -5147,7 +5193,7 @@ export default function Treatment() {
                                     justifyContent: 'space-between',
                                     alignItems: 'center'
                                 }}>
-                                    <div
+                                    <PatientNameDisplay
                                         onClick={() => {
                                             if (treatmentData?.patientId) {
                                                 setShowQuickRegistration(true);
@@ -5161,24 +5207,14 @@ export default function Treatment() {
                                             textDecoration: treatmentData?.patientId ? 'underline' : 'none'
                                         }}
                                         title={treatmentData?.patientId ? 'Click to view patient details' : ''}
-                                    >
-                                        {treatmentData?.patientName || 'Patient'} / {treatmentData?.gender || 'N/A'} / {treatmentData?.age ? `${treatmentData.age} Y` : 'N/A'} / {treatmentData?.contact || 'N/A'}
-                                    </div>
-                                    {/* <PatientNameDisplay onClick={() => {
-                                        if (treatmentData?.patientId) {
-                                            setShowQuickRegistration(true);
-                                        }
-                                    }}
-                                        style={{
-                                            fontSize: '16px',
-                                            fontWeight: 'bold',
-                                            color: '#2e7d32',
-                                            cursor: treatmentData?.patientId ? 'pointer' : 'default',
-                                            textDecoration: treatmentData?.patientId ? 'underline' : 'none'
+                                        patientData={{
+                                            patient: treatmentData?.patientName,
+                                            gender: treatmentData?.gender,
+                                            age: treatmentData?.age,
+                                            contact: treatmentData?.contact,
+                                            dob: treatmentData?.dateOfBirth
                                         }}
-                                        title={treatmentData?.patientId ? 'Click to view patient details' : ''}
-                                        patientData={treatmentData}
-                                    /> */}
+                                    />
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                             <label style={{ fontWeight: 'bold', color: '#333', fontSize: '13px', whiteSpace: 'nowrap' }}>Referred By:</label>
@@ -5262,8 +5298,8 @@ export default function Treatment() {
                                         <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: (isFormDisabled || inPersonDisabled) ? 'not-allowed' : 'pointer', fontSize: '12px', whiteSpace: 'nowrap' }}>
                                             <input
                                                 type="checkbox"
-                                                checked={true}
-                                                onChange={(e) => handleVisitTypeChange('inPerson', e.target.checked)}
+                                                checked={formData.visitType.inPerson}
+                                                // onChange={(e) => handleVisitTypeChange('inPerson', e.target.checked)}
                                                 disabled={true}
                                                 readOnly={inPersonDisabled}
                                             />
@@ -8280,18 +8316,25 @@ export default function Treatment() {
                             }}
                             onClick={(e) => e.stopPropagation()}
                         >
-                            <div style={{
-                                background: 'linear-gradient(90deg, #1976d2 0%, #42a5f5 100%)',
-                                color: '#fff',
-                                padding: '12px 16px',
-                                borderTopLeftRadius: 8,
-                                borderTopRightRadius: 8,
-                                fontWeight: 700,
-                                fontSize: 16,
-                                textDecoration: 'underline'
-                            }}>
-                                {treatmentData?.patientName || 'Patient'} / {treatmentData?.gender || 'N/A'} / {treatmentData?.age ? `${treatmentData.age} Y` : 'N/A'} / {treatmentData?.contact || 'N/A'}
-                            </div>
+                            <PatientNameDisplay
+                                style={{
+                                    background: 'linear-gradient(90deg, #1976d2 0%, #42a5f5 100%)',
+                                    color: '#fff',
+                                    padding: '12px 16px',
+                                    borderTopLeftRadius: 8,
+                                    borderTopRightRadius: 8,
+                                    fontWeight: 700,
+                                    fontSize: 16,
+                                    textDecoration: 'underline'
+                                }}
+                                patientData={{
+                                    patient: treatmentData?.patientName,
+                                    gender: treatmentData?.gender,
+                                    age: treatmentData?.age,
+                                    contact: treatmentData?.contact,
+                                    dob: treatmentData?.dateOfBirth
+                                }}
+                            />
 
                             <div style={{ padding: 16 }}>
                                 <div style={{ fontWeight: 600, color: '#2e7d32', marginBottom: 8 }}>Addendum:</div>

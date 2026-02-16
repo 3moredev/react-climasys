@@ -39,11 +39,9 @@ export default function AuthGuard({ children }: AuthGuardProps) {
     const validateSession = async () => {
       try {
         setIsValidatingSession(true)
-        console.log('AuthGuard: Starting session validation...')
         
         // Development bypass - create a mock user
         if (isDevelopment && bypassAuth) {
-          console.log('AuthGuard: Using development bypass')
           const mockUser = {
             loginId: 'dev-user',
             firstName: 'Development',
@@ -72,13 +70,9 @@ export default function AuthGuard({ children }: AuthGuardProps) {
         const persistedUser = sessionPersistence.loadUser()
         const hasValidSession = sessionPersistence.isSessionValid(30) // 30 minutes max inactivity
         
-        console.log('AuthGuard: Persisted user found:', !!persistedUser)
-        console.log('AuthGuard: Session valid:', hasValidSession)
-        
         if (persistedUser && hasValidSession) {
           // Update last activity timestamp
           sessionPersistence.updateLastActivity()
-          console.log('AuthGuard: Valid persisted session found, initializing auth')
           dispatch(initializeAuth())
           setIsValidatingSession(false)
           return
@@ -86,7 +80,6 @@ export default function AuthGuard({ children }: AuthGuardProps) {
         
         // Fallback to legacy localStorage check
         const localUser = localStorage.getItem('user')
-        console.log('AuthGuard: Legacy local user found:', !!localUser)
         
         if (localUser) {
           // Try to parse and validate the user data
@@ -98,7 +91,6 @@ export default function AuthGuard({ children }: AuthGuardProps) {
                 ...userData,
                 lastLoginTime: Date.now()
               })
-              console.log('AuthGuard: Legacy user data migrated to session persistence')
               dispatch(initializeAuth())
               setIsValidatingSession(false)
               return
@@ -109,7 +101,6 @@ export default function AuthGuard({ children }: AuthGuardProps) {
         }
         
         // No valid user found
-        console.log('AuthGuard: No valid user found, not authenticated')
         dispatch(initializeAuth())
         setIsValidatingSession(false)
         
@@ -176,15 +167,7 @@ export default function AuthGuard({ children }: AuthGuardProps) {
 
   // Watch for authentication state changes and redirect gracefully if not authenticated
   useEffect(() => {
-    console.log('AuthGuard: Auth state changed:', { 
-      isAuthenticated, 
-      loading, 
-      isValidatingSession,
-      pathname: location.pathname 
-    })
-    
     if (!loading && !isValidatingSession && !isAuthenticated) {
-      console.log('AuthGuard: Not authenticated, redirecting to login...')
       // Add a small delay to prevent blank screens during rapid state changes
       const timeoutId = setTimeout(() => {
         navigate('/login', { replace: true })
@@ -198,7 +181,6 @@ export default function AuthGuard({ children }: AuthGuardProps) {
   useEffect(() => {
     const fallbackTimeout = setTimeout(() => {
       if (isValidatingSession) {
-        console.warn('Session validation taking too long, redirecting to login')
         setIsValidatingSession(false)
         navigate('/login', { replace: true })
       }
@@ -226,16 +208,7 @@ export default function AuthGuard({ children }: AuthGuardProps) {
     }
   }, [isAuthenticated, loading, isValidatingSession])
 
-  console.log('AuthGuard: Rendering with state:', { 
-    loading, 
-    isValidatingSession, 
-    isAuthenticated,
-    pathname: location.pathname,
-    user: useSelector((state: RootState) => state.auth.user)
-  })
-
   if (loading || isValidatingSession) {
-    console.log('AuthGuard: Showing loading screen')
     return (
       <Box
         display="flex"
@@ -257,7 +230,6 @@ export default function AuthGuard({ children }: AuthGuardProps) {
   }
 
   if (!isAuthenticated) {
-    console.log('AuthGuard: Not authenticated, showing redirect screen')
     return (
       <Box
         display="flex"
@@ -278,6 +250,5 @@ export default function AuthGuard({ children }: AuthGuardProps) {
     )
   }
 
-  console.log('AuthGuard: Authenticated, rendering children')
   return <>{children}</>
 }

@@ -4,7 +4,7 @@ import {
     Snackbar, Alert, Dialog, DialogTitle, DialogContent,
     DialogActions, Grid, Box, Typography, TextField, Button,
     IconButton, Checkbox, FormControlLabel, MenuItem,
-    InputAdornment, CircularProgress
+    InputAdornment, CircularProgress, Tooltip
 } from '@mui/material';
 import { visitService, ComprehensiveVisitDataRequest } from '../services/visitService';
 import { complaintService, ComplaintOption } from '../services/complaintService';
@@ -1718,24 +1718,29 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
 
                         <Box display="flex" alignItems="center" gap={2} flexWrap="wrap">
                             <Typography sx={{ color: '#1565c0', fontSize: '14px' }}>{doctorDisplayName}</Typography>
-                            <Box display="flex" alignItems="center" gap={1}>
-                                <FormControlLabel
-                                    control={<Checkbox checked={inPersonChecked} disabled size="small" sx={{ p: 0.5 }} />}
-                                    label={<Typography fontSize="12px" className='text-black'>In-Person</Typography>}
-                                    sx={{ mr: 0, ml: 0 }}
-                                />
-                                <FormControlLabel
-                                    control={
-                                        <Checkbox
-                                            checked={visitType.followUp}
-                                            disabled={true}
-                                            size="small"
-                                            sx={{ p: 0.5 }}
+                            <Box display="flex" alignItems="center" gap={1} sx={{ cursor: 'not-allowed' }}>
+                                    <Box component="span" sx={{ cursor: 'not-allowed', display: 'inline-flex' }}>
+                                        <FormControlLabel
+                                            control={<Checkbox checked={inPersonChecked} disabled size="small" />}
+                                            label={<Typography fontSize="12px" className='text-black'>In-Person</Typography>}
+                                            sx={{ mr: 0, ml: 0, pointerEvents: 'none' }}
                                         />
-                                    }
-                                    label={<Typography fontSize="12px" className='text-black'>Follow-up</Typography>}
-                                    sx={{ mr: 0, ml: 0 }}
-                                />
+                                    </Box>
+
+                                    <Box component="span" sx={{ cursor: 'not-allowed', display: 'inline-flex' }}>
+                                        <FormControlLabel
+                                            control={
+                                                <Checkbox
+                                                    checked={visitType.followUp}
+                                                    disabled={true}
+                                                    size="small"
+                                                />
+                                            }
+                                            label={<Typography fontSize="12px" className='text-black'>Follow-up</Typography>}
+                                            sx={{ mr: 0, ml: 0, pointerEvents: 'none' }}
+                                        />
+                                    </Box>
+
                             </Box>
                         </Box>
                     </Box>
