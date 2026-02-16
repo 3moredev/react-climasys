@@ -3361,7 +3361,7 @@ export default function Treatment() {
                                                     sx={{
                                                         '& .MuiInputBase-root': {
                                                             fontSize: '13px',
-                                                height: '38px',
+                                                            height: '38px',
                                                             backgroundColor: '#D5D5D8'
                                                         }
                                                     }}
@@ -3395,7 +3395,7 @@ export default function Treatment() {
                                                     width: 90,
                                                     '& .MuiInputBase-root': {
                                                         fontSize: '13px',
-                                                height: '38px',
+                                                        height: '38px',
                                                         backgroundColor: '#D5D5D8',
                                                         padding: '4px 0'
                                                     },
@@ -3416,7 +3416,7 @@ export default function Treatment() {
                                                     width: 90,
                                                     '& .MuiInputBase-root': {
                                                         fontSize: '13px',
-                                                height: '38px',
+                                                        height: '38px',
                                                         backgroundColor: '#D5D5D8',
                                                         padding: '4px 0'
                                                     },
@@ -3437,7 +3437,7 @@ export default function Treatment() {
                                                     width: 90,
                                                     '& .MuiInputBase-root': {
                                                         fontSize: '13px',
-                                                height: '38px',
+                                                        height: '38px',
                                                         backgroundColor: '#D5D5D8',
                                                         padding: '4px 0'
                                                     },
@@ -3458,7 +3458,7 @@ export default function Treatment() {
                                                     width: 90,
                                                     '& .MuiInputBase-root': {
                                                         fontSize: '13px',
-                                                height: '38px',
+                                                        height: '38px',
                                                         backgroundColor: '#D5D5D8',
                                                         padding: '4px 0'
                                                     },
@@ -3479,7 +3479,7 @@ export default function Treatment() {
                                                     width: 90,
                                                     '& .MuiInputBase-root': {
                                                         fontSize: '13px',
-                                                height: '38px',
+                                                        height: '38px',
                                                         backgroundColor: '#D5D5D8',
                                                         padding: '4px 0'
                                                     },
@@ -3500,7 +3500,7 @@ export default function Treatment() {
                                                     width: 90,
                                                     '& .MuiInputBase-root': {
                                                         fontSize: '13px',
-                                                height: '38px',
+                                                        height: '38px',
                                                         backgroundColor: '#D5D5D8',
                                                         padding: '4px 0'
                                                     },
@@ -3521,7 +3521,7 @@ export default function Treatment() {
                                                     width: 90,
                                                     '& .MuiInputBase-root': {
                                                         fontSize: '13px',
-                                                height: '38px',
+                                                        height: '38px',
                                                         backgroundColor: '#D5D5D8',
                                                         padding: '4px 0'
                                                     },
@@ -3542,7 +3542,7 @@ export default function Treatment() {
                                                     width: 90,
                                                     '& .MuiInputBase-root': {
                                                         fontSize: '13px',
-                                                height: '38px',
+                                                        height: '38px',
                                                         backgroundColor: '#D5D5D8',
                                                         padding: '4px 0'
                                                     },
@@ -3876,39 +3876,83 @@ export default function Treatment() {
                                 {/* Follow-up Type */}
                                 <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
                                     <label style={{ fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Follow-up Type</label>
-                                    <select
-                                        disabled
+                                    <ClearableTextField
+                                        disableClearable
+                                        select
+                                        fullWidth
+                                        size="small"
                                         value={followUpData.followUpType || ''}
-                                        style={{ border: '1px solid #ddd', padding: '6px 8px', fontSize: 12, background: '#D5D5D8' }}
+                                        onChange={() => { }}
+                                        disabled={true}
+                                        sx={{
+                                            '& .MuiInputBase-root': {
+                                                fontSize: '13px',
+                                                height: '38px',
+                                                backgroundColor: '#f5f5f5 !important',
+                                                cursor: 'not-allowed !important'
+                                            },
+                                            '& .MuiSelect-select': {
+                                                padding: '6px 10px !important'
+                                            },
+                                            marginBottom: '0px'
+                                        }}
+                                        SelectProps={{
+                                            displayEmpty: true,
+                                            renderValue: (selected) => {
+                                                if (selected === "" || selected === undefined || selected === null) {
+                                                    return <span style={{ color: '#aaa' }}>—</span>;
+                                                }
+                                                const option = followUpTypesOptions.find(opt => String(opt.id) === String(selected));
+                                                return option ? option.followUpDescription : selected;
+                                            }
+                                        }}
                                     >
-                                        <option value="">—</option>
+                                        <MenuItem value="">—</MenuItem>
                                         {followUpTypesOptions.map(opt => (
-                                            <option key={opt.id} value={opt.id}>
+                                            <MenuItem key={opt.id} value={opt.id}>
                                                 {opt.followUpDescription}
-                                            </option>
+                                            </MenuItem>
                                         ))}
-                                    </select>
+                                    </ClearableTextField>
                                 </div>
 
                                 {/* Follow up */}
                                 <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
                                     <label style={{ fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Follow up</label>
-                                    <input
-                                        type="text"
+                                    <ClearableTextField
+                                        fullWidth
+                                        size="small"
                                         disabled
+                                        disableClearable
                                         value={display(followUpData.followUp || '')}
-                                        style={{ border: '1px solid #ddd', padding: '6px 8px', fontSize: 12, background: '#D5D5D8' }}
+                                        onChange={() => { }}
+                                        sx={{
+                                            '& .MuiInputBase-root': {
+                                                fontSize: '13px',
+                                                height: '38px',
+                                                backgroundColor: '#f5f5f5 !important'
+                                            }
+                                        }}
                                     />
                                 </div>
 
                                 {/* Follow-up Date */}
                                 <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
                                     <label style={{ fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Follow-up Date</label>
-                                    <input
-                                        type="text"
+                                    <ClearableTextField
+                                        fullWidth
+                                        size="small"
                                         disabled
+                                        disableClearable
                                         value={formatDateDdMmmYy(followUpData.followUpDate) || '-'}
-                                        style={{ border: '1px solid #ddd', padding: '6px 8px', fontSize: 12, background: '#D5D5D8' }}
+                                        onChange={() => { }}
+                                        sx={{
+                                            '& .MuiInputBase-root': {
+                                                fontSize: '13px',
+                                                height: '38px',
+                                                backgroundColor: '#f5f5f5 !important'
+                                            }
+                                        }}
                                     />
                                 </div>
                             </div>

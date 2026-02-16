@@ -34,6 +34,8 @@ export interface VisitDetails {
   diagnosis?: string;
   treatment?: string;
   notes?: string;
+  addendum?: string;
+  visitComments?: string;
 }
 
 // Comprehensive visit data request interface
@@ -106,6 +108,7 @@ export interface ComprehensiveVisitDataRequest {
   followUpType: string;
   instructions?: string;
   additionalInstructions?: string;
+  addendum?: string;
   feesToCollect: number;
   feesPaid: number;
   discount: number;
@@ -113,12 +116,12 @@ export interface ComprehensiveVisitDataRequest {
   statusId: number;
   userId: string;
   isSubmitPatientVisitDetails: boolean;
-  complaintsRows?: Array<{ short_description?: string; complaint_description?: string; complaint_comment?: string; [key: string]: any }>;
-  diagnosisRows?: Array<{ short_description?: string; diagnosis?: string; [key: string]: any }>;
-  medicineRows?: Array<{ short_description?: string; medicine?: string; morning?: number; afternoon?: number; night?: number; days?: number | string; instruction?: string; [key: string]: any }>;
-  prescriptionRows?: Array<{ prescription?: string; b?: number | string; l?: number | string; d?: number | string; days?: number | string; instruction?: string; [key: string]: any }>;
-  investigationRows?: Array<{ investigation?: string; [key: string]: any }>;
-  instructionGroups?: Array<{ groupDescription?: string; group_description?: string; instructionsDescription?: string; instructions_description?: string; sequenceNo?: number; sequence_no?: number; [key: string]: any }>;
+  complaintsRows?: Array<{ short_description?: string; complaint_description?: string; complaint_comment?: string;[key: string]: any }>;
+  diagnosisRows?: Array<{ short_description?: string; diagnosis?: string;[key: string]: any }>;
+  medicineRows?: Array<{ short_description?: string; medicine?: string; morning?: number; afternoon?: number; night?: number; days?: number | string; instruction?: string;[key: string]: any }>;
+  prescriptionRows?: Array<{ prescription?: string; b?: number | string; l?: number | string; d?: number | string; days?: number | string; instruction?: string;[key: string]: any }>;
+  investigationRows?: Array<{ investigation?: string;[key: string]: any }>;
+  instructionGroups?: Array<{ groupDescription?: string; group_description?: string; instructionsDescription?: string; instructions_description?: string; sequenceNo?: number; sequence_no?: number;[key: string]: any }>;
 }
 
 export const visitService = {
@@ -135,17 +138,17 @@ export const visitService = {
       return response.data;
     } catch (error: any) {
       console.error('Get visit history API Error:', error);
-      
+
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
         throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
       }
-      
+
       if (error.response?.status === 404) {
         throw new Error('Patient visit history not found.');
       } else if (error.response?.status === 500) {
         throw new Error('Server error occurred while fetching visit history.');
       }
-      
+
       throw new Error(error.response?.data?.error || 'Failed to fetch visit history');
     }
   },
@@ -163,17 +166,17 @@ export const visitService = {
       return response.data;
     } catch (error: any) {
       console.error('Get last visit details API Error:', error);
-      
+
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
         throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
       }
-      
+
       if (error.response?.status === 404) {
         throw new Error('Last visit details not found.');
       } else if (error.response?.status === 500) {
         throw new Error('Server error occurred while fetching last visit details.');
       }
-      
+
       throw new Error(error.response?.data?.error || 'Failed to fetch last visit details');
     }
   },
@@ -196,15 +199,15 @@ export const visitService = {
       return response.data;
     } catch (error: any) {
       console.error('Get today\'s visits API Error:', error);
-      
+
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
         throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
       }
-      
+
       if (error.response?.status === 500) {
         throw new Error('Server error occurred while fetching today\'s visits.');
       }
-      
+
       throw new Error(error.response?.data?.error || 'Failed to fetch today\'s visits');
     }
   },
@@ -222,17 +225,17 @@ export const visitService = {
       return response.data;
     } catch (error: any) {
       console.error('Get visit details API Error:', error);
-      
+
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
         throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
       }
-      
+
       if (error.response?.status === 404) {
         throw new Error('Visit details not found.');
       } else if (error.response?.status === 500) {
         throw new Error('Server error occurred while fetching visit details.');
       }
-      
+
       throw new Error(error.response?.data?.error || 'Failed to fetch visit details');
     }
   },
@@ -257,17 +260,17 @@ export const visitService = {
       return response.data;
     } catch (error: any) {
       console.error('Get appointment details API Error:', error);
-      
+
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
         throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
       }
-      
+
       if (error.response?.status === 404) {
         throw new Error('Appointment details not found.');
       } else if (error.response?.status === 500) {
         throw new Error('Server error occurred while fetching appointment details.');
       }
-      
+
       throw new Error(error.response?.data?.error || 'Failed to fetch appointment details');
     }
   },
@@ -285,17 +288,17 @@ export const visitService = {
       return response.data;
     } catch (error: any) {
       console.error('Save comprehensive visit API Error:', error);
-      
+
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
         throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
       }
-      
+
       if (error.response?.status === 400) {
         throw new Error(error.response?.data?.error || 'Validation failed. Please check your input data.');
       } else if (error.response?.status === 500) {
         throw new Error('Server error occurred while saving visit data.');
       }
-      
+
       throw new Error(error.response?.data?.error || 'Failed to save visit data');
     }
   }
