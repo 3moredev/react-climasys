@@ -403,6 +403,13 @@ export default function Treatment() {
     const [showAddendumModal, setShowAddendumModal] = useState<boolean>(false);
     const [addendumText, setAddendumText] = useState<string>("");
 
+    // Sync addendum text when modal opens or data changes
+    useEffect(() => {
+        if (showAddendumModal && treatmentData?.addendum) {
+            setAddendumText(treatmentData.addendum);
+        }
+    }, [showAddendumModal, treatmentData?.addendum]);
+
     // Billing popup state
     const [showBillingPopup, setShowBillingPopup] = useState<boolean>(false);
     const [referByOptions, setReferByOptions] = useState<{ id: string; name: string }[]>([]);
@@ -1244,38 +1251,171 @@ export default function Treatment() {
         };
     }, [prescriptionInput, treatmentData?.doctorId, sessionData?.clinicId]);
 
-    // Get treatment data from location state
+    // Get treatment data from location state or session storage
     useEffect(() => {
+        console.log('Mount: Checking location.state', location.state);
+
+        // Always check session storage first to see if we have fresher data for this patient
+        let storedData: TreatmentData | null = null;
+        try {
+            const rawStored = sessionStorage.getItem('currentTreatmentData');
+            if (rawStored) {
+                storedData = JSON.parse(rawStored) as TreatmentData;
+            }
+        } catch (e) {
+            console.error('Failed to parse session storage', e);
+        }
+
         if (location.state) {
+            console.log('Mount: Found location.state');
             const stateData = location.state as any;
-            const normalizedData: TreatmentData = {
+            const normalizedStateData: TreatmentData = {
                 ...stateData,
                 referralCode: stateData.referralCode || stateData.referBy
             };
-            setTreatmentData(normalizedData);
 
-            // Initialize referralBy from state if present
-            if (normalizedData.referralName) {
-                setFormData(prev => ({
-                    ...prev,
-                    referralBy: normalizedData.referralName || ''
-                }));
+            // SMART RESTORE:
+            // If session storage exists and matches the same patient/visit as location.state,
+            // prefer session storage because it has the latest edits (Addendum, Instructions, etc.)
+            // that might not be in location.state (which persists on refresh but is stale).
+            if (storedData &&
+                String(storedData.patientId) === String(normalizedStateData.patientId) &&
+                String(storedData.visitNumber) === String(normalizedStateData.visitNumber)) {
+
+                console.log('Mount: Preferring sessionStorage over location.state (Same Context)');
+                setTreatmentData(storedData);
+
+                // Restore selected instruction groups if present
+                if ((storedData as any)._selectedInstructionGroups) {
+                    setSelectedInstructionGroups((storedData as any)._selectedInstructionGroups);
+                }
+
+                if (storedData.referralName) {
+                    setFormData(prev => ({ ...prev, referralBy: storedData?.referralName || '' }));
+                }
+            } else {
+                // Different patient or no session data -> Use location.state (New Navigation)
+                console.log('Mount: Using location.state (New Context or No Session Data)');
+                setTreatmentData(normalizedStateData);
+
+                if (normalizedStateData.referralName) {
+                    setFormData(prev => ({ ...prev, referralBy: normalizedStateData.referralName || '' }));
+                }
+
+                // Overwrite session storage with new context
+                try {
+                    sessionStorage.setItem('currentTreatmentData', JSON.stringify(normalizedStateData));
+                } catch (e) {
+                    console.error('Failed to save treatment data to storage', e);
+                }
+            }
+        } else {
+            console.log('Mount: No location.state, trying sessionStorage');
+            // No location state (direct load or cleared history) -> Use session storage
+            if (storedData) {
+                console.log('Mount: Restoring data from sessionStorage:', storedData);
+                setTreatmentData(storedData);
+
+                // Restore selected instruction groups if present
+                if ((storedData as any)._selectedInstructionGroups) {
+                    setSelectedInstructionGroups((storedData as any)._selectedInstructionGroups);
+                }
+
+                if (storedData.referralName) {
+                    setFormData(prev => ({ ...prev, referralBy: storedData.referralName || '' }));
+                }
+            } else {
+                console.warn('Mount: No data in sessionStorage either!');
             }
         }
     }, [location.state]);
 
-    // Fetch full patient details to get DOB for accurate age display
+    // Persist treatmentData to session storage whenever it changes
+    // This ensures that latest edits (including Addendum and Instruction Groups) are saved even if page is refreshed
     useEffect(() => {
-        if (treatmentData?.patientId && !treatmentData.dateOfBirth) {
-            patientService.getPatient(treatmentData.patientId)
-                .then(patient => {
-                    if (patient.date_of_birth) {
-                        setTreatmentData(prev => prev ? ({ ...prev, dateOfBirth: patient.date_of_birth }) : null);
-                    }
-                })
-                .catch(err => console.error("Failed to fetch patient details:", err));
+        if (treatmentData) {
+            try {
+                const dataToStore = {
+                    ...treatmentData,
+                    _selectedInstructionGroups: selectedInstructionGroups
+                };
+                sessionStorage.setItem('currentTreatmentData', JSON.stringify(dataToStore));
+            } catch (e) {
+                console.error('Failed to sync treatment data to storage', e);
+            }
         }
-    }, [treatmentData?.patientId]);
+    }, [treatmentData, selectedInstructionGroups]);
+
+    // Fetch full patient details to get DOB and fresh visit info (including Addendum)
+    useEffect(() => {
+        console.log('Effect: Fetch details triggered. patientId:', treatmentData?.patientId, 'visitNum:', treatmentData?.visitNumber);
+        if (treatmentData?.patientId) {
+            // Fetch basic patient info for DOB
+            if (!treatmentData.dateOfBirth) {
+                patientService.getPatient(treatmentData.patientId)
+                    .then(patient => {
+                        if (patient.date_of_birth) {
+                            setTreatmentData(prev => prev ? ({ ...prev, dateOfBirth: patient.date_of_birth }) : null);
+                        }
+                    })
+                    .catch(err => console.error("Failed to fetch patient details:", err));
+            }
+
+            // Fetch comprehensive visit details to ensure Addendum and other fields are up-to-date
+            // This is crucial for page refreshes where session storage might have stale data
+            const fetchVisitDetails = async () => {
+                try {
+                    console.log('Fetching fresh visit details from API...');
+
+                    if (treatmentData.patientId && treatmentData.visitNumber) {
+                        try {
+                            // 1. Get visit history to find visit_id
+                            const history = await visitService.getPatientVisitHistory(treatmentData.patientId);
+
+                            // 2. Find the current visit
+                            const visit = history.visits.find(v => String(v.visit_number) === String(treatmentData.visitNumber));
+
+                            if (visit && visit.visit_id) {
+                                console.log('Found visit ID:', visit.visit_id);
+
+                                // 3. Get detailed visit info
+                                const details = await visitService.getVisitDetails(visit.visit_id);
+                                console.log('Refreshed visit details from backend:', details);
+
+                                // 4. Check for addendum
+                                // STRICTLY use details.addendum. Do NOT fallback to notes/visitComments as they might contain other data
+                                // and overwrite our locally restored Addendum (from session storage)
+                                const backendAddendum = details.addendum;
+
+                                if (backendAddendum && backendAddendum.trim().length > 0) {
+                                    setTreatmentData(prev => {
+                                        if (!prev) return null;
+                                        // Only update if backend has a meaningful value different from current
+                                        if (prev.addendum !== backendAddendum) {
+                                            console.log('Updating addendum from backend details (explicit field only):', backendAddendum);
+                                            return {
+                                                ...prev,
+                                                addendum: backendAddendum
+                                            };
+                                        }
+                                        return prev;
+                                    });
+                                }
+                            } else {
+                                console.warn('Could not find visit ID for visit number:', treatmentData.visitNumber);
+                            }
+                        } catch (err) {
+                            console.error("Failed to fetch visit details chain:", err);
+                        }
+                    }
+                } catch (err) {
+                    console.error("Failed to fetch fresh visit details:", err);
+                }
+            };
+
+            fetchVisitDetails();
+        }
+    }, [treatmentData?.patientId, treatmentData?.visitNumber]);
 
     // Load referral options from API
     React.useEffect(() => {
@@ -4011,6 +4151,7 @@ export default function Treatment() {
                 currentMedicines: formData.medicines,
                 instructions: followUpData.planAdv ? String(followUpData.planAdv) : '',
                 additionalInstructions: followUpData.remarkComments ? String(followUpData.remarkComments) : '',
+                addendum: treatmentData?.addendum || '',
 
                 // Medical conditions from form data
                 hypertension: formData.medicalHistory.hypertension,
@@ -5746,20 +5887,22 @@ export default function Treatment() {
                                             border: '1px solid #ccc',
                                             borderRadius: '4px',
                                             overflow: 'hidden',
-                                            opacity: isFormDisabled ? 0.6 : 1
+                                            overflowX: 'auto',
+                                            opacity: isFormDisabled ? 0.6 : 1,
+                                            width: '100%'
                                         }}
                                     >
-                                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                        <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
                                             <thead>
                                                 <tr style={{
                                                     backgroundColor: '#1976d2',
                                                     color: 'white',
                                                     fontSize: '13px'
                                                 }}>
-                                                    <th style={{ borderRight: '1px solid rgba(255,255,255,0.2)', width: '60px', textAlign: 'left' }} className="py-3">Sr.</th>
-                                                    <th style={{ borderRight: '1px solid rgba(255,255,255,0.2)', textAlign: 'left' }} className="py-3">Complaint Description</th>
-                                                    <th style={{ borderRight: '1px solid rgba(255,255,255,0.2)', textAlign: 'left' }} className="py-3">Duration / Comment</th>
-                                                    <th style={{ width: '80px', textAlign: 'center' }} className="py-3">Action</th>
+                                                    <th style={{ borderRight: '1px solid rgba(255,255,255,0.2)', width: '60px', textAlign: 'left', padding: '6px' }} className="py-3">Sr.</th>
+                                                    <th style={{ borderRight: '1px solid rgba(255,255,255,0.2)', width: '250px', textAlign: 'left', padding: '6px' }} className="py-3">Complaint Description</th>
+                                                    <th style={{ borderRight: '1px solid rgba(255,255,255,0.2)', width: 'auto', textAlign: 'left', padding: '6px' }} className="py-3">Duration / Comment</th>
+                                                    <th style={{ width: '80px', textAlign: 'center', padding: '6px' }} className="py-3">Action</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -5768,9 +5911,9 @@ export default function Treatment() {
                                                         backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white',
                                                         borderBottom: '1px solid #e0e0e0'
                                                     }}>
-                                                        <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '13px' }} className="px-3">{index + 1}</td>
-                                                        <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '13px' }} className="px-3">{row.label}</td>
-                                                        <td style={{ borderRight: '1px solid #e0e0e0' }} className="px-1 py-1">
+                                                        <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '13px', padding: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} className="px-3">{index + 1}</td>
+                                                        <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '13px', padding: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} className="px-3" title={row.label}>{row.label}</td>
+                                                        <td style={{ borderRight: '1px solid #e0e0e0', boxSizing: 'border-box' }} className="px-1 py-1">
                                                             <div style={{ position: 'relative' }}>
                                                                 <ClearableTextField
                                                                     fullWidth
@@ -5787,11 +5930,13 @@ export default function Treatment() {
                                                                     sx={{
                                                                         marginBottom: row.comment?.length >= 500 ? '16px' : '0px',
                                                                         transition: 'margin-bottom 0.2s',
+                                                                        boxSizing: 'border-box',
                                                                         '& .MuiOutlinedInput-root': {
                                                                             height: '100%',
                                                                             borderRadius: 0,
                                                                             backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
                                                                             fontSize: '11px',
+                                                                            boxSizing: 'border-box',
                                                                             '& fieldset': { border: 'none' }
                                                                         },
                                                                         '& .MuiFormHelperText-root': {
@@ -5804,7 +5949,8 @@ export default function Treatment() {
                                                                         '& .MuiInputBase-input': {
                                                                             padding: '8px 10px',
                                                                             color: isFormDisabled ? '#666' : '#333',
-                                                                            cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                                                            cursor: isFormDisabled ? 'not-allowed' : 'text',
+                                                                            boxSizing: 'border-box'
                                                                         }
                                                                     }}
                                                                 />
@@ -6636,10 +6782,12 @@ export default function Treatment() {
                                             border: '1px solid #ccc',
                                             borderRadius: '4px',
                                             overflow: 'hidden',
-                                            opacity: isFormDisabled ? 0.6 : 1
+                                            overflowX: 'auto',
+                                            opacity: isFormDisabled ? 0.6 : 1,
+                                            width: '100%'
                                         }}
                                     >
-                                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                        <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
                                             <thead>
                                                 <tr style={{
                                                     backgroundColor: '#1976d2',
@@ -6648,12 +6796,12 @@ export default function Treatment() {
                                                     fontSize: '13px'
                                                 }}>
                                                     <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '50px', textAlign: 'left' }}>Sr.</th>
-                                                    <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', textAlign: 'left' }}>Medicine</th>
+                                                    <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '200px', textAlign: 'left' }}>Medicine</th>
                                                     <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '50px', textAlign: 'center' }}>B</th>
                                                     <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '50px', textAlign: 'center' }}>L</th>
                                                     <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '50px', textAlign: 'center' }}>D</th>
-                                                    <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '50px', textAlign: 'center' }}>Days</th>
-                                                    <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', textAlign: 'left' }}>Instruction</th>
+                                                    <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '60px', textAlign: 'center' }}>Days</th>
+                                                    <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: 'auto', textAlign: 'left' }}>Instruction</th>
                                                     <th style={{ padding: '6px', width: '80px', textAlign: 'center' }}>Action</th>
                                                 </tr>
                                             </thead>
@@ -6663,9 +6811,9 @@ export default function Treatment() {
                                                         backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white',
                                                         borderBottom: '1px solid #e0e0e0'
                                                     }}>
-                                                        <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '13px' }}>{index + 1}</td>
-                                                        <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '13px' }}>{row.short_description || row.medicine}</td>
-                                                        <td style={{ borderRight: '1px solid #e0e0e0' }} className="px-1 py-1">
+                                                        <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '13px', padding: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{index + 1}</td>
+                                                        <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '13px', padding: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={row.short_description || row.medicine}>{row.short_description || row.medicine}</td>
+                                                        <td style={{ borderRight: '1px solid #e0e0e0', boxSizing: 'border-box' }} className="px-1 py-1">
                                                             <ClearableTextField
                                                                 size="small"
                                                                 value={row.b}
@@ -6680,18 +6828,21 @@ export default function Treatment() {
                                                                 onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
                                                                 sx={{
                                                                     marginBottom: 0,
+                                                                    boxSizing: 'border-box',
                                                                     '& .MuiOutlinedInput-root': {
                                                                         height: '100%',
                                                                         borderRadius: 0,
                                                                         backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
                                                                         fontSize: '11px',
+                                                                        boxSizing: 'border-box',
                                                                         '& fieldset': { border: 'none' }
                                                                     },
                                                                     '& .MuiInputBase-input': {
                                                                         padding: '8px 6px',
                                                                         textAlign: 'center',
                                                                         color: isFormDisabled ? '#666' : '#333',
-                                                                        cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                                                        cursor: isFormDisabled ? 'not-allowed' : 'text',
+                                                                        boxSizing: 'border-box'
                                                                     }
                                                                 }}
                                                             />
@@ -6711,18 +6862,21 @@ export default function Treatment() {
                                                                 onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
                                                                 sx={{
                                                                     marginBottom: 0,
+                                                                    boxSizing: 'border-box',
                                                                     '& .MuiOutlinedInput-root': {
                                                                         height: '100%',
                                                                         borderRadius: 0,
                                                                         backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
                                                                         fontSize: '11px',
+                                                                        boxSizing: 'border-box',
                                                                         '& fieldset': { border: 'none' }
                                                                     },
                                                                     '& .MuiInputBase-input': {
                                                                         padding: '8px 6px',
                                                                         textAlign: 'center',
                                                                         color: isFormDisabled ? '#666' : '#333',
-                                                                        cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                                                        cursor: isFormDisabled ? 'not-allowed' : 'text',
+                                                                        boxSizing: 'border-box'
                                                                     }
                                                                 }}
                                                             />
@@ -6742,23 +6896,26 @@ export default function Treatment() {
                                                                 onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
                                                                 sx={{
                                                                     marginBottom: 0,
+                                                                    boxSizing: 'border-box',
                                                                     '& .MuiOutlinedInput-root': {
                                                                         height: '100%',
                                                                         borderRadius: 0,
                                                                         backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
                                                                         fontSize: '11px',
+                                                                        boxSizing: 'border-box',
                                                                         '& fieldset': { border: 'none' }
                                                                     },
                                                                     '& .MuiInputBase-input': {
                                                                         padding: '8px 6px',
                                                                         textAlign: 'center',
                                                                         color: isFormDisabled ? '#666' : '#333',
-                                                                        cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                                                        cursor: isFormDisabled ? 'not-allowed' : 'text',
+                                                                        boxSizing: 'border-box'
                                                                     }
                                                                 }}
                                                             />
                                                         </td>
-                                                        <td style={{ borderRight: '1px solid #e0e0e0' }} className="px-1 py-1">
+                                                        <td style={{ borderRight: '1px solid #e0e0e0', boxSizing: 'border-box' }} className="px-1 py-1">
                                                             <ClearableTextField
                                                                 size="small"
                                                                 value={row.days}
@@ -6773,24 +6930,27 @@ export default function Treatment() {
                                                                 onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
                                                                 sx={{
                                                                     marginBottom: 0,
+                                                                    boxSizing: 'border-box',
                                                                     '& .MuiOutlinedInput-root': {
                                                                         height: '100%',
                                                                         borderRadius: 0,
                                                                         backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
                                                                         fontSize: '11px',
+                                                                        boxSizing: 'border-box',
                                                                         '& fieldset': { border: 'none' }
                                                                     },
                                                                     '& .MuiInputBase-input': {
                                                                         padding: '8px 6px',
                                                                         textAlign: 'center',
                                                                         color: isFormDisabled ? '#666' : '#333',
-                                                                        cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                                                        cursor: isFormDisabled ? 'not-allowed' : 'text',
+                                                                        boxSizing: 'border-box'
                                                                     }
                                                                 }}
                                                             />
                                                         </td>
-                                                        <td style={{ borderRight: '1px solid #e0e0e0' }} className="px-1 py-1">
-                                                            <div style={{ position: 'relative' }}>
+                                                        <td style={{ borderRight: '1px solid #e0e0e0', boxSizing: 'border-box' }} className="px-1 py-1">
+                                                            <div style={{ position: 'relative', width: '100%', boxSizing: 'border-box' }}>
                                                                 <ClearableTextField
                                                                     fullWidth
                                                                     size="small"
@@ -6806,11 +6966,13 @@ export default function Treatment() {
                                                                     sx={{
                                                                         marginBottom: row.instruction?.length >= 4000 ? '16px' : '0px',
                                                                         transition: 'margin-bottom 0.2s',
+                                                                        boxSizing: 'border-box',
                                                                         '& .MuiOutlinedInput-root': {
                                                                             height: '100%',
                                                                             borderRadius: 0,
                                                                             backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
                                                                             fontSize: '11px',
+                                                                            boxSizing: 'border-box',
                                                                             '& fieldset': { border: 'none' }
                                                                         },
                                                                         '& .MuiFormHelperText-root': {
@@ -6823,7 +6985,8 @@ export default function Treatment() {
                                                                         '& .MuiInputBase-input': {
                                                                             padding: '8px 10px',
                                                                             color: isFormDisabled ? '#666' : '#333',
-                                                                            cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                                                            cursor: isFormDisabled ? 'not-allowed' : 'text',
+                                                                            boxSizing: 'border-box'
                                                                         }
                                                                     }}
                                                                 />
@@ -7829,13 +7992,15 @@ export default function Treatment() {
                                                 placeholder="Billed Amount"
                                                 style={{
                                                     width: '100%',
+                                                    height: '38px',
                                                     padding: '6px 34px 6px 10px',
                                                     border: billingError ? '1px solid red' : '1px solid #ccc',
                                                     borderRadius: '4px',
                                                     fontSize: '13px',
                                                     backgroundColor: '#f5f5f5',
                                                     color: '#666',
-                                                    cursor: 'not-allowed'
+                                                    cursor: 'not-allowed',
+                                                    boxSizing: 'border-box'
                                                 }}
                                             />
                                             <button
@@ -7901,6 +8066,7 @@ export default function Treatment() {
                                                     '& .MuiOutlinedInput-root': {
                                                         borderRadius: '4px',
                                                         fontSize: '13px',
+                                                        height: '38px',
                                                         backgroundColor: isFormDisabled ? '#f5f5f5' : 'white'
                                                     },
                                                     '& .MuiInputBase-input': {
@@ -7932,6 +8098,7 @@ export default function Treatment() {
                                                 '& .MuiOutlinedInput-root': {
                                                     borderRadius: '4px',
                                                     fontSize: '13px',
+                                                    height: '38px',
                                                     backgroundColor: '#f5f5f5'
                                                 },
                                                 '& .MuiInputBase-input': {
@@ -7969,6 +8136,7 @@ export default function Treatment() {
                                                     '& .MuiOutlinedInput-root': {
                                                         borderRadius: '4px',
                                                         fontSize: '13px',
+                                                        height: '38px',
                                                         backgroundColor: '#f5f5f5',
                                                         paddingRight: folderAmountData?.totalAcBalance !== undefined &&
                                                             folderAmountData?.totalAcBalance !== null &&
@@ -8439,6 +8607,10 @@ export default function Treatment() {
                                                     patientVisitNo: visitNo,
                                                     userId
                                                 });
+
+                                                // Update local state so it persists
+                                                setTreatmentData(prev => prev ? { ...prev, addendum: addendumText } : prev);
+
                                                 const msg = resp?.message || 'Addendum updated';
                                                 setSnackbarMessage(msg);
                                                 setSnackbarOpen(true);
