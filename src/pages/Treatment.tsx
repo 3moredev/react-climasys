@@ -466,6 +466,7 @@ export default function Treatment() {
     // Medicine multi-select state
     const [selectedMedicines, setSelectedMedicines] = useState<string[]>([]);
     const [medicineSearch, setMedicineSearch] = useState('');
+    const [medicineSearchError, setMedicineSearchError] = useState<string | null>(null);
     const [isMedicinesOpen, setIsMedicinesOpen] = useState(false);
     const medicinesRef = React.useRef<HTMLDivElement | null>(null);
     const [medicinesOptions, setMedicinesOptions] = useState<MedicineOption[]>([]);
@@ -3872,9 +3873,9 @@ export default function Treatment() {
             checkLength(formData.sugar, 25, 'Sugar');
             checkLength(formData.tft, 25, 'TFT');
             checkLength(formData.pallorHb, 25, 'Pallor/HB');
-            checkLength(formData.pulse, 5, 'Pulse');
-            checkLength(formData.height, 10, 'Height');
-            checkLength(formData.weight, 10, 'Weight');
+            checkLength(formData.pulse, 3, 'Pulse'); // Updated from 5 to 3 to match fieldValidationConfig.ts
+            checkLength(formData.height, 3, 'Height'); // Updated from 10 to 3 to match fieldValidationConfig.ts
+            checkLength(formData.weight, 5, 'Weight'); // Updated from 10 to 5 to match fieldValidationConfig.ts
 
             // Follow-up
             checkLength(followUpData.planAdv, 1000, 'Plan / Advice');
@@ -4357,6 +4358,10 @@ export default function Treatment() {
     };
 
     const handleComplaintCommentChange = (rowValue: string, text: string) => {
+        // Validate character limit (500 chars for complaintComment)
+        if (text.length > 500) {
+            return; // Block input that exceeds limit
+        }
         setComplaintsRows(prev => prev.map(r => r.value === rowValue ? { ...r, comment: text } : r));
     };
 
@@ -4574,7 +4579,8 @@ export default function Treatment() {
     };
 
     const handleMedicineInstructionChange = (id: string, instruction: string) => {
-        if (instruction.length > 150) return;
+        // Validate character limit (4000 chars for medicine instruction)
+        if (instruction.length > 4000) return; // Block input that exceeds limit
         setMedicineRows(prev => prev.map(row =>
             row.id === id ? { ...row, instruction } : row
         ));
@@ -4715,8 +4721,20 @@ export default function Treatment() {
             let newError: string | null = null;
 
             if (field === 'discount') {
-                if (value.length > 3) {
-                    newError = 'Discount (Rs) cannot exceed 3 characters';
+                // Dynamic character limit based on billed amount
+                const billedLength = String(Math.floor(billedNum)).length;
+                const maxDiscountLength = Math.max(billedLength, 1); // At least 1 character
+
+                if (value.length >= maxDiscountLength && value.length > 0) {
+                    // Show message when at or exceeding the limit
+                    // Check if the numeric value is greater than billed
+                    const discountValue = parseFloat(value) || 0;
+                    if (discountValue > billedNum && billedNum > 0) {
+                        newError = 'Discount cannot be greater than billed amount';
+                    } else if (value.length === maxDiscountLength && billedNum > 0) {
+                        // Show the "cannot exceed" message when at the limit
+                        newError = `Discount cannot exceed ${Math.floor(billedNum)}`;
+                    }
                 } else if (value && isNaN(Number(value))) {
                     // Should be caught by blocking above, but fallback
                     newError = 'Discount must be a valid number';
@@ -5487,7 +5505,7 @@ export default function Treatment() {
                                                                 placeholder="Search complaints"
                                                                 variant="outlined"
                                                                 error={complaintSearch.length >= 100}
-                                                                helperText={complaintSearch.length >= 100 ? 'Search term cannot exceed 100 characters' : ''}
+                                                                helperText={complaintSearch.length >= 100 ? 'Search Complaints cannot exceed 100 characters' : ''}
                                                                 sx={{
                                                                     '& .MuiOutlinedInput-root': {
                                                                         height: '32px',
@@ -5702,12 +5720,25 @@ export default function Treatment() {
                                                                 onChange={(val) => handleComplaintCommentChange(row.value, val)}
                                                                 disabled={isFormDisabled}
                                                                 placeholder="Enter duration/comment"
+                                                                error={row.comment?.length === 500}
+                                                                helperText={row.comment?.length === 500 ? 'Comment cannot exceed 500 characters' : ''}
+                                                                inputProps={{
+                                                                    maxLength: 500
+                                                                }}
                                                                 sx={{
+                                                                    marginBottom: 0,
                                                                     '& .MuiOutlinedInput-root': {
+                                                                        height: '100%',
                                                                         borderRadius: 0,
                                                                         backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
                                                                         fontSize: '11px',
                                                                         '& fieldset': { border: 'none' }
+                                                                    },
+                                                                    '& .MuiFormHelperText-root': {
+                                                                        fontSize: '9px',
+                                                                        margin: '0',
+                                                                        padding: '0 4px',
+                                                                        color: '#666'
                                                                     },
                                                                     '& .MuiInputBase-input': {
                                                                         padding: '8px 10px',
@@ -6355,14 +6386,30 @@ export default function Treatment() {
                                                         fullWidth
                                                         size="small"
                                                         value={medicineSearch}
-                                                        onChange={(val) => setMedicineSearch(val)}
+                                                        onChange={(val) => {
+                                                            setMedicineSearch(val);
+                                                            if (val.length >= 1000) {
+                                                                setMedicineSearchError('Medicine search cannot exceed 1000 characters');
+                                                            } else {
+                                                                setMedicineSearchError(null);
+                                                            }
+                                                        }}
                                                         placeholder="Search medicines"
                                                         variant="outlined"
+                                                        error={!!medicineSearchError}
+                                                        helperText={medicineSearchError}
+                                                        inputProps={{
+                                                            maxLength: 1000
+                                                        }}
                                                         sx={{
                                                             '& .MuiOutlinedInput-root': {
-                                                                height: '32px',
+                                                                height: medicineSearchError ? 'auto' : '32px',
                                                                 borderRadius: '4px',
-                                                                fontSize: '12px'
+                                                                fontSize: '13px'
+                                                            },
+                                                            '& .MuiFormHelperText-root': {
+                                                                fontSize: '10px',
+                                                                margin: '2px 0 0 0'
                                                             }
                                                         }}
                                                     />
@@ -6557,54 +6604,64 @@ export default function Treatment() {
                                                         <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '12px' }}>{index + 1}</td>
                                                         <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '12px' }}>{row.short_description || row.medicine}</td>
                                                         <td style={{ borderRight: '1px solid #e0e0e0' }} className="px-1 py-1">
-                                                            <input
-                                                                type="text"
+                                                            <ClearableTextField
+                                                                size="small"
                                                                 value={row.b}
-                                                                inputMode="numeric"
-                                                                pattern="[0-9]*"
-                                                                onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
-                                                                onChange={(e) => handleMedicineFieldChange(row.id, 'b', e.target.value.replace(/\D/g, ''))}
+                                                                onChange={(val) => handleMedicineFieldChange(row.id, 'b', val.replace(/\D/g, ''))}
                                                                 disabled={isFormDisabled}
-                                                                className="medicine-table-input"
-                                                                style={{
-                                                                    width: '100%',
-                                                                    height: '100%',
-                                                                    padding: '8px 6px',
-                                                                    border: 'none',
-                                                                    borderRadius: 0,
-                                                                    outline: 'none',
-                                                                    backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
-                                                                    boxShadow: 'none',
-                                                                    fontSize: '11px',
-                                                                    textAlign: 'center',
-                                                                    color: isFormDisabled ? '#666' : '#333',
-                                                                    cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                                                disableClearable={true}
+                                                                inputProps={{
+                                                                    inputMode: 'numeric',
+                                                                    pattern: '[0-9]*',
+                                                                    maxLength: 10
+                                                                }}
+                                                                onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
+                                                                sx={{
+                                                                    marginBottom: 0,
+                                                                    '& .MuiOutlinedInput-root': {
+                                                                        height: '100%',
+                                                                        borderRadius: 0,
+                                                                        backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
+                                                                        fontSize: '11px',
+                                                                        '& fieldset': { border: 'none' }
+                                                                    },
+                                                                    '& .MuiInputBase-input': {
+                                                                        padding: '8px 6px',
+                                                                        textAlign: 'center',
+                                                                        color: isFormDisabled ? '#666' : '#333',
+                                                                        cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                                                    }
                                                                 }}
                                                             />
                                                         </td>
                                                         <td style={{ borderRight: '1px solid #e0e0e0' }} className="px-1 py-1">
-                                                            <input
-                                                                type="text"
+                                                            <ClearableTextField
+                                                                size="small"
                                                                 value={row.l}
-                                                                inputMode="numeric"
-                                                                pattern="[0-9]*"
-                                                                onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
-                                                                onChange={(e) => handleMedicineFieldChange(row.id, 'l', e.target.value.replace(/\D/g, ''))}
+                                                                onChange={(val) => handleMedicineFieldChange(row.id, 'l', val.replace(/\D/g, ''))}
                                                                 disabled={isFormDisabled}
-                                                                className="medicine-table-input"
-                                                                style={{
-                                                                    width: '100%',
-                                                                    height: '100%',
-                                                                    padding: '8px 6px',
-                                                                    border: 'none',
-                                                                    borderRadius: 0,
-                                                                    outline: 'none',
-                                                                    backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
-                                                                    boxShadow: 'none',
-                                                                    fontSize: '11px',
-                                                                    textAlign: 'center',
-                                                                    color: isFormDisabled ? '#666' : '#333',
-                                                                    cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                                                disableClearable={true}
+                                                                inputProps={{
+                                                                    inputMode: 'numeric',
+                                                                    pattern: '[0-9]*',
+                                                                    maxLength: 10
+                                                                }}
+                                                                onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
+                                                                sx={{
+                                                                    marginBottom: 0,
+                                                                    '& .MuiOutlinedInput-root': {
+                                                                        height: '100%',
+                                                                        borderRadius: 0,
+                                                                        backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
+                                                                        fontSize: '11px',
+                                                                        '& fieldset': { border: 'none' }
+                                                                    },
+                                                                    '& .MuiInputBase-input': {
+                                                                        padding: '8px 6px',
+                                                                        textAlign: 'center',
+                                                                        color: isFormDisabled ? '#666' : '#333',
+                                                                        cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                                                    }
                                                                 }}
                                                             />
                                                         </td>
@@ -6614,6 +6671,7 @@ export default function Treatment() {
                                                                 value={row.d}
                                                                 onChange={(val) => handleMedicineFieldChange(row.id, 'd', val.replace(/\D/g, ''))}
                                                                 disabled={isFormDisabled}
+                                                                disableClearable={true}
                                                                 inputProps={{
                                                                     inputMode: 'numeric',
                                                                     pattern: '[0-9]*',
@@ -6621,6 +6679,7 @@ export default function Treatment() {
                                                                 }}
                                                                 onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
                                                                 sx={{
+                                                                    marginBottom: 0,
                                                                     '& .MuiOutlinedInput-root': {
                                                                         height: '100%',
                                                                         borderRadius: 0,
@@ -6643,6 +6702,7 @@ export default function Treatment() {
                                                                 value={row.days}
                                                                 onChange={(val) => handleMedicineFieldChange(row.id, 'days', val.replace(/\D/g, ''))}
                                                                 disabled={isFormDisabled}
+                                                                disableClearable={true}
                                                                 inputProps={{
                                                                     inputMode: 'numeric',
                                                                     pattern: '[0-9]*',
@@ -6650,6 +6710,7 @@ export default function Treatment() {
                                                                 }}
                                                                 onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
                                                                 sx={{
+                                                                    marginBottom: 0,
                                                                     '& .MuiOutlinedInput-root': {
                                                                         height: '100%',
                                                                         borderRadius: 0,
@@ -6668,21 +6729,31 @@ export default function Treatment() {
                                                         </td>
                                                         <td style={{ borderRight: '1px solid #e0e0e0' }} className="px-1 py-1">
                                                             <ClearableTextField
+                                                                fullWidth
                                                                 size="small"
                                                                 value={row.instruction}
                                                                 onChange={(val) => handleMedicineInstructionChange(row.id, val)}
                                                                 disabled={isFormDisabled}
                                                                 placeholder="Enter instruction"
+                                                                error={row.instruction?.length === 4000}
+                                                                helperText={row.instruction?.length === 4000 ? 'Instruction cannot exceed 4000 characters' : ''}
                                                                 inputProps={{
                                                                     maxLength: 4000
                                                                 }}
                                                                 sx={{
+                                                                    marginBottom: 0,
                                                                     '& .MuiOutlinedInput-root': {
                                                                         height: '100%',
                                                                         borderRadius: 0,
                                                                         backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
                                                                         fontSize: '11px',
                                                                         '& fieldset': { border: 'none' }
+                                                                    },
+                                                                    '& .MuiFormHelperText-root': {
+                                                                        fontSize: '9px',
+                                                                        margin: '0',
+                                                                        padding: '0 4px',
+                                                                        color: '#666'
                                                                     },
                                                                     '& .MuiInputBase-input': {
                                                                         padding: '8px 10px',
@@ -7748,7 +7819,7 @@ export default function Treatment() {
                                                 onChange={(val) => handleBillingChange('discount', val)}
                                                 disabled={isFormDisabled}
                                                 inputProps={{
-                                                    maxLength: 4
+                                                    maxLength: Math.max(String(Math.floor(parseFloat(billingData.billed) || 0)).length, 1)
                                                 }}
                                                 placeholder="0.00"
                                                 variant="outlined"

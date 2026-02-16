@@ -87,13 +87,16 @@ const ClearableTextField: React.FC<ClearableTextFieldProps> = ({
                     boxShadow: 'none !important',
                     backgroundColor: isReadOnly ? '#f5f5f5 !important' : 'inherit',
                     cursor: isReadOnly ? 'not-allowed !important' : 'inherit',
+                    fontSize: 'inherit',
                     '&::placeholder': {
                         color: isReadOnly ? '#666666 !important' : 'inherit',
-                        opacity: isReadOnly ? '0.5 !important' : 1
+                        opacity: isReadOnly ? '0.5 !important' : 1,
+                        fontSize: 'inherit'
                     },
                     '&.Mui-disabled::placeholder': {
                         color: '#666666 !important',
-                        opacity: '0.5 !important'
+                        opacity: '0.5 !important',
+                        fontSize: 'inherit'
                     },
                     ...(typeof otherProps.sx === 'object' && (otherProps.sx as any)?.['& .MuiInputBase-input'] ? (otherProps.sx as any)['& .MuiInputBase-input'] : {})
                 }

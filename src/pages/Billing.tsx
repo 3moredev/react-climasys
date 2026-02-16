@@ -2817,8 +2817,20 @@ export default function Treatment() {
 
                 let newError: string | null = null;
                 if (field === 'discount') {
-                    if (value.length > 3) {
-                        newError = 'Discount (Rs) cannot exceed 3 characters';
+                    // Dynamic character limit based on billed amount
+                    const billedLength = String(Math.floor(billedNum)).length;
+                    const maxDiscountLength = Math.max(billedLength, 1); // At least 1 character
+
+                    if (value.length >= maxDiscountLength && value.length > 0) {
+                        // Show message when at or exceeding the limit
+                        // Check if the numeric value is greater than billed
+                        const discountValue = parseFloat(value) || 0;
+                        if (discountValue > billedNum && billedNum > 0) {
+                            newError = 'Discount cannot be greater than billed amount';
+                        } else if (value.length === maxDiscountLength && billedNum > 0) {
+                            // Show the "cannot exceed" message when at the limit
+                            newError = `Discount cannot exceed ${Math.floor(billedNum)}`;
+                        }
                     } else if (value && isNaN(Number(value))) {
                         newError = 'Discount must be a valid number';
                     } else if (!isNaN(discountNum) && discountNum < 0) {
@@ -3968,7 +3980,9 @@ export default function Treatment() {
                                         onClear={() => handleBillingChange('discount', '')}
                                         error={!!discountError}
                                         helperText={discountError}
-                                        inputProps={{ maxLength: 4 }}
+                                        inputProps={{
+                                            maxLength: Math.max(String(Math.floor(parseFloat(billingData.billed) || 0)).length, 1)
+                                        }}
                                         sx={{
                                             '& .MuiInputBase-root': {
                                                 fontSize: '12px',
