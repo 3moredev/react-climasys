@@ -355,15 +355,6 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
                     boxShadow: 'none'
                 },
                 '& .MuiOutlinedInput-root.Mui-focused': { boxShadow: 'none !important' },
-                '& .MuiFormHelperText-root': {
-                    fontSize: '0.75rem',
-                    lineHeight: 1.66,
-                    fontFamily: "'Roboto', sans-serif",
-                    margin: '3px 0 0 0 !important',
-                    padding: '0 !important',
-                    minHeight: '1.25rem',
-                    textAlign: 'left !important'
-                },
                 '& h1, & h2, & h3, & h4, & h5, & h6, & .MuiTypography-h1, & .MuiTypography-h2, & .MuiTypography-h3, & .MuiTypography-h4, & .MuiTypography-h5, & .MuiTypography-h6': {
                     margin: '0 0 2px 0 !important'
                 },

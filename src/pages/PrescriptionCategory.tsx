@@ -337,11 +337,11 @@ export default function PrescriptionCategory() {
         }
         .search-section {
           display: flex;
-          align-items: flex-start;
+          align-items: center;
           gap: 12px;
           margin-bottom: 20px;
           flex-wrap: nowrap;
-          overflow-x: auto;
+          padding-bottom: 18px;
         }
         .search-input-wrapper {
           position: relative;
@@ -545,8 +545,8 @@ export default function PrescriptionCategory() {
               setValidationErrors(prev => ({ ...prev, categoryName: error }));
             }}
             disabled={!!editingId}
-            error={!!validationErrors.categoryName && !validationErrors.categoryName.includes('cannot exceed')}
-            helperText={null}
+            error={!!validationErrors['categoryName']}
+            helperText={validationErrors['categoryName']}
             sx={{
               '& .MuiInputBase-root': {
                 height: '40px',
@@ -554,17 +554,6 @@ export default function PrescriptionCategory() {
               }
             }}
           />
-          {validationErrors.categoryName && (
-            <span style={{
-              color: validationErrors.categoryName.includes('cannot exceed') ? '#666' : '#d32f2f',
-              fontSize: '0.75rem',
-              display: 'block',
-              position: 'relative',
-              zIndex: 1
-            }}>
-              {validationErrors.categoryName}
-            </span>
-          )}
         </div>
         <div className="form-field">
           <label>Category Description</label>
@@ -581,25 +570,14 @@ export default function PrescriptionCategory() {
               }
               setValidationErrors(prev => ({ ...prev, description: error }));
             }}
-            error={!!validationErrors.description && !validationErrors.description.includes('cannot exceed')}
-            helperText={null}
+            error={!!validationErrors['description']}
+            helperText={validationErrors['description']}
             sx={{
               '& .MuiInputBase-root': {
                 height: '40px'
               }
             }}
           />
-          {validationErrors.description && (
-            <span style={{
-              color: validationErrors.description.includes('cannot exceed') ? '#666' : '#d32f2f',
-              fontSize: '0.75rem',
-              display: 'block',
-              position: 'relative',
-              zIndex: 1
-            }}>
-              {validationErrors.description}
-            </span>
-          )}
         </div>
         <div className="form-actions">
           <button className="btn-primary-custom" onClick={handleAddOrUpdate} style={{ height: '40px' }}>

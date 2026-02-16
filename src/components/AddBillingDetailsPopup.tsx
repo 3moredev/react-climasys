@@ -401,10 +401,6 @@ const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
                   onChange={(val) => handleInputChange('group', val)}
                   error={!!errors.group}
                   helperText={errors.group}
-                  sx={{ position: 'relative' }}
-                  FormHelperTextProps={{
-                    sx: { position: 'absolute', bottom: '-18px', left: 0 }
-                  }}
                   SelectProps={{
                     displayEmpty: true,
                     renderValue: (selected: any) => {
@@ -440,14 +436,6 @@ const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
                   }}
                   error={!!errors.details && !errors.details.includes('cannot exceed')}
                   helperText={errors.details}
-                  FormHelperTextProps={{
-                    sx: {
-                      color: errors.details?.includes('cannot exceed') ? 'gray !important' : '#d32f2f',
-                      position: 'relative',
-                      bottom: '0px',
-                      left: 0
-                    }
-                  }}
                 />
               </Box>
 
@@ -466,10 +454,6 @@ const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
                   onChange={(val) => handleInputChange('visitType', val)}
                   error={!!errors.visitType}
                   helperText={errors.visitType}
-                  sx={{ position: 'relative' }}
-                  FormHelperTextProps={{
-                    sx: { position: 'absolute', bottom: '-18px', left: 0 }
-                  }}
                   SelectProps={{
                     displayEmpty: true,
                     renderValue: (selected: any) => {
@@ -520,10 +504,6 @@ const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
                   value={billingData.subGroup}
                   onChange={(val) => handleInputChange('subGroup', val)}
                   disabled={!billingData.group || loadingSubCategories}
-                  sx={{ position: 'relative' }}
-                  FormHelperTextProps={{
-                    sx: { position: 'absolute', bottom: '-18px', left: 0 }
-                  }}
                   SelectProps={{
                     displayEmpty: true,
                     renderValue: (selected: any) => {
@@ -570,14 +550,6 @@ const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
                   error={!!errors.defaultFee && !errors.defaultFee.includes('cannot exceed')}
                   helperText={errors.defaultFee}
                   inputProps={{ inputMode: 'numeric' }}
-                  FormHelperTextProps={{
-                    sx: {
-                      color: errors.defaultFee?.includes('cannot exceed') ? 'gray !important' : '#d32f2f',
-                      position: 'relative',
-                      bottom: '0px',
-                      left: 0
-                    }
-                  }}
                 />
               </Box>
 
@@ -596,14 +568,6 @@ const AddBillingDetailsPopup: React.FC<AddBillingDetailsPopupProps> = ({
                   error={!!errors.sequenceNo && !errors.sequenceNo.includes('cannot exceed')}
                   helperText={errors.sequenceNo}
                   inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
-                  FormHelperTextProps={{
-                    sx: {
-                      color: errors.sequenceNo?.includes('cannot exceed') ? 'gray !important' : '#d32f2f',
-                      position: 'relative',
-                      bottom: '0px',
-                      left: 0
-                    }
-                  }}
                 />
               </Box>
             </Grid>

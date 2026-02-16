@@ -14,6 +14,8 @@ interface SearchInputProps {
     inputStyle?: React.CSSProperties;
     onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
     autoFocus?: boolean;
+    error?: boolean;
+    helperText?: string;
 }
 
 const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(({
@@ -27,7 +29,9 @@ const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(({
     showSearchIcon = true,
     inputStyle = {},
     onBlur,
-    autoFocus = false
+    autoFocus = false,
+    error,
+    helperText
 }, ref) => {
     const handleClear = () => {
         onChange('');
@@ -35,6 +39,10 @@ const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(({
             onClear();
         }
     };
+
+    const maxLengthReached = value.length === 50;
+    const displayError = error || maxLengthReached;
+    const errorMsg = maxLengthReached ? "Search cannot exceed 50 characters" : helperText;
 
     return (
         <div className={`search-input-wrapper ${className}`} style={{ position: 'relative', display: 'flex', flexDirection: 'column' }}>
@@ -52,7 +60,7 @@ const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(({
                     style={{
                         width: '100%',
                         padding: showSearchIcon ? '8px 70px 8px 12px' : '8px 70px 8px 12px',
-                        border: value.length === 50 ? '1px solid #616161' : '1px solid #ced4da',
+                        border: displayError ? (error ? '1px solid #d32f2f' : '1px solid #616161') : '1px solid #ced4da',
                         borderRadius: '4px',
                         fontSize: '0.9rem',
                         ...inputStyle
@@ -98,17 +106,22 @@ const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(({
             </div>
 
             {/* Error Message Space (Reserved to shift layout) */}
-            {value.length === 50 && (
+            {displayError && errorMsg && (
                 <FormHelperText sx={{
-                    m: 0,
-                    mt: 0.5,
-                    fontSize: '0.75rem',
-                    pl: 0,
-                    color: '#333333',
-                    position: 'relative',
-                    zIndex: 1
+                    color: error ? '#d32f2f !important' : '#757575 !important',
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    margin: 0,
+                    marginTop: '1px',
+                    whiteSpace: 'normal',
+                    maxWidth: '100%',
+                    lineHeight: '1.2',
+                    fontSize: '11px',
+                    zIndex: 2,
+                    pointerEvents: 'none'
                 }}>
-                    Search cannot exceed 50 characters
+                    {errorMsg}
                 </FormHelperText>
             )}
         </div>

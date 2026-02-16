@@ -512,7 +512,7 @@ export default function ManageDischargeCard() {
                 </h2>
             </div>
 
-            <div className="d-flex mb-3 align-items-center" style={{ gap: '8px', flexWrap: 'wrap', overflow: 'visible' }}>
+            <div className="d-flex mb-3 align-items-center" style={{ gap: '8px', flexWrap: 'wrap', paddingBottom: '18px' }}>
                 <div className="position-relative" ref={searchRef}>
                     <SearchInput
                         value={searchTerm}

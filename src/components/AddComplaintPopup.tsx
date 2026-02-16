@@ -203,9 +203,6 @@ const AddComplaintPopup: React.FC<AddComplaintPopupProps> = ({ open, onClose, on
                                     disabled={!!editData}
                                     error={!!errors.shortDescription && !errors.shortDescription.toLowerCase().includes('exceed')}
                                     helperText={errors.shortDescription}
-                                    FormHelperTextProps={{
-                                        sx: { color: errors.shortDescription?.toLowerCase().includes('exceed') ? '#666 !important' : undefined }
-                                    }}
                                 />
                             </Box>
                         </Grid>
@@ -230,9 +227,6 @@ const AddComplaintPopup: React.FC<AddComplaintPopupProps> = ({ open, onClose, on
                                     }}
                                     error={!!errors.complaintDescription && !errors.complaintDescription.toLowerCase().includes('exceed')}
                                     helperText={errors.complaintDescription}
-                                    FormHelperTextProps={{
-                                        sx: { color: errors.complaintDescription?.toLowerCase().includes('exceed') ? '#666 !important' : undefined }
-                                    }}
                                 />
                             </Box>
                         </Grid>
@@ -256,9 +250,6 @@ const AddComplaintPopup: React.FC<AddComplaintPopupProps> = ({ open, onClose, on
                                     }}
                                     error={!!errors.priority && !errors.priority.toLowerCase().includes('exceed')}
                                     helperText={errors.priority}
-                                    FormHelperTextProps={{
-                                        sx: { color: errors.priority?.toLowerCase().includes('exceed') ? '#666 !important' : undefined }
-                                    }}
                                 />
                             </Box>
                         </Grid>
