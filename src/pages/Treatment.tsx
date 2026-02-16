@@ -3846,8 +3846,13 @@ export default function Treatment() {
             const validationErrors: string[] = [];
 
             // Check the real-time errors state first (from handleInputChange)
-            const errorKeys = Object.keys(errors);
-            if (errorKeys.length > 0) {
+            // Only block submission for critical errors (not length warnings)
+            const criticalErrorKeys = Object.keys(errors).filter(key => {
+                const errMsg = errors[key];
+                return !errMsg.includes('cannot exceed') && !errMsg.includes('exceeds maximum length');
+            });
+
+            if (criticalErrorKeys.length > 0) {
                 setSnackbarMessage('Please fill all required fields');
                 setSnackbarOpen(true);
                 setIsSubmitting(false);
@@ -3912,8 +3917,13 @@ export default function Treatment() {
                 checkLength(row.instruction, 4000, `${prefix} Instruction`);
             });
 
-            if (validationErrors.length > 0) {
-                const firstError = validationErrors[0];
+            // Filter out length warnings from blocking the submission
+            const criticalValidationErrors = validationErrors.filter(err =>
+                !err.includes('cannot exceed') && !err.includes('exceeds maximum length')
+            );
+
+            if (criticalValidationErrors.length > 0) {
+                const firstError = criticalValidationErrors[0];
                 setSnackbarMessage(firstError);
                 setSnackbarOpen(true);
                 setIsSubmitting(false);
@@ -4359,8 +4369,9 @@ export default function Treatment() {
 
     const handleComplaintCommentChange = (rowValue: string, text: string) => {
         // Validate character limit (500 chars for complaintComment)
-        if (text.length > 500) {
-            return; // Block input that exceeds limit
+        // Allow up to 501 for validation message to trigger
+        if (text.length > 501) {
+            return; // Block input that exceeds buffer
         }
         setComplaintsRows(prev => prev.map(r => r.value === rowValue ? { ...r, comment: text } : r));
     };
@@ -4580,7 +4591,8 @@ export default function Treatment() {
 
     const handleMedicineInstructionChange = (id: string, instruction: string) => {
         // Validate character limit (4000 chars for medicine instruction)
-        if (instruction.length > 4000) return; // Block input that exceeds limit
+        // Allow up to 4001 for validation message to trigger
+        if (instruction.length > 4001) return; // Block input that exceeds buffer
         setMedicineRows(prev => prev.map(row =>
             row.id === id ? { ...row, instruction } : row
         ));
@@ -4827,7 +4839,7 @@ export default function Treatment() {
                                         padding: '20px',
                                         textAlign: 'center',
                                         color: '#666',
-                                        fontSize: '12px'
+                                        fontSize: '13px'
                                     }}>
                                         Loading previous visits...
                                     </div>
@@ -4852,7 +4864,7 @@ export default function Treatment() {
                                             }}
                                         >
                                             <div style={{ fontWeight: '500', color: '#333' }}>
-                                                <div style={{ fontSize: '12px', fontWeight: 'bold' }}>
+                                                <div style={{ fontSize: '13px', fontWeight: 'bold' }}>
                                                     <a
                                                         href="#"
                                                         onClick={(e) => {
@@ -4886,7 +4898,7 @@ export default function Treatment() {
                                         padding: '20px',
                                         textAlign: 'center',
                                         color: '#d32f2f',
-                                        fontSize: '12px',
+                                        fontSize: '13px',
                                         backgroundColor: '#ffebee',
                                         border: '1px solid #ffcdd2',
                                         borderRadius: '4px',
@@ -4915,7 +4927,7 @@ export default function Treatment() {
                                         padding: '20px',
                                         textAlign: 'center',
                                         color: '#666',
-                                        fontSize: '12px'
+                                        fontSize: '13px'
                                     }}>
                                         No previous visits found
                                     </div>
@@ -4941,7 +4953,7 @@ export default function Treatment() {
                                         alignItems: 'center',
                                         gap: '8px',
                                         color: '#2e7d32',
-                                        fontSize: '12px'
+                                        fontSize: '13px'
                                     }}>
                                         <div style={{
                                             width: '12px',
@@ -4956,7 +4968,7 @@ export default function Treatment() {
                                 )}
 
                                 {!isLoadingDocuments && existingDocuments.length === 0 && (
-                                    <div style={{ color: '#666', fontSize: '12px' }}>
+                                    <div style={{ color: '#666', fontSize: '13px' }}>
                                         No documents found for this visit
                                     </div>
                                 )}
@@ -4976,7 +4988,7 @@ export default function Treatment() {
                                                     backgroundColor: '#e8f5e8',
                                                     borderRadius: '6px',
                                                     border: '1px solid #c8e6c9',
-                                                    fontSize: '12px',
+                                                    fontSize: '13px',
                                                     fontFamily: "'Roboto', sans-serif",
                                                     fontWeight: 500,
                                                     color: '#2e7d32',
@@ -5079,7 +5091,7 @@ export default function Treatment() {
                                         padding: '10px 15px',
                                         textAlign: 'center',
                                         color: '#666',
-                                        fontSize: '12px'
+                                        fontSize: '13px'
                                     }}>
                                         Loading...
                                     </div>
@@ -5088,7 +5100,7 @@ export default function Treatment() {
                                         padding: '10px 15px',
                                         textAlign: 'center',
                                         color: '#d32f2f',
-                                        fontSize: '12px',
+                                        fontSize: '13px',
                                         backgroundColor: '#ffebee',
                                         border: '1px solid #ffcdd2',
                                         margin: '8px'
@@ -5100,7 +5112,7 @@ export default function Treatment() {
                                         padding: '10px 15px',
                                         textAlign: 'center',
                                         color: '#666',
-                                        fontSize: '12px'
+                                        fontSize: '13px'
                                     }}>
                                         No past services
                                     </div>
@@ -5183,7 +5195,7 @@ export default function Treatment() {
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                             <label style={{ fontWeight: 'bold', color: '#333', fontSize: '13px', whiteSpace: 'nowrap' }}>Referred By:</label>
                                             <span style={{
-                                                fontSize: '12px',
+                                                fontSize: '13px',
                                                 color: '#333',
                                                 fontWeight: 500
                                             }}>
@@ -5259,7 +5271,7 @@ export default function Treatment() {
 
                                             </span>
                                         </div>
-                                        <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: (isFormDisabled || inPersonDisabled) ? 'not-allowed' : 'pointer', fontSize: '12px', whiteSpace: 'nowrap' }}>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: (isFormDisabled || inPersonDisabled) ? 'not-allowed' : 'pointer', fontSize: '13px', whiteSpace: 'nowrap' }}>
                                             <input
                                                 type="checkbox"
                                                 checked={true}
@@ -5269,7 +5281,7 @@ export default function Treatment() {
                                             />
                                             In-Person
                                         </label>
-                                        <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: isFormDisabled ? 'not-allowed' : 'pointer', fontSize: '12px', whiteSpace: 'nowrap' }}>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: isFormDisabled ? 'not-allowed' : 'pointer', fontSize: '13px', whiteSpace: 'nowrap' }}>
                                             <input
                                                 type="checkbox"
                                                 checked={formData.visitType.followUp}
@@ -5333,6 +5345,12 @@ export default function Treatment() {
                                                 style={{
                                                     width: '100%'
                                                 }}
+                                                sx={{
+                                                    '& .MuiInputBase-root': {
+                                                        height: '38px',
+                                                        fontSize: '13px'
+                                                    }
+                                                }}
                                             />
                                         </div>
                                     ))}
@@ -5391,6 +5409,10 @@ export default function Treatment() {
                                                                 }}
                                                                 sx={{
                                                                     flex: 1,
+                                                                    '& .MuiInputBase-root': {
+                                                                        height: '38px',
+                                                                        fontSize: '13px'
+                                                                    },
                                                                     '& .MuiInputBase-input': {
                                                                         padding: '6px 10px',
                                                                         fontSize: '13px',
@@ -5415,9 +5437,9 @@ export default function Treatment() {
                                                 border: 'none',
                                                 borderRadius: '6px',
                                                 cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                                fontSize: '12px',
+                                                fontSize: '13px',
                                                 fontWeight: '500',
-                                                height: '32px',
+                                                height: '38px',
                                                 transition: 'background-color 0.2s',
                                                 whiteSpace: 'nowrap'
                                             }}
@@ -5451,11 +5473,11 @@ export default function Treatment() {
                                                         display: 'flex',
                                                         alignItems: 'center',
                                                         justifyContent: 'space-between',
-                                                        height: '32px',
+                                                        height: '38px',
                                                         padding: '4px 8px',
                                                         border: '2px solid #B7B7B7',
                                                         borderRadius: '6px',
-                                                        fontSize: '12px',
+                                                        fontSize: '13px',
                                                         fontFamily: "'Roboto', sans-serif",
                                                         fontWeight: 500,
                                                         backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
@@ -5508,9 +5530,9 @@ export default function Treatment() {
                                                                 helperText={complaintSearch.length >= 100 ? 'Search Complaints cannot exceed 100 characters' : ''}
                                                                 sx={{
                                                                     '& .MuiOutlinedInput-root': {
-                                                                        height: '32px',
+                                                                        height: '38px',
                                                                         borderRadius: '4px',
-                                                                        fontSize: '12px'
+                                                                        fontSize: '13px'
                                                                     }
                                                                 }}
                                                             />
@@ -5518,12 +5540,12 @@ export default function Treatment() {
 
                                                         <div className="complaints-dropdown" style={{ maxHeight: '200px', overflowY: 'auto', padding: '4px 6px', display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', columnGap: '8px', rowGap: '6px' }}>
                                                             {complaintsLoading && (
-                                                                <div style={{ padding: '6px', fontSize: '12px', color: '#777', gridColumn: '1 / -1', textAlign: 'center' }}>
+                                                                <div style={{ padding: '6px', fontSize: '13px', color: '#777', gridColumn: '1 / -1', textAlign: 'center' }}>
                                                                     Loading complaints...
                                                                 </div>
                                                             )}
                                                             {complaintsError && (
-                                                                <div style={{ padding: '6px', fontSize: '12px', color: '#d32f2f', gridColumn: '1 / -1', textAlign: 'center' }}>
+                                                                <div style={{ padding: '6px', fontSize: '13px', color: '#d32f2f', gridColumn: '1 / -1', textAlign: 'center' }}>
                                                                     {complaintsError}
                                                                     <button
                                                                         onClick={() => {
@@ -5558,7 +5580,7 @@ export default function Treatment() {
                                                                 </div>
                                                             )}
                                                             {!complaintsLoading && !complaintsError && filteredComplaints.length === 0 && (
-                                                                <div style={{ padding: '6px', fontSize: '12px', color: '#777', gridColumn: '1 / -1' }}>No complaints found</div>
+                                                                <div style={{ padding: '6px', fontSize: '13px', color: '#777', gridColumn: '1 / -1' }}>No complaints found</div>
                                                             )}
                                                             {!complaintsLoading && !complaintsError && filteredComplaints.map((opt, index) => {
                                                                 const checked = selectedComplaints.includes(opt.value);
@@ -5584,7 +5606,7 @@ export default function Treatment() {
                                                                                 gap: '4px',
                                                                                 padding: '4px 2px',
                                                                                 cursor: isAdded ? 'not-allowed' : 'pointer',
-                                                                                fontSize: '12px',
+                                                                                fontSize: '13px',
                                                                                 border: 'none',
                                                                                 backgroundColor: (checked || isAdded) ? '#eeeeee' : 'transparent',
                                                                                 borderRadius: '3px',
@@ -5633,9 +5655,9 @@ export default function Treatment() {
                                                     border: 'none',
                                                     borderRadius: '6px',
                                                     cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                                    fontSize: '12px',
+                                                    fontSize: '13px',
                                                     fontWeight: '500',
-                                                    height: '32px',
+                                                    height: '38px',
                                                     transition: 'background-color 0.2s'
                                                 }}
                                                 onMouseEnter={(e) => {
@@ -5660,7 +5682,7 @@ export default function Treatment() {
                                                     borderRadius: '6px',
                                                     cursor: isFormDisabled ? 'not-allowed' : 'pointer',
                                                     width: '32px',
-                                                    height: '32px',
+                                                    height: '38px',
                                                     display: 'flex',
                                                     alignItems: 'center',
                                                     justifyContent: 'center',
@@ -5710,43 +5732,47 @@ export default function Treatment() {
                                                         backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white',
                                                         borderBottom: '1px solid #e0e0e0'
                                                     }}>
-                                                        <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '12px' }} className="px-3">{index + 1}</td>
-                                                        <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '12px' }} className="px-3">{row.label}</td>
+                                                        <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '13px' }} className="px-3">{index + 1}</td>
+                                                        <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '13px' }} className="px-3">{row.label}</td>
                                                         <td style={{ borderRight: '1px solid #e0e0e0' }} className="px-1 py-1">
-                                                            <ClearableTextField
-                                                                fullWidth
-                                                                size="small"
-                                                                value={row.comment}
-                                                                onChange={(val) => handleComplaintCommentChange(row.value, val)}
-                                                                disabled={isFormDisabled}
-                                                                placeholder="Enter duration/comment"
-                                                                error={row.comment?.length === 500}
-                                                                helperText={row.comment?.length === 500 ? 'Comment cannot exceed 500 characters' : ''}
-                                                                inputProps={{
-                                                                    maxLength: 500
-                                                                }}
-                                                                sx={{
-                                                                    marginBottom: 0,
-                                                                    '& .MuiOutlinedInput-root': {
-                                                                        height: '100%',
-                                                                        borderRadius: 0,
-                                                                        backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
-                                                                        fontSize: '11px',
-                                                                        '& fieldset': { border: 'none' }
-                                                                    },
-                                                                    '& .MuiFormHelperText-root': {
-                                                                        fontSize: '9px',
-                                                                        margin: '0',
-                                                                        padding: '0 4px',
-                                                                        color: '#666'
-                                                                    },
-                                                                    '& .MuiInputBase-input': {
-                                                                        padding: '8px 10px',
-                                                                        color: isFormDisabled ? '#666' : '#333',
-                                                                        cursor: isFormDisabled ? 'not-allowed' : 'text'
-                                                                    }
-                                                                }}
-                                                            />
+                                                            <div style={{ position: 'relative' }}>
+                                                                <ClearableTextField
+                                                                    fullWidth
+                                                                    size="small"
+                                                                    value={row.comment}
+                                                                    onChange={(val) => handleComplaintCommentChange(row.value, val)}
+                                                                    disabled={isFormDisabled}
+                                                                    placeholder="Enter duration/comment"
+                                                                    error={row.comment?.length >= 500}
+                                                                    helperText={row.comment?.length >= 500 ? 'Comment cannot exceed 500 characters' : ''}
+                                                                    inputProps={{
+                                                                        maxLength: 501
+                                                                    }}
+                                                                    sx={{
+                                                                        marginBottom: row.comment?.length >= 500 ? '16px' : '0px',
+                                                                        transition: 'margin-bottom 0.2s',
+                                                                        '& .MuiOutlinedInput-root': {
+                                                                            height: '100%',
+                                                                            borderRadius: 0,
+                                                                            backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
+                                                                            fontSize: '11px',
+                                                                            '& fieldset': { border: 'none' }
+                                                                        },
+                                                                        '& .MuiFormHelperText-root': {
+                                                                            fontSize: '9px',
+                                                                            margin: '0',
+                                                                            padding: '0 4px',
+                                                                            color: '#666',
+                                                                            whiteSpace: 'nowrap'
+                                                                        },
+                                                                        '& .MuiInputBase-input': {
+                                                                            padding: '8px 10px',
+                                                                            color: isFormDisabled ? '#666' : '#333',
+                                                                            cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                                                        }
+                                                                    }}
+                                                                />
+                                                            </div>
                                                         </td>
                                                         <td style={{ padding: '6px' }}>
                                                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -6028,11 +6054,11 @@ export default function Treatment() {
                                                 display: 'flex',
                                                 alignItems: 'center',
                                                 justifyContent: 'space-between',
-                                                height: '32px',
+                                                height: '38px',
                                                 padding: '4px 8px',
                                                 border: '2px solid #B7B7B7',
                                                 borderRadius: '6px',
-                                                fontSize: '12px',
+                                                fontSize: '13px',
                                                 fontFamily: "'Roboto', sans-serif",
                                                 fontWeight: 500,
                                                 backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
@@ -6082,9 +6108,9 @@ export default function Treatment() {
                                                         variant="outlined"
                                                         sx={{
                                                             '& .MuiOutlinedInput-root': {
-                                                                height: '32px',
+                                                                height: '38px',
                                                                 borderRadius: '4px',
-                                                                fontSize: '12px'
+                                                                fontSize: '13px'
                                                             }
                                                         }}
                                                     />
@@ -6092,12 +6118,12 @@ export default function Treatment() {
 
                                                 <div className="diagnoses-dropdown" style={{ maxHeight: '200px', overflowY: 'auto', padding: '4px 6px', display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', columnGap: '8px', rowGap: '6px' }}>
                                                     {diagnosesLoading && (
-                                                        <div style={{ padding: '6px', fontSize: '12px', color: '#777', gridColumn: '1 / -1', textAlign: 'center' }}>
+                                                        <div style={{ padding: '6px', fontSize: '13px', color: '#777', gridColumn: '1 / -1', textAlign: 'center' }}>
                                                             Loading diagnoses...
                                                         </div>
                                                     )}
                                                     {diagnosesError && (
-                                                        <div style={{ padding: '6px', fontSize: '12px', color: '#d32f2f', gridColumn: '1 / -1', textAlign: 'center' }}>
+                                                        <div style={{ padding: '6px', fontSize: '13px', color: '#d32f2f', gridColumn: '1 / -1', textAlign: 'center' }}>
                                                             {diagnosesError}
                                                             <button
                                                                 onClick={() => {
@@ -6129,7 +6155,7 @@ export default function Treatment() {
                                                         </div>
                                                     )}
                                                     {!diagnosesLoading && !diagnosesError && filteredDiagnoses.length === 0 && (
-                                                        <div style={{ padding: '6px', fontSize: '12px', color: '#777', gridColumn: '1 / -1' }}>No diagnoses found</div>
+                                                        <div style={{ padding: '6px', fontSize: '13px', color: '#777', gridColumn: '1 / -1' }}>No diagnoses found</div>
                                                     )}
                                                     {!diagnosesLoading && !diagnosesError && filteredDiagnoses.map((opt, index) => {
                                                         const checked = selectedDiagnoses.includes(opt.value);
@@ -6163,7 +6189,7 @@ export default function Treatment() {
                                                                         gap: '4px',
                                                                         padding: '4px 2px',
                                                                         cursor: isAdded ? 'not-allowed' : 'pointer',
-                                                                        fontSize: '12px',
+                                                                        fontSize: '13px',
                                                                         border: 'none',
                                                                         backgroundColor: (checked || isAdded) ? '#eeeeee' : 'transparent',
                                                                         borderRadius: '3px',
@@ -6212,8 +6238,8 @@ export default function Treatment() {
                                             border: 'none',
                                             borderRadius: '6px',
                                             cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                            fontSize: '12px',
-                                            height: '32px',
+                                            fontSize: '13px',
+                                            height: '38px',
                                             transition: 'background-color 0.2s'
                                         }}
                                         onMouseEnter={(e) => {
@@ -6238,7 +6264,7 @@ export default function Treatment() {
                                             borderRadius: '6px',
                                             cursor: isFormDisabled ? 'not-allowed' : 'pointer',
                                             width: '32px',
-                                            height: '32px',
+                                            height: '38px',
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',
@@ -6286,8 +6312,8 @@ export default function Treatment() {
                                                         backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white',
                                                         borderBottom: '1px solid #e0e0e0'
                                                     }}>
-                                                        <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '12px' }}>{index + 1}</td>
-                                                        <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '12px' }}>{row.diagnosis}</td>
+                                                        <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '13px' }}>{index + 1}</td>
+                                                        <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '13px' }}>{row.diagnosis}</td>
                                                         <td style={{ textAlign: 'center' }}>
                                                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                                                 <div
@@ -6340,11 +6366,11 @@ export default function Treatment() {
                                                 display: 'flex',
                                                 alignItems: 'center',
                                                 justifyContent: 'space-between',
-                                                height: '32px',
+                                                height: '38px',
                                                 padding: '4px 8px',
                                                 border: '2px solid #B7B7B7',
                                                 borderRadius: '6px',
-                                                fontSize: '12px',
+                                                fontSize: '13px',
                                                 fontFamily: "'Roboto', sans-serif",
                                                 fontWeight: 500,
                                                 backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
@@ -6417,12 +6443,12 @@ export default function Treatment() {
 
                                                 <div className="medicines-dropdown" style={{ maxHeight: '200px', overflowY: 'auto', padding: '4px 6px', display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', columnGap: '8px', rowGap: '6px' }}>
                                                     {medicinesLoading && (
-                                                        <div style={{ padding: '6px', fontSize: '12px', color: '#777', gridColumn: '1 / -1', textAlign: 'center' }}>
+                                                        <div style={{ padding: '6px', fontSize: '13px', color: '#777', gridColumn: '1 / -1', textAlign: 'center' }}>
                                                             Loading medicines...
                                                         </div>
                                                     )}
                                                     {medicinesError && (
-                                                        <div style={{ padding: '6px', fontSize: '12px', color: '#d32f2f', gridColumn: '1 / -1', textAlign: 'center' }}>
+                                                        <div style={{ padding: '6px', fontSize: '13px', color: '#d32f2f', gridColumn: '1 / -1', textAlign: 'center' }}>
                                                             {medicinesError}
                                                             <button
                                                                 onClick={() => {
@@ -6450,7 +6476,7 @@ export default function Treatment() {
                                                         </div>
                                                     )}
                                                     {!medicinesLoading && !medicinesError && filteredMedicines.length === 0 && (
-                                                        <div style={{ padding: '6px', fontSize: '12px', color: '#777', gridColumn: '1 / -1' }}>No medicines found</div>
+                                                        <div style={{ padding: '6px', fontSize: '13px', color: '#777', gridColumn: '1 / -1' }}>No medicines found</div>
                                                     )}
                                                     {!medicinesLoading && !medicinesError && filteredMedicines.map((opt, index) => {
                                                         const checked = selectedMedicines.includes(opt.value);
@@ -6480,7 +6506,7 @@ export default function Treatment() {
                                                                         gap: '4px',
                                                                         padding: '4px 2px',
                                                                         cursor: isAdded ? 'not-allowed' : 'pointer',
-                                                                        fontSize: '12px',
+                                                                        fontSize: '13px',
                                                                         border: 'none',
                                                                         backgroundColor: (checked || isAdded) ? '#eeeeee' : 'transparent',
                                                                         borderRadius: '3px',
@@ -6531,7 +6557,7 @@ export default function Treatment() {
                                             padding: '6px 12px',
                                             borderRadius: '4px',
                                             cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                            fontSize: '12px'
+                                            fontSize: '13px'
                                         }}
                                     >
                                         Add
@@ -6548,7 +6574,7 @@ export default function Treatment() {
                                             borderRadius: '6px',
                                             cursor: isFormDisabled ? 'not-allowed' : 'pointer',
                                             width: '32px',
-                                            height: '32px',
+                                            height: '38px',
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',
@@ -6601,8 +6627,8 @@ export default function Treatment() {
                                                         backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white',
                                                         borderBottom: '1px solid #e0e0e0'
                                                     }}>
-                                                        <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '12px' }}>{index + 1}</td>
-                                                        <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '12px' }}>{row.short_description || row.medicine}</td>
+                                                        <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '13px' }}>{index + 1}</td>
+                                                        <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '13px' }}>{row.short_description || row.medicine}</td>
                                                         <td style={{ borderRight: '1px solid #e0e0e0' }} className="px-1 py-1">
                                                             <ClearableTextField
                                                                 size="small"
@@ -6728,40 +6754,44 @@ export default function Treatment() {
                                                             />
                                                         </td>
                                                         <td style={{ borderRight: '1px solid #e0e0e0' }} className="px-1 py-1">
-                                                            <ClearableTextField
-                                                                fullWidth
-                                                                size="small"
-                                                                value={row.instruction}
-                                                                onChange={(val) => handleMedicineInstructionChange(row.id, val)}
-                                                                disabled={isFormDisabled}
-                                                                placeholder="Enter instruction"
-                                                                error={row.instruction?.length === 4000}
-                                                                helperText={row.instruction?.length === 4000 ? 'Instruction cannot exceed 4000 characters' : ''}
-                                                                inputProps={{
-                                                                    maxLength: 4000
-                                                                }}
-                                                                sx={{
-                                                                    marginBottom: 0,
-                                                                    '& .MuiOutlinedInput-root': {
-                                                                        height: '100%',
-                                                                        borderRadius: 0,
-                                                                        backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
-                                                                        fontSize: '11px',
-                                                                        '& fieldset': { border: 'none' }
-                                                                    },
-                                                                    '& .MuiFormHelperText-root': {
-                                                                        fontSize: '9px',
-                                                                        margin: '0',
-                                                                        padding: '0 4px',
-                                                                        color: '#666'
-                                                                    },
-                                                                    '& .MuiInputBase-input': {
-                                                                        padding: '8px 10px',
-                                                                        color: isFormDisabled ? '#666' : '#333',
-                                                                        cursor: isFormDisabled ? 'not-allowed' : 'text'
-                                                                    }
-                                                                }}
-                                                            />
+                                                            <div style={{ position: 'relative' }}>
+                                                                <ClearableTextField
+                                                                    fullWidth
+                                                                    size="small"
+                                                                    value={row.instruction}
+                                                                    onChange={(val) => handleMedicineInstructionChange(row.id, val)}
+                                                                    disabled={isFormDisabled}
+                                                                    placeholder="Enter instruction"
+                                                                    error={row.instruction?.length >= 4000}
+                                                                    helperText={row.instruction?.length >= 4000 ? 'Instruction cannot exceed 4000 characters' : ''}
+                                                                    inputProps={{
+                                                                        maxLength: 4001
+                                                                    }}
+                                                                    sx={{
+                                                                        marginBottom: row.instruction?.length >= 4000 ? '16px' : '0px',
+                                                                        transition: 'margin-bottom 0.2s',
+                                                                        '& .MuiOutlinedInput-root': {
+                                                                            height: '100%',
+                                                                            borderRadius: 0,
+                                                                            backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
+                                                                            fontSize: '11px',
+                                                                            '& fieldset': { border: 'none' }
+                                                                        },
+                                                                        '& .MuiFormHelperText-root': {
+                                                                            fontSize: '9px',
+                                                                            margin: '0',
+                                                                            padding: '0 4px',
+                                                                            color: '#666',
+                                                                            whiteSpace: 'nowrap'
+                                                                        },
+                                                                        '& .MuiInputBase-input': {
+                                                                            padding: '8px 10px',
+                                                                            color: isFormDisabled ? '#666' : '#333',
+                                                                            cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                                                        }
+                                                                    }}
+                                                                />
+                                                            </div>
                                                         </td>
                                                         <td style={{ padding: '6px', textAlign: 'center' }}>
                                                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -6831,7 +6861,7 @@ export default function Treatment() {
                                             }}
                                             sx={{
                                                 '& .MuiOutlinedInput-root': {
-                                                    height: '32px',
+                                                    height: '38px',
                                                     borderRadius: '4px',
                                                     fontSize: '13px',
                                                     backgroundColor: isFormDisabled ? '#f5f5f5' : 'white'
@@ -6857,7 +6887,7 @@ export default function Treatment() {
                                             padding: '6px 12px',
                                             borderRadius: '4px',
                                             cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                            fontSize: '12px'
+                                            fontSize: '13px'
                                         }}
                                     >
                                         Add Rx
@@ -6874,7 +6904,7 @@ export default function Treatment() {
                                             borderRadius: '6px',
                                             cursor: isFormDisabled ? 'not-allowed' : 'pointer',
                                             width: '32px',
-                                            height: '32px',
+                                            height: '38px',
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',
@@ -6908,7 +6938,7 @@ export default function Treatment() {
                                             borderRadius: '50%',
                                             cursor: isFormDisabled ? 'not-allowed' : 'pointer',
                                             width: '32px',
-                                            height: '32px',
+                                            height: '38px',
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',
@@ -6941,7 +6971,7 @@ export default function Treatment() {
                                             <div
                                                 key={idx}
                                                 onClick={() => { setPrescriptionInput(item); setIsRxOpen(false); }}
-                                                style={{ padding: '6px 10px', cursor: 'pointer', fontSize: '12px', borderBottom: '1px solid #eee' }}
+                                                style={{ padding: '6px 10px', cursor: 'pointer', fontSize: '13px', borderBottom: '1px solid #eee' }}
                                                 onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = '#f5f5f5'; }}
                                                 onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = '#fff'; }}
                                                 title={item}
@@ -6968,7 +6998,7 @@ export default function Treatment() {
                                             backgroundColor: '#1976d2',
                                             color: 'white',
                                             fontWeight: 'bold',
-                                            fontSize: '12px'
+                                            fontSize: '13px'
                                         }}>
                                             <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Sr.</div>
                                             <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Prescriptions</div>
@@ -6986,8 +7016,8 @@ export default function Treatment() {
                                                 backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white',
                                                 borderBottom: '1px solid #e0e0e0'
                                             }}>
-                                                <div style={{ padding: '6px', borderRight: '1px solid #e0e0e0', fontSize: '12px' }}>{index + 1}</div>
-                                                <div style={{ padding: '6px', borderRight: '1px solid #e0e0e0', fontSize: '12px' }}>{row.prescription}</div>
+                                                <div style={{ padding: '6px', borderRight: '1px solid #e0e0e0', fontSize: '13px' }}>{index + 1}</div>
+                                                <div style={{ padding: '6px', borderRight: '1px solid #e0e0e0', fontSize: '13px' }}>{row.prescription}</div>
                                                 <div style={{ padding: '0', borderRight: '1px solid #e0e0e0' }}>
                                                     <input
                                                         type="text"
@@ -7206,13 +7236,13 @@ export default function Treatment() {
                                                         backgroundColor: '#f5f5f5',
                                                         borderBottom: '1px solid #ccc'
                                                     }}>
-                                                        <div style={{ padding: '6px', borderRight: '1px solid #ccc', fontSize: '12px', color: '#666' }}>{index + 1}</div>
-                                                        <div style={{ padding: '6px', borderRight: '1px solid #ccc', fontSize: '12px', color: '#666' }}>{row.prescription}</div>
-                                                        <div style={{ padding: '6px', borderRight: '1px solid #ccc', fontSize: '12px', color: '#666', textAlign: 'center' }}>{row.b}</div>
-                                                        <div style={{ padding: '6px', borderRight: '1px solid #ccc', fontSize: '12px', color: '#666', textAlign: 'center' }}>{row.l}</div>
-                                                        <div style={{ padding: '6px', borderRight: '1px solid #ccc', fontSize: '12px', color: '#666', textAlign: 'center' }}>{row.d}</div>
-                                                        <div style={{ padding: '6px', borderRight: '1px solid #ccc', fontSize: '12px', color: '#666', textAlign: 'center' }}>{row.days}</div>
-                                                        <div style={{ padding: '6px', fontSize: '12px', color: '#666' }}>{row.instruction}</div>
+                                                        <div style={{ padding: '6px', borderRight: '1px solid #ccc', fontSize: '13px', color: '#666' }}>{index + 1}</div>
+                                                        <div style={{ padding: '6px', borderRight: '1px solid #ccc', fontSize: '13px', color: '#666' }}>{row.prescription}</div>
+                                                        <div style={{ padding: '6px', borderRight: '1px solid #ccc', fontSize: '13px', color: '#666', textAlign: 'center' }}>{row.b}</div>
+                                                        <div style={{ padding: '6px', borderRight: '1px solid #ccc', fontSize: '13px', color: '#666', textAlign: 'center' }}>{row.l}</div>
+                                                        <div style={{ padding: '6px', borderRight: '1px solid #ccc', fontSize: '13px', color: '#666', textAlign: 'center' }}>{row.d}</div>
+                                                        <div style={{ padding: '6px', borderRight: '1px solid #ccc', fontSize: '13px', color: '#666', textAlign: 'center' }}>{row.days}</div>
+                                                        <div style={{ padding: '6px', fontSize: '13px', color: '#666' }}>{row.instruction}</div>
                                                     </div>
                                                 ))}
                                             </div>
@@ -7221,7 +7251,7 @@ export default function Treatment() {
                                                 padding: '10px',
                                                 textAlign: 'center',
                                                 color: '#666',
-                                                fontSize: '12px',
+                                                fontSize: '13px',
                                                 border: '1px solid #ccc',
                                                 borderRadius: '4px',
                                                 backgroundColor: '#f5f5f5'
@@ -7246,11 +7276,11 @@ export default function Treatment() {
                                                 display: 'flex',
                                                 alignItems: 'center',
                                                 justifyContent: 'space-between',
-                                                height: '32px',
+                                                height: '38px',
                                                 padding: '4px 8px',
                                                 border: '2px solid #B7B7B7',
                                                 borderRadius: '6px',
-                                                fontSize: '12px',
+                                                fontSize: '13px',
                                                 fontFamily: "'Roboto', sans-serif",
                                                 fontWeight: 500,
                                                 backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
@@ -7300,9 +7330,9 @@ export default function Treatment() {
                                                         variant="outlined"
                                                         sx={{
                                                             '& .MuiOutlinedInput-root': {
-                                                                height: '32px',
+                                                                height: '38px',
                                                                 borderRadius: '4px',
-                                                                fontSize: '12px'
+                                                                fontSize: '13px'
                                                             }
                                                         }}
                                                     />
@@ -7310,12 +7340,12 @@ export default function Treatment() {
 
                                                 <div className="investigations-dropdown" style={{ maxHeight: '200px', overflowY: 'auto', padding: '4px 6px', display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', columnGap: '8px', rowGap: '6px' }}>
                                                     {investigationsLoading && (
-                                                        <div style={{ padding: '6px', fontSize: '12px', color: '#777', gridColumn: '1 / -1', textAlign: 'center' }}>
+                                                        <div style={{ padding: '6px', fontSize: '13px', color: '#777', gridColumn: '1 / -1', textAlign: 'center' }}>
                                                             Loading investigations...
                                                         </div>
                                                     )}
                                                     {investigationsError && (
-                                                        <div style={{ padding: '6px', fontSize: '12px', color: '#d32f2f', gridColumn: '1 / -1', textAlign: 'center' }}>
+                                                        <div style={{ padding: '6px', fontSize: '13px', color: '#d32f2f', gridColumn: '1 / -1', textAlign: 'center' }}>
                                                             {investigationsError}
                                                             <button
                                                                 onClick={() => {
@@ -7342,7 +7372,7 @@ export default function Treatment() {
                                                         </div>
                                                     )}
                                                     {!investigationsLoading && !investigationsError && filteredInvestigations.length === 0 && (
-                                                        <div style={{ padding: '6px', fontSize: '12px', color: '#777', gridColumn: '1 / -1' }}>No investigations found</div>
+                                                        <div style={{ padding: '6px', fontSize: '13px', color: '#777', gridColumn: '1 / -1' }}>No investigations found</div>
                                                     )}
                                                     {!investigationsLoading && !investigationsError && filteredInvestigations.map((opt, index) => {
                                                         const checked = selectedInvestigations.includes(opt.value);
@@ -7371,7 +7401,7 @@ export default function Treatment() {
                                                                         gap: '4px',
                                                                         padding: '4px 2px',
                                                                         cursor: isAdded ? 'not-allowed' : 'pointer',
-                                                                        fontSize: '12px',
+                                                                        fontSize: '13px',
                                                                         border: 'none',
                                                                         backgroundColor: (checked || isAdded) ? '#eeeeee' : 'transparent',
                                                                         borderRadius: '3px',
@@ -7421,8 +7451,8 @@ export default function Treatment() {
                                             border: 'none',
                                             borderRadius: '6px',
                                             cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                            fontSize: '12px',
-                                            height: '32px',
+                                            fontSize: '13px',
+                                            height: '38px',
                                             transition: 'background-color 0.2s'
                                         }}
                                         onMouseEnter={(e) => {
@@ -7447,7 +7477,7 @@ export default function Treatment() {
                                             borderRadius: '6px',
                                             cursor: isFormDisabled ? 'not-allowed' : 'pointer',
                                             width: '32px',
-                                            height: '32px',
+                                            height: '38px',
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',
@@ -7476,7 +7506,7 @@ export default function Treatment() {
                                             borderRadius: '50%',
                                             cursor: isFormDisabled ? 'not-allowed' : 'pointer',
                                             width: '32px',
-                                            height: '32px',
+                                            height: '38px',
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',
@@ -7529,8 +7559,8 @@ export default function Treatment() {
                                                         backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white',
                                                         borderBottom: '1px solid #e0e0e0'
                                                     }}>
-                                                        <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '12px' }}>{index + 1}</td>
-                                                        <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '12px' }}>{row.investigation}</td>
+                                                        <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '13px' }}>{index + 1}</td>
+                                                        <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '13px' }}>{row.investigation}</td>
                                                         <td style={{ textAlign: 'center' }}>
                                                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                                                 <div
@@ -7587,7 +7617,7 @@ export default function Treatment() {
                                             sx={{
                                                 '& .MuiInputBase-root': {
                                                     fontSize: '13px',
-                                                    height: '32px',
+                                                    height: '38px',
                                                     backgroundColor: isFormDisabled ? '#f5f5f5 !important' : 'white !important',
                                                     cursor: isFormDisabled ? 'not-allowed !important' : 'pointer'
                                                 },
@@ -7650,6 +7680,9 @@ export default function Treatment() {
                                             placeholder="Enter follow up"
                                             variant="outlined"
                                             sx={{
+                                                '& .MuiInputBase-root': {
+                                                    height: '38px'
+                                                },
                                                 '& .MuiOutlinedInput-root': {
                                                     borderRadius: '4px',
                                                     fontSize: '13px',
@@ -7682,12 +7715,15 @@ export default function Treatment() {
                                             variant="outlined"
                                             size="small"
                                             sx={{
+                                                '& .MuiInputBase-root': {
+                                                    height: '38px'
+                                                },
                                                 '& .MuiOutlinedInput-root': {
                                                     borderRadius: '4px',
                                                     fontSize: '13px',
                                                     backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
-                                                    minHeight: '32px',
-                                                    maxHeight: '32px'
+                                                    minHeight: '38px',
+                                                    maxHeight: '38px'
                                                 },
                                                 '& .MuiInputBase-input': {
                                                     color: isFormDisabled ? '#666' : '#333',
@@ -7722,9 +7758,11 @@ export default function Treatment() {
                                     variant="outlined"
                                     size="small"
                                     sx={{
+                                        '& .MuiInputBase-root': {
+                                            fontSize: '13px'
+                                        },
                                         '& .MuiOutlinedInput-root': {
                                             borderRadius: '4px',
-                                            fontSize: '13px',
                                             backgroundColor: isFormDisabled ? '#f5f5f5' : 'white'
                                         },
                                         '& .MuiInputBase-input': {
@@ -7802,7 +7840,7 @@ export default function Treatment() {
                                             </button>
                                         </div>
                                         {billingError && (
-                                            <div style={{ color: 'red', fontSize: '12px', marginTop: '4px', marginLeft: 0, textAlign: 'left' }}>
+                                            <div style={{ color: 'red', fontSize: '13px', marginTop: '4px', marginLeft: 0, textAlign: 'left' }}>
                                                 {billingError}
                                             </div>
                                         )}
@@ -7960,7 +7998,7 @@ export default function Treatment() {
                                         padding: '8px 12px',
                                         borderRadius: '4px',
                                         cursor: isAddendumEnabled ? 'pointer' : 'not-allowed',
-                                        fontSize: '12px',
+                                        fontSize: '13px',
                                         pointerEvents: 'auto',
                                         opacity: 1,
                                         zIndex: 11,
@@ -7995,7 +8033,7 @@ export default function Treatment() {
                                         padding: '8px 12px',
                                         borderRadius: '4px',
                                         cursor: 'pointer',
-                                        fontSize: '12px',
+                                        fontSize: '13px',
                                         opacity: 1,
                                         zIndex: 11,
                                         position: 'relative',
@@ -8025,7 +8063,7 @@ export default function Treatment() {
                                         padding: '8px 12px',
                                         borderRadius: '4px',
                                         cursor: 'pointer',
-                                        fontSize: '12px'
+                                        fontSize: '13px'
                                     }}
                                 >
                                     Close
@@ -8042,7 +8080,7 @@ export default function Treatment() {
                                         padding: '8px 12px',
                                         borderRadius: '4px',
                                         cursor: (isSubmitting || isFormDisabled) ? 'not-allowed' : 'pointer',
-                                        fontSize: '12px'
+                                        fontSize: '13px'
                                     }}
                                 >
                                     {isSubmitting ? 'Saving...' : 'Save'}
@@ -8059,7 +8097,7 @@ export default function Treatment() {
                                         padding: '8px 12px',
                                         borderRadius: '4px',
                                         cursor: (isSubmitting || isFormDisabled) ? 'not-allowed' : 'pointer',
-                                        fontSize: '12px'
+                                        fontSize: '13px'
                                     }}
                                 >
                                     {isSubmitting ? 'Submitting...' : 'Submit'}
