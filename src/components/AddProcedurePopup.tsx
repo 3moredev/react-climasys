@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Close, Delete } from '@mui/icons-material';
 import {
     Snackbar,
-    TextField,
     Button,
     Dialog,
     DialogTitle,
@@ -16,6 +15,7 @@ import {
 import procedureService, { ProcedureMaster, ProcedureFindings } from '../services/procedureService';
 import { sessionService } from '../services/sessionService';
 import { validateField } from '../utils/validationUtils';
+import ClearableTextField from '../components/ClearableTextField';
 
 interface Finding {
     id: string;
@@ -340,17 +340,17 @@ const AddProcedurePopup: React.FC<AddProcedurePopupProps> = ({ open, onClose, on
                                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                                     Procedure Description <span style={{ color: 'red' }}>*</span>
                                 </Typography>
-                                <TextField
+                                <ClearableTextField
                                     fullWidth
                                     placeholder="Procedure Description"
                                     variant="outlined"
                                     size="small"
                                     value={procedureDescription}
-                                    onChange={(e) => {
-                                        const val = e.target.value.toUpperCase();
-                                        const { allowed, error } = validateField('procedureDescription', val, undefined, undefined, 'procedure');
+                                    onChange={(val) => {
+                                        const capitalized = val.toUpperCase();
+                                        const { allowed, error } = validateField('procedureDescription', capitalized, undefined, undefined, 'procedure');
                                         if (allowed) {
-                                            setProcedureDescription(val);
+                                            setProcedureDescription(capitalized);
                                         }
                                         setErrors(prev => ({ ...prev, procedureDescription: error }));
                                     }}
@@ -368,14 +368,13 @@ const AddProcedurePopup: React.FC<AddProcedurePopupProps> = ({ open, onClose, on
                                 <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }} className='mb-0'>
                                     Procedure Priority <span style={{ color: 'red' }}>*</span>
                                 </Typography>
-                                <TextField
+                                <ClearableTextField
                                     fullWidth
                                     placeholder="Priority"
                                     variant="outlined"
                                     size="small"
                                     value={priority}
-                                    onChange={(e) => {
-                                        const val = e.target.value;
+                                    onChange={(val) => {
                                         const { allowed, error } = validateField('priority', val, undefined, undefined, 'procedure');
                                         if (allowed) {
                                             setPriority(val);
@@ -401,21 +400,21 @@ const AddProcedurePopup: React.FC<AddProcedurePopupProps> = ({ open, onClose, on
                                         <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }} className='mb-0'>
                                             Findings Description
                                         </Typography>
-                                        <TextField
+                                        <ClearableTextField
                                             fullWidth
                                             placeholder="Findings Description"
                                             variant="outlined"
                                             size="small"
                                             value={findingsDescription}
-                                            onChange={(e) => {
-                                                const val = e.target.value.toUpperCase();
-                                                const { allowed, error } = validateField('findingsDescription', val, undefined, undefined, 'procedure');
+                                            onChange={(val) => {
+                                                const capitalized = val.toUpperCase();
+                                                const { allowed, error } = validateField('findingsDescription', capitalized, undefined, undefined, 'procedure');
                                                 if (allowed) {
-                                                    setFindingsDescription(val);
+                                                    setFindingsDescription(capitalized);
                                                 }
                                                 setErrors(prev => ({ ...prev, findingsDescription: error }));
                                             }}
-                                            onKeyPress={(e) => {
+                                            onKeyDown={(e) => {
                                                 if (e.key === 'Enter') {
                                                     handleAddFinding();
                                                 }

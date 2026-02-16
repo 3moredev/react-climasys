@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { Edit, Delete, Search, Refresh, Add } from "@mui/icons-material";
-import { CircularProgress } from "@mui/material";
+import { CircularProgress, Select, MenuItem } from "@mui/material";
 import { diagnosisService, DiagnosisApiResponse } from "../services/diagnosisService";
 import { doctorService, Doctor } from "../services/doctorService";
 import { useSession } from "../store/hooks/useSession";
@@ -356,11 +356,11 @@ export default function ManageDiagnosis() {
         }
         .search-section {
           display: flex;
-          align-items: flex-start;
+          align-items: center;
           gap: 12px;
           margin-bottom: 20px;
           flex-wrap: nowrap;
-          overflow-x: auto;
+          padding-bottom: 18px;
         }
         .search-input-wrapper {
           position: relative;
@@ -537,7 +537,7 @@ export default function ManageDiagnosis() {
         {userId !== 7 && (
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ fontSize: '0.9rem', color: '#666', whiteSpace: 'nowrap' }}>For Provider</span>
-            <select
+            <Select
               className="provider-dropdown"
               value={selectedDoctorId}
               onChange={async (e) => {
@@ -545,27 +545,64 @@ export default function ManageDiagnosis() {
                 setSelectedDoctorId(doctorIdValue);
                 const doctor = doctors.find(d => d.id === doctorIdValue);
                 setSelectedProvider(doctor?.name || '');
-                setCurrentPage(1); // Reset to first page when doctor changes
+                setCurrentPage(1);
 
-                // Immediately fetch diagnoses for the selected doctor
                 if (doctorIdValue) {
                   await fetchDiagnoses(doctorIdValue);
                 }
               }}
               disabled={loadingDoctors || doctors.length === 0}
+              displayEmpty
+              size="small"
+              sx={{
+                height: 38,
+                backgroundColor: '#FFFFFF',
+                width: 300,
+                color: selectedDoctorId ? '#212121' : '#666c75',
+                '& .MuiSelect-select': {
+                  padding: '6px 12px',
+                  fontSize: '0.9rem',
+                  fontFamily: "'Roboto', sans-serif",
+                  textAlign: 'left',
+                }
+              }}
+              MenuProps={{
+                anchorOrigin: {
+                  vertical: 'bottom',
+                  horizontal: 'left',
+                },
+                transformOrigin: {
+                  vertical: 'top',
+                  horizontal: 'left',
+                },
+                PaperProps: {
+                  sx: {
+                    marginTop: '4px',
+                    '& .MuiMenuItem-root.Mui-selected': {
+                      backgroundColor: '#eeeeee !important',
+                    },
+                    '& .MuiMenuItem-root:hover': {
+                      backgroundColor: '#eeeeee',
+                    },
+                    '& .MuiMenuItem-root.Mui-selected:hover': {
+                      backgroundColor: '#eeeeee',
+                    }
+                  }
+                }
+              }}
             >
               {loadingDoctors ? (
-                <option value="">Loading doctors...</option>
+                <MenuItem value="" disabled>Loading doctors...</MenuItem>
               ) : doctors.length === 0 ? (
-                <option value="">No doctors available</option>
+                <MenuItem value="" disabled>No doctors available</MenuItem>
               ) : (
                 doctors.map((doctor) => (
-                  <option key={doctor.id} value={doctor.id}>
+                  <MenuItem key={doctor.id} value={doctor.id}>
                     {doctor.name}
-                  </option>
+                  </MenuItem>
                 ))
               )}
-            </select>
+            </Select>
           </div>
         )}
       </div>
@@ -646,16 +683,45 @@ export default function ManageDiagnosis() {
             </span>
             <div className="page-size-selector">
               <span>Show:</span>
-              <select
-                className="page-size-select"
+              <Select
                 value={pageSize}
                 onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                variant="outlined"
+                size="small"
+                sx={{
+                  height: '30px',
+                  backgroundColor: '#fff',
+                  fontSize: '0.9rem',
+                  '& .MuiSelect-select': {
+                    padding: '4px 32px 4px 8px',
+                    display: 'flex',
+                    alignItems: 'center'
+                  },
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#ddd'
+                  }
+                }}
+                MenuProps={{
+                  PaperProps: {
+                    sx: {
+                      '& .MuiMenuItem-root.Mui-selected': {
+                        backgroundColor: '#eeeeee !important',
+                      },
+                      '& .MuiMenuItem-root:hover': {
+                        backgroundColor: '#eeeeee',
+                      },
+                      '& .MuiMenuItem-root.Mui-selected:hover': {
+                        backgroundColor: '#eeeeee',
+                      }
+                    }
+                  }
+                }}
               >
-                <option value={5}>5</option>
-                <option value={10}>10</option>
-                <option value={20}>20</option>
-                <option value={50}>50</option>
-              </select>
+                <MenuItem value={5}>5</MenuItem>
+                <MenuItem value={10}>10</MenuItem>
+                <MenuItem value={20}>20</MenuItem>
+                <MenuItem value={50}>50</MenuItem>
+              </Select>
               <span style={{ whiteSpace: 'nowrap' }}>per page</span>
             </div>
           </div>

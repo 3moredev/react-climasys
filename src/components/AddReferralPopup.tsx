@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Close } from '@mui/icons-material';
-import { Snackbar, Dialog, DialogTitle, DialogContent, Grid, Box, Typography, TextField, Button, IconButton } from '@mui/material';
+import { Snackbar, Dialog, DialogTitle, DialogContent, Grid, Box, Typography, Button, IconButton } from '@mui/material';
 import api from '../services/api';
+import ClearableTextField from './ClearableTextField';
 
 import { validateField, getMaxLength } from '../utils/validationUtils';
 
@@ -354,15 +355,6 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
                     boxShadow: 'none'
                 },
                 '& .MuiOutlinedInput-root.Mui-focused': { boxShadow: 'none !important' },
-                '& .MuiFormHelperText-root': {
-                    fontSize: '0.75rem',
-                    lineHeight: 1.66,
-                    fontFamily: "'Roboto', sans-serif",
-                    margin: '3px 0 0 0 !important',
-                    padding: '0 !important',
-                    minHeight: '1.25rem',
-                    textAlign: 'left !important'
-                },
                 '& h1, & h2, & h3, & h4, & h5, & h6, & .MuiTypography-h1, & .MuiTypography-h2, & .MuiTypography-h3, & .MuiTypography-h4, & .MuiTypography-h5, & .MuiTypography-h6': {
                     margin: '0 0 2px 0 !important'
                 },
@@ -370,30 +362,17 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
                 <Grid container spacing={3} sx={{ mt: 0 }}>
                     <Grid item xs={12} md={6}>
                         <Box sx={{ mb: 2 }}>
-                            <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
-                                Doctor Name <span style={{ color: '#f44336' }}>*</span>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className="mb-0">
+                                Doctor Name <span style={{ color: 'red' }}>*</span>
                             </Typography>
-                            <TextField
+                            <ClearableTextField
                                 fullWidth
                                 placeholder="Enter Doctor Name"
                                 value={formData.doctorName}
-                                onChange={(e) => handleDoctorNameChange(e.target.value)}
+                                onChange={(val) => handleDoctorNameChange(val)}
                                 onBlur={handleDoctorNameBlur}
-                                error={!!doctorNameError && !doctorNameError.toLowerCase().includes('cannot exceed') && !doctorNameError.toLowerCase().includes('exceeds')}
+                                error={!!doctorNameError}
                                 helperText={doctorNameError}
-                                FormHelperTextProps={{
-                                    sx: {
-                                        color: (doctorNameError && (doctorNameError.toLowerCase().includes('cannot exceed') || doctorNameError.toLowerCase().includes('exceeds'))) ? '#333333 !important' : undefined
-                                    }
-                                }}
-                                sx={{
-                                    '& .MuiOutlinedInput-notchedOutline': {
-                                        borderColor: (doctorNameError && (doctorNameError.toLowerCase().includes('cannot exceed') || doctorNameError.toLowerCase().includes('exceeds'))) ? '#616161 !important' : undefined
-                                    },
-                                    '&:hover .MuiOutlinedInput-notchedOutline': {
-                                        borderColor: (doctorNameError && (doctorNameError.toLowerCase().includes('cannot exceed') || doctorNameError.toLowerCase().includes('exceeds'))) ? '#424242 !important' : undefined
-                                    }
-                                }}
                             />
                         </Box>
                     </Grid>
@@ -402,27 +381,14 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
                             <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
                                 Doctor Number
                             </Typography>
-                            <TextField
+                            <ClearableTextField
                                 fullWidth
                                 placeholder="Enter Doctor Number"
                                 value={formData.doctorMob}
-                                onChange={(e) => handleContactNumberChange(e.target.value)}
+                                onChange={(val) => handleContactNumberChange(val)}
                                 onBlur={validateContactNumber}
-                                error={!!contactError && !contactError.toLowerCase().includes('cannot exceed') && !contactError.toLowerCase().includes('exceeds')}
+                                error={!!contactError}
                                 helperText={contactError}
-                                FormHelperTextProps={{
-                                    sx: {
-                                        color: (contactError && (contactError.toLowerCase().includes('cannot exceed') || contactError.toLowerCase().includes('exceeds'))) ? '#333333 !important' : undefined
-                                    }
-                                }}
-                                sx={{
-                                    '& .MuiOutlinedInput-notchedOutline': {
-                                        borderColor: (contactError && (contactError.toLowerCase().includes('cannot exceed') || contactError.toLowerCase().includes('exceeds'))) ? '#616161 !important' : undefined
-                                    },
-                                    '&:hover .MuiOutlinedInput-notchedOutline': {
-                                        borderColor: (contactError && (contactError.toLowerCase().includes('cannot exceed') || contactError.toLowerCase().includes('exceeds'))) ? '#424242 !important' : undefined
-                                    }
-                                }}
                             />
                         </Box>
                     </Grid>
@@ -431,27 +397,14 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
                             <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
                                 Doctor Email
                             </Typography>
-                            <TextField
+                            <ClearableTextField
                                 fullWidth
                                 placeholder="Enter Doctor Email"
                                 value={formData.doctorMail}
-                                onChange={(e) => handleEmailChange(e.target.value)}
+                                onChange={(val) => handleEmailChange(val)}
                                 onBlur={validateEmail}
-                                error={!!emailError && !emailError.toLowerCase().includes('cannot exceed') && !emailError.toLowerCase().includes('exceeds')}
+                                error={!!emailError}
                                 helperText={emailError}
-                                FormHelperTextProps={{
-                                    sx: {
-                                        color: (emailError && (emailError.toLowerCase().includes('cannot exceed') || emailError.toLowerCase().includes('exceeds'))) ? '#333333 !important' : undefined
-                                    }
-                                }}
-                                sx={{
-                                    '& .MuiOutlinedInput-notchedOutline': {
-                                        borderColor: (emailError && (emailError.toLowerCase().includes('cannot exceed') || emailError.toLowerCase().includes('exceeds'))) ? '#616161 !important' : undefined
-                                    },
-                                    '&:hover .MuiOutlinedInput-notchedOutline': {
-                                        borderColor: (emailError && (emailError.toLowerCase().includes('cannot exceed') || emailError.toLowerCase().includes('exceeds'))) ? '#424242 !important' : undefined
-                                    }
-                                }}
                             />
                         </Box>
                     </Grid>
@@ -460,65 +413,33 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
                             <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
                                 Remark
                             </Typography>
-                            <TextField
+                            <ClearableTextField
                                 fullWidth
                                 placeholder="Enter Remark"
                                 value={formData.remarks}
-                                onChange={(e) => handleRemarksChange(e.target.value)}
-                                error={!!remarksError && !remarksError.toLowerCase().includes('cannot exceed') && !remarksError.toLowerCase().includes('exceeds')}
+                                onChange={(val) => handleRemarksChange(val)}
+                                error={!!remarksError}
                                 helperText={remarksError}
-                                FormHelperTextProps={{
-                                    sx: {
-                                        color: (remarksError && (remarksError.toLowerCase().includes('cannot exceed') || remarksError.toLowerCase().includes('exceeds'))) ? '#333333 !important' : undefined
-                                    }
-                                }}
-                                sx={{
-                                    '& .MuiOutlinedInput-notchedOutline': {
-                                        borderColor: (remarksError && (remarksError.toLowerCase().includes('cannot exceed') || remarksError.toLowerCase().includes('exceeds'))) ? '#616161 !important' : undefined
-                                    },
-                                    '&:hover .MuiOutlinedInput-notchedOutline': {
-                                        borderColor: (remarksError && (remarksError.toLowerCase().includes('cannot exceed') || remarksError.toLowerCase().includes('exceeds'))) ? '#424242 !important' : undefined
-                                    }
-                                }}
                                 inputProps={{ maxLength: getMaxLength('remarks', 'referralDoctor') }}
                             />
                         </Box>
                     </Grid>
                     <Grid item xs={12}>
                         <Box sx={{ mb: 2 }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
-                                    Doctor Address
-                                </Typography>
-                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px' }}>
-                                    {(formData.doctorAddress || '').length}/{getMaxLength('doctorAddress', 'referralDoctor') || 150}
-                                </Typography>
-                            </div>
-                            <textarea
-                                id='textarea-autosize'
+                            <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                                Doctor Address
+                            </Typography>
+                            <ClearableTextField
+                                fullWidth
+                                multiline
                                 rows={2}
-                                maxLength={getMaxLength('doctorAddress', 'referralDoctor')}
                                 placeholder="Enter Doctor Address"
                                 value={formData.doctorAddress}
-                                onChange={(e) => handleAddressChange(e.target.value)}
-                                style={{
-                                    border: `2px solid ${(addressError && !addressError.toLowerCase().includes('cannot exceed') && !addressError.toLowerCase().includes('exceeds')) ? '#f44336' : (addressError ? '#616161' : '#b7b7b7')}`,
-                                    borderRadius: '8px',
-                                    padding: '8px',
-                                    resize: 'vertical',
-                                    width: '100%',
-                                    fontFamily: "'Roboto', sans-serif"
-                                }}
+                                onChange={(val) => handleAddressChange(val)}
+                                error={!!addressError}
+                                helperText={addressError}
+                                inputProps={{ maxLength: getMaxLength('doctorAddress', 'referralDoctor') }}
                             />
-                            {addressError && (
-                                <Typography variant="caption" sx={{
-                                    color: (addressError && (addressError.toLowerCase().includes('cannot exceed') || addressError.toLowerCase().includes('exceeds'))) ? '#333333' : '#f44336',
-                                    mt: 0.5,
-                                    display: 'block'
-                                }}>
-                                    {addressError}
-                                </Typography>
-                            )}
                         </Box>
                     </Grid>
                 </Grid>

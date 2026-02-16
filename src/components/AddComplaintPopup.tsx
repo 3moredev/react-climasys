@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Close } from '@mui/icons-material';
 import {
     Snackbar,
-    TextField,
     FormControlLabel,
     Checkbox,
     Button,
@@ -17,6 +16,7 @@ import {
 } from '@mui/material';
 import { useSession } from '../store/hooks/useSession';
 import { validateField } from '../utils/validationUtils';
+import ClearableTextField from '../components/ClearableTextField';
 
 interface AddComplaintPopupProps {
     open: boolean;
@@ -186,26 +186,23 @@ const AddComplaintPopup: React.FC<AddComplaintPopupProps> = ({ open, onClose, on
                                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                                     Short Description <span style={{ color: 'red' }}>*</span> <span className="text-muted">(Displayed on UI)</span>
                                 </Typography>
-                                <TextField
+                                <ClearableTextField
                                     fullWidth
                                     placeholder="Complaint Short Description"
                                     variant="outlined"
                                     size="small"
                                     value={shortDescription}
-                                    onChange={(e) => {
-                                        const val = e.target.value.toUpperCase();
-                                        const { allowed, error } = validateField('shortDescription', val, undefined, undefined, 'complaint');
+                                    onChange={(val) => {
+                                        const capitalized = val.toUpperCase();
+                                        const { allowed, error } = validateField('shortDescription', capitalized, undefined, undefined, 'complaint');
                                         if (allowed) {
-                                            setShortDescription(val);
+                                            setShortDescription(capitalized);
                                         }
                                         setErrors(prev => ({ ...prev, shortDescription: error }));
                                     }}
                                     disabled={!!editData}
                                     error={!!errors.shortDescription && !errors.shortDescription.toLowerCase().includes('exceed')}
                                     helperText={errors.shortDescription}
-                                    FormHelperTextProps={{
-                                        sx: { color: errors.shortDescription?.toLowerCase().includes('exceed') ? '#666 !important' : undefined }
-                                    }}
                                 />
                             </Box>
                         </Grid>
@@ -214,25 +211,22 @@ const AddComplaintPopup: React.FC<AddComplaintPopupProps> = ({ open, onClose, on
                                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                                     Complaint Description <span style={{ color: 'red' }}>*</span>
                                 </Typography>
-                                <TextField
+                                <ClearableTextField
                                     fullWidth
                                     placeholder="Complaint Description"
                                     variant="outlined"
                                     size="small"
                                     value={complaintDescription}
-                                    onChange={(e) => {
-                                        const val = e.target.value.toUpperCase();
-                                        const { allowed, error } = validateField('complaintDescription', val, undefined, undefined, 'complaint');
+                                    onChange={(val) => {
+                                        const capitalized = val.toUpperCase();
+                                        const { allowed, error } = validateField('complaintDescription', capitalized, undefined, undefined, 'complaint');
                                         if (allowed) {
-                                            setComplaintDescription(val);
+                                            setComplaintDescription(capitalized);
                                         }
                                         setErrors(prev => ({ ...prev, complaintDescription: error }));
                                     }}
                                     error={!!errors.complaintDescription && !errors.complaintDescription.toLowerCase().includes('exceed')}
                                     helperText={errors.complaintDescription}
-                                    FormHelperTextProps={{
-                                        sx: { color: errors.complaintDescription?.toLowerCase().includes('exceed') ? '#666 !important' : undefined }
-                                    }}
                                 />
                             </Box>
                         </Grid>
@@ -241,14 +235,13 @@ const AddComplaintPopup: React.FC<AddComplaintPopupProps> = ({ open, onClose, on
                                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                                     Priority <span style={{ color: 'red' }}>*</span>
                                 </Typography>
-                                <TextField
+                                <ClearableTextField
                                     fullWidth
                                     placeholder="Priority"
                                     variant="outlined"
                                     size="small"
                                     value={priority}
-                                    onChange={(e) => {
-                                        const val = e.target.value;
+                                    onChange={(val) => {
                                         const { allowed, error } = validateField('priority', val, undefined, undefined, 'complaint');
                                         if (allowed) {
                                             setPriority(val);
@@ -257,9 +250,6 @@ const AddComplaintPopup: React.FC<AddComplaintPopupProps> = ({ open, onClose, on
                                     }}
                                     error={!!errors.priority && !errors.priority.toLowerCase().includes('exceed')}
                                     helperText={errors.priority}
-                                    FormHelperTextProps={{
-                                        sx: { color: errors.priority?.toLowerCase().includes('exceed') ? '#666 !important' : undefined }
-                                    }}
                                 />
                             </Box>
                         </Grid>

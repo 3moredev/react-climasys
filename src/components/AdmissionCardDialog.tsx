@@ -765,6 +765,8 @@ function HorizontalField({
   disabled = false,
   maxLength,
   required = false,
+  error = false,
+  helperText = "",
 }: {
   label: string;
   value?: any;
@@ -788,14 +790,16 @@ function HorizontalField({
   disabled?: boolean;
   maxLength?: number;
   required?: boolean;
+  error?: boolean;
+  helperText?: string;
 }) {
   return (
-    <div className="row align-items-center mb-3">
+    <div className="row align-items-center mb-0" style={{ marginBottom: "18px" }}>
       <label className="col-4 col-form-label fw-medium">
         {label}
         {required && <span style={{ color: '#f44336', marginLeft: '4px' }}>*</span>}
       </label>
-      <div className="col-8">
+      <div className="col-8" style={{ position: 'relative' }}>
         {dual ? (
           // ✅ Two inputs (Room + Bed)
           <div className="d-flex gap-2">
@@ -965,6 +969,19 @@ function HorizontalField({
             disabled={disabled}
             maxLength={maxLength}
           />
+        )}
+        {error && helperText && (
+          <div style={{
+            color: '#d32f2f',
+            fontSize: '11px',
+            position: 'absolute',
+            top: '100%',
+            left: '12px',
+            marginTop: '1px',
+            zIndex: 10
+          }}>
+            {helperText}
+          </div>
         )}
       </div>
     </div>

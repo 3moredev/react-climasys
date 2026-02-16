@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Close } from '@mui/icons-material';
 import {
     Snackbar,
-    TextField,
     Button,
     Dialog,
     DialogTitle,
@@ -19,6 +18,7 @@ import {
 import medicineService, { MedicineMaster } from '../services/medicineService';
 import { sessionService } from '../services/sessionService';
 import { validateField } from '../utils/validationUtils';
+import ClearableTextField from '../components/ClearableTextField';
 
 export interface MedicineData {
     shortDescription: string;
@@ -326,19 +326,16 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                                     Short Description <span style={{ color: 'red' }}>*</span> <span className="text-muted">(Displayed on UI)</span>
                                 </Typography>
-                                <TextField
+                                <ClearableTextField
                                     fullWidth
                                     placeholder="Short Description"
                                     variant="outlined"
                                     size="small"
                                     value={shortDescription}
-                                    onChange={(e) => handleInputChange(setShortDescription, 'shortDescription', e.target.value.toUpperCase())}
+                                    onChange={(val) => handleInputChange(setShortDescription, 'shortDescription', val.toUpperCase())}
                                     disabled={!!editData}
-                                    error={!!errors.shortDescription && !errors.shortDescription.toLowerCase().includes('exceed')}
+                                    error={!!errors.shortDescription}
                                     helperText={errors.shortDescription}
-                                    FormHelperTextProps={{
-                                        sx: { color: errors.shortDescription?.toLowerCase().includes('exceed') ? '#666 !important' : undefined }
-                                    }}
                                 />
                             </Box>
 
@@ -346,18 +343,15 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                                     Medicine Name <span style={{ color: 'red' }}>*</span>
                                 </Typography>
-                                <TextField
+                                <ClearableTextField
                                     fullWidth
                                     placeholder="Medicine Name"
                                     variant="outlined"
                                     size="small"
                                     value={medicineName}
-                                    onChange={(e) => handleInputChange(setMedicineName, 'medicineName', e.target.value.toUpperCase())}
-                                    error={!!errors.medicineName && !errors.medicineName.toLowerCase().includes('exceed')}
+                                    onChange={(val) => handleInputChange(setMedicineName, 'medicineName', val.toUpperCase())}
+                                    error={!!errors.medicineName}
                                     helperText={errors.medicineName}
-                                    FormHelperTextProps={{
-                                        sx: { color: errors.medicineName?.toLowerCase().includes('exceed') ? '#666 !important' : undefined }
-                                    }}
                                 />
                             </Box>
 
@@ -365,19 +359,16 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                                     Priority <span style={{ color: 'red' }}>*</span>
                                 </Typography>
-                                <TextField
+                                <ClearableTextField
                                     fullWidth
                                     placeholder="Priority"
                                     variant="outlined"
                                     size="small"
                                     value={priority}
-                                    onChange={(e) => handleInputChange(setPriority, 'priority', e.target.value)}
+                                    onChange={(val) => handleInputChange(setPriority, 'priority', val)}
                                     inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
-                                    error={!!errors.priority && !errors.priority.toLowerCase().includes('exceed')}
+                                    error={!!errors.priority}
                                     helperText={errors.priority}
-                                    FormHelperTextProps={{
-                                        sx: { color: errors.priority?.toLowerCase().includes('exceed') ? '#666 !important' : undefined }
-                                    }}
                                 />
                             </Box>
 
@@ -385,18 +376,15 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                                     Breakfast
                                 </Typography>
-                                <TextField
+                                <ClearableTextField
                                     fullWidth
                                     placeholder="Breakfast"
                                     variant="outlined"
                                     size="small"
                                     value={breakfast}
-                                    onChange={(e) => handleNumericChange(setBreakfast, 'breakfast', e.target.value)}
-                                    error={!!errors.breakfast && !errors.breakfast.toLowerCase().includes('exceed')}
+                                    onChange={(val) => handleNumericChange(setBreakfast, 'breakfast', val)}
+                                    error={!!errors.breakfast}
                                     helperText={errors.breakfast}
-                                    FormHelperTextProps={{
-                                        sx: { color: errors.breakfast?.toLowerCase().includes('exceed') ? '#666 !important' : undefined }
-                                    }}
                                 />
                             </Box>
 
@@ -420,18 +408,15 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                                     Lunch
                                 </Typography>
-                                <TextField
+                                <ClearableTextField
                                     fullWidth
                                     placeholder="Lunch"
                                     variant="outlined"
                                     size="small"
                                     value={lunch}
-                                    onChange={(e) => handleNumericChange(setLunch, 'lunch', e.target.value)}
-                                    error={!!errors.lunch && !errors.lunch.toLowerCase().includes('exceed')}
+                                    onChange={(val) => handleNumericChange(setLunch, 'lunch', val)}
+                                    error={!!errors.lunch}
                                     helperText={errors.lunch}
-                                    FormHelperTextProps={{
-                                        sx: { color: errors.lunch?.toLowerCase().includes('exceed') ? '#666 !important' : undefined }
-                                    }}
                                 />
                             </Box>
 
@@ -439,18 +424,15 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                                     Dinner
                                 </Typography>
-                                <TextField
+                                <ClearableTextField
                                     fullWidth
                                     placeholder="Dinner"
                                     variant="outlined"
                                     size="small"
                                     value={dinner}
-                                    onChange={(e) => handleNumericChange(setDinner, 'dinner', e.target.value)}
-                                    error={!!errors.dinner && !errors.dinner.toLowerCase().includes('exceed')}
+                                    onChange={(val) => handleNumericChange(setDinner, 'dinner', val)}
+                                    error={!!errors.dinner}
                                     helperText={errors.dinner}
-                                    FormHelperTextProps={{
-                                        sx: { color: errors.dinner?.toLowerCase().includes('exceed') ? '#666 !important' : undefined }
-                                    }}
                                 />
                             </Box>
 
@@ -458,18 +440,15 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                                     Days
                                 </Typography>
-                                <TextField
+                                <ClearableTextField
                                     fullWidth
                                     placeholder="Days"
                                     variant="outlined"
                                     size="small"
                                     value={days}
-                                    onChange={(e) => handleNumericChange(setDays, 'days', e.target.value)}
-                                    error={!!errors.days && !errors.days.toLowerCase().includes('exceed')}
+                                    onChange={(val) => handleNumericChange(setDays, 'days', val)}
+                                    error={!!errors.days}
                                     helperText={errors.days}
-                                    FormHelperTextProps={{
-                                        sx: { color: errors.days?.toLowerCase().includes('exceed') ? '#666 !important' : undefined }
-                                    }}
                                 />
                             </Box>
 
@@ -477,18 +456,15 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
                                     Instruction
                                 </Typography>
-                                <TextField
+                                <ClearableTextField
                                     fullWidth
                                     placeholder="Instruction"
                                     variant="outlined"
                                     size="small"
                                     value={instruction}
-                                    onChange={(e) => handleInputChange(setInstruction, 'instruction', e.target.value.toUpperCase())}
-                                    error={!!errors.instruction && !errors.instruction.toLowerCase().includes('exceed')}
+                                    onChange={(val) => handleInputChange(setInstruction, 'instruction', val.toUpperCase())}
+                                    error={!!errors.instruction}
                                     helperText={errors.instruction}
-                                    FormHelperTextProps={{
-                                        sx: { color: errors.instruction?.toLowerCase().includes('exceed') ? '#666 !important' : undefined }
-                                    }}
                                 />
                             </Box>
 

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { Add, Delete, Edit, Refresh, Search } from '@mui/icons-material'
-import { Snackbar } from '@mui/material'
+import { Snackbar, Select, MenuItem } from '@mui/material'
 import { doctorService, Doctor } from '../services/doctorService'
 import { useSession } from '../store/hooks/useSession'
 import prescriptionSubCategoryService, {
@@ -424,11 +424,11 @@ export default function PrescriptionSubCategory() {
         }
         .search-section {
           display: flex;
-          align-items: flex-start;
+          align-items: center;
           gap: 12px;
           margin-bottom: 20px;
           flex-wrap: nowrap;
-          overflow-x: auto;
+          padding-bottom: 18px;
         }
         .search-input-wrapper {
           position: relative;
@@ -618,21 +618,72 @@ export default function PrescriptionSubCategory() {
       <div className="form-row">
         <div className="form-field">
           <label>Category Name</label>
-          <select
+          <Select
             value={formData.categoryName}
             onChange={(event) => setFormData((prev) => ({ ...prev, categoryName: event.target.value }))}
+            displayEmpty
+            fullWidth
+            size="small"
+            sx={{
+              height: 40,
+              backgroundColor: '#FFFFFF',
+              color: formData.categoryName ? '#212121' : '#666c75',
+              '& .MuiSelect-select': {
+                padding: '10px 12px',
+                fontSize: '13px',
+                fontFamily: "'Roboto', sans-serif",
+                textAlign: 'left',
+              },
+              '& .MuiOutlinedInput-notchedOutline': {
+                borderColor: '#ced4da',
+              },
+              '&:hover .MuiOutlinedInput-notchedOutline': {
+                borderColor: '#b2b2b2',
+              },
+              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                borderColor: '#1976d2',
+                borderWidth: '1px',
+              },
+            }}
+            MenuProps={{
+              anchorOrigin: {
+                vertical: 'bottom',
+                horizontal: 'left',
+              },
+              transformOrigin: {
+                vertical: 'top',
+                horizontal: 'left',
+              },
+              PaperProps: {
+                sx: {
+                  marginTop: '4px',
+                  '& .MuiMenuItem-root': {
+                    '&:hover': {
+                      backgroundColor: '#e0e0e0',
+                    },
+                    '&.Mui-selected': {
+                      backgroundColor: '#e0e0e0',
+                      '&:hover': {
+                        backgroundColor: '#e0e0e0',
+                      },
+                    },
+                  },
+                }
+              }
+            }}
           >
-            <option value="">Select Category</option>
+            <MenuItem value="">Select Category</MenuItem>
             {categoryOptions.map((option) => (
-              <option key={option} value={option}>
+              <MenuItem key={option} value={option}>
                 {option}
-              </option>
+              </MenuItem>
             ))}
-          </select>
+          </Select>
         </div>
         <div className="form-field">
           <label>SubCategory Name</label>
           <ClearableTextField
+            disableClearable
             fullWidth
             size="small"
             placeholder="SubCategory Name"
@@ -646,8 +697,8 @@ export default function PrescriptionSubCategory() {
               setValidationErrors(prev => ({ ...prev, subCategoryName: error }));
             }}
             disabled={!!editingId} // Disable if editing (based on ID presence logic often implies key fields locked) checks
-            error={!!validationErrors.subCategoryName && !validationErrors.subCategoryName.includes('cannot exceed')}
-            helperText={null}
+            error={!!validationErrors.subCategoryName}
+            helperText={validationErrors.subCategoryName}
             sx={{
               '& .MuiInputBase-root': {
                 height: '40px',
@@ -655,17 +706,6 @@ export default function PrescriptionSubCategory() {
               }
             }}
           />
-          {validationErrors.subCategoryName && (
-            <span style={{
-              color: validationErrors.subCategoryName.includes('cannot exceed') ? '#666' : '#d32f2f',
-              fontSize: '0.75rem',
-              display: 'block',
-              position: 'relative',
-              zIndex: 1
-            }}>
-              {validationErrors.subCategoryName}
-            </span>
-          )}
         </div>
         <div className="form-actions">
           <button className="btn-primary-custom" onClick={handleAddOrUpdate}>
@@ -700,24 +740,62 @@ export default function PrescriptionSubCategory() {
         {userId !== 7 && (
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ fontSize: '0.9rem', color: '#666', whiteSpace: 'nowrap' }}>For Provider</span>
-            <select
+            <Select
               className="provider-select"
               value={selectedDoctorId}
               onChange={(event) => setSelectedDoctorId(event.target.value)}
               disabled={loadingDoctors || doctors.length === 0}
+              displayEmpty
+              size="small"
+              sx={{
+                height: 38,
+                backgroundColor: '#FFFFFF',
+                width: 300,
+                color: selectedDoctorId ? '#212121' : '#666c75',
+                '& .MuiSelect-select': {
+                  padding: '6px 12px',
+                  fontSize: '0.9rem',
+                  fontFamily: "'Roboto', sans-serif",
+                  textAlign: 'left',
+                }
+              }}
+              MenuProps={{
+                anchorOrigin: {
+                  vertical: 'bottom',
+                  horizontal: 'left',
+                },
+                transformOrigin: {
+                  vertical: 'top',
+                  horizontal: 'left',
+                },
+                PaperProps: {
+                  sx: {
+                    marginTop: '4px',
+                    '& .MuiMenuItem-root.Mui-selected': {
+                      backgroundColor: '#eeeeee !important',
+                    },
+                    '& .MuiMenuItem-root:hover': {
+                      backgroundColor: '#eeeeee',
+                    },
+                    '& .MuiMenuItem-root.Mui-selected:hover': {
+                      backgroundColor: '#eeeeee',
+                    }
+                  }
+                }
+              }}
             >
               {loadingDoctors ? (
-                <option value="">Loading doctors...</option>
+                <MenuItem value="" disabled>Loading doctors...</MenuItem>
               ) : doctors.length === 0 ? (
-                <option value="">No doctors available</option>
+                <MenuItem value="" disabled>No doctors available</MenuItem>
               ) : (
                 doctors.map((doctor) => (
-                  <option key={doctor.id} value={doctor.id}>
+                  <MenuItem key={doctor.id} value={doctor.id}>
                     {doctor.name || doctor.id}
-                  </option>
+                  </MenuItem>
                 ))
               )}
-            </select>
+            </Select>
           </div>
         )}
       </div>
@@ -776,16 +854,45 @@ export default function PrescriptionSubCategory() {
             </span>
             <div className="page-size-selector">
               <span>Show:</span>
-              <select
-                className="page-size-select"
+              <Select
                 value={pageSize}
                 onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                variant="outlined"
+                size="small"
+                sx={{
+                  height: '30px',
+                  backgroundColor: '#fff',
+                  fontSize: '0.9rem',
+                  '& .MuiSelect-select': {
+                    padding: '4px 32px 4px 8px',
+                    display: 'flex',
+                    alignItems: 'center'
+                  },
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: '#ddd'
+                  }
+                }}
+                MenuProps={{
+                  PaperProps: {
+                    sx: {
+                      '& .MuiMenuItem-root.Mui-selected': {
+                        backgroundColor: '#eeeeee !important',
+                      },
+                      '& .MuiMenuItem-root:hover': {
+                        backgroundColor: '#eeeeee',
+                      },
+                      '& .MuiMenuItem-root.Mui-selected:hover': {
+                        backgroundColor: '#eeeeee',
+                      }
+                    }
+                  }
+                }}
               >
-                <option value={5}>5</option>
-                <option value={10}>10</option>
-                <option value={20}>20</option>
-                <option value={50}>50</option>
-              </select>
+                <MenuItem value={5}>5</MenuItem>
+                <MenuItem value={10}>10</MenuItem>
+                <MenuItem value={20}>20</MenuItem>
+                <MenuItem value={50}>50</MenuItem>
+              </Select>
               <span style={{ whiteSpace: 'nowrap' }}>per page</span>
             </div>
           </div>

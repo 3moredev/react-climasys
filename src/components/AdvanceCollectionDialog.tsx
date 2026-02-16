@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Close } from "@mui/icons-material";
-import { Snackbar } from "@mui/material";
+import { Snackbar, MenuItem } from "@mui/material";
 import { Calendar } from "lucide-react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import AddPatientPage from "../pages/AddPatientPage";
@@ -9,6 +9,7 @@ import { advanceCollectionService, AdvanceCollectionRequest, AdvanceCollectionDe
 import { patientService, Patient } from "../services/patientService";
 import { SessionInfo } from "../services/sessionService";
 import { admissionService, InsuranceCompany } from "../services/admissionService";
+import ClearableTextField from "./ClearableTextField";
 
 interface AdvanceCollectionDialogProps {
   open: boolean;
@@ -825,6 +826,7 @@ export default function AdvanceCollectionDialog({
                 optionValues={paymentByOptions.map(opt => String(opt.value)) as string[]}
                 value={String(formData.paymentBy)}
                 onChange={(v) => handleInputChange("paymentBy", parseInt(v, 10) || 0)}
+                disableClearable
               />
             </div>
           </div>
@@ -1023,9 +1025,10 @@ function HorizontalField({
   onDatePickerChange,
   datePickerValue,
   datePickerRef,
-  disabled = false,
-  maxLength,
   required = false,
+  error = false,
+  helperText = '',
+  disableClearable = false,
 }: {
   label: string;
   value?: any;
@@ -1043,6 +1046,9 @@ function HorizontalField({
   disabled?: boolean;
   maxLength?: number;
   required?: boolean;
+  error?: boolean;
+  helperText?: string;
+  disableClearable?: boolean;
 }) {
   return (
     <div className="row align-items-center mb-3">
@@ -1075,36 +1081,56 @@ function HorizontalField({
             />
           </div>
         ) : isSelect ? (
-          <select
-            className="form-select"
+          <ClearableTextField
+            select
+            fullWidth
+            size="small"
             value={value || ""}
-            onChange={(e) => onChange(e.target.value)}
+            onChange={onChange}
             disabled={disabled}
-            style={{
-              border: "1px solid #ced4da",
-              borderRadius: "4px",
-              padding: "6px 12px",
-              fontSize: "14px"
+            disableClearable={disableClearable}
+            sx={{
+              "& .MuiInputBase-root": {
+                fontSize: "14px",
+                height: "38px", // Match Bootstrap-like Height or default MUI
+                backgroundColor: "white !important",
+                cursor: disabled ? 'not-allowed !important' : 'pointer'
+              },
+              marginBottom: '18px'
+            }}
+            error={error}
+            helperText={helperText}
+            SelectProps={{
+              MenuProps: {
+                PaperProps: {
+                  sx: {
+                    '& .MuiMenuItem-root.Mui-selected': {
+                      backgroundColor: '#eeeeee !important',
+                      '&:hover': {
+                        backgroundColor: '#e0e0e0 !important',
+                      }
+                    }
+                  }
+                }
+              }
             }}
           >
             {options && options.length > 0 ? (
               options.map((opt, index) => {
-                // If optionValues is provided, use it for the value, otherwise use the option text
                 const optionValue = (optionValues && optionValues[index] !== undefined)
                   ? optionValues[index]
                   : opt;
-                // Use a combination of index and optionValue for unique key
                 const uniqueKey = optionValue ? `${optionValue}-${index}` : `option-${index}`;
                 return (
-                  <option key={uniqueKey} value={optionValue}>
+                  <MenuItem key={uniqueKey} value={optionValue}>
                     {opt}
-                  </option>
+                  </MenuItem>
                 );
               })
             ) : (
-              <option value="">Select...</option>
+              <MenuItem value="">Select...</MenuItem>
             )}
-          </select>
+          </ClearableTextField>
         ) : isRadio ? (
           <div className="d-flex gap-3">
             {options?.map((opt) => (
@@ -1166,23 +1192,28 @@ function HorizontalField({
             />
           </div>
         ) : (
-          <input
-            type="text"
-            className="form-control"
+          <ClearableTextField
+            fullWidth
+            variant="outlined"
+            size="small"
             value={value || ""}
-            onChange={(e) => onChange(e.target.value)}
+            onChange={onChange}
             disabled={disabled}
-            maxLength={maxLength}
-            style={{
-              border: "1px solid #ced4da",
-              borderRadius: "4px",
-              padding: "6px 12px",
-              fontSize: "14px"
+            inputProps={{ maxLength: maxLength }}
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                borderRadius: "4px",
+                fontSize: "14px",
+                backgroundColor: disabled ? "#e9ecef" : "white",
+              },
+              marginBottom: '18px'
             }}
+            error={error}
+            helperText={helperText}
           />
         )}
       </div>
-    </div>
+    </div >
   );
 }
 

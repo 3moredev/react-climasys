@@ -5,7 +5,7 @@ import PatientNameDisplay from '../components/PatientNameDisplay';
 import { visitService, ComprehensiveVisitDataRequest } from '../services/visitService';
 import { sessionService, SessionInfo } from "../services/sessionService";
 import { Download as DownloadIcon } from '@mui/icons-material';
-import { Snackbar, Box, Typography, TextField } from '@mui/material';
+import { Snackbar, Box, Typography, TextField, MenuItem } from '@mui/material';
 import { complaintService, ComplaintOption } from "../services/complaintService";
 import { medicineService, MedicineOption } from "../services/medicineService";
 import { diagnosisService, DiagnosisOption } from "../services/diagnosisService";
@@ -22,6 +22,8 @@ import AddBillingPopup from "../components/AddBillingPopup";
 import AddPatientPage from "./AddPatientPage";
 import { buildPrescriptionPrintHTML, buildLabTestsPrintHTML, getHeaderImageUrl } from "../utils/printTemplates";
 import PrintReceiptPopup, { PrintReceiptFormValues } from "../components/PrintReceiptPopup";
+import ClearableTextField from "../components/ClearableTextField";
+
 
 // Specific styles for Duration/Comment input in table
 const durationCommentStyles = `
@@ -210,6 +212,11 @@ export default function Treatment() {
     const [treatmentData, setTreatmentData] = useState<TreatmentData | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
     const [billingError, setBillingError] = useState<string | null>(null);
+    const [discountError, setDiscountError] = useState<string | null>(null);
+    const [collectedError, setCollectedError] = useState<string | null>(null);
+    const [reasonError, setReasonError] = useState<string | null>(null);
+    const [paymentByError, setPaymentByError] = useState<string | null>(null);
+    const [paymentRemarkError, setPaymentRemarkError] = useState<string | null>(null);
     const [isFormDisabled, setIsFormDisabled] = useState<boolean>(false);
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
     const [snackbarOpen, setSnackbarOpen] = useState(false);
@@ -301,8 +308,6 @@ export default function Treatment() {
     // Billing popup state
     const [showBillingPopup, setShowBillingPopup] = useState<boolean>(false);
     const [showPrintReceiptPopup, setShowPrintReceiptPopup] = useState<boolean>(false);
-    // const [totalSelectedFees, setTotalSelectedFees] = useState<number>(0); // Removed as it causes sync issues
-    const [discountError, setDiscountError] = useState<string | null>(null);
 
     const filteredComplaints = React.useMemo(() => {
         const term = complaintSearch.trim().toLowerCase();
@@ -2764,20 +2769,55 @@ export default function Treatment() {
     };
 
     const handleBillingChange = (field: string, value: string) => {
-        // Strict blocking for discount field
-        if ((field === 'discount' || field === 'billed') && value && !/^\d*\.?\d*$/.test(value)) {
+        // Strict blocking for numeric fields
+        if ((field === 'discount' || field === 'billed' || field === 'feesCollected') && value && !/^\d*\.?\d*$/.test(value)) {
             return; // Block non-numeric input
         }
 
-        const sanitizedValue = field === 'feesCollected'
-            ? value.replace(/[^0-9]/g, '')
-            : value;
+        const sanitizedValue = value;
 
         setBillingData(prev => {
             const updated = {
                 ...prev,
                 [field]: sanitizedValue
             };
+
+            // Validation logic
+            if (field === 'reason') {
+                if (value.length > 200) {
+                    setReasonError('Reason cannot exceed 200 characters');
+                } else {
+                    setReasonError(null);
+                }
+            }
+
+            if (field === 'paymentRemark') {
+                if (value.length > 200) {
+                    setPaymentRemarkError('Payment Remark cannot exceed 200 characters');
+                } else {
+                    setPaymentRemarkError(null);
+                }
+            }
+
+            if (field === 'paymentBy') {
+                if (!value || value === '') {
+                    setPaymentByError('Payment By is required');
+                } else {
+                    setPaymentByError(null);
+                }
+            }
+
+            if (field === 'feesCollected') {
+                if (value.length > 10) {
+                    setCollectedError('Collected (Rs) cannot exceed 10 characters');
+                } else if (value && isNaN(Number(value))) {
+                    setCollectedError('Collected amount must be a valid number');
+                } else if (Number(value) < 0) {
+                    setCollectedError('Collected amount cannot be negative');
+                } else {
+                    setCollectedError(null);
+                }
+            }
 
             // Linkage: Recalculate Dues when Billed or Discount changes
             if (field === 'billed' || field === 'discount') {
@@ -2786,7 +2826,21 @@ export default function Treatment() {
 
                 let newError: string | null = null;
                 if (field === 'discount') {
-                    if (value && isNaN(Number(value))) {
+                    // Dynamic character limit based on billed amount
+                    const billedLength = String(Math.floor(billedNum)).length;
+                    const maxDiscountLength = Math.max(billedLength, 1); // At least 1 character
+
+                    if (value.length >= maxDiscountLength && value.length > 0) {
+                        // Show message when at or exceeding the limit
+                        // Check if the numeric value is greater than billed
+                        const discountValue = parseFloat(value) || 0;
+                        if (discountValue > billedNum && billedNum > 0) {
+                            newError = 'Discount cannot be greater than billed amount';
+                        } else if (value.length === maxDiscountLength && billedNum > 0) {
+                            // Show the "cannot exceed" message when at the limit
+                            newError = `Discount cannot exceed ${Math.floor(billedNum)}`;
+                        }
+                    } else if (value && isNaN(Number(value))) {
                         newError = 'Discount must be a valid number';
                     } else if (!isNaN(discountNum) && discountNum < 0) {
                         newError = 'Discount cannot be negative';
@@ -2884,17 +2938,17 @@ export default function Treatment() {
                                             style={{
                                                 padding: '10px 15px',
                                                 borderBottom: '1px solid #e0e0e0',
-                                                backgroundColor: index % 2 === 0 ? '#e3f2fd' : 'white',
+                                                backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white',
                                                 cursor: 'pointer',
                                                 fontSize: '13px',
                                                 transition: 'background-color 0.2s ease'
                                             }}
                                             onClick={() => handlePreviousVisitClick(visit)}
                                             onMouseEnter={(e) => {
-                                                e.currentTarget.style.backgroundColor = '#bbdefb';
+                                                e.currentTarget.style.backgroundColor = '#eeeeee';
                                             }}
                                             onMouseLeave={(e) => {
-                                                e.currentTarget.style.backgroundColor = index % 2 === 0 ? '#e3f2fd' : 'white';
+                                                e.currentTarget.style.backgroundColor = index % 2 === 0 ? '#f8f9fa' : 'white';
                                             }}
                                         >
                                             <div style={{ fontWeight: '500', color: '#333' }}>
@@ -3216,7 +3270,7 @@ export default function Treatment() {
                                     />
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px', whiteSpace: 'nowrap' }}>Referred By:</label>
+                                            <label style={{ fontWeight: 'bold', color: '#333', fontSize: '13px', whiteSpace: 'nowrap' }}>Referred By:</label>
                                             <span style={{
                                                 fontSize: '12px',
                                                 color: '#333',
@@ -3298,11 +3352,11 @@ export default function Treatment() {
                                                 >
                                                     {label}
                                                 </Typography>
-                                                <TextField
+                                                <ClearableTextField
                                                     fullWidth
                                                     size="small"
                                                     value={display(formData[key as keyof typeof formData] as string)}
-                                                    onChange={(e) => handleInputChange(key, e.target.value)}
+                                                    onChange={(val) => handleInputChange(key, val)}
                                                     disabled
                                                     sx={{
                                                         '& .MuiInputBase-root': {
@@ -3331,35 +3385,163 @@ export default function Treatment() {
                                     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', marginTop: 8 }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                             <label style={{ fontSize: '12px', color: '#555', whiteSpace: 'nowrap' }}>Height (Cm)</label>
-                                            <input type="text" disabled value={display(formData.height)} style={{ width: 90, padding: '4px 6px', border: '1px solid #ddd', borderRadius: 4, background: '#D5D5D8' }} />
+                                            <ClearableTextField
+                                                size="small"
+                                                disabled
+                                                value={display(formData.height)}
+                                                onChange={() => { }}
+                                                sx={{
+                                                    width: 90,
+                                                    '& .MuiInputBase-root': {
+                                                        fontSize: '12px',
+                                                        backgroundColor: '#D5D5D8',
+                                                        padding: '4px 0'
+                                                    },
+                                                    '& .MuiInputBase-input': {
+                                                        padding: '4px 6px'
+                                                    }
+                                                }}
+                                            />
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                             <label style={{ fontSize: '12px', color: '#555', whiteSpace: 'nowrap' }}>Weight (Kg)</label>
-                                            <input type="text" disabled value={display(formData.weight)} style={{ width: 90, padding: '4px 6px', border: '1px solid #ddd', borderRadius: 4, background: '#D5D5D8' }} />
+                                            <ClearableTextField
+                                                size="small"
+                                                disabled
+                                                value={display(formData.weight)}
+                                                onChange={() => { }}
+                                                sx={{
+                                                    width: 90,
+                                                    '& .MuiInputBase-root': {
+                                                        fontSize: '12px',
+                                                        backgroundColor: '#D5D5D8',
+                                                        padding: '4px 0'
+                                                    },
+                                                    '& .MuiInputBase-input': {
+                                                        padding: '4px 6px'
+                                                    }
+                                                }}
+                                            />
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                             <label style={{ fontSize: '12px', color: '#555', whiteSpace: 'nowrap' }}>BMI</label>
-                                            <input type="text" disabled value={display(formData.bmi)} style={{ width: 90, padding: '4px 6px', border: '1px solid #ddd', borderRadius: 4, background: '#D5D5D8' }} />
+                                            <ClearableTextField
+                                                size="small"
+                                                disabled
+                                                value={display(formData.bmi)}
+                                                onChange={() => { }}
+                                                sx={{
+                                                    width: 90,
+                                                    '& .MuiInputBase-root': {
+                                                        fontSize: '12px',
+                                                        backgroundColor: '#D5D5D8',
+                                                        padding: '4px 0'
+                                                    },
+                                                    '& .MuiInputBase-input': {
+                                                        padding: '4px 6px'
+                                                    }
+                                                }}
+                                            />
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                             <label style={{ fontSize: '12px', color: '#555', whiteSpace: 'nowrap' }}>Pulse (min)</label>
-                                            <input type="text" disabled value={display(formData.pulse)} style={{ width: 90, padding: '4px 6px', border: '1px solid #ddd', borderRadius: 4, background: '#D5D5D8' }} />
+                                            <ClearableTextField
+                                                size="small"
+                                                disabled
+                                                value={display(formData.pulse)}
+                                                onChange={() => { }}
+                                                sx={{
+                                                    width: 90,
+                                                    '& .MuiInputBase-root': {
+                                                        fontSize: '12px',
+                                                        backgroundColor: '#D5D5D8',
+                                                        padding: '4px 0'
+                                                    },
+                                                    '& .MuiInputBase-input': {
+                                                        padding: '4px 6px'
+                                                    }
+                                                }}
+                                            />
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                             <label style={{ fontSize: '12px', color: '#555', whiteSpace: 'nowrap' }}>BP</label>
-                                            <input type="text" disabled value={display(formData.bp)} style={{ width: 90, padding: '4px 6px', border: '1px solid #ddd', borderRadius: 4, background: '#D5D5D8' }} />
+                                            <ClearableTextField
+                                                size="small"
+                                                disabled
+                                                value={display(formData.bp)}
+                                                onChange={() => { }}
+                                                sx={{
+                                                    width: 90,
+                                                    '& .MuiInputBase-root': {
+                                                        fontSize: '12px',
+                                                        backgroundColor: '#D5D5D8',
+                                                        padding: '4px 0'
+                                                    },
+                                                    '& .MuiInputBase-input': {
+                                                        padding: '4px 6px'
+                                                    }
+                                                }}
+                                            />
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                             <label style={{ fontSize: '12px', color: '#555', whiteSpace: 'nowrap' }}>Sugar</label>
-                                            <input type="text" disabled value={display(formData.sugar)} style={{ width: 90, padding: '4px 6px', border: '1px solid #ddd', borderRadius: 4, background: '#D5D5D8' }} />
+                                            <ClearableTextField
+                                                size="small"
+                                                disabled
+                                                value={display(formData.sugar)}
+                                                onChange={() => { }}
+                                                sx={{
+                                                    width: 90,
+                                                    '& .MuiInputBase-root': {
+                                                        fontSize: '12px',
+                                                        backgroundColor: '#D5D5D8',
+                                                        padding: '4px 0'
+                                                    },
+                                                    '& .MuiInputBase-input': {
+                                                        padding: '4px 6px'
+                                                    }
+                                                }}
+                                            />
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                             <label style={{ fontSize: '12px', color: '#555', whiteSpace: 'nowrap' }}>TFT</label>
-                                            <input type="text" disabled value={display(formData.tft)} style={{ width: 90, padding: '4px 6px', border: '1px solid #ddd', borderRadius: 4, background: '#D5D5D8' }} />
+                                            <ClearableTextField
+                                                size="small"
+                                                disabled
+                                                value={display(formData.tft)}
+                                                onChange={() => { }}
+                                                sx={{
+                                                    width: 90,
+                                                    '& .MuiInputBase-root': {
+                                                        fontSize: '12px',
+                                                        backgroundColor: '#D5D5D8',
+                                                        padding: '4px 0'
+                                                    },
+                                                    '& .MuiInputBase-input': {
+                                                        padding: '4px 6px'
+                                                    }
+                                                }}
+                                            />
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                             <label style={{ fontSize: '12px', color: '#555', whiteSpace: 'nowrap' }}>Pallor/HB</label>
-                                            <input type="text" disabled value={display(formData.pallorHb)} style={{ width: 90, padding: '4px 6px', border: '1px solid #ddd', borderRadius: 4, background: '#D5D5D8' }} />
+                                            <ClearableTextField
+                                                size="small"
+                                                disabled
+                                                value={display(formData.pallorHb)}
+                                                onChange={() => { }}
+                                                sx={{
+                                                    width: 90,
+                                                    '& .MuiInputBase-root': {
+                                                        fontSize: '12px',
+                                                        backgroundColor: '#D5D5D8',
+                                                        padding: '4px 0'
+                                                    },
+                                                    '& .MuiInputBase-input': {
+                                                        padding: '4px 6px'
+                                                    }
+                                                }}
+                                            />
                                         </div>
                                     </div>
                                 )}
@@ -3734,21 +3916,25 @@ export default function Treatment() {
                                         Billed (Rs) <span style={{ color: 'red' }}>*</span>
                                     </label>
                                     <div style={{ position: 'relative' }}>
-                                        <input
-                                            type="text"
+                                        <ClearableTextField
+                                            fullWidth
+                                            size="small"
                                             value={billingData.billed}
-                                            onChange={(e) => handleBillingChange('billed', e.target.value)}
+                                            onChange={(val) => handleBillingChange('billed', val)}
                                             disabled
                                             placeholder="Billed Amount"
-                                            style={{
-                                                width: '100%',
-                                                padding: '6px 34px 6px 10px',
-                                                border: billingError ? '1px solid red' : '1px solid #ccc',
-                                                borderRadius: '4px',
-                                                fontSize: '13px',
-                                                backgroundColor: '#f5f5f5',
-                                                color: '#666',
-                                                cursor: 'not-allowed'
+                                            onClear={() => handleBillingChange('billed', '')}
+                                            sx={{
+                                                marginBottom: 0,
+                                                '& .MuiInputBase-root': {
+                                                    fontSize: '13px',
+                                                    backgroundColor: '#f5f5f5',
+                                                    color: '#666',
+                                                    paddingRight: '34px !important'
+                                                },
+                                                '& .MuiOutlinedInput-notchedOutline': {
+                                                    borderColor: billingError ? 'red !important' : '#ccc'
+                                                }
                                             }}
                                         />
                                         <button
@@ -3759,7 +3945,8 @@ export default function Treatment() {
                                             style={{
                                                 position: 'absolute',
                                                 right: 6,
-                                                top: '20%',
+                                                top: '50%',
+                                                transform: 'translateY(-50%)',
                                                 display: 'inline-flex',
                                                 alignItems: 'center',
                                                 justifyContent: 'center',
@@ -3777,7 +3964,8 @@ export default function Treatment() {
                                                 outline: 'none',
                                                 boxShadow: 'none',
                                                 transition: 'none',
-                                                opacity: isFormDisabled ? 0.7 : 1
+                                                opacity: isFormDisabled ? 0.7 : 1,
+                                                zIndex: 1
                                             }}
                                             disabled={isFormDisabled}
                                             onMouseDown={(e) => {
@@ -3796,37 +3984,44 @@ export default function Treatment() {
                                 {/* Discount (enabled/disabled based on status) */}
                                 <div>
                                     <label style={{ display: 'block', marginBottom: 4, fontWeight: 600, fontSize: 12 }}>Discount (Rs)</label>
-                                    <input
-                                        type="text"
+                                    <ClearableTextField
+                                        fullWidth
+                                        size="small"
                                         value={billingData.discount}
-                                        onChange={(e) => handleBillingChange('discount', e.target.value)}
+                                        onChange={(val) => handleBillingChange('discount', val)}
                                         disabled={isFormDisabled}
-                                        style={{
-                                            width: '100%',
-                                            border: '1px solid #ddd',
-                                            padding: '6px 8px',
-                                            fontSize: 12,
-                                            background: isFormDisabled ? '#D5D5D8' : 'white',
-                                            cursor: isFormDisabled ? 'not-allowed' : 'text',
-                                            color: isFormDisabled ? '#666' : '#333'
+                                        onClear={() => handleBillingChange('discount', '')}
+                                        error={!!discountError}
+                                        helperText={discountError}
+                                        inputProps={{
+                                            maxLength: Math.max(String(Math.floor(parseFloat(billingData.billed) || 0)).length, 1)
+                                        }}
+                                        sx={{
+                                            '& .MuiInputBase-root': {
+                                                fontSize: '12px',
+                                                background: isFormDisabled ? 'white' : 'white',
+                                                cursor: isFormDisabled ? 'not-allowed' : 'text',
+                                                color: isFormDisabled ? '#666' : '#333'
+                                            }
                                         }}
                                     />
-
-                                    {discountError && (
-                                        <div style={{ color: 'red', fontSize: '12px', marginTop: '4px' }}>
-                                            {discountError}
-                                        </div>
-                                    )}
                                 </div>
                                 {/* Dues (disabled) */}
                                 <div>
                                     <label style={{ display: 'block', marginBottom: 4, fontWeight: 600, fontSize: 12 }}>Dues (Rs)</label>
-                                    <input
-                                        type="text"
+                                    <ClearableTextField
+                                        fullWidth
+                                        size="small"
                                         disabled
                                         value={display(billingData.dues)}
-                                        onChange={(e) => handleBillingChange('dues', e.target.value)}
-                                        style={{ width: '100%', border: '1px solid #ddd', padding: '6px 8px', fontSize: 12, background: '#D5D5D8' }}
+                                        onChange={(val) => handleBillingChange('dues', val)}
+                                        onClear={() => handleBillingChange('dues', '')}
+                                        sx={{
+                                            '& .MuiInputBase-root': {
+                                                fontSize: '12px',
+                                                background: '#D5D5D8'
+                                            }
+                                        }}
                                     />
                                 </div>
                                 {/* A/C Balance (disabled) */}
@@ -3846,29 +4041,28 @@ export default function Treatment() {
                                         >Payment History</span>
                                     </label>
                                     <div style={{ position: 'relative', width: '100%' }}>
-                                        <input
-                                            type="text"
+                                        <ClearableTextField
+                                            fullWidth
+                                            size="small"
                                             value={Math.abs(parseFloat(billingData.acBalance) || 0).toFixed(2)}
                                             disabled
                                             placeholder="0.00"
-                                            style={{
-                                                width: '100%',
-                                                padding: '6px 10px',
-                                                paddingRight: folderAmountData?.totalAcBalance !== undefined &&
-                                                    folderAmountData?.totalAcBalance !== null &&
-                                                    folderAmountData?.rows &&
-                                                    folderAmountData.rows.length > 0 ? '120px' : '10px',
-                                                border: '1px solid #ccc',
-                                                borderRadius: '4px',
-                                                fontSize: '13px',
-                                                backgroundColor: '#f5f5f5',
-                                                color: folderAmountData?.totalAcBalance !== undefined &&
-                                                    folderAmountData?.totalAcBalance !== null &&
-                                                    folderAmountData?.rows &&
-                                                    folderAmountData.rows.length > 0
-                                                    ? (folderAmountData.totalAcBalance < 0 ? '#d32f2f' : '#2e7d32')
-                                                    : '#666',
-                                                cursor: 'not-allowed'
+                                            onChange={() => { }}
+                                            sx={{
+                                                '& .MuiInputBase-root': {
+                                                    fontSize: '13px',
+                                                    backgroundColor: '#f5f5f5',
+                                                    color: folderAmountData?.totalAcBalance !== undefined &&
+                                                        folderAmountData?.totalAcBalance !== null &&
+                                                        folderAmountData?.rows &&
+                                                        folderAmountData.rows.length > 0
+                                                        ? (folderAmountData.totalAcBalance < 0 ? '#d32f2f' : '#2e7d32')
+                                                        : '#666',
+                                                    paddingRight: folderAmountData?.totalAcBalance !== undefined &&
+                                                        folderAmountData?.totalAcBalance !== null &&
+                                                        folderAmountData?.rows &&
+                                                        folderAmountData.rows.length > 0 ? '120px' : '10px',
+                                                }
                                             }}
                                         />
                                         {folderAmountData?.totalAcBalance !== undefined &&
@@ -3894,11 +4088,18 @@ export default function Treatment() {
                                 {/* Receipt No (disabled) */}
                                 <div>
                                     <label style={{ display: 'block', marginBottom: 4, fontWeight: 600, fontSize: 12 }}>Receipt No</label>
-                                    <input
-                                        type="text"
+                                    <ClearableTextField
+                                        fullWidth
+                                        size="small"
                                         disabled
                                         value={display(billingData.receiptNo)}
-                                        style={{ width: '100%', border: '1px solid #ddd', padding: '6px 8px', fontSize: 12, background: '#D5D5D8' }}
+                                        onChange={() => { }}
+                                        sx={{
+                                            '& .MuiInputBase-root': {
+                                                fontSize: '12px',
+                                                background: '#D5D5D8'
+                                            }
+                                        }}
                                     />
                                 </div>
                             </div>
@@ -3907,94 +4108,136 @@ export default function Treatment() {
                                 {/* Collected (enabled/disabled based on status) */}
                                 <div>
                                     <label style={{ display: 'block', marginBottom: 4, fontWeight: 600, fontSize: 12 }}>Collected (Rs)</label>
-                                    <input
-                                        type="text"
+                                    <ClearableTextField
+                                        fullWidth
+                                        size="small"
                                         value={billingData.feesCollected}
-                                        onChange={(e) => handleBillingChange('feesCollected', e.target.value)}
+                                        onChange={(val) => handleBillingChange('feesCollected', val)}
                                         disabled={isFormDisabled}
-                                        style={{
-                                            width: '100%',
-                                            border: '1px solid #ddd',
-                                            padding: '6px 8px',
-                                            fontSize: 12,
-                                            background: isFormDisabled ? '#D5D5D8' : 'white',
-                                            cursor: isFormDisabled ? 'not-allowed' : 'text',
-                                            color: isFormDisabled ? '#666' : '#333'
+                                        onClear={() => handleBillingChange('feesCollected', '')}
+                                        error={!!collectedError}
+                                        helperText={collectedError}
+                                        inputProps={{ maxLength: 11 }}
+                                        sx={{
+                                            marginBottom: '18px',
+                                            '& .MuiInputBase-root': {
+                                                fontSize: '12px',
+                                                background: isFormDisabled ? '#D5D5D8' : 'white',
+                                                cursor: isFormDisabled ? 'not-allowed' : 'text',
+                                                color: isFormDisabled ? '#666' : '#333'
+                                            }
                                         }}
                                     />
                                 </div>
                                 {/* Reason (enabled/disabled based on status) */}
                                 <div>
                                     <label style={{ display: 'block', marginBottom: 4, fontWeight: 600, fontSize: 12 }}>Reason</label>
-                                    <input
-                                        type="text"
+                                    <ClearableTextField
+                                        fullWidth
+                                        size="small"
                                         value={billingData.reason}
-                                        onChange={(e) => handleBillingChange('reason', e.target.value)}
+                                        onChange={(val) => handleBillingChange('reason', val)}
                                         disabled={isFormDisabled}
-                                        style={{
-                                            width: '100%',
-                                            border: '1px solid #ddd',
-                                            padding: '6px 8px',
-                                            fontSize: 12,
-                                            background: isFormDisabled ? '#D5D5D8' : 'white',
-                                            cursor: isFormDisabled ? 'not-allowed' : 'text',
-                                            color: isFormDisabled ? '#666' : '#333'
+                                        onClear={() => handleBillingChange('reason', '')}
+                                        error={!!reasonError}
+                                        helperText={reasonError}
+                                        inputProps={{ maxLength: 201 }}
+                                        sx={{
+                                            marginBottom: '18px',
+                                            '& .MuiInputBase-root': {
+                                                fontSize: '12px',
+                                                background: isFormDisabled ? '#D5D5D8' : 'white',
+                                                cursor: isFormDisabled ? 'not-allowed' : 'text',
+                                                color: isFormDisabled ? '#666' : '#333'
+                                            }
                                         }}
                                     />
                                 </div>
                                 {/* Payment By (enabled/disabled based on status) */}
                                 <div>
                                     <label style={{ display: 'block', marginBottom: 4, fontWeight: 600, fontSize: 12 }}>Payment By</label>
-                                    <select
+                                    <ClearableTextField
+                                        fullWidth
+                                        select
+                                        size="small"
                                         value={billingData.paymentBy}
-                                        onChange={(e) => handleBillingChange('paymentBy', e.target.value)}
+                                        onChange={(val) => handleBillingChange('paymentBy', val)}
                                         disabled={isFormDisabled}
-                                        style={{
-                                            width: '100%',
-                                            border: '1px solid #ddd',
-                                            padding: '6px 8px',
-                                            fontSize: 12,
-                                            background: isFormDisabled ? '#D5D5D8' : 'white',
-                                            cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                            color: isFormDisabled ? '#666' : '#333'
+                                        disableClearable
+                                        error={!!paymentByError}
+                                        helperText={paymentByError}
+                                        sx={{
+                                            marginBottom: '18px',
+                                            '& .MuiInputBase-root': {
+                                                fontSize: '12px',
+                                                background: 'white',
+                                                cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                                color: isFormDisabled ? '#666' : '#333'
+                                            }
+                                        }}
+                                        SelectProps={{
+                                            MenuProps: {
+                                                PaperProps: {
+                                                    sx: {
+                                                        '& .MuiMenuItem-root.Mui-selected': {
+                                                            backgroundColor: '#eeeeee !important',
+                                                            '&:hover': {
+                                                                backgroundColor: '#e0e0e0 !important',
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
                                         }}
                                     >
                                         {paymentByOptions.length === 0 ? (
-                                            <option value="">—</option>
+                                            <MenuItem value="">—</MenuItem>
                                         ) : (
                                             paymentByOptions.map(opt => (
-                                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                                <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>
                                             ))
                                         )}
-                                    </select>
+                                    </ClearableTextField>
                                 </div>
                                 {/* Payment Remark (enabled/disabled based on status) */}
                                 <div>
                                     <label style={{ display: 'block', marginBottom: 4, fontWeight: 600, fontSize: 12 }}>Payment Remark</label>
-                                    <input
-                                        type="text"
+                                    <ClearableTextField
+                                        fullWidth
+                                        size="small"
                                         value={billingData.paymentRemark}
-                                        onChange={(e) => handleBillingChange('paymentRemark', e.target.value)}
+                                        onChange={(val) => handleBillingChange('paymentRemark', val)}
                                         disabled={isFormDisabled}
-                                        style={{
-                                            width: '100%',
-                                            border: '1px solid #ddd',
-                                            padding: '6px 8px',
-                                            fontSize: 12,
-                                            background: isFormDisabled ? '#D5D5D8' : 'white',
-                                            cursor: isFormDisabled ? 'not-allowed' : 'text',
-                                            color: isFormDisabled ? '#666' : '#333'
+                                        onClear={() => handleBillingChange('paymentRemark', '')}
+                                        error={!!paymentRemarkError}
+                                        helperText={paymentRemarkError}
+                                        inputProps={{ maxLength: 201 }}
+                                        sx={{
+                                            marginBottom: '18px',
+                                            '& .MuiInputBase-root': {
+                                                fontSize: '12px',
+                                                background: 'white',
+                                                cursor: isFormDisabled ? 'not-allowed' : 'text',
+                                                color: isFormDisabled ? '#666' : '#333'
+                                            }
                                         }}
                                     />
                                 </div>
                                 {/* Receipt Date (disabled) */}
                                 <div>
                                     <label style={{ display: 'block', marginBottom: 4, fontWeight: 600, fontSize: 12 }}>Receipt Date</label>
-                                    <input
-                                        type="text"
+                                    <ClearableTextField
+                                        fullWidth
+                                        size="small"
                                         disabled
                                         value={formatDateDdMmmYy(billingData.receiptDate)}
-                                        style={{ width: '100%', border: '1px solid #ddd', padding: '6px 8px', fontSize: 12, background: '#D5D5D8' }}
+                                        onChange={() => { }}
+                                        sx={{
+                                            '& .MuiInputBase-root': {
+                                                fontSize: '12px',
+                                                background: '#D5D5D8'
+                                            }
+                                        }}
                                     />
                                 </div>
                             </div>

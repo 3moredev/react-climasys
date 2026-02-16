@@ -444,7 +444,7 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
                     {selectedOptions.length > 0 && (
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', padding: '6px', paddingTop: 0, maxHeight: '100px', overflowY: 'auto' }}>
                         {selectedOptions.map((group) => (
-                          <label key={`chip-${group.id}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 10px', backgroundColor: '#e3f2fd', borderRadius: '6px', fontSize: '12px', border: '1px solid #bbdefb' }}>
+                          <label key={`chip-${group.id}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 10px', backgroundColor: '#eeeeee', borderRadius: '6px', fontSize: '12px', border: '1px solid #e0e0e0' }}>
                             <input
                               type="checkbox"
                               checked

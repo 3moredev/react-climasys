@@ -173,10 +173,27 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
 
     const handleComplaintCommentChange = (rowValue: string, text: string) => {
         const config = getFieldConfig('complaintComment', 'visit');
-        if (config?.maxLength && text.length > config.maxLength) {
+        const maxLength = config?.maxLength || 500;
+
+        // Use the same logic as handleInputChange for consistency
+        const { allowed, error } = validateField('complaintComment', text, maxLength, 'Duration/Comment', 'visit');
+
+        if (!allowed) {
+            setValidationErrors(prev => ({ ...prev, [`complaintComment_${rowValue}`]: error }));
             return;
         }
+
         setComplaintsRows(prev => prev.map(r => r.value === rowValue ? { ...r, comment: text } : r));
+
+        setValidationErrors(prev => {
+            const next = { ...prev };
+            if (error) {
+                next[`complaintComment_${rowValue}`] = error;
+            } else {
+                delete next[`complaintComment_${rowValue}`];
+            }
+            return next;
+        });
     };
 
     const handleRemoveComplaint = (rowValue: string) => {
@@ -1821,26 +1838,48 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                         </Grid>
                         <Grid item xs={12} sm={6} md={2}>
                             {isDoctorReferral() ? (
-                                (formData.referralName && formData.referralName.trim() !== '') || selectedDoctor !== null ? (
-                                    <Box sx={{ mb: 2 }}>
-                                        <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
-                                            {isDoctorReferral() ? 'Doctor Name' : 'Referral Name'}
-                                        </Typography>
+                                <Box sx={{ mb: 2 }}>
+                                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
+                                        {isDoctorReferral() ? 'Doctor Name' : 'Referral Name'}
+                                    </Typography>
+                                    <Box position="relative">
                                         <ClearableTextField
                                             fullWidth
                                             size="small"
-                                            value={formData.referralName}
-                                            onChange={(value) => handleInputChange('referralName', value)}
+                                            placeholder={isDoctorReferral() ? 'Type Doctor Name' : 'Type Referral Name'}
+                                            value={selectedDoctor ? formData.referralName : referralNameSearch}
+                                            onChange={(value) => {
+                                                if (selectedDoctor) {
+                                                    handleInputChange('referralName', value);
+                                                } else {
+                                                    handleReferralNameSearch(value);
+                                                }
+                                            }}
                                             onClear={() => {
                                                 handleInputChange('referralName', '');
                                                 setReferralNameSearch('');
                                                 setSelectedDoctor(null);
                                                 setReferralNameOptions([]);
                                             }}
+                                            onBlur={() => {
+                                                // When user clicks away, ensure the typed name is saved
+                                                if (!selectedDoctor && referralNameSearch && referralNameSearch !== formData.referralName) {
+                                                    handleInputChange('referralName', referralNameSearch);
+                                                }
+                                            }}
                                             onKeyDown={(e) => {
-                                                // Prevent any keyboard input when doctor is selected (except Tab for navigation)
-                                                if (selectedDoctor && e.key !== 'Tab') {
-                                                    e.preventDefault();
+                                                // Allow Tab for navigation
+                                                if (e.key === 'Tab') return;
+
+                                                // If doctor is selected and user starts typing or presses Backspace
+                                                if (selectedDoctor && (e.key.length === 1 || e.key === 'Backspace')) {
+                                                    // Clear the selection state and start a new search
+                                                    const initialSearch = e.key.length === 1 ? e.key : '';
+
+                                                    setSelectedDoctor(null);
+                                                    setReferralNameSearch(initialSearch);
+                                                    handleInputChange('referralName', '');
+                                                    setReferralNameOptions([]);
                                                 }
                                             }}
                                             disabled={readOnly || isSelfReferral}
@@ -1854,16 +1893,17 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                 },
                                                 '& .MuiInputBase-input.Mui-disabled::placeholder': {
                                                     color: '#666666 !important',
-                                                    opacity: '0.5 !important'
+                                                    opacity: '0.5 !important',
+                                                    WebkitTextFillColor: '#666666 !important'
                                                 }
                                             }}
                                             variant="outlined"
-                                            placeholder={isDoctorReferral() ? 'Type Doctor Name' : 'Type Referral Name'}
                                             error={!!validationErrors.referralName}
                                             helperText={validationErrors.referralName}
                                             InputProps={{
                                                 endAdornment: (
                                                     <React.Fragment>
+                                                        {!selectedDoctor && isSearchingReferral && <CircularProgress color="inherit" size={20} sx={{ mr: 1 }} />}
                                                         <InputAdornment position="end">
                                                             <IconButton
                                                                 size="small"
@@ -1888,122 +1928,51 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                 )
                                             }}
                                         />
+                                        {/* Search Results Dropdown */}
+                                        {!selectedDoctor && referralNameOptions.length > 0 && (
+                                            <Box sx={{
+                                                position: 'absolute',
+                                                top: 'calc(100% + 4px)',
+                                                left: 0,
+                                                right: 0,
+                                                backgroundColor: 'white',
+                                                borderRadius: '4px',
+                                                boxShadow: '0px 5px 5px -3px rgba(0,0,0,0.2), 0px 8px 10px 1px rgba(0,0,0,0.14), 0px 3px 14px 2px rgba(0,0,0,0.12)',
+                                                zIndex: 1000,
+                                                maxHeight: '200px',
+                                                overflowY: 'auto'
+                                            }}>
+                                                {referralNameOptions.map((option) => (
+                                                    <Box
+                                                        key={option.id}
+                                                        onMouseDown={() => {
+                                                            console.log('DEBUG: Doctor selected from list', option)
+                                                            setSelectedDoctor((option as any).fullData);
+                                                            setFormData(prev => ({
+                                                                ...prev,
+                                                                referralName: option.name,
+                                                                referralContact: (option as any).fullData?.doctorMob || '',
+                                                                referralEmail: (option as any).fullData?.doctorMail || '',
+                                                                referralAddress: (option as any).fullData?.doctorAddress || ''
+                                                            }));
+                                                            setReferralNameSearch(option.name);
+                                                            setReferralNameOptions([]);
+                                                        }}
+                                                        sx={{
+                                                            padding: '8px 12px',
+                                                            cursor: 'pointer',
+                                                            fontSize: '14px',
+                                                            borderBottom: '1px solid #f0f0f0',
+                                                            '&:hover': { backgroundColor: '#f5f5f5' }
+                                                        }}
+                                                    >
+                                                        {option.name}
+                                                    </Box>
+                                                ))}
+                                            </Box>
+                                        )}
                                     </Box>
-                                ) : (
-                                    <Box sx={{ mb: 2 }}>
-                                        <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
-                                            {isDoctorReferral() ? 'Doctor Name' : 'Referral Name'}
-                                        </Typography>
-                                        <Box position="relative">
-                                            <ClearableTextField
-                                                fullWidth
-                                                size="small"
-                                                placeholder={isDoctorReferral() ? 'Type Doctor Name' : 'Type Referral Name'}
-                                                value={referralNameSearch}
-                                                onChange={(value) => handleReferralNameSearch(value)}
-                                                onClear={() => {
-                                                    handleInputChange('referralName', '');
-                                                    setReferralNameSearch('');
-                                                    setSelectedDoctor(null);
-                                                    setReferralNameOptions([]);
-                                                }}
-                                                onBlur={() => {
-                                                    // When user clicks away, ensure the typed name is saved
-                                                    if (referralNameSearch && referralNameSearch !== formData.referralName) {
-                                                        handleInputChange('referralName', referralNameSearch);
-                                                    }
-                                                }}
-                                                disabled={readOnly || isSelfReferral}
-                                                sx={{
-                                                    '& .MuiInputBase-root.Mui-disabled': {
-                                                        backgroundColor: '#f5f5f5 !important'
-                                                    },
-                                                    '& .MuiInputBase-input.Mui-disabled': {
-                                                        color: '#666666 !important',
-                                                        WebkitTextFillColor: '#666666 !important'
-                                                    },
-                                                    '& .MuiInputBase-input.Mui-disabled::placeholder': {
-                                                        color: '#666666 !important',
-                                                        opacity: '0.5 !important'
-                                                    }
-                                                }}
-                                                variant="outlined"
-                                                error={!!validationErrors.referralName}
-                                                helperText={validationErrors.referralName}
-                                                InputProps={{
-                                                    endAdornment: (
-                                                        <React.Fragment>
-                                                            {isSearchingReferral && <CircularProgress color="inherit" size={20} sx={{ mr: 1 }} />}
-                                                            <InputAdornment position="end">
-                                                                <IconButton
-                                                                    size="small"
-                                                                    onClick={() => !readOnly && !isSelfReferral && setShowReferralPopup(true)}
-                                                                    disabled={readOnly || isSelfReferral}
-                                                                    title="Add New Referral Doctor"
-                                                                    sx={{
-                                                                        backgroundColor: readOnly ? '#9e9e9e' : '#1976d2',
-                                                                        color: 'white',
-                                                                        width: 24,
-                                                                        height: 24,
-                                                                        padding: 0,
-                                                                        '&:hover': {
-                                                                            backgroundColor: readOnly ? '#9e9e9e' : '#1565c0',
-                                                                        }
-                                                                    }}
-                                                                >
-                                                                    <Add sx={{ fontSize: 16 }} />
-                                                                </IconButton>
-                                                            </InputAdornment>
-                                                        </React.Fragment>
-                                                    )
-                                                }}
-                                            />
-                                            {/* Search Results Dropdown */}
-                                            {referralNameOptions.length > 0 && (
-                                                <Box sx={{
-                                                    position: 'absolute',
-                                                    top: 'calc(100% + 4px)',
-                                                    left: 0,
-                                                    right: 0,
-                                                    backgroundColor: 'white',
-                                                    borderRadius: '4px',
-                                                    boxShadow: '0px 5px 5px -3px rgba(0,0,0,0.2), 0px 8px 10px 1px rgba(0,0,0,0.14), 0px 3px 14px 2px rgba(0,0,0,0.12)',
-                                                    zIndex: 1000,
-                                                    maxHeight: '200px',
-                                                    overflowY: 'auto'
-                                                }}>
-                                                    {referralNameOptions.map((option) => (
-                                                        <Box
-                                                            key={option.id}
-                                                            onMouseDown={() => {
-                                                                console.log('DEBUG: Doctor selected from list', option)
-                                                                setSelectedDoctor((option as any).fullData);
-                                                                setFormData(prev => ({
-                                                                    ...prev,
-                                                                    referralName: option.name,
-                                                                    referralContact: (option as any).fullData?.doctorMob || '',
-                                                                    referralEmail: (option as any).fullData?.doctorMail || '',
-                                                                    referralAddress: (option as any).fullData?.doctorAddress || ''
-                                                                }));
-                                                                setReferralNameSearch(option.name);
-                                                                setReferralNameOptions([]);
-                                                            }}
-                                                            sx={{
-                                                                padding: '8px 12px',
-                                                                cursor: 'pointer',
-                                                                fontSize: '14px',
-                                                                borderBottom: '1px solid #f0f0f0',
-                                                                '&:hover': { backgroundColor: '#f5f5f5' }
-                                                            }}
-                                                        >
-                                                            {option.name}
-                                                        </Box>
-                                                    ))}
-                                                </Box>
-                                            )}
-                                        </Box>
-                                    </Box>
-                                )
+                                </Box>
                             ) : (
                                 <Box sx={{ mb: 2 }}>
                                     <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
@@ -2333,7 +2302,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                         id="textarea-autosize"
                                         style={{
                                             border: validationErrors.pastSurgicalHistory
-                                                ? '1px solid #d32f2f'
+                                                ? (validationErrors.pastSurgicalHistory.toLowerCase().includes('exceed') ? '1px solid #616161' : '1px solid #d32f2f')
                                                 : '1px solid #b7b7b7',
                                             borderRadius: '8px',
                                             padding: '8px',
@@ -2344,8 +2313,11 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     {validationErrors.pastSurgicalHistory && (
                                         <Typography
                                             variant="caption"
-                                            color="error"
-                                            sx={{ mt: 0.5, display: 'block' }}
+                                            sx={{
+                                                mt: 0.5,
+                                                display: 'block',
+                                                color: validationErrors.pastSurgicalHistory.toLowerCase().includes('exceed') ? '#757575' : '#d32f2f'
+                                            }}
                                         >
                                             {validationErrors.pastSurgicalHistory}
                                         </Typography>
@@ -2568,7 +2540,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                                                 cursor: readOnly ? 'not-allowed' : 'pointer',
                                                                                 fontSize: '12px',
                                                                                 border: 'none',
-                                                                                backgroundColor: checked ? '#e3f2fd' : 'transparent',
+                                                                                backgroundColor: checked ? '#eeeeee' : 'transparent',
                                                                                 borderRadius: '3px',
                                                                                 fontWeight: checked ? '600' : '400',
                                                                                 opacity: readOnly ? 0.6 : 1,
@@ -2643,11 +2615,11 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                 <textarea
                                     rows={2}
                                     value={formData.visitComments}
-                                    onChange={(e) => handleInputChange('visitComments', e.target.value)}
+                                    onChange={(e) => handleInputChange('visitComments', e.target.value.slice(0, getFieldConfig('visitComments', 'visit')?.maxLength || 1000))}
                                     disabled={readOnly}
                                     style={{
                                         border: validationErrors.visitComments
-                                            ? '1px solid #d32f2f'
+                                            ? (validationErrors.visitComments.toLowerCase().includes('exceed') ? '1px solid #616161' : '1px solid #d32f2f')
                                             : '1px solid #b7b7b7',
                                         borderRadius: '8px',
                                         padding: '8px',
@@ -2658,8 +2630,11 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                 {validationErrors.visitComments && (
                                     <Typography
                                         variant="caption"
-                                        color="error"
-                                        sx={{ mt: 0.5, display: 'block' }}
+                                        sx={{
+                                            mt: 0.5,
+                                            display: 'block',
+                                            color: validationErrors.visitComments.toLowerCase().includes('exceed') ? '#757575' : '#d32f2f'
+                                        }}
                                     >
                                         {validationErrors.visitComments}
                                     </Typography>
@@ -2680,11 +2655,11 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                 <textarea
                                     rows={2}
                                     value={formData.currentMedicines}
-                                    onChange={(e) => handleInputChange('currentMedicines', e.target.value)}
+                                    onChange={(e) => handleInputChange('currentMedicines', e.target.value.slice(0, getFieldConfig('currentMedicines', 'visit')?.maxLength || 1000))}
                                     disabled={readOnly}
                                     style={{
                                         border: validationErrors.currentMedicines
-                                            ? '1px solid #d32f2f'
+                                            ? (validationErrors.currentMedicines.toLowerCase().includes('exceed') ? '1px solid #616161' : '1px solid #d32f2f')
                                             : '1px solid #b7b7b7',
                                         borderRadius: '8px',
                                         padding: '8px',
@@ -2695,8 +2670,11 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                 {validationErrors.currentMedicines && (
                                     <Typography
                                         variant="caption"
-                                        color="error"
-                                        sx={{ mt: 0.5, display: 'block' }}
+                                        sx={{
+                                            mt: 0.5,
+                                            display: 'block',
+                                            color: validationErrors.currentMedicines.toLowerCase().includes('exceed') ? '#757575' : '#d32f2f'
+                                        }}
                                     >
                                         {validationErrors.currentMedicines}
                                     </Typography>
@@ -2774,9 +2752,9 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                             padding: '12px',
                                                             borderBottom: '1px solid #eee',
                                                             color: 'black',
-                                                            height: '38px',
                                                             fontSize: '12px',
-                                                            width: '10%'
+                                                            width: '10%',
+                                                            verticalAlign: 'top'
                                                         }}>
                                                             {idx + 1}
                                                         </td>
@@ -2784,15 +2762,16 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                             padding: '12px',
                                                             borderBottom: '1px solid #eee',
                                                             color: 'black',
-                                                            height: '38px',
                                                             fontSize: '12px',
-                                                            width: '30%'
+                                                            width: '30%',
+                                                            verticalAlign: 'top'
                                                         }}>
                                                             {row.label}
                                                         </td>
                                                         <td style={{
-                                                            padding: '12px',
-                                                            width: '40%'
+                                                            width: '40%',
+                                                            padding: '4px 0px',
+                                                            verticalAlign: 'top'
                                                         }}>
                                                             <ClearableTextField
                                                                 fullWidth
@@ -2802,16 +2781,37 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                                 disabled={readOnly}
                                                                 placeholder="Enter Duration/Comment"
                                                                 variant="outlined"
-                                                                inputProps={{ maxLength: getFieldConfig('complaintComment', 'visit')?.maxLength }}
-                                                                InputProps={{ disableUnderline: true }}
+                                                                error={!!validationErrors[`complaintComment_${row.value}`] || (row.comment || '').length >= 500}
+                                                                helperText={(row.comment || '').length >= 500 ? 'Comment cannot exceed 500 characters' : (validationErrors[`complaintComment_${row.value}`] || '')}
+                                                                inputProps={{ maxLength: 500 }}
+                                                                sx={{
+                                                                    marginBottom: 0,
+                                                                    '& .MuiOutlinedInput-root': {
+                                                                        height: '32px',
+                                                                        borderRadius: 0,
+                                                                        backgroundColor: readOnly ? '#f5f5f5' : 'transparent',
+                                                                        fontSize: '11px',
+                                                                        '& fieldset': { border: 'none' }
+                                                                    },
+                                                                    '& .MuiFormHelperText-root': {
+                                                                        fontSize: '9px',
+                                                                        padding: '2px 4px 0 4px',
+                                                                        color: (row.comment || '').length === 500 ? '#666' : '#d32f2f',
+                                                                        position: 'static !important'
+                                                                    },
+                                                                    '& .MuiInputBase-input': {
+                                                                        padding: '8px 10px',
+                                                                        color: readOnly ? '#666' : '#333'
+                                                                    }
+                                                                }}
                                                             />
                                                         </td>
                                                         <td style={{
                                                             padding: '12px',
                                                             borderBottom: '1px solid #eee',
                                                             textAlign: 'center',
-                                                            height: '38px',
-                                                            width: '20%'
+                                                            width: '20%',
+                                                            verticalAlign: 'top'
                                                         }}>
                                                             <button
                                                                 onClick={() => !readOnly && handleRemoveComplaint(row.value)}

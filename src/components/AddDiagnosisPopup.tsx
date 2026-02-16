@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Close } from '@mui/icons-material';
 import {
     Snackbar,
-    TextField,
     Button,
     Dialog,
     DialogTitle,
@@ -15,6 +14,7 @@ import {
 } from '@mui/material';
 import { useSession } from '../store/hooks/useSession';
 import { validateField } from '../utils/validationUtils';
+import ClearableTextField from '../components/ClearableTextField';
 
 interface AddDiagnosisPopupProps {
     open: boolean;
@@ -180,26 +180,23 @@ const AddDiagnosisPopup: React.FC<AddDiagnosisPopupProps> = ({ open, onClose, on
                                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className="mb-0">
                                     Short Description <span style={{ color: 'red' }}>*</span> <span className="text-muted">(Displayed on UI)</span>
                                 </Typography>
-                                <TextField
+                                <ClearableTextField
                                     fullWidth
                                     placeholder="Diagnosis Short Description"
                                     variant="outlined"
                                     size="small"
                                     value={shortDescription}
-                                    onChange={(e) => {
-                                        const val = e.target.value.toUpperCase();
-                                        const { allowed, error } = validateField('shortDescription', val, undefined, undefined, 'diagnosis');
+                                    onChange={(val) => {
+                                        const capitalized = val.toUpperCase();
+                                        const { allowed, error } = validateField('shortDescription', capitalized, undefined, undefined, 'diagnosis');
                                         if (allowed) {
-                                            setShortDescription(val);
+                                            setShortDescription(capitalized);
                                         }
                                         setErrors(prev => ({ ...prev, shortDescription: error }));
                                     }}
                                     disabled={!!editData}
                                     error={!!errors.shortDescription && !errors.shortDescription.toLowerCase().includes('exceed')}
                                     helperText={errors.shortDescription}
-                                    FormHelperTextProps={{
-                                        sx: { color: errors.shortDescription?.toLowerCase().includes('exceed') ? '#666 !important' : undefined }
-                                    }}
                                 />
                             </Box>
                         </Grid>
@@ -208,25 +205,22 @@ const AddDiagnosisPopup: React.FC<AddDiagnosisPopupProps> = ({ open, onClose, on
                                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className="mb-0">
                                     Diagnosis Description <span style={{ color: 'red' }}>*</span>
                                 </Typography>
-                                <TextField
+                                <ClearableTextField
                                     fullWidth
                                     placeholder="Diagnosis Description"
                                     variant="outlined"
                                     size="small"
                                     value={diagnosisDescription}
-                                    onChange={(e) => {
-                                        const val = e.target.value.toUpperCase();
-                                        const { allowed, error } = validateField('diagnosisDescription', val, undefined, undefined, 'diagnosis');
+                                    onChange={(val) => {
+                                        const capitalized = val.toUpperCase();
+                                        const { allowed, error } = validateField('diagnosisDescription', capitalized, undefined, undefined, 'diagnosis');
                                         if (allowed) {
-                                            setDiagnosisDescription(val);
+                                            setDiagnosisDescription(capitalized);
                                         }
                                         setErrors(prev => ({ ...prev, diagnosisDescription: error }));
                                     }}
                                     error={!!errors.diagnosisDescription && !errors.diagnosisDescription.toLowerCase().includes('exceed')}
                                     helperText={errors.diagnosisDescription}
-                                    FormHelperTextProps={{
-                                        sx: { color: errors.diagnosisDescription?.toLowerCase().includes('exceed') ? '#666 !important' : undefined }
-                                    }}
                                 />
                             </Box>
                         </Grid>
@@ -235,14 +229,13 @@ const AddDiagnosisPopup: React.FC<AddDiagnosisPopupProps> = ({ open, onClose, on
                                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className="mb-0">
                                     Priority <span style={{ color: 'red' }}>*</span>
                                 </Typography>
-                                <TextField
+                                <ClearableTextField
                                     fullWidth
                                     placeholder="Priority"
                                     variant="outlined"
                                     size="small"
                                     value={priority}
-                                    onChange={(e) => {
-                                        const val = e.target.value;
+                                    onChange={(val) => {
                                         const { allowed, error } = validateField('priority', val, undefined, undefined, 'diagnosis');
                                         if (allowed) {
                                             setPriority(val);
@@ -251,9 +244,6 @@ const AddDiagnosisPopup: React.FC<AddDiagnosisPopupProps> = ({ open, onClose, on
                                     }}
                                     error={!!errors.priority && !errors.priority.toLowerCase().includes('exceed')}
                                     helperText={errors.priority}
-                                    FormHelperTextProps={{
-                                        sx: { color: errors.priority?.toLowerCase().includes('exceed') ? '#666 !important' : undefined }
-                                    }}
                                 />
                             </Box>
                         </Grid>

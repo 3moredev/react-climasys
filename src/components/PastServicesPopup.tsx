@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Close } from '@mui/icons-material';
+import { TextField, MenuItem } from '@mui/material';
+import ClearableTextField from './ClearableTextField';
 import { SessionInfo } from '../services/sessionService';
 import { patientService, MasterListsRequest } from '../services/patientService';
 
@@ -101,7 +103,7 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                 // const doctorId = sessionData?.doctorId as unknown as string | undefined;
                 const clinicId = sessionData?.clinicId as unknown as string | undefined;
                 const shiftFromSession = (sessionData as any)?.shiftId;
-                if (!patientId ||  !clinicId) return;
+                if (!patientId || !clinicId) return;
 
                 // First, find the visitNo and shiftId for the given date
                 // Primary: fetch detailed visits
@@ -187,18 +189,18 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                     const mlResp: any = await patientService.getMasterListsForServices(params);
                     console.log('getMasterListsForServices response:', mlResp);
                     const dataRootMl = (mlResp as any)?.data || {};
-                    
+
                     // Get billingFields from response (priority) or fallback to uiFields
                     const billingFields = (dataRootMl as any)?.billingFields || (mlResp as any)?.billingFields || {};
                     const uiFields = (dataRootMl as any)?.uiFields || (mlResp as any)?.uiFields || {};
-                    
+
                     const toStr = (v: any) => (v === undefined || v === null ? '' : String(v));
                     const toNumStr = (v: any) => {
                         if (v === undefined || v === null || v === '') return '0';
                         const num = parseFloat(String(v));
                         return isNaN(num) ? '0' : num.toFixed(2);
                     };
-                    
+
                     // Format receipt date from UTC to local time in dd-MMM-yy format
                     const formatReceiptDate = (dateValue: any): string => {
                         if (!dateValue) return '';
@@ -206,7 +208,7 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                             // Parse the date (handles ISO strings, timestamps, etc.)
                             const date = new Date(dateValue);
                             if (isNaN(date.getTime())) return String(dateValue);
-                            
+
                             // Convert to local time and format as dd-MMM-yy
                             const day = String(date.getDate()).padStart(2, '0');
                             const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -334,7 +336,7 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                             <Close style={{ color: '#fff' }} />
                         </button>
                     </div>
-                    
+
                     {/* Patient and Doctor info line */}
                     <div style={{
                         display: 'flex',
@@ -520,8 +522,8 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                                     {services.map((service, index) => (
                                         <tr key={index} style={{
                                             borderBottom: '1px solid #e0e0e0',
-                                            backgroundColor: service.selected 
-                                                ? '#e3f2fd' 
+                                            backgroundColor: service.selected
+                                                ? '#eeeeee'
                                                 : (index % 2 === 0 ? '#f8f9fa' : 'white')
                                         }}>
                                             <td style={{
@@ -587,7 +589,7 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                                 </tbody>
                             </table>
                         </div>
-                        
+
                         {/* Fields Section - 12 fields in 4 rows (3 fields per row) */}
                         <div style={{
                             marginTop: '20px',
@@ -596,339 +598,129 @@ const PastServicesPopup: React.FC<PastServicesPopupProps> = ({ open, onClose, da
                             gap: '15px'
                         }}>
                             {/* Row 1 */}
-                            <div style={{
-                                display: 'flex',
-                                flexDirection: 'column'
-                            }}>
-                                <label style={{
-                                    fontSize: '12px',
-                                    fontWeight: 'bold',
-                                    color: '#333',
-                                    marginBottom: '5px'
-                                }}>
-                                    Billed (Rs)
-                                </label>
-                                <input
-                                    type="text"
-                                    value={billing.billed}
-                                    onChange={(e) => setBilling(b => ({ ...b, billed: e.target.value }))}
-                                    disabled
-                                    style={{
-                                        padding: '8px 10px',
-                                        border: '1px solid #ccc',
-                                        borderRadius: '4px',
-                                        fontSize: '13px',
-                                        background: '#D5D5D8',
-                                        cursor: 'not-allowed'
-                                    }}
-                                />
-                            </div>
-                            <div style={{
-                                display: 'flex',
-                                flexDirection: 'column'
-                            }}>
-                                <label style={{
-                                    fontSize: '12px',
-                                    fontWeight: 'bold',
-                                    color: '#333',
-                                    marginBottom: '5px'
-                                }}>
-                                    Discount (Rs)
-                                </label>
-                                <input
-                                    type="text"
-                                    value={billing.discount}
-                                    onChange={(e) => setBilling(b => ({ ...b, discount: e.target.value }))}
-                                    disabled
-                                    style={{
-                                        padding: '8px 10px',
-                                        border: '1px solid #ccc',
-                                        borderRadius: '4px',
-                                        fontSize: '13px',
-                                        background: '#D5D5D8',
-                                        cursor: 'not-allowed'
-                                    }}
-                                />
-                            </div>
-                            <div style={{
-                                display: 'flex',
-                                flexDirection: 'column'
-                            }}>
-                                <label style={{
-                                    fontSize: '12px',
-                                    fontWeight: 'bold',
-                                    color: '#333',
-                                    marginBottom: '5px'
-                                }}>
-                                    A/C Balance (Rs)
-                                </label>
-                                <input
-                                    type="text"
-                                    value={billing.acBalance}
-                                    onChange={(e) => setBilling(b => ({ ...b, acBalance: e.target.value }))}
-                                    disabled
-                                    style={{
-                                        padding: '8px 10px',
-                                        border: '1px solid #ccc',
-                                        borderRadius: '4px',
-                                        fontSize: '13px',
-                                        background: '#D5D5D8',
-                                        cursor: 'not-allowed'
-                                    }}
-                                />
-                            </div>
-                            
+                            <ClearableTextField
+                                label="Billed (Rs)"
+                                fullWidth
+                                variant="outlined"
+                                size="small"
+                                value={billing.billed}
+                                onChange={(val) => setBilling(b => ({ ...b, billed: val }))}
+                                disabled
+                            />
+                            <ClearableTextField
+                                label="Discount (Rs)"
+                                fullWidth
+                                variant="outlined"
+                                size="small"
+                                value={billing.discount}
+                                onChange={(val) => setBilling(b => ({ ...b, discount: val }))}
+                                disabled
+                            />
+                            <ClearableTextField
+                                label="A/C Balance (Rs)"
+                                fullWidth
+                                variant="outlined"
+                                size="small"
+                                value={billing.acBalance}
+                                onChange={(val) => setBilling(b => ({ ...b, acBalance: val }))}
+                                disabled
+                            />
+
                             {/* Row 2 */}
-                            <div style={{
-                                display: 'flex',
-                                flexDirection: 'column'
-                            }}>
-                                <label style={{
-                                    fontSize: '12px',
-                                    fontWeight: 'bold',
-                                    color: '#333',
-                                    marginBottom: '5px'
-                                }}>
-                                    Dues (Rs)
-                                </label>
-                                <input
-                                    type="text"
-                                    value={billing.dues}
-                                    onChange={(e) => setBilling(b => ({ ...b, dues: e.target.value }))}
-                                    disabled
-                                    style={{
-                                        padding: '8px 10px',
-                                        border: '1px solid #ccc',
-                                        borderRadius: '4px',
-                                        fontSize: '13px',
-                                        background: '#D5D5D8',
-                                        cursor: 'not-allowed'
-                                    }}
-                                />
-                            </div>
-                            <div style={{
-                                display: 'flex',
-                                flexDirection: 'column'
-                            }}>
-                                <label style={{
-                                    fontSize: '12px',
-                                    fontWeight: 'bold',
-                                    color: '#333',
-                                    marginBottom: '5px'
-                                }}>
-                                    Collected
-                                </label>
-                                <input
-                                    type="text"
-                                    value={billing.feesCollected}
-                                    onChange={(e) => setBilling(b => ({ ...b, feesCollected: e.target.value }))}
-                                    disabled
-                                    style={{
-                                        padding: '8px 10px',
-                                        border: '1px solid #ccc',
-                                        borderRadius: '4px',
-                                        fontSize: '13px',
-                                        background: '#D5D5D8',
-                                        cursor: 'not-allowed'
-                                    }}
-                                />
-                            </div>
-                            <div style={{
-                                display: 'flex',
-                                flexDirection: 'column'
-                            }}>
-                                <label style={{
-                                    fontSize: '12px',
-                                    fontWeight: 'bold',
-                                    color: '#333',
-                                    marginBottom: '5px'
-                                }}>
-                                    Reason
-                                </label>
-                                <input
-                                    type="text"
-                                    value={billing.reason}
-                                    disabled
-                                    style={{
-                                        padding: '8px 10px',
-                                        border: '1px solid #ccc',
-                                        borderRadius: '4px',
-                                        fontSize: '13px',
-                                        background: '#D5D5D8',
-                                        cursor: 'not-allowed'
-                                    }}
-                                />
-                            </div>
-                            
+                            <ClearableTextField
+                                label="Dues (Rs)"
+                                fullWidth
+                                variant="outlined"
+                                size="small"
+                                value={billing.dues}
+                                onChange={(val) => setBilling(b => ({ ...b, dues: val }))}
+                                disabled
+                            />
+                            <ClearableTextField
+                                label="Collected"
+                                fullWidth
+                                variant="outlined"
+                                size="small"
+                                value={billing.feesCollected}
+                                onChange={(val) => setBilling(b => ({ ...b, feesCollected: val }))}
+                                disabled
+                            />
+                            <ClearableTextField
+                                label="Reason"
+                                fullWidth
+                                variant="outlined"
+                                size="small"
+                                value={billing.reason}
+                                onChange={(val) => setBilling(b => ({ ...b, reason: val }))}
+                                disabled
+                            />
+
                             {/* Row 3 */}
-                            <div style={{
-                                display: 'flex',
-                                flexDirection: 'column'
-                            }}>
-                                <label style={{
-                                    fontSize: '12px',
-                                    fontWeight: 'bold',
-                                    color: '#333',
-                                    marginBottom: '5px'
-                                }}>
-                                    Payment By
-                                </label>
-                                <select
-                                    disabled
-                                    value={billing.paymentBy}
-                                    onChange={(e) => setBilling(b => ({ ...b, paymentBy: e.target.value }))}
-                                    style={{
-                                        padding: '8px 10px',
-                                        border: '1px solid #ccc',
-                                        borderRadius: '4px',
-                                        fontSize: '13px',
-                                        background: '#D5D5D8',
-                                        color: '#333'
-                                    }}
-                                >
-                                    {paymentByOptions.length === 0 ? (
-                                        <option value="">—</option>
-                                    ) : (
-                                        paymentByOptions.map(opt => (
-                                            <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                        ))
-                                    )}
-                                </select>
-                            </div>
-                            <div style={{
-                                display: 'flex',
-                                flexDirection: 'column'
-                            }}>
-                                <label style={{
-                                    fontSize: '12px',
-                                    fontWeight: 'bold',
-                                    color: '#333',
-                                    marginBottom: '5px'
-                                }}>
-                                    Payment Remark
-                                </label>
-                                <input
-                                    type="text"
-                                    value={billing.paymentRemark}
-                                    onChange={(e) => setBilling(b => ({ ...b, paymentRemark: e.target.value }))}
-                                    disabled
-                                    style={{
-                                        padding: '8px 10px',
-                                        border: '1px solid #ccc',
-                                        borderRadius: '4px',
-                                        fontSize: '13px',
-                                        background: '#D5D5D8',
-                                        cursor: 'not-allowed'
-                                    }}
-                                />
-                            </div>
-                            <div style={{
-                                display: 'flex',
-                                flexDirection: 'column'
-                            }}>
-                                <label style={{
-                                    fontSize: '12px',
-                                    fontWeight: 'bold',
-                                    color: '#333',
-                                    marginBottom: '5px'
-                                }}>
-                                    Referred by
-                                </label>
-                                <input
-                                    type="text"
-                                    value={billing.referredBy}
-                                    disabled
-                                    style={{
-                                        padding: '8px 10px',
-                                        border: '1px solid #ccc',
-                                        borderRadius: '4px',
-                                        fontSize: '13px',
-                                        background: '#D5D5D8',
-                                        cursor: 'not-allowed'
-                                    }}
-                                />
-                            </div>
-                            
+                            <TextField
+                                select
+                                label="Payment By"
+                                value={billing.paymentBy}
+                                onChange={(e) => setBilling(b => ({ ...b, paymentBy: e.target.value }))}
+                                disabled
+                                fullWidth
+                                size="small"
+                                variant="outlined"
+                            >
+                                {paymentByOptions.length === 0 ? (
+                                    <MenuItem value="">—</MenuItem>
+                                ) : (
+                                    paymentByOptions.map(opt => (
+                                        <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>
+                                    ))
+                                )}
+                            </TextField>
+                            <ClearableTextField
+                                label="Payment Remark"
+                                fullWidth
+                                variant="outlined"
+                                size="small"
+                                value={billing.paymentRemark}
+                                onChange={(val) => setBilling(b => ({ ...b, paymentRemark: val }))}
+                                disabled
+                            />
+                            <ClearableTextField
+                                label="Referred by"
+                                fullWidth
+                                variant="outlined"
+                                size="small"
+                                value={billing.referredBy}
+                                onChange={(val) => setBilling(b => ({ ...b, referredBy: val }))}
+                                disabled
+                            />
+
                             {/* Row 4 */}
-                            <div style={{
-                                display: 'flex',
-                                flexDirection: 'column'
-                            }}>
-                                <label style={{
-                                    fontSize: '12px',
-                                    fontWeight: 'bold',
-                                    color: '#333',
-                                    marginBottom: '5px'
-                                }}>
-                                    Receipt no
-                                </label>
-                                <input
-                                    type="text"
-                                    value={billing.receiptNo}
-                                    onChange={(e) => setBilling(b => ({ ...b, receiptNo: e.target.value }))}
-                                    disabled
-                                    style={{
-                                        padding: '8px 10px',
-                                        border: '1px solid #ccc',
-                                        borderRadius: '4px',
-                                        fontSize: '13px',
-                                        background: '#D5D5D8',
-                                        cursor: 'not-allowed'
-                                    }}
-                                />
-                            </div>
-                            <div style={{
-                                display: 'flex',
-                                flexDirection: 'column'
-                            }}>
-                                <label style={{
-                                    fontSize: '12px',
-                                    fontWeight: 'bold',
-                                    color: '#333',
-                                    marginBottom: '5px'
-                                }}>
-                                    Receipt Date
-                                </label>
-                                <input
-                                    type="text"
-                                    value={billing.receiptDate}
-                                    disabled
-                                    style={{
-                                        padding: '8px 10px',
-                                        border: '1px solid #ccc',
-                                        borderRadius: '4px',
-                                        fontSize: '13px',
-                                        background: '#D5D5D8',
-                                        cursor: 'not-allowed'
-                                    }}
-                                />
-                            </div>
-                            <div style={{
-                                display: 'flex',
-                                flexDirection: 'column'
-                            }}>
-                                <label style={{
-                                    fontSize: '12px',
-                                    fontWeight: 'bold',
-                                    color: '#333',
-                                    marginBottom: '5px'
-                                }}>
-                                    Receipt Amount
-                                </label>
-                                <input
-                                    type="text"
-                                    value={billing.receiptAmount}
-                                    disabled
-                                    style={{
-                                        padding: '8px 10px',
-                                        border: '1px solid #ccc',
-                                        borderRadius: '4px',
-                                        fontSize: '13px',
-                                        background: '#D5D5D8',
-                                        cursor: 'not-allowed'
-                                    }}
-                                />
-                            </div>
+                            <ClearableTextField
+                                label="Receipt no"
+                                fullWidth
+                                variant="outlined"
+                                size="small"
+                                value={billing.receiptNo}
+                                onChange={(val) => setBilling(b => ({ ...b, receiptNo: val }))}
+                                disabled
+                            />
+                            <ClearableTextField
+                                label="Receipt Date"
+                                fullWidth
+                                variant="outlined"
+                                size="small"
+                                value={billing.receiptDate}
+                                onChange={(val) => setBilling(b => ({ ...b, receiptDate: val }))}
+                                disabled
+                            />
+                            <ClearableTextField
+                                label="Receipt Amount"
+                                fullWidth
+                                variant="outlined"
+                                size="small"
+                                value={billing.receiptAmount}
+                                onChange={(val) => setBilling(b => ({ ...b, receiptAmount: val }))}
+                                disabled
+                            />
                         </div>
                     </div>
                 </div>

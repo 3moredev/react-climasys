@@ -43,8 +43,8 @@ export const PATIENT_FIELDS = {
     referralName: { maxLength: 200, fieldName: 'Referral doctor name', type: 'text' as const }, // Frontend alias
     doctorAddress: { maxLength: 150, fieldName: 'Doctor address', type: 'text' as const },
     referralAddress: { maxLength: 150, fieldName: 'Referral address', type: 'text' as const }, // Frontend alias
-    doctorMobile: { maxLength: 20, fieldName: 'Doctor mobile', type: 'number' as const },
-    referralContact: { maxLength: 20, fieldName: 'Referral contact', type: 'number' as const }, // Frontend alias
+    doctorMobile: { maxLength: 10, fieldName: 'Doctor mobile', type: 'number' as const },
+    referralContact: { maxLength: 10, fieldName: 'Referral contact', type: 'number' as const }, // Frontend alias
     doctorEmail: { maxLength: 60, fieldName: 'Doctor email', type: 'email' as const },
     doctorMail: { maxLength: 60, fieldName: 'Doctor email', type: 'email' as const }, // Frontend alias
     referralEmail: { maxLength: 60, fieldName: 'Referral email', type: 'email' as const }, // Frontend alias
@@ -61,7 +61,7 @@ export const VISIT_FIELDS = {
     // Referral
     referDoctorDetails: { maxLength: 200, fieldName: 'Referral doctor name', type: 'text' as const },
     doctorAddress: { maxLength: 150, fieldName: 'Referral address', type: 'text' as const },
-    doctorMobile: { maxLength: 20, fieldName: 'Referral mobile', type: 'number' as const },
+    doctorMobile: { maxLength: 10, fieldName: 'Referral mobile', type: 'number' as const },
     doctorEmail: { maxLength: 60, fieldName: 'Referral email', type: 'email' as const },
 
     // Vitals
@@ -137,7 +137,7 @@ export const VISIT_FIELDS = {
     referralEmail: { maxLength: 60, fieldName: 'Referral email', type: 'email' as const },
     referralAddress: { maxLength: 150, fieldName: 'Referral address', type: 'text' as const },
     pastSurgicalHistory: { maxLength: 1000, fieldName: 'Past surgical history', type: 'textarea' as const },
-    complaintComment: { maxLength: 200, fieldName: 'Duration/Comment', type: 'text' as const },
+    complaintComment: { maxLength: 500, fieldName: 'Duration/Comment', type: 'text' as const },
     complaintSearch: { maxLength: 100, fieldName: 'Complaint Search', type: 'text' as const },
 } as const;
 

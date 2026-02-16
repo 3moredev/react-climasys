@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import PatientNameDisplay from './PatientNameDisplay';
 import { Close, Add, Delete } from '@mui/icons-material';
 import { TextField, InputAdornment, Grid, Box, Typography, DialogContent, FormHelperText } from '@mui/material';
+import ClearableTextField from './ClearableTextField';
 import { validateField } from '../utils/validationUtils';
 import dayjs from 'dayjs';
 import { patientService } from '../services/patientService';
@@ -494,8 +495,15 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
             const validation = validateField(field, processedValue, undefined, undefined, 'lab');
 
             if (validation.allowed) {
-                setFormData(prev => ({ ...prev, [field]: processedValue }));
-                if (validation.error) {
+                // Apply maxLength constraint
+                const maxLength = (field === 'labDoctorName' || field === 'labName') ? 200 : 1000;
+                const cappedValue = processedValue.slice(0, maxLength);
+
+                setFormData(prev => ({ ...prev, [field]: cappedValue }));
+
+                if (cappedValue.length >= maxLength) {
+                    setErrors(prev => ({ ...prev, [field]: `${field === 'labName' ? 'Lab Name' : (field === 'labDoctorName' ? 'Doctor Name' : 'Comment')} exceeds maximum length of ${maxLength} characters` }));
+                } else if (validation.error) {
                     setErrors(prev => ({ ...prev, [field]: validation.error }));
                 } else {
                     setErrors(prev => {
@@ -1064,16 +1072,17 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                     <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
                                                         Lab Name <span style={{ color: 'red' }}>*</span>
                                                     </Typography>
-                                                    <TextField
+                                                    <ClearableTextField
                                                         fullWidth
                                                         placeholder="Lab Name"
                                                         value={formData.labName}
-                                                        onChange={(e) => handleInputChange('labName', e.target.value)}
+                                                        onChange={(val) => handleInputChange('labName', val)}
                                                         error={!!errors.labName}
                                                         helperText={errors.labName}
                                                         required
                                                         variant="outlined"
                                                         size="small"
+                                                        inputProps={{ maxLength: 200 }}
                                                         sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
                                                     />
                                                 </Box>
@@ -1084,16 +1093,17 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                     <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
                                                         Lab Doctor Name <span style={{ color: 'red' }}>*</span>
                                                     </Typography>
-                                                    <TextField
+                                                    <ClearableTextField
                                                         fullWidth
                                                         placeholder="Doctor Name"
                                                         value={formData.labDoctorName}
-                                                        onChange={(e) => handleInputChange('labDoctorName', e.target.value)}
+                                                        onChange={(val) => handleInputChange('labDoctorName', val)}
                                                         error={!!errors.labDoctorName}
                                                         helperText={errors.labDoctorName}
                                                         required
                                                         variant="outlined"
                                                         size="small"
+                                                        inputProps={{ maxLength: 200 }}
                                                         sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
                                                     />
                                                 </Box>
@@ -1144,12 +1154,23 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                 rows={3}
                                                 placeholder="Comment"
                                                 value={formData.comment}
-                                                onChange={(e) => handleInputChange('comment', e.target.value)}
+                                                onChange={(e) => handleInputChange('comment', e.target.value.slice(0, 1000))}
                                                 maxLength={1000}
+                                                style={{
+                                                    width: '100%',
+                                                    padding: '8px',
+                                                    borderRadius: '8px',
+                                                    border: errors.comment
+                                                        ? (errors.comment.toLowerCase().includes('exceed') ? '1px solid #616161' : '1px solid #d32f2f')
+                                                        : '1px solid #ccc',
+                                                    outline: 'none',
+                                                    fontFamily: 'inherit',
+                                                    fontSize: '14px'
+                                                }}
                                             />
                                             {errors.comment && (
                                                 <Typography variant="caption" sx={{
-                                                    color: (errors.comment && !errors.comment.toLowerCase().includes('required')) ? '#f44336' : '#f44336',
+                                                    color: errors.comment.toLowerCase().includes('exceed') ? '#757575' : '#d32f2f',
                                                     mt: 0.5,
                                                     display: 'block'
                                                 }}>
@@ -1220,25 +1241,22 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                     marginTop: '4px'
                                                 }}>
                                                     <div style={{ padding: '6px' }}>
-                                                        <input
-                                                            type="text"
+                                                        <ClearableTextField
+                                                            fullWidth
                                                             value={labTestSearch}
-                                                            onChange={(e) => setLabTestSearch(e.target.value)}
+                                                            onChange={setLabTestSearch}
                                                             placeholder="Search lab tests"
-                                                            style={{
-                                                                width: '100%',
-                                                                height: '28px',
-                                                                padding: '4px 8px',
-                                                                border: '1px solid #B7B7B7',
-                                                                borderRadius: '4px',
-                                                                fontSize: '12px',
-                                                                outline: 'none'
-                                                            }}
-                                                            onFocus={(e) => {
-                                                                e.target.style.borderColor = '#1E88E5';
-                                                            }}
-                                                            onBlur={(e) => {
-                                                                e.target.style.borderColor = '#B7B7B7';
+                                                            variant="outlined"
+                                                            size="small"
+                                                            sx={{
+                                                                '& .MuiOutlinedInput-root': {
+                                                                    height: '32px',
+                                                                    fontSize: '12px',
+                                                                    borderRadius: '4px'
+                                                                },
+                                                                '& .MuiInputBase-input': {
+                                                                    padding: '4px 8px'
+                                                                }
                                                             }}
                                                         />
                                                     </div>
@@ -1310,7 +1328,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                                             cursor: isAdded ? 'not-allowed' : 'pointer',
                                                                             fontSize: '13px',
                                                                             borderBottom: '1px solid #f9f9f9',
-                                                                            backgroundColor: isAdded ? '#f5f5f5' : 'transparent',
+                                                                            backgroundColor: isChecked ? '#eeeeee' : 'transparent',
                                                                             fontWeight: 400,
                                                                             opacity: isAdded ? 0.6 : 1,
                                                                             color: isAdded ? '#999' : '#333'
@@ -1432,7 +1450,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                             Parameter Name
                                                         </th>
                                                         <th style={{
-                                                            padding: '12px',
+                                                            padding: '12px 10px',
                                                             textAlign: 'left',
                                                             borderBottom: '1px solid #ddd',
                                                             fontWeight: '400',
@@ -1464,45 +1482,70 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                         {labTestResults.map((result) => (
                                                             <tr key={result.id}>
                                                                 <td style={{
-                                                                    padding: '16px',
+                                                                    padding: '12px 16px',
                                                                     borderBottom: '1px solid #eee',
                                                                     color: 'black',
-                                                                    height: '38px',
                                                                     fontSize: '14px',
-                                                                    width: '30%'
+                                                                    width: '30%',
+                                                                    verticalAlign: 'top'
                                                                 }}>
                                                                     {result.labTestName}
                                                                 </td>
                                                                 <td style={{
-                                                                    padding: '16px',
+                                                                    padding: '12px 16px',
                                                                     borderBottom: '1px solid #eee',
                                                                     color: 'black',
-                                                                    height: '38px',
                                                                     fontSize: '14px',
-                                                                    width: '30%'
+                                                                    width: '30%',
+                                                                    verticalAlign: 'top'
                                                                 }}>
                                                                     {result.parameterName}
                                                                 </td>
-                                                                <td style={{ padding: '16px', borderBottom: '1px solid #eee', width: '30%' }}>
-                                                                    <TextField
+                                                                <td style={{ borderBottom: '1px solid #eee', width: '30%', padding: '4px 0px', verticalAlign: 'top' }}>
+                                                                    <ClearableTextField
                                                                         fullWidth
                                                                         placeholder="Value / Results"
                                                                         value={result.value}
-                                                                        onChange={(e) => handleResultChange(result.id, 'value', e.target.value)}
+                                                                        onChange={(val) => handleResultChange(result.id, 'value', val)}
                                                                         required
-                                                                        error={resultErrors.has(result.id)}
-                                                                        helperText={resultErrors.has(result.id) ? 'Value is required' : ''}
+                                                                        error={resultErrors.has(result.id) || (result.value || '').length >= 2000}
+                                                                        helperText={
+                                                                            (result.value || '').length >= 2000
+                                                                                ? 'Value exceeds maximum length of 2000 characters'
+                                                                                : (resultErrors.has(result.id) ? 'Value is required' : '')
+                                                                        }
                                                                         variant="outlined"
                                                                         size="small"
-                                                                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
+                                                                        inputProps={{ maxLength: 2000 }}
+                                                                        sx={{
+                                                                            marginBottom: 0,
+                                                                            '& .MuiOutlinedInput-root': {
+                                                                                height: '32px',
+                                                                                borderRadius: 0,
+                                                                                backgroundColor: 'transparent',
+                                                                                fontSize: '13px',
+                                                                                '& fieldset': { border: 'none' }
+                                                                            },
+                                                                            '& .MuiFormHelperText-root': {
+                                                                                fontSize: '9px',
+                                                                                margin: '0',
+                                                                                padding: '2px 4px 0 4px',
+                                                                                color: (result.value || '').length === 2000 ? '#666' : '#d32f2f',
+                                                                                position: 'static !important'
+                                                                            },
+                                                                            '& .MuiInputBase-input': {
+                                                                                padding: '8px 10px',
+                                                                                color: '#333'
+                                                                            }
+                                                                        }}
                                                                     />
                                                                 </td>
                                                                 <td style={{
-                                                                    padding: '16px',
+                                                                    padding: '12px 16px',
                                                                     borderBottom: '1px solid #eee',
                                                                     textAlign: 'center',
-                                                                    height: '38px',
-                                                                    width: '10%'
+                                                                    width: '10%',
+                                                                    verticalAlign: 'top'
                                                                 }}>
                                                                     <button
                                                                         onClick={() => handleRemoveResult(result.id)}

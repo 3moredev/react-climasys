@@ -40,8 +40,19 @@ export const validateField = (
         return { allowed: true, error: '' };
     }
 
-    // Strict length check
+    // Strict length check - but preserve range errors if they exist
     if (strValue.length > maxLength) {
+        // Check if the value (truncated to maxLength) has a range error
+        // If so, show that instead of the length error
+        if (config?.type === 'number' && config?.min !== undefined && config?.max !== undefined) {
+            const truncatedValue = strValue.substring(0, maxLength);
+            const numValue = parseFloat(truncatedValue);
+            if (!isNaN(numValue)) {
+                if (numValue < config.min || numValue > config.max) {
+                    return { allowed: false, error: `${fieldLabel} must be between ${config.min} and ${config.max}` };
+                }
+            }
+        }
         return { allowed: false, error: `${fieldLabel} cannot exceed ${maxLength} characters` };
     }
 
@@ -72,8 +83,8 @@ export const validateField = (
         }
     }
 
-    // Length warning
-    if (strValue.length === maxLength) {
+    // Length warning - only show if no other error (like range error) exists
+    if (strValue.length === maxLength && !error) {
         error = `${fieldLabel} cannot exceed ${maxLength} characters`;
     }
 
