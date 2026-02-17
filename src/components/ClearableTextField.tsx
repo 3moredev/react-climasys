@@ -53,22 +53,17 @@ const ClearableTextField: React.FC<ClearableTextFieldProps> = ({
                 sx: {
                     ...(otherProps.FormHelperTextProps?.sx as any),
                     color: shouldUseGrayError ? '#757575 !important' : (otherProps.FormHelperTextProps?.sx as any)?.color,
-                    position: 'absolute',
-                    top: '100%',
-                    left: 0,
                     margin: 0,
-                    marginTop: '1px',
+                    marginTop: '4px',
                     whiteSpace: 'normal',
                     maxWidth: '100%',
                     lineHeight: '1.2',
-                    fontSize: '11px',
-                    zIndex: 2,
-                    pointerEvents: 'none'
+                    fontSize: '11px'
                 }
             }}
             sx={{
                 position: 'relative',
-                marginBottom: '18px', // Balanced space for error message + breathing room
+                marginBottom: '0px', // Removed fixed margin since helper text now takes space
                 '& .MuiInputBase-root': {
                     paddingRight: '6px !important',
                     backgroundColor: isReadOnly ? '#f5f5f5 !important' : 'inherit',

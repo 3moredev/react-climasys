@@ -30,27 +30,10 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
   initialSelectedGroups = [],
   onChange
 }) => {
-  // Debug: Log received props
-  console.log('=== INSTRUCTION GROUPS POPUP: Received Props ===');
-  console.log('isOpen:', isOpen);
-  console.log('initialSelectedGroups prop:', initialSelectedGroups);
-  console.log('initialSelectedGroups length:', initialSelectedGroups?.length || 0);
-  console.log('initialSelectedGroups is array:', Array.isArray(initialSelectedGroups));
-  if (initialSelectedGroups && initialSelectedGroups.length > 0) {
-    console.log('initialSelectedGroups content:', JSON.stringify(initialSelectedGroups, null, 2));
-    initialSelectedGroups.forEach((group, idx) => {
-      console.log(`Received Group ${idx + 1}:`, {
-        id: group.id,
-        name: group.name,
-        nameHindi: group.nameHindi,
-        instructions: group.instructions,
-        hasName: !!group.name,
-        hasInstructions: !!group.instructions
-      });
-    });
-  } else {
-    console.warn('⚠️ initialSelectedGroups prop is EMPTY or UNDEFINED!');
-  }
+  // Debug: Log received props (reduced verbosity)
+  // console.log('=== INSTRUCTION GROUPS POPUP: Received Props ===');
+  // console.log('isOpen:', isOpen);
+  // console.log('initialSelectedGroups length:', initialSelectedGroups?.length || 0);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedGroups, setSelectedGroups] = useState<InstructionGroup[]>(initialSelectedGroups);
