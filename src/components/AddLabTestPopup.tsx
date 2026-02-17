@@ -265,9 +265,20 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
                                     size="small"
                                     value={testLabData.labTestName}
                                     onChange={(val) => handleInputChange('labTestName', val.toUpperCase())}
-                                    error={!!errors.labTestName}
-                                    helperText={errors.labTestName || (testLabData.labTestName.length === 80 ? 'Lab Test Name cannot exceed 80 characters' : '')}
+                                    error={!!errors.labTestName && !errors.labTestName.includes('cannot exceed')}
+                                    helperText={errors.labTestName && !errors.labTestName.includes('cannot exceed') ? errors.labTestName : ''}
                                 />
+                                {(errors.labTestName && errors.labTestName.includes('cannot exceed')) || testLabData.labTestName.length === 80 ? (
+                                    <div style={{
+                                        color: '#666',
+                                        fontSize: '11px',
+                                        marginTop: '4px',
+                                        lineHeight: '1.2',
+                                        fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif'
+                                    }}>
+                                        Lab Test Name cannot exceed 80 characters
+                                    </div>
+                                ) : null}
                             </Box>
                         </Grid>
                         <Grid item xs={12}>
@@ -283,9 +294,20 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
                                     value={testLabData.priority}
                                     onChange={(val) => handleInputChange('priority', val)}
                                     inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
-                                    error={!!errors.priority}
-                                    helperText={errors.priority || (testLabData.priority.length === 10 ? 'Priority cannot exceed 10 characters' : '')}
+                                    error={!!errors.priority && !errors.priority.includes('cannot exceed')}
+                                    helperText={errors.priority && !errors.priority.includes('cannot exceed') ? errors.priority : ''}
                                 />
+                                {(errors.priority && errors.priority.includes('cannot exceed')) || testLabData.priority.length === 10 ? (
+                                    <div style={{
+                                        color: '#666',
+                                        fontSize: '11px',
+                                        marginTop: '4px',
+                                        lineHeight: '1.2',
+                                        fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif'
+                                    }}>
+                                        Priority cannot exceed 10 characters
+                                    </div>
+                                ) : null}
                             </Box>
                         </Grid>
                         <Grid item xs={12}>

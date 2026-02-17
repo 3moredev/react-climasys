@@ -39,7 +39,7 @@ const ClearableTextField: React.FC<ClearableTextFieldProps> = ({
 
     // Any error that is not just a length warning should be red.
     const effectiveError = !!otherProps.error && !isLengthWarning;
-    const shouldUseGrayError = !!otherProps.error && isLengthWarning;
+    const shouldUseGrayError = isLengthWarning; // Always show length warnings in gray, even if error=true
 
     return (
         <TextField
@@ -52,7 +52,7 @@ const ClearableTextField: React.FC<ClearableTextFieldProps> = ({
                 ...(otherProps.FormHelperTextProps as any),
                 sx: {
                     ...(otherProps.FormHelperTextProps?.sx as any),
-                    color: shouldUseGrayError ? '#757575 !important' : (otherProps.FormHelperTextProps?.sx as any)?.color,
+                    color: shouldUseGrayError ? '#666 !important' : (otherProps.FormHelperTextProps?.sx as any)?.color,
                     margin: 0,
                     marginTop: '4px',
                     whiteSpace: 'normal',
@@ -84,7 +84,7 @@ const ClearableTextField: React.FC<ClearableTextFieldProps> = ({
                     cursor: isReadOnly ? 'not-allowed !important' : 'inherit',
                     fontSize: 'inherit',
                     '&::placeholder': {
-                        color: isReadOnly ? '#666666 !important' : 'inherit',
+                        color: effectiveError ? '#d32f2f !important' : '#666 !important',
                         opacity: isReadOnly ? '0.5 !important' : 1,
                         fontSize: 'inherit'
                     },
