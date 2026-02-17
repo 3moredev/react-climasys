@@ -308,6 +308,10 @@ export default function Treatment() {
     const [planAdvError, setPlanAdvError] = useState<string | null>(null);
     const [remarkCommentsError, setRemarkCommentsError] = useState<string | null>(null);
     const [prescriptionError, setPrescriptionError] = useState<string | null>(null);
+    const [complaintsSelectionError, setComplaintsSelectionError] = useState<string | null>(null);
+    const [diagnosesSelectionError, setDiagnosesSelectionError] = useState<string | null>(null);
+    const [medicinesSelectionError, setMedicinesSelectionError] = useState<string | null>(null);
+    const [investigationsSelectionError, setInvestigationsSelectionError] = useState<string | null>(null);
     const [snackbarOpen, setSnackbarOpen] = useState(false);
     const [snackbarMessage, setSnackbarMessage] = useState('');
 
@@ -2747,7 +2751,11 @@ export default function Treatment() {
     };
 
     const handleAddComplaints = () => {
-        if (selectedComplaints.length === 0) return;
+        if (selectedComplaints.length === 0) {
+            setComplaintsSelectionError('Please select at least one complaint');
+            return;
+        }
+        setComplaintsSelectionError(null);
         setComplaintsRows(prev => {
             const existingValues = new Set(prev.map(r => r.value));
             const newRows: ComplaintRow[] = [];
@@ -4656,7 +4664,11 @@ export default function Treatment() {
     };
 
     const handleAddDiagnoses = () => {
-        if (selectedDiagnoses.length === 0) return;
+        if (selectedDiagnoses.length === 0) {
+            setDiagnosesSelectionError('Please select at least one diagnosis');
+            return;
+        }
+        setDiagnosesSelectionError(null);
         setDiagnosisRows(prev => {
             // Normalize existing values and diagnoses for comparison
             const existingValues = new Set(prev.map(r => r.value?.toLowerCase().trim()).filter(Boolean));
@@ -4695,9 +4707,9 @@ export default function Treatment() {
 
             // Show error if duplicates found
             if (duplicateDiagnoses.length > 0) {
-                setDiagnosesError(`The following diagnosis(es) are already added: ${duplicateDiagnoses.join(', ')}`);
+                setDiagnosesSelectionError(`The following diagnosis(es) are already added: ${duplicateDiagnoses.join(', ')}`);
             } else {
-                setDiagnosesError(null);
+                setDiagnosesSelectionError(null);
             }
 
             const next = [...prev, ...newRows];
@@ -4718,6 +4730,11 @@ export default function Treatment() {
     };
 
     const handleAddMedicine = () => {
+        if (selectedMedicines.length === 0) {
+            setMedicinesSelectionError('Please select at least one medicine');
+            return;
+        }
+        setMedicinesSelectionError(null);
         if (selectedMedicines.length > 0) {
             setMedicineRows(prev => {
                 const existingShortDescriptions = new Set(prev.map(r => r.short_description?.toLowerCase().trim()));
@@ -4753,9 +4770,9 @@ export default function Treatment() {
 
                 // Show error if duplicates found
                 if (duplicateMedicines.length > 0) {
-                    setMedicinesError(`The following medicine(s) are already added: ${duplicateMedicines.join(', ')}`);
+                    setMedicinesSelectionError(`The following medicine(s) are already added: ${duplicateMedicines.join(', ')}`);
                 } else {
-                    setMedicinesError(null);
+                    setMedicinesSelectionError(null);
                 }
 
                 const next = [...prev, ...newRows];
@@ -4788,10 +4805,10 @@ export default function Treatment() {
     const handleAddPrescription = () => {
         const raw = prescriptionInput.trim();
         if (!raw) {
-            setSnackbarMessage('Prescription cannot be empty');
-            setSnackbarOpen(true);
+            setPrescriptionError('Please enter at least one prescription');
             return;
         }
+        setPrescriptionError(null);
 
         if (raw.length > 200) {
             setSnackbarMessage('Prescription cannot exceed 200 characters');
@@ -4848,7 +4865,11 @@ export default function Treatment() {
 
     // Investigation handlers
     const handleAddInvestigations = () => {
-        if (selectedInvestigations.length === 0) return;
+        if (selectedInvestigations.length === 0) {
+            setInvestigationsSelectionError('Please select at least one lab test');
+            return;
+        }
+        setInvestigationsSelectionError(null);
         setInvestigationRows(prev => {
             const existingInvestigationLabels = new Set(prev.map(r => r.investigation.toLowerCase()));
             const newRows: InvestigationRow[] = [];
@@ -4872,7 +4893,7 @@ export default function Treatment() {
                 setSnackbarMessage(`The following investigation(s) are already added: ${duplicateInvestigations.join(', ')}`);
                 setSnackbarOpen(true);
             } else {
-                setInvestigationsError(null);
+                setInvestigationsSelectionError(null);
             }
 
             return [...prev, ...newRows];
@@ -5680,11 +5701,23 @@ export default function Treatment() {
                                                     </span>
                                                     <span style={{ marginLeft: '8px', color: '#666', fontSize: '16px', lineHeight: '1' }}>▾</span>
                                                 </div>
+                                                {complaintsSelectionError && (
+                                                    <p style={{
+                                                        color: '#d32f2f',
+                                                        fontSize: '0.75rem',
+                                                        fontWeight: 400,
+                                                        fontFamily: "'Roboto', sans-serif",
+                                                        margin: '3px 0 0 0',
+                                                        textAlign: 'left'
+                                                    }}>
+                                                        {complaintsSelectionError}
+                                                    </p>
+                                                )}
 
                                                 {isComplaintsOpen && (
                                                     <div style={{
                                                         position: 'absolute',
-                                                        top: '100%',
+                                                        top: '38px',
                                                         left: 0,
                                                         right: 0,
                                                         backgroundColor: 'white',
@@ -5803,6 +5836,7 @@ export default function Treatment() {
                                                                                 onChange={(e) => {
                                                                                     if (isAdded) return;
                                                                                     setSelectedComplaints(prev => {
+                                                                                        setComplaintsSelectionError(null);
                                                                                         if (e.target.checked) {
                                                                                             if (prev.includes(opt.value)) return prev;
                                                                                             return [...prev, opt.value];
@@ -6273,11 +6307,23 @@ export default function Treatment() {
                                             </span>
                                             <span style={{ marginLeft: '8px', color: '#666', fontSize: '16px', lineHeight: '1' }}>▾</span>
                                         </div>
+                                        {diagnosesSelectionError && (
+                                            <p style={{
+                                                color: '#d32f2f',
+                                                fontSize: '0.75rem',
+                                                fontWeight: 400,
+                                                fontFamily: "'Roboto', sans-serif",
+                                                margin: '3px 0 0 0',
+                                                textAlign: 'left'
+                                            }}>
+                                                {diagnosesSelectionError}
+                                            </p>
+                                        )}
 
                                         {isDiagnosesOpen && (
                                             <div style={{
                                                 position: 'absolute',
-                                                top: '100%',
+                                                top: '38px',
                                                 left: 0,
                                                 right: 0,
                                                 backgroundColor: 'white',
@@ -6396,6 +6442,7 @@ export default function Treatment() {
                                                                         onChange={(e) => {
                                                                             if (isAdded) return;
                                                                             setSelectedDiagnoses(prev => {
+                                                                                setDiagnosesSelectionError(null);
                                                                                 if (e.target.checked) {
                                                                                     if (prev.includes(opt.value)) return prev;
                                                                                     return [...prev, opt.value];
@@ -6583,11 +6630,23 @@ export default function Treatment() {
                                             </span>
                                             <span style={{ marginLeft: '8px', color: '#666', fontSize: '16px', lineHeight: '1' }}>▾</span>
                                         </div>
+                                        {medicinesSelectionError && (
+                                            <p style={{
+                                                color: '#d32f2f',
+                                                fontSize: '0.75rem',
+                                                fontWeight: 400,
+                                                fontFamily: "'Roboto', sans-serif",
+                                                margin: '3px 0 0 0',
+                                                textAlign: 'left'
+                                            }}>
+                                                {medicinesSelectionError}
+                                            </p>
+                                        )}
 
                                         {isMedicinesOpen && (
                                             <div style={{
                                                 position: 'absolute',
-                                                top: '100%',
+                                                top: '38px',
                                                 left: 0,
                                                 right: 0,
                                                 backgroundColor: 'white',
@@ -6713,6 +6772,7 @@ export default function Treatment() {
                                                                         onChange={(e) => {
                                                                             if (isAdded) return;
                                                                             setSelectedMedicines(prev => {
+                                                                                setMedicinesSelectionError(null);
                                                                                 if (e.target.checked) {
                                                                                     if (prev.includes(opt.value)) return prev;
                                                                                     return [...prev, opt.value];
@@ -7048,7 +7108,7 @@ export default function Treatment() {
                                     </label>
                                 </div>
 
-                                <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                                <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', alignItems: 'flex-start' }}>
                                     <div style={{ position: 'relative', flex: 1 }}>
                                         <ClearableTextField
                                             fullWidth
@@ -7115,10 +7175,15 @@ export default function Treatment() {
                                             backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
                                             color: 'white',
                                             border: 'none',
-                                            padding: '6px 12px',
+                                            padding: '0 12px',
                                             borderRadius: '6px',
                                             cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                            fontSize: '13px'
+                                            fontSize: '13px',
+                                            height: '38px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            fontWeight: '500'
                                         }}
                                     >
                                         Add Rx
@@ -7323,10 +7388,23 @@ export default function Treatment() {
                                             <span style={{ marginLeft: '8px', color: '#666', fontSize: '16px', lineHeight: '1' }}>▾</span>
                                         </div>
 
+                                        {investigationsSelectionError && (
+                                            <p style={{
+                                                color: '#d32f2f',
+                                                fontSize: '0.75rem',
+                                                fontWeight: 400,
+                                                fontFamily: "'Roboto', sans-serif",
+                                                margin: '3px 0 0 0',
+                                                textAlign: 'left'
+                                            }}>
+                                                {investigationsSelectionError}
+                                            </p>
+                                        )}
+
                                         {isInvestigationsOpen && (
                                             <div style={{
                                                 position: 'absolute',
-                                                top: '100%',
+                                                top: '38px',
                                                 left: 0,
                                                 right: 0,
                                                 backgroundColor: 'white',
@@ -7435,6 +7513,7 @@ export default function Treatment() {
                                                                         disabled={isAdded}
                                                                         onChange={(e) => {
                                                                             if (isAdded) return;
+                                                                            setInvestigationsSelectionError(null);
                                                                             setSelectedInvestigations(prev => {
                                                                                 if (e.target.checked) {
                                                                                     if (prev.includes(opt.value)) return prev;
