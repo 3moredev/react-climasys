@@ -45,9 +45,9 @@ export async function getOccupations(): Promise<OptionItem[]> {
 }
 
 export async function getMaritalStatuses(): Promise<OptionItem[]> {
-  const response = await api.get('/reference/marital-statuses')
-  const data = Array.isArray(response.data) ? response.data : []
-  return data.map(mapMaritalStatusItem)
+  const response = await api.get('/reference/marital-statuses/translations')
+  const data = Array.isArray(response.data.maritalStatuses) ? response.data.maritalStatuses : []
+  return data.map((i: any) => { return { id: i.id, name: i.description } })
 }
 
 

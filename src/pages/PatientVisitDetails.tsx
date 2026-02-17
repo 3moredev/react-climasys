@@ -1719,28 +1719,25 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                         <Box display="flex" alignItems="center" gap={2} flexWrap="wrap">
                             <Typography sx={{ color: '#1565c0', fontSize: '14px' }}>{doctorDisplayName}</Typography>
                             <Box display="flex" alignItems="center" gap={1} sx={{ cursor: 'not-allowed' }}>
-                                    <Box component="span" sx={{ cursor: 'not-allowed', display: 'inline-flex' }}>
-                                        <FormControlLabel
-                                            control={<Checkbox checked={inPersonChecked} disabled size="small" />}
-                                            label={<Typography fontSize="12px" className='text-black'>In-Person</Typography>}
-                                            sx={{ mr: 0, ml: 0, pointerEvents: 'none' }}
-                                        />
-                                    </Box>
+                                <Box component="span" display="flex" alignItems="center" gap={0.5}>
+                                    <input
+                                        type="checkbox"
+                                        checked={inPersonChecked}
+                                        disabled
+                                        style={{ cursor: 'not-allowed', margin: 0 }}
+                                    />
+                                    <Typography fontSize="12px" className='text-black' sx={{ cursor: 'not-allowed', whiteSpace: 'nowrap' }}>In-Person</Typography>
+                                </Box>
 
-                                    <Box component="span" sx={{ cursor: 'not-allowed', display: 'inline-flex' }}>
-                                        <FormControlLabel
-                                            control={
-                                                <Checkbox
-                                                    checked={visitType.followUp}
-                                                    disabled={true}
-                                                    size="small"
-                                                />
-                                            }
-                                            label={<Typography fontSize="12px" className='text-black'>Follow-up</Typography>}
-                                            sx={{ mr: 0, ml: 0, pointerEvents: 'none' }}
-                                        />
-                                    </Box>
-
+                                <Box component="span" display="flex" alignItems="center" gap={0.5}>
+                                    <input
+                                        type="checkbox"
+                                        checked={visitType.followUp}
+                                        disabled
+                                        style={{ cursor: 'not-allowed', margin: 0 }}
+                                    />
+                                    <Typography fontSize="12px" className='text-black' sx={{ cursor: 'not-allowed', whiteSpace: 'nowrap' }}>Follow-up</Typography>
+                                </Box>
                             </Box>
                         </Box>
                     </Box>
