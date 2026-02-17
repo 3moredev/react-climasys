@@ -108,7 +108,7 @@ const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(({
             {/* Error Message Space (Reserved to shift layout) */}
             {displayError && errorMsg && (
                 <FormHelperText sx={{
-                    color: error ? '#d32f2f !important' : '#757575 !important',
+                    color: error ? '#d32f2f !important' : '#666 !important',
                     position: 'absolute',
                     top: '100%',
                     left: 0,

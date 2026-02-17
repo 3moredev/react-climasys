@@ -195,7 +195,7 @@ const AddDiagnosisPopup: React.FC<AddDiagnosisPopupProps> = ({ open, onClose, on
                                         setErrors(prev => ({ ...prev, shortDescription: error }));
                                     }}
                                     disabled={!!editData}
-                                    error={!!errors.shortDescription && !errors.shortDescription.toLowerCase().includes('exceed')}
+                                    error={!!errors.shortDescription}
                                     helperText={errors.shortDescription}
                                 />
                             </Box>
@@ -219,7 +219,7 @@ const AddDiagnosisPopup: React.FC<AddDiagnosisPopupProps> = ({ open, onClose, on
                                         }
                                         setErrors(prev => ({ ...prev, diagnosisDescription: error }));
                                     }}
-                                    error={!!errors.diagnosisDescription && !errors.diagnosisDescription.toLowerCase().includes('exceed')}
+                                    error={!!errors.diagnosisDescription}
                                     helperText={errors.diagnosisDescription}
                                 />
                             </Box>
@@ -242,7 +242,7 @@ const AddDiagnosisPopup: React.FC<AddDiagnosisPopupProps> = ({ open, onClose, on
                                         }
                                         setErrors(prev => ({ ...prev, priority: error }));
                                     }}
-                                    error={!!errors.priority && !errors.priority.toLowerCase().includes('exceed')}
+                                    error={!!errors.priority}
                                     helperText={errors.priority}
                                 />
                             </Box>
