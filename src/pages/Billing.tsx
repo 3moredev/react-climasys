@@ -3283,7 +3283,7 @@ export default function Treatment() {
                                                 checked={formData.visitType.inPerson}
                                                 onChange={(e) => handleVisitTypeChange('inPerson', e.target.checked)}
                                                 disabled
-                                                style={{ backgroundColor: '#D5D5D8' }}
+                                                style={{ backgroundColor: '#f5f5f5' }}
                                             />
                                             In-Person
                                         </label>
@@ -3293,7 +3293,7 @@ export default function Treatment() {
                                                 checked={formData.visitType.followUp}
                                                 onChange={(e) => handleVisitTypeChange('followUp', e.target.checked)}
                                                 disabled
-                                                style={{ backgroundColor: '#e9ecef', cursor: 'not-allowed' }}
+                                                style={{ backgroundColor: '#f5f5f5', cursor: 'not-allowed' }}
                                             />
                                             Follow-up
                                         </label>
@@ -3362,7 +3362,10 @@ export default function Treatment() {
                                                         '& .MuiInputBase-root': {
                                                             fontSize: '13px',
                                                             height: '38px',
-                                                            backgroundColor: '#D5D5D8'
+                                                            backgroundColor: '#f5f5f5',
+                                                            '& .MuiOutlinedInput-notchedOutline': {
+                                                                borderColor: 'rgba(0, 0, 0, 0.1) !important'
+                                                            }
                                                         }
                                                     }}
                                                 />
@@ -3396,8 +3399,11 @@ export default function Treatment() {
                                                     '& .MuiInputBase-root': {
                                                         fontSize: '13px',
                                                         height: '38px',
-                                                        backgroundColor: '#D5D5D8',
-                                                        padding: '4px 0'
+                                                        backgroundColor: '#f5f5f5',
+                                                        padding: '4px 0',
+                                                        '& .MuiOutlinedInput-notchedOutline': {
+                                                            borderColor: 'rgba(0, 0, 0, 0.1) !important'
+                                                        }
                                                     },
                                                     '& .MuiInputBase-input': {
                                                         padding: '4px 6px'
@@ -3417,8 +3423,11 @@ export default function Treatment() {
                                                     '& .MuiInputBase-root': {
                                                         fontSize: '13px',
                                                         height: '38px',
-                                                        backgroundColor: '#D5D5D8',
-                                                        padding: '4px 0'
+                                                        backgroundColor: '#f5f5f5',
+                                                        padding: '4px 0',
+                                                        '& .MuiOutlinedInput-notchedOutline': {
+                                                            borderColor: 'rgba(0, 0, 0, 0.1) !important'
+                                                        }
                                                     },
                                                     '& .MuiInputBase-input': {
                                                         padding: '4px 6px'
@@ -3438,8 +3447,11 @@ export default function Treatment() {
                                                     '& .MuiInputBase-root': {
                                                         fontSize: '13px',
                                                         height: '38px',
-                                                        backgroundColor: '#D5D5D8',
-                                                        padding: '4px 0'
+                                                        backgroundColor: '#f5f5f5',
+                                                        padding: '4px 0',
+                                                        '& .MuiOutlinedInput-notchedOutline': {
+                                                            borderColor: 'rgba(0, 0, 0, 0.1) !important'
+                                                        }
                                                     },
                                                     '& .MuiInputBase-input': {
                                                         padding: '4px 6px'
@@ -3459,8 +3471,11 @@ export default function Treatment() {
                                                     '& .MuiInputBase-root': {
                                                         fontSize: '13px',
                                                         height: '38px',
-                                                        backgroundColor: '#D5D5D8',
-                                                        padding: '4px 0'
+                                                        backgroundColor: '#f5f5f5',
+                                                        padding: '4px 0',
+                                                        '& .MuiOutlinedInput-notchedOutline': {
+                                                            borderColor: 'rgba(0, 0, 0, 0.1) !important'
+                                                        }
                                                     },
                                                     '& .MuiInputBase-input': {
                                                         padding: '4px 6px'
@@ -3480,8 +3495,11 @@ export default function Treatment() {
                                                     '& .MuiInputBase-root': {
                                                         fontSize: '13px',
                                                         height: '38px',
-                                                        backgroundColor: '#D5D5D8',
-                                                        padding: '4px 0'
+                                                        backgroundColor: '#f5f5f5',
+                                                        padding: '4px 0',
+                                                        '& .MuiOutlinedInput-notchedOutline': {
+                                                            borderColor: 'rgba(0, 0, 0, 0.1) !important'
+                                                        }
                                                     },
                                                     '& .MuiInputBase-input': {
                                                         padding: '4px 6px'
@@ -3501,8 +3519,11 @@ export default function Treatment() {
                                                     '& .MuiInputBase-root': {
                                                         fontSize: '13px',
                                                         height: '38px',
-                                                        backgroundColor: '#D5D5D8',
-                                                        padding: '4px 0'
+                                                        backgroundColor: '#f5f5f5',
+                                                        padding: '4px 0',
+                                                        '& .MuiOutlinedInput-notchedOutline': {
+                                                            borderColor: 'rgba(0, 0, 0, 0.1) !important'
+                                                        }
                                                     },
                                                     '& .MuiInputBase-input': {
                                                         padding: '4px 6px'
@@ -3522,8 +3543,11 @@ export default function Treatment() {
                                                     '& .MuiInputBase-root': {
                                                         fontSize: '13px',
                                                         height: '38px',
-                                                        backgroundColor: '#D5D5D8',
-                                                        padding: '4px 0'
+                                                        backgroundColor: '#f5f5f5',
+                                                        padding: '4px 0',
+                                                        '& .MuiOutlinedInput-notchedOutline': {
+                                                            borderColor: 'rgba(0, 0, 0, 0.1) !important'
+                                                        }
                                                     },
                                                     '& .MuiInputBase-input': {
                                                         padding: '4px 6px'
@@ -3543,8 +3567,11 @@ export default function Treatment() {
                                                     '& .MuiInputBase-root': {
                                                         fontSize: '13px',
                                                         height: '38px',
-                                                        backgroundColor: '#D5D5D8',
-                                                        padding: '4px 0'
+                                                        backgroundColor: '#f5f5f5',
+                                                        padding: '4px 0',
+                                                        '& .MuiOutlinedInput-notchedOutline': {
+                                                            borderColor: 'rgba(0, 0, 0, 0.1) !important'
+                                                        }
                                                     },
                                                     '& .MuiInputBase-input': {
                                                         padding: '4px 6px'
@@ -3584,25 +3611,25 @@ export default function Treatment() {
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, padding: 12 }}>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                                             <label>Detailed History</label>
-                                            <textarea value={display(formData.detailedHistory)} placeholder="Detailed History" disabled style={{ height: 64, width: '100%', border: '1px solid #ddd', padding: 8, fontSize: 12, background: '#D5D5D8' }} />
+                                            <textarea value={display(formData.detailedHistory)} placeholder="Detailed History" disabled style={{ height: 64, width: '100%', border: '1px solid #eee', padding: 8, fontSize: 12, background: '#f5f5f5' }} />
                                         </div>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                                             <label>Examination Findings</label>
-                                            <textarea value={display(formData.examinationFindings)} placeholder="Examination Findings" disabled style={{ height: 64, width: '100%', border: '1px solid #ddd', padding: 8, fontSize: 12, background: '#D5D5D8' }} />
+                                            <textarea value={display(formData.examinationFindings)} placeholder="Examination Findings" disabled style={{ height: 64, width: '100%', border: '1px solid #eee', padding: 8, fontSize: 12, background: '#f5f5f5' }} />
                                         </div>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                                             <label>Additional Comments</label>
-                                            <textarea value={display(formData.additionalComments)} placeholder="Additional Comments" disabled style={{ height: 64, width: '100%', border: '1px solid #ddd', padding: 8, fontSize: 12, background: '#D5D5D8' }} />
+                                            <textarea value={display(formData.additionalComments)} placeholder="Additional Comments" disabled style={{ height: 64, width: '100%', border: '1px solid #eee', padding: 8, fontSize: 12, background: '#f5f5f5' }} />
                                         </div>
                                     </div>
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 160px', gap: 12, padding: 12, alignItems: 'end' }}>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                                             <label>Procedure Performed</label>
-                                            <textarea value={display(formData.procedurePerformed)} placeholder="Procedure Performed" disabled style={{ height: 64, width: '100%', border: '1px solid #ddd', padding: 8, fontSize: 12, background: '#D5D5D8' }} />
+                                            <textarea value={display(formData.procedurePerformed)} placeholder="Procedure Performed" disabled style={{ height: 64, width: '100%', border: '1px solid rgba(0, 0, 0, 0.1)', padding: 8, fontSize: 12, background: '#f5f5f5' }} />
                                         </div>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                                             <label>Dressing (body parts)</label>
-                                            <textarea value={display(formData.dressingBodyParts)} placeholder="Dressing (body parts)" disabled style={{ height: 64, width: '100%', border: '1px solid #ddd', padding: 8, fontSize: 12, background: '#D5D5D8' }} />
+                                            <textarea value={display(formData.dressingBodyParts)} placeholder="Dressing (body parts)" disabled style={{ height: 64, width: '100%', border: '1px solid rgba(0, 0, 0, 0.1)', padding: 8, fontSize: 12, background: '#f5f5f5' }} />
                                         </div>
                                     </div>
                                 </div>
@@ -3958,8 +3985,28 @@ export default function Treatment() {
                             </div>
                             <div style={{ marginBottom: 12 }}>
                                 <label style={{ display: 'block', marginBottom: 6, fontWeight: 600, fontSize: 13 }}>Plan / Adv</label>
-                                <textarea value={display(followUpData.planAdv)} disabled style={{ width: '100%', height: 38, border: '1px solid #ddd', padding: 8, fontSize: 12, background: '#D5D5D8' }} />
-                                {/* Addendum button moved to Treatment page */}
+                                <ClearableTextField
+                                    multiline
+                                    rows={2}
+                                    fullWidth
+                                    value={display(followUpData.planAdv)}
+                                    disabled
+                                    variant="outlined"
+                                    size="small"
+                                    sx={{
+                                        '& .MuiInputBase-root': {
+                                            fontSize: '13px'
+                                        },
+                                        '& .MuiOutlinedInput-root': {
+                                            borderRadius: '4px',
+                                            backgroundColor: '#f5f5f5'
+                                        },
+                                        '& .MuiInputBase-input': {
+                                            color: '#666'
+                                        }
+                                    }}
+                                />
+
                             </div>
 
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, marginBottom: 12 }}>
@@ -3987,7 +4034,7 @@ export default function Treatment() {
                                                     paddingRight: '34px !important'
                                                 },
                                                 '& .MuiOutlinedInput-notchedOutline': {
-                                                    borderColor: billingError ? 'red !important' : '#ccc'
+                                                    borderColor: billingError ? 'red !important' : (isFormDisabled ? 'rgba(0, 0, 0, 0.1) !important' : '#ccc')
                                                 }
                                             }}
                                         />
@@ -4008,7 +4055,7 @@ export default function Treatment() {
                                                 height: 22,
                                                 borderRadius: 4,
                                                 border: 'none',
-                                                backgroundColor: isFormDisabled ? '#D5D5D8' : '#1976d2',
+                                                backgroundColor: isFormDisabled ? '#f5f5f5' : '#1976d2',
                                                 color: isFormDisabled ? '#666' : '#fff',
                                                 fontWeight: 700,
                                                 lineHeight: '22px',
@@ -4054,9 +4101,12 @@ export default function Treatment() {
                                             '& .MuiInputBase-root': {
                                                 fontSize: '13px',
                                                 height: '38px',
-                                                background: isFormDisabled ? 'white' : 'white',
+                                                background: isFormDisabled ? '#f5f5f5' : 'white',
                                                 cursor: isFormDisabled ? 'not-allowed' : 'text',
-                                                color: isFormDisabled ? '#666' : '#333'
+                                                color: isFormDisabled ? '#666' : '#333',
+                                                '& .MuiOutlinedInput-notchedOutline': {
+                                                    borderColor: isFormDisabled ? 'rgba(0, 0, 0, 0.1) !important' : undefined
+                                                }
                                             }
                                         }}
                                     />
@@ -4075,7 +4125,10 @@ export default function Treatment() {
                                             '& .MuiInputBase-root': {
                                                 fontSize: '13px',
                                                 height: '38px',
-                                                background: '#D5D5D8'
+                                                background: '#f5f5f5',
+                                                '& .MuiOutlinedInput-notchedOutline': {
+                                                    borderColor: 'rgba(0, 0, 0, 0.1) !important'
+                                                }
                                             }
                                         }}
                                     />
@@ -4155,7 +4208,10 @@ export default function Treatment() {
                                             '& .MuiInputBase-root': {
                                                 fontSize: '13px',
                                                 height: '38px',
-                                                background: '#D5D5D8'
+                                                background: '#f5f5f5',
+                                                '& .MuiOutlinedInput-notchedOutline': {
+                                                    borderColor: 'rgba(0, 0, 0, 0.1) !important'
+                                                }
                                             }
                                         }}
                                     />
@@ -4181,9 +4237,12 @@ export default function Treatment() {
                                             '& .MuiInputBase-root': {
                                                 fontSize: '13px',
                                                 height: '38px',
-                                                background: isFormDisabled ? '#D5D5D8' : 'white',
+                                                background: isFormDisabled ? '#f5f5f5' : 'white',
                                                 cursor: isFormDisabled ? 'not-allowed' : 'text',
-                                                color: isFormDisabled ? '#666' : '#333'
+                                                color: isFormDisabled ? '#666' : '#333',
+                                                '& .MuiOutlinedInput-notchedOutline': {
+                                                    borderColor: isFormDisabled ? 'rgba(0, 0, 0, 0.1) !important' : undefined
+                                                }
                                             }
                                         }}
                                     />
@@ -4206,9 +4265,12 @@ export default function Treatment() {
                                             '& .MuiInputBase-root': {
                                                 fontSize: '13px',
                                                 height: '38px',
-                                                background: isFormDisabled ? '#D5D5D8' : 'white',
+                                                background: isFormDisabled ? '#f5f5f5' : 'white',
                                                 cursor: isFormDisabled ? 'not-allowed' : 'text',
-                                                color: isFormDisabled ? '#666' : '#333'
+                                                color: isFormDisabled ? '#666' : '#333',
+                                                '& .MuiOutlinedInput-notchedOutline': {
+                                                    borderColor: isFormDisabled ? 'rgba(0, 0, 0, 0.1) !important' : undefined
+                                                }
                                             }
                                         }}
                                     />
@@ -4231,9 +4293,12 @@ export default function Treatment() {
                                             '& .MuiInputBase-root': {
                                                 fontSize: '13px',
                                                 height: '38px',
-                                                background: 'white',
+                                                background: isFormDisabled ? '#f5f5f5' : 'white',
                                                 cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                                color: isFormDisabled ? '#666' : '#333'
+                                                color: isFormDisabled ? '#666' : '#333',
+                                                '& .MuiOutlinedInput-notchedOutline': {
+                                                    borderColor: isFormDisabled ? 'rgba(0, 0, 0, 0.1) !important' : undefined
+                                                }
                                             }
                                         }}
                                         SelectProps={{
@@ -4278,9 +4343,12 @@ export default function Treatment() {
                                             '& .MuiInputBase-root': {
                                                 fontSize: '13px',
                                                 height: '38px',
-                                                background: 'white',
+                                                background: isFormDisabled ? '#f5f5f5' : 'white',
                                                 cursor: isFormDisabled ? 'not-allowed' : 'text',
-                                                color: isFormDisabled ? '#666' : '#333'
+                                                color: isFormDisabled ? '#666' : '#333',
+                                                '& .MuiOutlinedInput-notchedOutline': {
+                                                    borderColor: isFormDisabled ? 'rgba(0, 0, 0, 0.1) !important' : undefined
+                                                }
                                             }
                                         }}
                                     />
@@ -4298,7 +4366,10 @@ export default function Treatment() {
                                             '& .MuiInputBase-root': {
                                                 fontSize: '13px',
                                                 height: '38px',
-                                                background: '#D5D5D8'
+                                                background: '#f5f5f5',
+                                                '& .MuiOutlinedInput-notchedOutline': {
+                                                    borderColor: 'rgba(0, 0, 0, 0.1) !important'
+                                                }
                                             }
                                         }}
                                     />
@@ -4310,7 +4381,7 @@ export default function Treatment() {
                                     type="button"
                                     disabled={!isFormDisabled}
                                     style={{
-                                        backgroundColor: !isFormDisabled ? '#D5D5D8' : '#1976d2',
+                                        backgroundColor: !isFormDisabled ? '#eee' : '#1976d2',
                                         color: !isFormDisabled ? '#666' : 'white',
                                         border: 'none',
                                         padding: '8px 12px',
@@ -4373,7 +4444,7 @@ export default function Treatment() {
                                     onClick={handleTreatmentSubmit}
                                     disabled={isSubmitting || hasSubmittedSuccessfully || isFormDisabled}
                                     style={{
-                                        backgroundColor: (isSubmitting || hasSubmittedSuccessfully || isFormDisabled) ? '#D5D5D8' : '#1976d2',
+                                        backgroundColor: (isSubmitting || hasSubmittedSuccessfully || isFormDisabled) ? '#eee' : '#1976d2',
                                         color: (isSubmitting || hasSubmittedSuccessfully || isFormDisabled) ? '#666' : 'white',
                                         border: 'none',
                                         padding: '8px 12px',

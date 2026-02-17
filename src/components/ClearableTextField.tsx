@@ -70,11 +70,14 @@ const ClearableTextField: React.FC<ClearableTextFieldProps> = ({
                     cursor: isReadOnly ? 'not-allowed !important' : 'inherit',
                 },
                 '& .MuiOutlinedInput-notchedOutline': {
-                    borderColor: shouldUseGrayError ? '#616161 !important' : undefined,
-                    borderWidth: shouldUseGrayError ? '1px !important' : undefined
+                    borderColor: isReadOnly ? 'rgba(0, 0, 0, 0.1) !important' : (shouldUseGrayError ? '#616161 !important' : undefined),
+                    borderWidth: (isReadOnly || shouldUseGrayError) ? '1px !important' : undefined
                 },
                 '&:hover .MuiOutlinedInput-notchedOutline': {
-                    borderColor: shouldUseGrayError ? '#424242 !important' : undefined
+                    borderColor: isReadOnly ? 'rgba(0, 0, 0, 0.1) !important' : (shouldUseGrayError ? '#424242 !important' : undefined)
+                },
+                '&.Mui-disabled .MuiOutlinedInput-notchedOutline, & .MuiOutlinedInput-root.Mui-disabled .MuiOutlinedInput-notchedOutline': {
+                    borderColor: 'rgba(0, 0, 0, 0.08) !important',
                 },
                 ...((otherProps.sx as any) || {}),
                 '& .MuiInputBase-input': {
