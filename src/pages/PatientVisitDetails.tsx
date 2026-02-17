@@ -108,6 +108,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
     const [complaintsOptions, setComplaintsOptions] = useState<ComplaintOption[]>([]);
     const [complaintsLoading, setComplaintsLoading] = useState(false);
     const [complaintsError, setComplaintsError] = useState<string | null>(null);
+    const [complaintsSelectionError, setComplaintsSelectionError] = useState<string | null>(null);
     const [showQuickRegistration, setShowQuickRegistration] = useState(false);
     const [sessionDataForQuickReg, setSessionDataForQuickReg] = useState<any>(null);
     const [currentClinicId, setCurrentClinicId] = useState<string>('');
@@ -152,7 +153,11 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
     const computedFollowUp = React.useRef<{ followUp: boolean, followUpType: string } | null>(null);
 
     const handleAddComplaints = () => {
-        if (selectedComplaints.length === 0) return;
+        if (selectedComplaints.length === 0) {
+            setComplaintsSelectionError('Please select at least one complaint');
+            return;
+        }
+        setComplaintsSelectionError(null);
         setComplaintsRows(prev => {
             const existingValues = new Set(prev.map(r => r.value));
             const newRows: ComplaintRow[] = [];
@@ -1665,6 +1670,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
         setReferralNameOptions([]);
         setSnackbarMessage('');
         setSelectedComplaints([]);
+        setComplaintsSelectionError(null);
         setComplaintSearch('');
         setIsComplaintsOpen(false);
         setComplaintsRows([]);
@@ -1929,7 +1935,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                         {!selectedDoctor && referralNameOptions.length > 0 && (
                                             <Box sx={{
                                                 position: 'absolute',
-                                                top: 'calc(100% + 4px)',
+                                                top: '44px',
                                                 left: 0,
                                                 right: 0,
                                                 backgroundColor: 'white',
@@ -2380,12 +2386,12 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                     <Grid container spacing={2} sx={{ mb: 0 }}>
                         <Grid item xs={12} md={4}>
                             <Box sx={{ mb: 2 }}>
-                                <Grid container spacing={2} alignItems="center">
+                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
+                                    Select Complaints
+                                </Typography>
+                                <Grid container spacing={2} alignItems="flex-start">
                                     <Grid item xs>
                                         <Box sx={{ mb: 2 }}>
-                                            <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }} className='mb-0'>
-                                                Select Complaints
-                                            </Typography>
                                             <div ref={complaintsRef} style={{ position: 'relative', flex: 1 }}>
                                                 <div
                                                     onClick={() => !readOnly && setIsComplaintsOpen(prev => !prev)}
@@ -2428,7 +2434,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                 {isComplaintsOpen && (
                                                     <div style={{
                                                         position: 'absolute',
-                                                        top: '100%',
+                                                        top: '40px',
                                                         left: 0,
                                                         right: 0,
                                                         backgroundColor: 'white',
@@ -2550,6 +2556,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                                                 checked={checked}
                                                                                 onChange={(e) => {
                                                                                     if (readOnly) return;
+                                                                                    setComplaintsSelectionError(null);
                                                                                     setSelectedComplaints(prev => {
                                                                                         if (e.target.checked) {
                                                                                             if (prev.includes(opt.value)) return prev;
@@ -2581,6 +2588,18 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                             })}
                                                         </div>
                                                     </div>
+                                                )}
+                                                {complaintsSelectionError && (
+                                                    <p style={{
+                                                        color: '#d32f2f',
+                                                        fontSize: '0.75rem',
+                                                        fontWeight: 400,
+                                                        fontFamily: "'Roboto', sans-serif",
+                                                        margin: '3px 0 0 0',
+                                                        textAlign: 'left'
+                                                    }}>
+                                                        {complaintsSelectionError}
+                                                    </p>
                                                 )}
                                             </div>
                                         </Box>
@@ -2688,60 +2707,72 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     borderRadius: '4px',
                                     overflow: 'hidden'
                                 }}>
-                                    {/* Header Table (Static) */}
-                                    <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'separate', borderSpacing: 0 }}>
-                                        <thead>
-                                            <tr style={{ backgroundColor: '#1976d2' }}>
-                                                <th style={{
-                                                    padding: '12px',
-                                                    textAlign: 'left',
-                                                    borderBottom: '1px solid #ddd',
-                                                    fontWeight: 'normal',
-                                                    color: 'white',
-                                                    width: '10%',
-                                                    fontSize: '12px'
-                                                }}>
-                                                    Sr.
-                                                </th>
-                                                <th style={{
-                                                    padding: '12px',
-                                                    textAlign: 'left',
-                                                    borderBottom: '1px solid #ddd',
-                                                    fontWeight: 'normal',
-                                                    color: 'white',
-                                                    width: '30%',
-                                                    fontSize: '12px'
-                                                }}>
-                                                    Complaint Description
-                                                </th>
-                                                <th style={{
-                                                    padding: '12px',
-                                                    textAlign: 'left',
-                                                    borderBottom: '1px solid #ddd',
-                                                    fontWeight: 'normal',
-                                                    color: 'white',
-                                                    width: '40%',
-                                                    fontSize: '12px'
-                                                }}>
-                                                    Duration / Comment
-                                                </th>
-                                                <th style={{
-                                                    padding: '12px',
-                                                    borderBottom: '1px solid #ddd',
-                                                    fontWeight: 'normal',
-                                                    color: 'white',
-                                                    width: '20%',
-                                                    fontSize: '12px',
-                                                    textAlign: 'center'
-                                                }}>
-                                                    Action
-                                                </th>
-                                            </tr>
-                                        </thead>
-                                    </table>
-
-                                    <div style={{ maxHeight: '160px', overflowY: 'auto' }}>
+                                    <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid #ddd', borderRadius: '4px' }}>
                                         <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'separate', borderSpacing: 0 }}>
+                                            <thead style={{ position: 'sticky', top: 0, zIndex: 1, backgroundColor: '#1976d2' }}>
+                                                <tr style={{ backgroundColor: '#1976d2' }}>
+                                                    <th style={{
+                                                        padding: '12px',
+                                                        textAlign: 'left',
+                                                        borderBottom: '1px solid #ddd',
+                                                        fontWeight: 'bold',
+                                                        color: 'white',
+                                                        width: '10%',
+                                                        fontSize: '12px',
+                                                        position: 'sticky',
+                                                        top: 0,
+                                                        backgroundColor: '#1976d2',
+                                                        zIndex: 1
+                                                    }}>
+                                                        Sr.
+                                                    </th>
+                                                    <th style={{
+                                                        padding: '12px',
+                                                        textAlign: 'left',
+                                                        borderBottom: '1px solid #ddd',
+                                                        fontWeight: 'bold',
+                                                        color: 'white',
+                                                        width: '30%',
+                                                        fontSize: '12px',
+                                                        position: 'sticky',
+                                                        top: 0,
+                                                        backgroundColor: '#1976d2',
+                                                        zIndex: 1
+                                                    }}>
+                                                        Complaint Description
+                                                    </th>
+                                                    <th style={{
+                                                        padding: '12px',
+                                                        textAlign: 'left',
+                                                        borderBottom: '1px solid #ddd',
+                                                        fontWeight: 'bold',
+                                                        color: 'white',
+                                                        width: '40%',
+                                                        fontSize: '12px',
+                                                        position: 'sticky',
+                                                        top: 0,
+                                                        backgroundColor: '#1976d2',
+                                                        zIndex: 1
+                                                    }}>
+                                                        Duration / Comment
+                                                    </th>
+                                                    <th style={{
+                                                        padding: '12px',
+                                                        borderBottom: '1px solid #ddd',
+                                                        fontWeight: 'bold',
+                                                        color: 'white',
+                                                        width: '20%',
+                                                        fontSize: '12px',
+                                                        textAlign: 'center',
+                                                        position: 'sticky',
+                                                        top: 0,
+                                                        backgroundColor: '#1976d2',
+                                                        zIndex: 1
+                                                    }}>
+                                                        Action
+                                                    </th>
+                                                </tr>
+                                            </thead>
                                             <tbody>
                                                 {complaintsRows.map((row, idx) => (
                                                     <tr key={row.id}>
@@ -2797,7 +2828,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                                         position: 'static !important'
                                                                     },
                                                                     '& .MuiInputBase-input': {
-                                                                        padding: '8px 10px',
+                                                                        padding: '8px 12px',
                                                                         color: readOnly ? '#666' : '#333'
                                                                     }
                                                                 }}

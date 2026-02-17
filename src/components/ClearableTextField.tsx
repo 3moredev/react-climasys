@@ -87,7 +87,7 @@ const ClearableTextField: React.FC<ClearableTextFieldProps> = ({
                     cursor: isReadOnly ? 'not-allowed !important' : 'inherit',
                     fontSize: 'inherit',
                     '&::placeholder': {
-                        color: effectiveError ? '#d32f2f !important' : '#666 !important',
+                        color: '#666 !important',
                         opacity: isReadOnly ? '0.5 !important' : 1,
                         fontSize: 'inherit'
                     },
