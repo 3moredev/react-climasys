@@ -7040,9 +7040,12 @@ export default function Treatment() {
                             </div>
 
                             {/* Prescription Section */}
+                            {/* Prescription Section */}
                             <div style={{ marginBottom: '15px' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '5px', width: '88%', gap: '8px' }}>
-                                    <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Prescription</label>
+                                    <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                                        Prescription
+                                    </label>
                                 </div>
 
                                 <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
@@ -7070,10 +7073,29 @@ export default function Treatment() {
                                             sx={{
                                                 '& .MuiOutlinedInput-root': {
                                                     height: '38px',
-                                                    borderRadius: '4px',
+                                                    borderRadius: '6px',
                                                     fontSize: '13px',
-                                                    backgroundColor: isFormDisabled ? '#f5f5f5' : 'white'
+                                                    backgroundColor: isFormDisabled ? '#f5f5f5' : '#ffffff'
                                                 },
+
+                                                /* Default border */
+                                                '& .MuiOutlinedInput-root fieldset': {
+                                                    borderColor: '#B7B7B7',
+                                                    borderWidth: '2px'
+                                                },
+
+                                                /* Hover border */
+                                                '& .MuiOutlinedInput-root:hover fieldset': {
+                                                    borderColor: isFormDisabled ? '#B7B7B7' : '#1E88E5',
+                                                    borderWidth: '2px'
+                                                },
+
+                                                /* Focus border */
+                                                '& .MuiOutlinedInput-root.Mui-focused fieldset': {
+                                                    borderColor: '#1E88E5',
+                                                    borderWidth: '2px'
+                                                },
+
                                                 '& .MuiInputBase-input': {
                                                     color: isFormDisabled ? '#666' : '#333',
                                                     cursor: isFormDisabled ? 'not-allowed' : 'text'
@@ -7083,6 +7105,7 @@ export default function Treatment() {
                                             helperText={prescriptionError}
                                         />
                                     </div>
+
                                     <button
                                         type="button"
                                         onClick={handleAddPrescription}
@@ -7093,13 +7116,14 @@ export default function Treatment() {
                                             color: 'white',
                                             border: 'none',
                                             padding: '6px 12px',
-                                            borderRadius: '4px',
+                                            borderRadius: '6px',
                                             cursor: isFormDisabled ? 'not-allowed' : 'pointer',
                                             fontSize: '13px'
                                         }}
                                     >
                                         Add Rx
                                     </button>
+
                                     <button
                                         type="button"
                                         disabled={isFormDisabled}
@@ -7129,6 +7153,7 @@ export default function Treatment() {
                                     >
                                         <Add fontSize="small" />
                                     </button>
+
                                     <button
                                         type="button"
                                         onClick={() => setShowInstructionPopup(true)}
@@ -7156,241 +7181,26 @@ export default function Treatment() {
                                         }}
                                         onMouseEnter={(e) => {
                                             if (!isFormDisabled) {
-                                                e.currentTarget.style.backgroundColor = (selectedInstructionGroups && selectedInstructionGroups.length > 0)
-                                                    ? '#ffb300'
-                                                    : '#1565c0';
+                                                e.currentTarget.style.backgroundColor =
+                                                    (selectedInstructionGroups && selectedInstructionGroups.length > 0)
+                                                        ? '#ffb300'
+                                                        : '#1565c0';
                                             }
                                         }}
                                         onMouseLeave={(e) => {
                                             if (!isFormDisabled) {
-                                                e.currentTarget.style.backgroundColor = (selectedInstructionGroups && selectedInstructionGroups.length > 0)
-                                                    ? '#ffc107'
-                                                    : '#1976d2';
+                                                e.currentTarget.style.backgroundColor =
+                                                    (selectedInstructionGroups && selectedInstructionGroups.length > 0)
+                                                        ? '#ffc107'
+                                                        : '#1976d2';
                                             }
                                         }}
                                     >
                                         i
                                     </button>
                                 </div>
-
-                                {isRxOpen && rxSuggestions.length > 0 && (
-                                    <div ref={rxRef} style={{ border: '1px solid #ccc', borderRadius: '4px', background: '#fff', maxHeight: '180px', overflowY: 'auto', width: '88%', marginBottom: '12px' }}>
-                                        {rxSuggestions.map((item, idx) => (
-                                            <div
-                                                key={idx}
-                                                onClick={() => { setPrescriptionInput(item); setIsRxOpen(false); }}
-                                                style={{ padding: '6px 10px', cursor: 'pointer', fontSize: '13px', borderBottom: '1px solid #eee' }}
-                                                onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = '#f5f5f5'; }}
-                                                onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = '#fff'; }}
-                                                title={item}
-                                            >
-                                                {item}
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-
-                                {/* Prescription Table */}
-                                {prescriptionRows.length > 0 && (
-                                    <div
-                                        style={{
-                                            border: '1px solid #ccc',
-                                            borderRadius: '4px',
-                                            overflow: 'hidden',
-                                            opacity: isFormDisabled ? 0.6 : 1
-                                        }}
-                                    >
-                                        <div style={{
-                                            display: 'grid',
-                                            gridTemplateColumns: '50px 1fr 50px 50px 50px 50px 1fr 80px' as const,
-                                            backgroundColor: '#1976d2',
-                                            color: 'white',
-                                            fontWeight: 'bold',
-                                            fontSize: '13px'
-                                        }}>
-                                            <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Sr.</div>
-                                            <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Prescriptions</div>
-                                            <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>B</div>
-                                            <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>L</div>
-                                            <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>D</div>
-                                            <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Days</div>
-                                            <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Instruction</div>
-                                            <div style={{ padding: '6px' }} className="text-center">Action</div>
-                                        </div>
-                                        {prescriptionRows.map((row, index) => (
-                                            <div key={row.id} style={{
-                                                display: 'grid',
-                                                gridTemplateColumns: '50px 1fr 50px 50px 50px 50px 1fr 80px' as const,
-                                                backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white',
-                                                borderBottom: '1px solid #e0e0e0'
-                                            }}>
-                                                <div style={{ padding: '6px', borderRight: '1px solid #e0e0e0', fontSize: '13px' }}>{index + 1}</div>
-                                                <div style={{ padding: '6px', borderRight: '1px solid #e0e0e0', fontSize: '13px' }}>{row.prescription}</div>
-                                                <div style={{ padding: '0', borderRight: '1px solid #e0e0e0' }}>
-                                                    <input
-                                                        type="text"
-                                                        value={row.b}
-                                                        inputMode="numeric"
-                                                        pattern="[0-9]*"
-                                                        onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
-                                                        onChange={(e) => handlePrescriptionFieldChange(row.id, 'b', e.target.value.replace(/\D/g, ''))}
-                                                        disabled={isFormDisabled}
-                                                        maxLength={10}
-                                                        className="medicine-table-input"
-                                                        style={{
-                                                            width: '100%',
-                                                            height: '100%',
-                                                            padding: '8px 6px',
-                                                            border: 'none',
-                                                            borderRadius: 0,
-                                                            outline: 'none',
-                                                            backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
-                                                            boxShadow: 'none',
-                                                            fontSize: '11px',
-                                                            textAlign: 'center',
-                                                            color: isFormDisabled ? '#666' : '#333',
-                                                            cursor: isFormDisabled ? 'not-allowed' : 'text'
-                                                        }}
-                                                    />
-                                                </div>
-                                                <div style={{ padding: '0', borderRight: '1px solid #e0e0e0' }}>
-                                                    <input
-                                                        type="text"
-                                                        value={row.l}
-                                                        inputMode="numeric"
-                                                        pattern="[0-9]*"
-                                                        onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
-                                                        onChange={(e) => handlePrescriptionFieldChange(row.id, 'l', e.target.value.replace(/\D/g, ''))}
-                                                        disabled={isFormDisabled}
-                                                        maxLength={10}
-                                                        className="medicine-table-input"
-                                                        style={{
-                                                            width: '100%',
-                                                            height: '100%',
-                                                            padding: '8px 6px',
-                                                            border: 'none',
-                                                            borderRadius: 0,
-                                                            outline: 'none',
-                                                            backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
-                                                            boxShadow: 'none',
-                                                            fontSize: '11px',
-                                                            textAlign: 'center',
-                                                            color: isFormDisabled ? '#666' : '#333',
-                                                            cursor: isFormDisabled ? 'not-allowed' : 'text'
-                                                        }}
-                                                    />
-                                                </div>
-                                                <div style={{ padding: '0', borderRight: '1px solid #e0e0e0' }}>
-                                                    <input
-                                                        type="text"
-                                                        value={row.d}
-                                                        inputMode="numeric"
-                                                        pattern="[0-9]*"
-                                                        onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
-                                                        onChange={(e) => handlePrescriptionFieldChange(row.id, 'd', e.target.value.replace(/\D/g, ''))}
-                                                        disabled={isFormDisabled}
-                                                        maxLength={10}
-                                                        className="medicine-table-input"
-                                                        style={{
-                                                            width: '100%',
-                                                            height: '100%',
-                                                            padding: '8px 6px',
-                                                            border: 'none',
-                                                            borderRadius: 0,
-                                                            outline: 'none',
-                                                            backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
-                                                            boxShadow: 'none',
-                                                            fontSize: '11px',
-                                                            textAlign: 'center',
-                                                            color: isFormDisabled ? '#666' : '#333',
-                                                            cursor: isFormDisabled ? 'not-allowed' : 'text'
-                                                        }}
-                                                    />
-                                                </div>
-                                                <div style={{ padding: '0', borderRight: '1px solid #e0e0e0' }}>
-                                                    <input
-                                                        type="text"
-                                                        value={row.days}
-                                                        inputMode="numeric"
-                                                        pattern="[0-9]*"
-                                                        onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
-                                                        onChange={(e) => handlePrescriptionFieldChange(row.id, 'days', e.target.value.replace(/\D/g, ''))}
-                                                        disabled={isFormDisabled}
-                                                        maxLength={10}
-                                                        className="medicine-table-input"
-                                                        style={{
-                                                            width: '100%',
-                                                            height: '100%',
-                                                            padding: '8px 6px',
-                                                            border: 'none',
-                                                            borderRadius: 0,
-                                                            outline: 'none',
-                                                            backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
-                                                            boxShadow: 'none',
-                                                            fontSize: '11px',
-                                                            textAlign: 'center',
-                                                            color: isFormDisabled ? '#666' : '#333',
-                                                            cursor: isFormDisabled ? 'not-allowed' : 'text'
-                                                        }}
-                                                    />
-                                                </div>
-                                                <div style={{ padding: '0', borderRight: '1px solid #e0e0e0' }}>
-                                                    <input
-                                                        type="text"
-                                                        value={row.instruction}
-                                                        onChange={(e) => handlePrescriptionInstructionChange(row.id, e.target.value)}
-                                                        disabled={isFormDisabled}
-                                                        maxLength={4000}
-                                                        placeholder="Enter instruction"
-                                                        className="medicine-table-input"
-                                                        style={{
-                                                            width: '100%',
-                                                            height: '100%',
-                                                            padding: '8px 10px',
-                                                            border: 'none',
-                                                            borderRadius: 0,
-                                                            outline: 'none',
-                                                            backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
-                                                            boxShadow: 'none',
-                                                            fontSize: '11px',
-                                                            color: isFormDisabled ? '#666' : '#333',
-                                                            cursor: isFormDisabled ? 'not-allowed' : 'text'
-                                                        }}
-                                                    />
-                                                </div>
-                                                <div style={{ padding: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-                                                    <div
-                                                        onClick={() => {
-                                                            if (isFormDisabled) return;
-                                                            handleRemovePrescription(row.id);
-                                                        }}
-                                                        title="Remove"
-                                                        style={{
-                                                            display: 'inline-flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                            width: '24px',
-                                                            height: '24px',
-                                                            cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                                            color: isFormDisabled ? '#9e9e9e' : '#000000',
-                                                            backgroundColor: 'transparent'
-                                                        }}
-                                                        onMouseEnter={(e) => {
-                                                            if (isFormDisabled) return;
-                                                            (e.currentTarget as HTMLDivElement).style.color = '#EF5350';
-                                                        }}
-                                                        onMouseLeave={(e) => {
-                                                            (e.currentTarget as HTMLDivElement).style.color = isFormDisabled ? '#9e9e9e' : '#000000';
-                                                        }}
-                                                    >
-                                                        <Delete fontSize="small" />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
                             </div>
+
 
                             {/* Previous Visit Section */}
                             <div style={{ marginBottom: '15px' }}>
