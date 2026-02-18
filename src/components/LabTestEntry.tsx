@@ -1430,7 +1430,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                 <thead>
                                                     <tr style={{ backgroundColor: '#f5f5f5' }}>
                                                         <th style={{
-                                                            padding: '12px',
+                                                            padding: '16px',
                                                             textAlign: 'left',
                                                             borderBottom: '1px solid #ddd',
                                                             fontWeight: '400',
@@ -1440,7 +1440,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                             Lab Test Name
                                                         </th>
                                                         <th style={{
-                                                            padding: '12px',
+                                                            padding: '16px',
                                                             textAlign: 'left',
                                                             borderBottom: '1px solid #ddd',
                                                             fontWeight: '400',
@@ -1460,7 +1460,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                             Value / Results <span style={{ color: 'red' }}>*</span>
                                                         </th>
                                                         <th style={{
-                                                            padding: '12px',
+                                                            padding: '16px',
                                                             textAlign: 'center',
                                                             borderBottom: '1px solid #ddd',
                                                             fontWeight: '400',
@@ -1482,26 +1482,26 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                         {labTestResults.map((result) => (
                                                             <tr key={result.id}>
                                                                 <td style={{
-                                                                    padding: '12px 16px',
+                                                                    // padding: '12px 16px',
                                                                     borderBottom: '1px solid #eee',
                                                                     color: 'black',
                                                                     // fontSize: '14px',
                                                                     width: '30%',
-                                                                    verticalAlign: 'top'
+                                                                    // verticalAlign: 'top'
                                                                 }}>
                                                                     {result.labTestName}
                                                                 </td>
                                                                 <td style={{
-                                                                    padding: '12px 16px',
+                                                                    // padding: '12px 16px',
                                                                     borderBottom: '1px solid #eee',
                                                                     color: 'black',
                                                                     // fontSize: '14px',
                                                                     width: '30%',
-                                                                    verticalAlign: 'top'
+                                                                    // verticalAlign: 'top'
                                                                 }}>
                                                                     {result.parameterName}
                                                                 </td>
-                                                                <td style={{ borderBottom: '1px solid #eee', width: '30%', padding: '4px 0px', verticalAlign: 'top' }}>
+                                                                <td style={{ borderBottom: '1px solid #eee', width: '30%', padding: '4px 0px' }}>
                                                                     <ClearableTextField
                                                                         fullWidth
                                                                         placeholder="Value / Results"
@@ -1541,11 +1541,11 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                                     />
                                                                 </td>
                                                                 <td style={{
-                                                                    padding: '12px 16px',
+                                                                    // padding: '12px 16px',
                                                                     borderBottom: '1px solid #eee',
                                                                     textAlign: 'center',
                                                                     width: '10%',
-                                                                    verticalAlign: 'top'
+                                                                    // verticalAlign: 'top'
                                                                 }}>
                                                                     <button
                                                                         onClick={() => handleRemoveResult(result.id)}
