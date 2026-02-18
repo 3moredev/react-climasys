@@ -2284,7 +2284,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                         <Typography variant="subtitle2" fontWeight="bold" className='mb-0'>
                                             Surgical History
                                         </Typography>
-                                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px' }}>
+                                        <Typography color="text.secondary" sx={{ fontSize: '11px' }}>
                                             {(formData.pastSurgicalHistory || '').length}/{getFieldConfig('pastSurgicalHistory', 'visit')?.maxLength || 1000}
                                         </Typography>
                                     </div>
@@ -2315,9 +2315,9 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     />
                                     {validationErrors.pastSurgicalHistory && (
                                         <Typography
-                                            variant="caption"
+
                                             sx={{
-                                                mt: 0.5,
+                                                //      mt: 0.5,
                                                 display: 'block',
                                                 color: validationErrors.pastSurgicalHistory.toLowerCase().includes('exceed') ? '#757575' : '#d32f2f'
                                             }}
@@ -2334,7 +2334,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                         <Typography variant="subtitle2" fontWeight="bold" className="mb-0">
                                             Previous Visit Plan
                                         </Typography>
-                                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px' }}>
+                                        <Typography color="text.secondary" sx={{ fontSize: '11px' }}>
                                             {(formData.previousVisitPlan || '').length}/{getFieldConfig('plan', 'visit')?.maxLength || 1000}
                                         </Typography>
                                     </div>
@@ -2360,7 +2360,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                         <Typography variant="subtitle2" fontWeight="bold" className="mb-0">
                                             Chief complaint entered by patient
                                         </Typography>
-                                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px' }}>
+                                        <Typography color="text.secondary" sx={{ fontSize: '11px' }}>
                                             {(formData.chiefComplaint || '').length}/{getFieldConfig('chiefComplaint', 'visit')?.maxLength || 400}
                                         </Typography>
                                     </div>
@@ -2624,7 +2624,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     <Typography variant="subtitle2" fontWeight="bold" className="mb-0">
                                         Visit Comments
                                     </Typography>
-                                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px' }}>
+                                    <Typography color="text.secondary" sx={{ fontSize: '11px' }}>
                                         {(formData.visitComments || '').length}/{getFieldConfig('visitComments', 'visit')?.maxLength || 1000}
                                     </Typography>
                                 </div>
@@ -2645,9 +2645,9 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                 />
                                 {validationErrors.visitComments && (
                                     <Typography
-                                        variant="caption"
+
                                         sx={{
-                                            mt: 0.5,
+                                            //       mt: 0.5,
                                             display: 'block',
                                             color: validationErrors.visitComments.toLowerCase().includes('exceed') ? '#757575' : '#d32f2f'
                                         }}
@@ -2664,7 +2664,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                     <Typography variant="subtitle2" fontWeight="bold" className='mb-0'>
                                         Medicines
                                     </Typography>
-                                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px' }}>
+                                    <Typography color="text.secondary" sx={{ fontSize: '11px' }}>
                                         {(formData.currentMedicines || '').length}/{getFieldConfig('currentMedicines', 'visit')?.maxLength || 1000}
                                     </Typography>
                                 </div>
@@ -2685,9 +2685,9 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                 />
                                 {validationErrors.currentMedicines && (
                                     <Typography
-                                        variant="caption"
+
                                         sx={{
-                                            mt: 0.5,
+                                            //    mt: 0.5,
                                             display: 'block',
                                             color: validationErrors.currentMedicines.toLowerCase().includes('exceed') ? '#757575' : '#d32f2f'
                                         }}
@@ -2947,7 +2947,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                 pl: 1, pr: 0.5, py: 0.5
                                             }}>
                                                 <Typography
-                                                    variant="caption"
+
                                                     sx={{
                                                         color: '#2e7d32',
                                                         mr: 0.5,
@@ -3001,7 +3001,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                 borderRadius: 8,
                                                 pl: 1, pr: 0.5, py: 0
                                             }}>
-                                                <Typography variant="caption" sx={{ mr: 0.5, fontWeight: 500 }} title={file.name}>
+                                                <Typography sx={{ mr: 0.5, fontWeight: 500 }} title={file.name}>
                                                     {displayName}{fileSize}
                                                 </Typography>
                                                 <span
