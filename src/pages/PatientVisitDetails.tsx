@@ -2288,31 +2288,48 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                             {(formData.pastSurgicalHistory || '').length}/{getFieldConfig('pastSurgicalHistory', 'visit')?.maxLength || 1000}
                                         </Typography>
                                     </div>
-                                    <textarea
-                                        rows={2}
-                                        value={formData.pastSurgicalHistory}
-                                        onChange={(e) =>
-                                            handleInputChange(
-                                                'pastSurgicalHistory',
-                                                e.target.value.slice(
-                                                    0,
-                                                    getFieldConfig('pastSurgicalHistory', 'visit')?.maxLength
+                                    <div style={{ position: 'relative' }}>
+                                        <textarea
+                                            rows={2}
+                                            value={formData.pastSurgicalHistory}
+                                            onChange={(e) =>
+                                                handleInputChange(
+                                                    'pastSurgicalHistory',
+                                                    e.target.value.slice(
+                                                        0,
+                                                        getFieldConfig('pastSurgicalHistory', 'visit')?.maxLength
+                                                    )
                                                 )
-                                            )
-                                        }
-                                        disabled={readOnly}
-                                        maxLength={getFieldConfig('pastSurgicalHistory', 'visit')?.maxLength}
-                                        id="textarea-autosize"
-                                        style={{
-                                            border: validationErrors.pastSurgicalHistory
-                                                ? (validationErrors.pastSurgicalHistory.toLowerCase().includes('exceed') ? '1px solid #616161' : '1px solid #d32f2f')
-                                                : '1px solid #b7b7b7',
-                                            borderRadius: '8px',
-                                            padding: '8px',
-                                            resize: 'vertical',
-                                            width: '100%'
-                                        }}
-                                    />
+                                            }
+                                            disabled={readOnly}
+                                            maxLength={getFieldConfig('pastSurgicalHistory', 'visit')?.maxLength}
+                                            id="textarea-autosize"
+                                            style={{
+                                                border: validationErrors.pastSurgicalHistory
+                                                    ? (validationErrors.pastSurgicalHistory.toLowerCase().includes('exceed') ? '1px solid #616161' : '1px solid #d32f2f')
+                                                    : '1px solid #b7b7b7',
+                                                borderRadius: '8px',
+                                                padding: '8px',
+                                                paddingRight: '28px',
+                                                resize: 'vertical',
+                                                width: '100%'
+                                            }}
+                                        />
+                                        {!readOnly && formData.pastSurgicalHistory && (
+                                            <Close
+                                                onClick={() => handleInputChange('pastSurgicalHistory', '')}
+                                                titleAccess="Clear"
+                                                style={{
+                                                    position: 'absolute',
+                                                    top: '6px',
+                                                    right: '6px',
+                                                    fontSize: '18px',
+                                                    color: '#757575',
+                                                    cursor: 'pointer',
+                                                }}
+                                            />
+                                        )}
+                                    </div>
                                     {validationErrors.pastSurgicalHistory && (
                                         <Typography
 
@@ -2446,33 +2463,51 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                     }}>
                                                         {/* Search Field inside dropdown */}
                                                         <div style={{ padding: '6px' }}>
-                                                            <input
-                                                                type="text"
-                                                                value={complaintSearch}
-                                                                onChange={(e) => {
-                                                                    const config = getFieldConfig('complaintSearch', 'visit');
-                                                                    if (config?.maxLength && e.target.value.length > config.maxLength) return;
-                                                                    setComplaintSearch(e.target.value);
-                                                                }}
-                                                                disabled={readOnly}
-                                                                maxLength={getFieldConfig('complaintSearch', 'visit')?.maxLength}
-                                                                placeholder="Search complaints"
-                                                                style={{
-                                                                    width: '100%',
-                                                                    height: '28px',
-                                                                    padding: '4px 8px',
-                                                                    border: '1px solid #B7B7B7',
-                                                                    borderRadius: '4px',
-                                                                    fontSize: '12px',
-                                                                    outline: 'none'
-                                                                }}
-                                                                onFocus={(e) => {
-                                                                    (e.target as HTMLInputElement).style.borderColor = '#1E88E5';
-                                                                }}
-                                                                onBlur={(e) => {
-                                                                    (e.target as HTMLInputElement).style.borderColor = '#B7B7B7';
-                                                                }}
-                                                            />
+                                                            <div style={{ position: 'relative' }}>
+                                                                <input
+                                                                    type="text"
+                                                                    value={complaintSearch}
+                                                                    onChange={(e) => {
+                                                                        const config = getFieldConfig('complaintSearch', 'visit');
+                                                                        if (config?.maxLength && e.target.value.length > config.maxLength) return;
+                                                                        setComplaintSearch(e.target.value);
+                                                                    }}
+                                                                    disabled={readOnly}
+                                                                    maxLength={getFieldConfig('complaintSearch', 'visit')?.maxLength}
+                                                                    placeholder="Search complaints"
+                                                                    style={{
+                                                                        width: '100%',
+                                                                        height: '28px',
+                                                                        padding: '4px 28px 4px 8px',
+                                                                        border: '1px solid #B7B7B7',
+                                                                        borderRadius: '4px',
+                                                                        fontSize: '12px',
+                                                                        outline: 'none',
+                                                                        boxSizing: 'border-box'
+                                                                    }}
+                                                                    onFocus={(e) => {
+                                                                        (e.target as HTMLInputElement).style.borderColor = '#1E88E5';
+                                                                    }}
+                                                                    onBlur={(e) => {
+                                                                        (e.target as HTMLInputElement).style.borderColor = '#B7B7B7';
+                                                                    }}
+                                                                />
+                                                                {complaintSearch && !readOnly && (
+                                                                    <Close
+                                                                        onClick={() => setComplaintSearch('')}
+                                                                        titleAccess="Clear search"
+                                                                        style={{
+                                                                            position: 'absolute',
+                                                                            top: '50%',
+                                                                            right: '6px',
+                                                                            transform: 'translateY(-50%)',
+                                                                            fontSize: '18px',
+                                                                            color: '#757575',
+                                                                            cursor: 'pointer',
+                                                                        }}
+                                                                    />
+                                                                )}
+                                                            </div>
                                                         </div>
 
                                                         <div style={{ maxHeight: '200px', overflowY: 'auto', padding: '4px 6px', display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', columnGap: '8px', rowGap: '6px' }}>
@@ -2628,21 +2663,38 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                         {(formData.visitComments || '').length}/{getFieldConfig('visitComments', 'visit')?.maxLength || 1000}
                                     </Typography>
                                 </div>
-                                <textarea
-                                    rows={2}
-                                    value={formData.visitComments}
-                                    onChange={(e) => handleInputChange('visitComments', e.target.value.slice(0, getFieldConfig('visitComments', 'visit')?.maxLength || 1000))}
-                                    disabled={readOnly}
-                                    style={{
-                                        border: validationErrors.visitComments
-                                            ? (validationErrors.visitComments.toLowerCase().includes('exceed') ? '1px solid #616161' : '1px solid #d32f2f')
-                                            : '1px solid #b7b7b7',
-                                        borderRadius: '8px',
-                                        padding: '8px',
-                                        resize: 'vertical',
-                                        width: '100%'
-                                    }}
-                                />
+                                <div style={{ position: 'relative' }}>
+                                    <textarea
+                                        rows={2}
+                                        value={formData.visitComments}
+                                        onChange={(e) => handleInputChange('visitComments', e.target.value.slice(0, getFieldConfig('visitComments', 'visit')?.maxLength || 1000))}
+                                        disabled={readOnly}
+                                        style={{
+                                            border: validationErrors.visitComments
+                                                ? (validationErrors.visitComments.toLowerCase().includes('exceed') ? '1px solid #616161' : '1px solid #d32f2f')
+                                                : '1px solid #b7b7b7',
+                                            borderRadius: '8px',
+                                            padding: '8px',
+                                            paddingRight: '28px',
+                                            resize: 'vertical',
+                                            width: '100%'
+                                        }}
+                                    />
+                                    {!readOnly && formData.visitComments && (
+                                        <Close
+                                            onClick={() => handleInputChange('visitComments', '')}
+                                            titleAccess="Clear"
+                                            style={{
+                                                position: 'absolute',
+                                                top: '6px',
+                                                right: '6px',
+                                                fontSize: '18px',
+                                                color: '#757575',
+                                                cursor: 'pointer',
+                                            }}
+                                        />
+                                    )}
+                                </div>
                                 {validationErrors.visitComments && (
                                     <Typography
 
@@ -2668,21 +2720,38 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                         {(formData.currentMedicines || '').length}/{getFieldConfig('currentMedicines', 'visit')?.maxLength || 1000}
                                     </Typography>
                                 </div>
-                                <textarea
-                                    rows={2}
-                                    value={formData.currentMedicines}
-                                    onChange={(e) => handleInputChange('currentMedicines', e.target.value.slice(0, getFieldConfig('currentMedicines', 'visit')?.maxLength || 1000))}
-                                    disabled={readOnly}
-                                    style={{
-                                        border: validationErrors.currentMedicines
-                                            ? (validationErrors.currentMedicines.toLowerCase().includes('exceed') ? '1px solid #616161' : '1px solid #d32f2f')
-                                            : '1px solid #b7b7b7',
-                                        borderRadius: '8px',
-                                        padding: '8px',
-                                        resize: 'vertical',
-                                        width: '100%'
-                                    }}
-                                />
+                                <div style={{ position: 'relative' }}>
+                                    <textarea
+                                        rows={2}
+                                        value={formData.currentMedicines}
+                                        onChange={(e) => handleInputChange('currentMedicines', e.target.value.slice(0, getFieldConfig('currentMedicines', 'visit')?.maxLength || 1000))}
+                                        disabled={readOnly}
+                                        style={{
+                                            border: validationErrors.currentMedicines
+                                                ? (validationErrors.currentMedicines.toLowerCase().includes('exceed') ? '1px solid #616161' : '1px solid #d32f2f')
+                                                : '1px solid #b7b7b7',
+                                            borderRadius: '8px',
+                                            padding: '8px',
+                                            paddingRight: '28px',
+                                            resize: 'vertical',
+                                            width: '100%'
+                                        }}
+                                    />
+                                    {!readOnly && formData.currentMedicines && (
+                                        <Close
+                                            onClick={() => handleInputChange('currentMedicines', '')}
+                                            titleAccess="Clear"
+                                            style={{
+                                                position: 'absolute',
+                                                top: '6px',
+                                                right: '6px',
+                                                fontSize: '18px',
+                                                color: '#757575',
+                                                cursor: 'pointer',
+                                            }}
+                                        />
+                                    )}
+                                </div>
                                 {validationErrors.currentMedicines && (
                                     <Typography
 

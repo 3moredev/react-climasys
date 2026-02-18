@@ -1149,25 +1149,42 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                     {(formData.comment || '').length}/1000
                                                 </Typography>
                                             </div>
-                                            <textarea
-                                                id='textarea-autosize'
-                                                rows={3}
-                                                placeholder="Comment"
-                                                value={formData.comment}
-                                                onChange={(e) => handleInputChange('comment', e.target.value.slice(0, 1000))}
-                                                maxLength={1000}
-                                                style={{
-                                                    width: '100%',
-                                                    padding: '8px',
-                                                    borderRadius: '8px',
-                                                    border: errors.comment
-                                                        ? (errors.comment.toLowerCase().includes('exceed') ? '1px solid #616161' : '1px solid #d32f2f')
-                                                        : '1px solid #ccc',
-                                                    outline: 'none',
-                                                    fontFamily: 'inherit',
-                                                    fontSize: '14px'
-                                                }}
-                                            />
+                                            <div style={{ position: 'relative' }}>
+                                                <textarea
+                                                    id='textarea-autosize'
+                                                    rows={3}
+                                                    placeholder="Comment"
+                                                    value={formData.comment}
+                                                    onChange={(e) => handleInputChange('comment', e.target.value.slice(0, 1000))}
+                                                    maxLength={1000}
+                                                    style={{
+                                                        width: '100%',
+                                                        padding: '8px',
+                                                        paddingRight: '28px',
+                                                        borderRadius: '8px',
+                                                        border: errors.comment
+                                                            ? (errors.comment.toLowerCase().includes('exceed') ? '1px solid #616161' : '1px solid #d32f2f')
+                                                            : '1px solid #ccc',
+                                                        outline: 'none',
+                                                        fontFamily: 'inherit',
+                                                        fontSize: '14px'
+                                                    }}
+                                                />
+                                                {formData.comment && (
+                                                    <Close
+                                                        onClick={() => handleInputChange('comment', '')}
+                                                        titleAccess="Clear"
+                                                        style={{
+                                                            position: 'absolute',
+                                                            top: '6px',
+                                                            right: '6px',
+                                                            fontSize: '18px',
+                                                            color: '#757575',
+                                                            cursor: 'pointer',
+                                                        }}
+                                                    />
+                                                )}
+                                            </div>
                                             {errors.comment && (
                                                 <Typography variant="caption" sx={{
                                                     color: errors.comment.toLowerCase().includes('exceed') ? '#757575' : '#d32f2f',

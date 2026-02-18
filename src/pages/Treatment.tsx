@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { Close as CloseIcon } from '@mui/icons-material';
 import "bootstrap/dist/css/bootstrap.min.css";
 import dayjs from "dayjs";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -6042,24 +6043,41 @@ export default function Treatment() {
                                                 {(formData.detailedHistory || '').length}/{getFieldConfig('detailedHistory', 'visit')?.maxLength || 1000}
                                             </Typography>
                                         </div>
-                                        <textarea
-                                            value={formData.detailedHistory}
-                                            onChange={(e) => handleInputChange('detailedHistory', e.target.value.slice(0, getFieldConfig('detailedHistory', 'visit')?.maxLength || 1000))}
-                                            disabled={isFormDisabled}
-                                            rows={3}
-                                            maxLength={getFieldConfig('detailedHistory', 'visit')?.maxLength}
-                                            style={{
-                                                width: '100%',
-                                                padding: '6px 10px',
-                                                border: '1px solid #ccc',
-                                                borderRadius: '4px',
-                                                fontSize: '13px',
-                                                resize: 'vertical',
-                                                backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
-                                                color: isFormDisabled ? '#666' : '#333',
-                                                cursor: isFormDisabled ? 'not-allowed' : 'text'
-                                            }}
-                                        />
+                                        <div style={{ position: 'relative' }}>
+                                            <textarea
+                                                value={formData.detailedHistory}
+                                                onChange={(e) => handleInputChange('detailedHistory', e.target.value.slice(0, getFieldConfig('detailedHistory', 'visit')?.maxLength || 1000))}
+                                                disabled={isFormDisabled}
+                                                rows={3}
+                                                maxLength={getFieldConfig('detailedHistory', 'visit')?.maxLength}
+                                                style={{
+                                                    width: '100%',
+                                                    padding: '6px 10px',
+                                                    paddingRight: '28px',
+                                                    border: '1px solid #ccc',
+                                                    borderRadius: '4px',
+                                                    fontSize: '13px',
+                                                    resize: 'vertical',
+                                                    backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
+                                                    color: isFormDisabled ? '#666' : '#333',
+                                                    cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                                }}
+                                            />
+                                            {!isFormDisabled && formData.detailedHistory && (
+                                                <CloseIcon
+                                                    onClick={() => handleInputChange('detailedHistory', '')}
+                                                    titleAccess="Clear"
+                                                    style={{
+                                                        position: 'absolute',
+                                                        top: '6px',
+                                                        right: '6px',
+                                                        fontSize: '18px',
+                                                        color: '#757575',
+                                                        cursor: 'pointer',
+                                                    }}
+                                                />
+                                            )}
+                                        </div>
                                         {errors.detailedHistory && (
                                             <div style={{
                                                 color: errors.detailedHistory.includes('cannot exceed') ? '#333333' : '#d32f2f',
@@ -6078,24 +6096,41 @@ export default function Treatment() {
                                                 {(formData.importantFindings || '').length}/{getFieldConfig('importantFindings', 'visit')?.maxLength || 1000}
                                             </Typography>
                                         </div>
-                                        <textarea
-                                            value={formData.importantFindings}
-                                            onChange={(e) => handleInputChange('importantFindings', e.target.value.slice(0, getFieldConfig('importantFindings', 'visit')?.maxLength || 1000))}
-                                            disabled={isFormDisabled}
-                                            rows={3}
-                                            maxLength={getFieldConfig('importantFindings', 'visit')?.maxLength}
-                                            style={{
-                                                width: '100%',
-                                                padding: '6px 10px',
-                                                border: '1px solid #ccc',
-                                                borderRadius: '4px',
-                                                fontSize: '13px',
-                                                resize: 'vertical',
-                                                backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
-                                                color: isFormDisabled ? '#666' : '#333',
-                                                cursor: isFormDisabled ? 'not-allowed' : 'text'
-                                            }}
-                                        />
+                                        <div style={{ position: 'relative' }}>
+                                            <textarea
+                                                value={formData.importantFindings}
+                                                onChange={(e) => handleInputChange('importantFindings', e.target.value.slice(0, getFieldConfig('importantFindings', 'visit')?.maxLength || 1000))}
+                                                disabled={isFormDisabled}
+                                                rows={3}
+                                                maxLength={getFieldConfig('importantFindings', 'visit')?.maxLength}
+                                                style={{
+                                                    width: '100%',
+                                                    padding: '6px 10px',
+                                                    paddingRight: '28px',
+                                                    border: '1px solid #ccc',
+                                                    borderRadius: '4px',
+                                                    fontSize: '13px',
+                                                    resize: 'vertical',
+                                                    backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
+                                                    color: isFormDisabled ? '#666' : '#333',
+                                                    cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                                }}
+                                            />
+                                            {!isFormDisabled && formData.importantFindings && (
+                                                <CloseIcon
+                                                    onClick={() => handleInputChange('importantFindings', '')}
+                                                    titleAccess="Clear"
+                                                    style={{
+                                                        position: 'absolute',
+                                                        top: '6px',
+                                                        right: '6px',
+                                                        fontSize: '18px',
+                                                        color: '#757575',
+                                                        cursor: 'pointer',
+                                                    }}
+                                                />
+                                            )}
+                                        </div>
                                         {errors.importantFindings && (
                                             <div style={{
                                                 color: errors.importantFindings.includes('cannot exceed') ? '#333333' : '#d32f2f',
@@ -6114,24 +6149,41 @@ export default function Treatment() {
                                                 {(formData.additionalComments || '').length}/{getFieldConfig('additionalComments', 'visit')?.maxLength || 1000}
                                             </Typography>
                                         </div>
-                                        <textarea
-                                            value={formData.additionalComments}
-                                            onChange={(e) => handleInputChange('additionalComments', e.target.value.slice(0, getFieldConfig('additionalComments', 'visit')?.maxLength || 1000))}
-                                            disabled={isFormDisabled}
-                                            rows={3}
-                                            maxLength={getFieldConfig('additionalComments', 'visit')?.maxLength}
-                                            style={{
-                                                width: '100%',
-                                                padding: '6px 10px',
-                                                border: '1px solid #ccc',
-                                                borderRadius: '4px',
-                                                fontSize: '13px',
-                                                resize: 'vertical',
-                                                backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
-                                                color: isFormDisabled ? '#666' : '#333',
-                                                cursor: isFormDisabled ? 'not-allowed' : 'text'
-                                            }}
-                                        />
+                                        <div style={{ position: 'relative' }}>
+                                            <textarea
+                                                value={formData.additionalComments}
+                                                onChange={(e) => handleInputChange('additionalComments', e.target.value.slice(0, getFieldConfig('additionalComments', 'visit')?.maxLength || 1000))}
+                                                disabled={isFormDisabled}
+                                                rows={3}
+                                                maxLength={getFieldConfig('additionalComments', 'visit')?.maxLength}
+                                                style={{
+                                                    width: '100%',
+                                                    padding: '6px 10px',
+                                                    paddingRight: '28px',
+                                                    border: '1px solid #ccc',
+                                                    borderRadius: '4px',
+                                                    fontSize: '13px',
+                                                    resize: 'vertical',
+                                                    backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
+                                                    color: isFormDisabled ? '#666' : '#333',
+                                                    cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                                }}
+                                            />
+                                            {!isFormDisabled && formData.additionalComments && (
+                                                <CloseIcon
+                                                    onClick={() => handleInputChange('additionalComments', '')}
+                                                    titleAccess="Clear"
+                                                    style={{
+                                                        position: 'absolute',
+                                                        top: '6px',
+                                                        right: '6px',
+                                                        fontSize: '18px',
+                                                        color: '#757575',
+                                                        cursor: 'pointer',
+                                                    }}
+                                                />
+                                            )}
+                                        </div>
                                         {errors.additionalComments && (
                                             <div style={{
                                                 color: errors.additionalComments.includes('cannot exceed') ? '#333333' : '#d32f2f',
@@ -6156,24 +6208,41 @@ export default function Treatment() {
                                                 {(formData.procedurePerformed || '').length}/{getFieldConfig('procedurePerformed', 'visit')?.maxLength || 1000}
                                             </Typography>
                                         </div>
-                                        <textarea
-                                            value={formData.procedurePerformed}
-                                            onChange={(e) => handleInputChange('procedurePerformed', e.target.value.slice(0, getFieldConfig('procedurePerformed', 'visit')?.maxLength || 1000))}
-                                            disabled={isFormDisabled}
-                                            rows={3}
-                                            maxLength={getFieldConfig('procedurePerformed', 'visit')?.maxLength}
-                                            style={{
-                                                width: '100%',
-                                                padding: '6px 10px',
-                                                border: '1px solid #ccc',
-                                                borderRadius: '4px',
-                                                fontSize: '13px',
-                                                resize: 'vertical',
-                                                backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
-                                                color: isFormDisabled ? '#666' : '#333',
-                                                cursor: isFormDisabled ? 'not-allowed' : 'text'
-                                            }}
-                                        />
+                                        <div style={{ position: 'relative' }}>
+                                            <textarea
+                                                value={formData.procedurePerformed}
+                                                onChange={(e) => handleInputChange('procedurePerformed', e.target.value.slice(0, getFieldConfig('procedurePerformed', 'visit')?.maxLength || 1000))}
+                                                disabled={isFormDisabled}
+                                                rows={3}
+                                                maxLength={getFieldConfig('procedurePerformed', 'visit')?.maxLength}
+                                                style={{
+                                                    width: '100%',
+                                                    padding: '6px 10px',
+                                                    paddingRight: '28px',
+                                                    border: '1px solid #ccc',
+                                                    borderRadius: '4px',
+                                                    fontSize: '13px',
+                                                    resize: 'vertical',
+                                                    backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
+                                                    color: isFormDisabled ? '#666' : '#333',
+                                                    cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                                }}
+                                            />
+                                            {!isFormDisabled && formData.procedurePerformed && (
+                                                <CloseIcon
+                                                    onClick={() => handleInputChange('procedurePerformed', '')}
+                                                    titleAccess="Clear"
+                                                    style={{
+                                                        position: 'absolute',
+                                                        top: '6px',
+                                                        right: '6px',
+                                                        fontSize: '18px',
+                                                        color: '#757575',
+                                                        cursor: 'pointer',
+                                                    }}
+                                                />
+                                            )}
+                                        </div>
                                         {errors.procedurePerformed && (
                                             <div style={{
                                                 color: errors.procedurePerformed.includes('cannot exceed') ? '#333333' : '#d32f2f',
@@ -6192,24 +6261,41 @@ export default function Treatment() {
                                                 {(formData.dressingBodyParts || '').length}/{getFieldConfig('dressingBodyParts', 'visit')?.maxLength || 1000}
                                             </Typography>
                                         </div>
-                                        <textarea
-                                            value={formData.dressingBodyParts}
-                                            onChange={(e) => handleInputChange('dressingBodyParts', e.target.value.slice(0, getFieldConfig('dressingBodyParts', 'visit')?.maxLength || 1000))}
-                                            disabled={isFormDisabled}
-                                            rows={3}
-                                            maxLength={getFieldConfig('dressingBodyParts', 'visit')?.maxLength}
-                                            style={{
-                                                width: '100%',
-                                                padding: '6px 10px',
-                                                border: '1px solid #ccc',
-                                                borderRadius: '4px',
-                                                fontSize: '13px',
-                                                resize: 'vertical',
-                                                backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
-                                                color: isFormDisabled ? '#666' : '#333',
-                                                cursor: isFormDisabled ? 'not-allowed' : 'text'
-                                            }}
-                                        />
+                                        <div style={{ position: 'relative' }}>
+                                            <textarea
+                                                value={formData.dressingBodyParts}
+                                                onChange={(e) => handleInputChange('dressingBodyParts', e.target.value.slice(0, getFieldConfig('dressingBodyParts', 'visit')?.maxLength || 1000))}
+                                                disabled={isFormDisabled}
+                                                rows={3}
+                                                maxLength={getFieldConfig('dressingBodyParts', 'visit')?.maxLength}
+                                                style={{
+                                                    width: '100%',
+                                                    padding: '6px 10px',
+                                                    paddingRight: '28px',
+                                                    border: '1px solid #ccc',
+                                                    borderRadius: '4px',
+                                                    fontSize: '13px',
+                                                    resize: 'vertical',
+                                                    backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
+                                                    color: isFormDisabled ? '#666' : '#333',
+                                                    cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                                }}
+                                            />
+                                            {!isFormDisabled && formData.dressingBodyParts && (
+                                                <CloseIcon
+                                                    onClick={() => handleInputChange('dressingBodyParts', '')}
+                                                    titleAccess="Clear"
+                                                    style={{
+                                                        position: 'absolute',
+                                                        top: '6px',
+                                                        right: '6px',
+                                                        fontSize: '18px',
+                                                        color: '#757575',
+                                                        cursor: 'pointer',
+                                                    }}
+                                                />
+                                            )}
+                                        </div>
                                         {errors.dressingBodyParts && (
                                             <div style={{
                                                 color: errors.dressingBodyParts.includes('cannot exceed') ? '#333333' : '#d32f2f',
