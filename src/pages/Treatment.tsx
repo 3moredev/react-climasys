@@ -4867,7 +4867,7 @@ export default function Treatment() {
     // Investigation handlers
     const handleAddInvestigations = () => {
         if (selectedInvestigations.length === 0) {
-            setInvestigationsSelectionError('Please select at least one lab test');
+            setInvestigationsSelectionError('Please select at least one investigation');
             return;
         }
         setInvestigationsSelectionError(null);
@@ -5668,7 +5668,7 @@ export default function Treatment() {
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px', width: '88%', gap: '8px' }}>
                                             <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Complaints</label>
                                         </div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
                                             <div ref={complaintsRef} style={{ position: 'relative', flex: 1 }}>
                                                 <div
                                                     onClick={() => !isFormDisabled && setIsComplaintsOpen(prev => !prev)}
@@ -6358,7 +6358,7 @@ export default function Treatment() {
                                     <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Diagnosis</label>
                                 </div>
 
-                                <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                                <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', alignItems: 'flex-start' }}>
                                     <div style={{ flex: 1, position: 'relative' }} ref={diagnosesRef}>
                                         <div
                                             style={{
@@ -6682,7 +6682,7 @@ export default function Treatment() {
                                     <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Medicine</label>
                                 </div>
 
-                                <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                                <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', alignItems: 'flex-start' }}>
                                     <div style={{ position: 'relative', flex: 1 }} ref={medicinesRef}>
                                         <div
                                             onClick={() => !isFormDisabled && setIsMedicinesOpen(!isMedicinesOpen)}
@@ -7240,6 +7240,14 @@ export default function Treatment() {
                                                 '& .MuiOutlinedInput-root.Mui-focused fieldset': {
                                                     borderColor: '#1E88E5',
                                                     borderWidth: '2px'
+                                                },
+
+                                                /* Override error border to be normal gray */
+                                                '& .MuiOutlinedInput-root.Mui-error fieldset': {
+                                                    borderColor: '#B7B7B7',
+                                                },
+                                                '& .MuiOutlinedInput-root.Mui-error:hover fieldset': {
+                                                    borderColor: '#1E88E5',
                                                 },
 
                                                 '& .MuiInputBase-input': {
