@@ -7195,7 +7195,7 @@ export default function Treatment() {
                                 </div>
 
                                 <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', alignItems: 'flex-start' }}>
-                                    <div style={{ position: 'relative', flex: 1 }}>
+                                    <div style={{ position: 'relative', flex: 1 }} ref={rxRef}>
                                         <ClearableTextField
                                             fullWidth
                                             size="small"
@@ -7250,6 +7250,47 @@ export default function Treatment() {
                                             error={!!prescriptionError}
                                             helperText={prescriptionError}
                                         />
+                                        {isRxOpen && rxSuggestions.length > 0 && (
+                                            <div style={{
+                                                position: 'absolute',
+                                                top: '38px',
+                                                left: 0,
+                                                right: 0,
+                                                backgroundColor: 'white',
+                                                border: '1px solid #B7B7B7',
+                                                borderRadius: '6px',
+                                                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                                                zIndex: 1000,
+                                                marginTop: '4px',
+                                                maxHeight: '200px',
+                                                overflowY: 'auto'
+                                            }}>
+                                                {rxSuggestions.map((suggestion, index) => (
+                                                    <div
+                                                        key={index}
+                                                        onClick={() => {
+                                                            setPrescriptionInput(suggestion);
+                                                            setIsRxOpen(false);
+                                                        }}
+                                                        style={{
+                                                            padding: '8px 12px',
+                                                            cursor: 'pointer',
+                                                            borderBottom: index < rxSuggestions.length - 1 ? '1px solid #eee' : 'none',
+                                                            fontSize: '13px',
+                                                            color: '#333'
+                                                        }}
+                                                        onMouseEnter={(e) => {
+                                                            e.currentTarget.style.backgroundColor = '#f5f5f5';
+                                                        }}
+                                                        onMouseLeave={(e) => {
+                                                            e.currentTarget.style.backgroundColor = 'white';
+                                                        }}
+                                                    >
+                                                        {suggestion}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
 
                                     <button
@@ -7350,6 +7391,213 @@ export default function Treatment() {
                                         i
                                     </button>
                                 </div>
+
+                                {/* Prescription Table */}
+                                {prescriptionRows.length > 0 && (
+                                    <div
+                                        style={{
+                                            border: '1px solid #ccc',
+                                            borderRadius: '4px',
+                                            overflow: 'hidden',
+                                            overflowX: 'auto',
+                                            opacity: isFormDisabled ? 0.6 : 1,
+                                            width: '100%',
+                                            marginTop: '10px'
+                                        }}
+                                    >
+                                        <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+                                            <thead>
+                                                <tr style={{
+                                                    backgroundColor: '#1976d2',
+                                                    color: 'white',
+                                                    fontWeight: 'bold',
+                                                    fontSize: '13px'
+                                                }}>
+                                                    <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '50px', textAlign: 'left' }}>Sr.</th>
+                                                    <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '200px', textAlign: 'left' }}>Prescription</th>
+                                                    <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '50px', textAlign: 'center' }}>B</th>
+                                                    <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '50px', textAlign: 'center' }}>L</th>
+                                                    <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '50px', textAlign: 'center' }}>D</th>
+                                                    <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '60px', textAlign: 'center' }}>Days</th>
+                                                    <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: 'auto', textAlign: 'left' }}>Instruction</th>
+                                                    <th style={{ padding: '6px', width: '80px', textAlign: 'center' }}>Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {prescriptionRows.map((row, index) => (
+                                                    <tr key={row.id} style={{
+                                                        backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white',
+                                                        borderBottom: '1px solid #e0e0e0'
+                                                    }}>
+                                                        <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '13px', padding: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{index + 1}</td>
+                                                        <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '13px', padding: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={row.prescription}>{row.prescription}</td>
+                                                        <td style={{ borderRight: '1px solid #e0e0e0', boxSizing: 'border-box' }} className="px-1 py-1">
+                                                            <ClearableTextField
+                                                                size="small"
+                                                                value={row.b}
+                                                                onChange={(val) => handlePrescriptionFieldChange(row.id, 'b', val.replace(/\D/g, ''))}
+                                                                disabled={isFormDisabled}
+                                                                disableClearable={true}
+                                                                inputProps={{
+                                                                    inputMode: 'numeric',
+                                                                    pattern: '[0-9]*',
+                                                                    maxLength: 10
+                                                                }}
+                                                                sx={{
+                                                                    marginBottom: 0,
+                                                                    '& .MuiOutlinedInput-root': {
+                                                                        height: '32px',
+                                                                        borderRadius: 0,
+                                                                        backgroundColor: 'transparent',
+                                                                        fontSize: '11px',
+                                                                        '& fieldset': { border: 'none' }
+                                                                    },
+                                                                    '& .MuiInputBase-input': {
+                                                                        padding: '4px',
+                                                                        textAlign: 'center'
+                                                                    }
+                                                                }}
+                                                            />
+                                                        </td>
+                                                        <td style={{ borderRight: '1px solid #e0e0e0', boxSizing: 'border-box' }} className="px-1 py-1">
+                                                            <ClearableTextField
+                                                                size="small"
+                                                                value={row.l}
+                                                                onChange={(val) => handlePrescriptionFieldChange(row.id, 'l', val.replace(/\D/g, ''))}
+                                                                disabled={isFormDisabled}
+                                                                disableClearable={true}
+                                                                inputProps={{
+                                                                    inputMode: 'numeric',
+                                                                    pattern: '[0-9]*',
+                                                                    maxLength: 10
+                                                                }}
+                                                                sx={{
+                                                                    marginBottom: 0,
+                                                                    '& .MuiOutlinedInput-root': {
+                                                                        height: '32px',
+                                                                        borderRadius: 0,
+                                                                        backgroundColor: 'transparent',
+                                                                        fontSize: '11px',
+                                                                        '& fieldset': { border: 'none' }
+                                                                    },
+                                                                    '& .MuiInputBase-input': {
+                                                                        padding: '4px',
+                                                                        textAlign: 'center'
+                                                                    }
+                                                                }}
+                                                            />
+                                                        </td>
+                                                        <td style={{ borderRight: '1px solid #e0e0e0', boxSizing: 'border-box' }} className="px-1 py-1">
+                                                            <ClearableTextField
+                                                                size="small"
+                                                                value={row.d}
+                                                                onChange={(val) => handlePrescriptionFieldChange(row.id, 'd', val.replace(/\D/g, ''))}
+                                                                disabled={isFormDisabled}
+                                                                disableClearable={true}
+                                                                inputProps={{
+                                                                    inputMode: 'numeric',
+                                                                    pattern: '[0-9]*',
+                                                                    maxLength: 10
+                                                                }}
+                                                                sx={{
+                                                                    marginBottom: 0,
+                                                                    '& .MuiOutlinedInput-root': {
+                                                                        height: '32px',
+                                                                        borderRadius: 0,
+                                                                        backgroundColor: 'transparent',
+                                                                        fontSize: '11px',
+                                                                        '& fieldset': { border: 'none' }
+                                                                    },
+                                                                    '& .MuiInputBase-input': {
+                                                                        padding: '4px',
+                                                                        textAlign: 'center'
+                                                                    }
+                                                                }}
+                                                            />
+                                                        </td>
+                                                        <td style={{ borderRight: '1px solid #e0e0e0', boxSizing: 'border-box' }} className="px-1 py-1">
+                                                            <ClearableTextField
+                                                                size="small"
+                                                                value={row.days}
+                                                                onChange={(val) => handlePrescriptionFieldChange(row.id, 'days', val.replace(/\D/g, ''))}
+                                                                disabled={isFormDisabled}
+                                                                disableClearable={true}
+                                                                inputProps={{
+                                                                    inputMode: 'numeric',
+                                                                    pattern: '[0-9]*',
+                                                                    maxLength: 10
+                                                                }}
+                                                                sx={{
+                                                                    marginBottom: 0,
+                                                                    '& .MuiOutlinedInput-root': {
+                                                                        height: '32px',
+                                                                        borderRadius: 0,
+                                                                        backgroundColor: 'transparent',
+                                                                        fontSize: '11px',
+                                                                        '& fieldset': { border: 'none' }
+                                                                    },
+                                                                    '& .MuiInputBase-input': {
+                                                                        padding: '4px',
+                                                                        textAlign: 'center'
+                                                                    }
+                                                                }}
+                                                            />
+                                                        </td>
+                                                        <td style={{ borderRight: '1px solid #e0e0e0', boxSizing: 'border-box' }} className="px-1 py-1">
+                                                            <ClearableTextField
+                                                                fullWidth
+                                                                size="small"
+                                                                value={row.instruction}
+                                                                onChange={(val) => handlePrescriptionInstructionChange(row.id, val)}
+                                                                disabled={isFormDisabled}
+                                                                placeholder="Instruction"
+                                                                sx={{
+                                                                    marginBottom: 0,
+                                                                    '& .MuiOutlinedInput-root': {
+                                                                        height: '100%',
+                                                                        borderRadius: 0,
+                                                                        backgroundColor: 'transparent',
+                                                                        fontSize: '11px',
+                                                                        '& fieldset': { border: 'none' }
+                                                                    },
+                                                                    '& .MuiInputBase-input': {
+                                                                        padding: '8px 10px'
+                                                                    }
+                                                                }}
+                                                            />
+                                                        </td>
+                                                        <td style={{ padding: '6px' }}>
+                                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                                <div
+                                                                    onClick={() => !isFormDisabled && handleRemovePrescription(row.id)}
+                                                                    title="Remove"
+                                                                    style={{
+                                                                        display: 'inline-flex',
+                                                                        alignItems: 'center',
+                                                                        justifyContent: 'center',
+                                                                        width: '24px',
+                                                                        height: '24px',
+                                                                        cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                                                        color: isFormDisabled ? '#9e9e9e' : '#000000',
+                                                                        backgroundColor: 'transparent'
+                                                                    }}
+                                                                    onMouseEnter={(e) => {
+                                                                        if (!isFormDisabled) (e.currentTarget as HTMLDivElement).style.color = '#EF5350';
+                                                                    }}
+                                                                    onMouseLeave={(e) => {
+                                                                        if (!isFormDisabled) (e.currentTarget as HTMLDivElement).style.color = '#000000';
+                                                                    }}
+                                                                >
+                                                                    <Delete fontSize="small" />
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
                             </div>
 
 
