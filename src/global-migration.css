@@ -310,8 +310,8 @@ thead,
 th,
 .MuiTableCell-head {
   font-weight: bold !important;
-  padding: 16px !important;
-  text-align: left !important;
+  /* padding: 16px !important; */
+  /* text-align: left !important; */
   color: white;
 }
 

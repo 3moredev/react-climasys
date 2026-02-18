@@ -1485,7 +1485,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                                     padding: '12px 16px',
                                                                     borderBottom: '1px solid #eee',
                                                                     color: 'black',
-                                                                    fontSize: '14px',
+                                                                    // fontSize: '14px',
                                                                     width: '30%',
                                                                     verticalAlign: 'top'
                                                                 }}>
@@ -1495,7 +1495,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                                     padding: '12px 16px',
                                                                     borderBottom: '1px solid #eee',
                                                                     color: 'black',
-                                                                    fontSize: '14px',
+                                                                    // fontSize: '14px',
                                                                     width: '30%',
                                                                     verticalAlign: 'top'
                                                                 }}>
@@ -1523,7 +1523,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                                                 height: '32px',
                                                                                 borderRadius: 0,
                                                                                 backgroundColor: 'transparent',
-                                                                                fontSize: '13px',
+                                                                                // fontSize: '13px',
                                                                                 '& fieldset': { border: 'none' }
                                                                             },
                                                                             '& .MuiFormHelperText-root': {
