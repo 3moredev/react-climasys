@@ -84,6 +84,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
     const [labTestsLoading, setLabTestsLoading] = useState(false);
     const [labTestsError, setLabTestsError] = useState<string | null>(null);
     const [selectedLabTests, setSelectedLabTests] = useState<string[]>([]);
+    const [labTestSearchError, setLabTestSearchError] = useState<string | null>(null);
     const labTestsRef = useRef<HTMLDivElement | null>(null);
     const [showQuickRegistration, setShowQuickRegistration] = useState(false);
     const lastFetchParamsRef = useRef<string | null>(null);
@@ -1261,7 +1262,18 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                         <ClearableTextField
                                                             fullWidth
                                                             value={labTestSearch}
-                                                            onChange={setLabTestSearch}
+                                                            onChange={(val) => {
+                                                                if (val.length >= 100) {
+                                                                    setLabTestSearchError('Lab test search cannot exceed 100 characters');
+                                                                } else {
+                                                                    setLabTestSearchError(null);
+                                                                }
+                                                                setLabTestSearch(val);
+                                                            }}
+                                                            error={!!labTestSearchError}
+                                                            helperText={labTestSearchError}
+                                                            FormHelperTextProps={{ style: { color: '#757575' } }}
+                                                            inputProps={{ maxLength: 100 }}
                                                             placeholder="Search lab tests"
                                                             variant="outlined"
                                                             size="small"

@@ -438,6 +438,7 @@ export default function Treatment() {
     const [complaintsError, setComplaintsError] = useState<string | null>(null);
     const complaintsRowsBuiltFromApiRef = React.useRef(false);
     const selectedComplaintsPatchedFromApiRef = React.useRef(false);
+    const [complaintSearchError, setComplaintSearchError] = useState<string | null>(null);
     const complaintsRowsLoadedFromSaveResponseRef = React.useRef(false);
     const diagnosisRowsLoadedFromSaveResponseRef = React.useRef(false);
     const medicineRowsLoadedFromSaveResponseRef = React.useRef(false);
@@ -532,6 +533,7 @@ export default function Treatment() {
     const [diagnosesOptions, setDiagnosesOptions] = useState<DiagnosisOption[]>([]);
     const [diagnosesLoading, setDiagnosesLoading] = useState(false);
     const [diagnosesError, setDiagnosesError] = useState<string | null>(null);
+    const [diagnosisSearchError, setDiagnosisSearchError] = useState<string | null>(null);
 
     const filteredDiagnoses = React.useMemo(() => {
         const term = diagnosisSearch.trim().toLowerCase();
@@ -586,6 +588,7 @@ export default function Treatment() {
     const [investigationsOptions, setInvestigationsOptions] = useState<InvestigationOption[]>([]);
     const [investigationsLoading, setInvestigationsLoading] = useState(false);
     const [investigationsError, setInvestigationsError] = useState<string | null>(null);
+    const [investigationSearchError, setInvestigationSearchError] = useState<string | null>(null);
 
     const filteredInvestigations = React.useMemo(() => {
         const term = investigationSearch.trim().toLowerCase();
@@ -5734,15 +5737,19 @@ export default function Treatment() {
                                                                 size="small"
                                                                 value={complaintSearch}
                                                                 onChange={(val) => {
-                                                                    // Cap at 100 characters
-                                                                    if (val.length <= 100) {
-                                                                        setComplaintSearch(val);
+                                                                    if (val.length >= 100) {
+                                                                        setComplaintSearchError('Complaints search cannot exceed 100 characters');
+                                                                    } else {
+                                                                        setComplaintSearchError(null);
                                                                     }
+                                                                    setComplaintSearch(val);
                                                                 }}
                                                                 placeholder="Search complaints"
                                                                 variant="outlined"
-                                                                error={complaintSearch.length >= 100}
-                                                                helperText={complaintSearch.length >= 100 ? 'Search Complaints cannot exceed 100 characters' : ''}
+                                                                error={!!complaintSearchError}
+                                                                helperText={complaintSearchError}
+                                                                FormHelperTextProps={{ style: { color: '#757575' } }}
+                                                                inputProps={{ maxLength: 100 }}
                                                                 sx={{
                                                                     '& .MuiOutlinedInput-root': {
                                                                         height: '38px',
@@ -6080,7 +6087,7 @@ export default function Treatment() {
                                         </div>
                                         {errors.detailedHistory && (
                                             <div style={{
-                                                color: errors.detailedHistory.includes('cannot exceed') ? '#333333' : '#d32f2f',
+                                                color: errors.detailedHistory.includes('cannot exceed') ? '#757575' : '#d32f2f',
                                                 fontSize: '11px',
                                                 marginTop: '4px',
                                                 lineHeight: '1.2'
@@ -6133,7 +6140,7 @@ export default function Treatment() {
                                         </div>
                                         {errors.importantFindings && (
                                             <div style={{
-                                                color: errors.importantFindings.includes('cannot exceed') ? '#333333' : '#d32f2f',
+                                                color: errors.importantFindings.includes('cannot exceed') ? '#757575' : '#d32f2f',
                                                 fontSize: '11px',
                                                 marginTop: '4px',
                                                 lineHeight: '1.2'
@@ -6186,7 +6193,7 @@ export default function Treatment() {
                                         </div>
                                         {errors.additionalComments && (
                                             <div style={{
-                                                color: errors.additionalComments.includes('cannot exceed') ? '#333333' : '#d32f2f',
+                                                color: errors.additionalComments.includes('cannot exceed') ? '#757575' : '#d32f2f',
                                                 fontSize: '11px',
                                                 marginTop: '4px',
                                                 lineHeight: '1.2'
@@ -6245,7 +6252,7 @@ export default function Treatment() {
                                         </div>
                                         {errors.procedurePerformed && (
                                             <div style={{
-                                                color: errors.procedurePerformed.includes('cannot exceed') ? '#333333' : '#d32f2f',
+                                                color: errors.procedurePerformed.includes('cannot exceed') ? '#757575' : '#d32f2f',
                                                 fontSize: '11px',
                                                 marginTop: '4px',
                                                 lineHeight: '1.2'
@@ -6298,7 +6305,7 @@ export default function Treatment() {
                                         </div>
                                         {errors.dressingBodyParts && (
                                             <div style={{
-                                                color: errors.dressingBodyParts.includes('cannot exceed') ? '#333333' : '#d32f2f',
+                                                color: errors.dressingBodyParts.includes('cannot exceed') ? '#757575' : '#d32f2f',
                                                 fontSize: '11px',
                                                 marginTop: '4px',
                                                 lineHeight: '1.2'
@@ -6426,9 +6433,20 @@ export default function Treatment() {
                                                         fullWidth
                                                         size="small"
                                                         value={diagnosisSearch}
-                                                        onChange={(val) => setDiagnosisSearch(val)}
+                                                        onChange={(val) => {
+                                                            if (val.length >= 1000) {
+                                                                setDiagnosisSearchError('Diagnosis search cannot exceed 1000 characters');
+                                                            } else {
+                                                                setDiagnosisSearchError(null);
+                                                            }
+                                                            setDiagnosisSearch(val);
+                                                        }}
                                                         placeholder="Search diagnoses"
                                                         variant="outlined"
+                                                        error={!!diagnosisSearchError}
+                                                        helperText={diagnosisSearchError}
+                                                        FormHelperTextProps={{ style: { color: '#757575' } }}
+                                                        inputProps={{ maxLength: 1000 }}
                                                         sx={{
                                                             '& .MuiOutlinedInput-root': {
                                                                 height: '38px',
@@ -7763,9 +7781,20 @@ export default function Treatment() {
                                                         fullWidth
                                                         size="small"
                                                         value={investigationSearch}
-                                                        onChange={(val) => setInvestigationSearch(val)}
+                                                        onChange={(val) => {
+                                                            if (val.length >= 1000) {
+                                                                setInvestigationSearchError('Investigation search cannot exceed 1000 characters');
+                                                            } else {
+                                                                setInvestigationSearchError(null);
+                                                            }
+                                                            setInvestigationSearch(val);
+                                                        }}
                                                         placeholder="Search investigations"
                                                         variant="outlined"
+                                                        error={!!investigationSearchError}
+                                                        helperText={investigationSearchError}
+                                                        FormHelperTextProps={{ style: { color: '#757575' } }}
+                                                        inputProps={{ maxLength: 1000 }}
                                                         sx={{
                                                             '& .MuiOutlinedInput-root': {
                                                                 height: '38px',
