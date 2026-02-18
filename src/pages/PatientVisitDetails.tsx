@@ -109,6 +109,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
     const [complaintsLoading, setComplaintsLoading] = useState(false);
     const [complaintsError, setComplaintsError] = useState<string | null>(null);
     const [complaintsSelectionError, setComplaintsSelectionError] = useState<string | null>(null);
+    const [complaintSearchError, setComplaintSearchError] = useState<string | null>(null);
     const [showQuickRegistration, setShowQuickRegistration] = useState(false);
     const [sessionDataForQuickReg, setSessionDataForQuickReg] = useState<any>(null);
     const [currentClinicId, setCurrentClinicId] = useState<string>('');
@@ -2469,8 +2470,15 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                                     value={complaintSearch}
                                                                     onChange={(e) => {
                                                                         const config = getFieldConfig('complaintSearch', 'visit');
-                                                                        if (config?.maxLength && e.target.value.length > config.maxLength) return;
-                                                                        setComplaintSearch(e.target.value);
+                                                                        const maxLength = config?.maxLength || 100;
+                                                                        if (e.target.value.length >= maxLength) {
+                                                                            setComplaintSearchError(`Complaints search cannot exceed ${maxLength} characters`);
+                                                                        } else {
+                                                                            setComplaintSearchError(null);
+                                                                        }
+                                                                        if (e.target.value.length <= maxLength) {
+                                                                            setComplaintSearch(e.target.value);
+                                                                        }
                                                                     }}
                                                                     disabled={readOnly}
                                                                     maxLength={getFieldConfig('complaintSearch', 'visit')?.maxLength}
@@ -2479,7 +2487,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                                         width: '100%',
                                                                         height: '28px',
                                                                         padding: '4px 28px 4px 8px',
-                                                                        border: '1px solid #B7B7B7',
+                                                                        border: complaintSearchError ? '1px solid #d32f2f' : '1px solid #B7B7B7',
                                                                         borderRadius: '4px',
                                                                         fontSize: '12px',
                                                                         outline: 'none',
@@ -2489,7 +2497,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                                         (e.target as HTMLInputElement).style.borderColor = '#1E88E5';
                                                                     }}
                                                                     onBlur={(e) => {
-                                                                        (e.target as HTMLInputElement).style.borderColor = '#B7B7B7';
+                                                                        (e.target as HTMLInputElement).style.borderColor = complaintSearchError ? '#d32f2f' : '#B7B7B7';
                                                                     }}
                                                                 />
                                                                 {complaintSearch && !readOnly && (
@@ -2508,6 +2516,16 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                                     />
                                                                 )}
                                                             </div>
+                                                            {complaintSearchError && (
+                                                                <p style={{
+                                                                    color: '#757575',
+                                                                    fontSize: '11px',
+                                                                    margin: '4px 0 0 2px',
+                                                                    textAlign: 'left'
+                                                                }}>
+                                                                    {complaintSearchError}
+                                                                </p>
+                                                            )}
                                                         </div>
 
                                                         <div style={{ maxHeight: '200px', overflowY: 'auto', padding: '4px 6px', display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', columnGap: '8px', rowGap: '6px' }}>
@@ -2517,7 +2535,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                                 </div>
                                                             )}
                                                             {complaintsError && (
-                                                                <div style={{ padding: '6px', fontSize: '12px', color: '#d32f2f', gridColumn: '1 / -1', textAlign: 'center' }}>
+                                                                <div style={{ padding: '6px', fontSize: '12px', color: '#757575', gridColumn: '1 / -1', textAlign: 'center' }}>
                                                                     {complaintsError}
                                                                     <button
                                                                         onClick={() => {
@@ -2626,7 +2644,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                 )}
                                                 {complaintsSelectionError && (
                                                     <p style={{
-                                                        color: '#d32f2f',
+                                                        color: '#757575',
                                                         fontSize: '0.75rem',
                                                         fontWeight: 400,
                                                         fontFamily: "'Roboto', sans-serif",
