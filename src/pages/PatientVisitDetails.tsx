@@ -158,20 +158,26 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
             setComplaintsSelectionError('Please select at least one complaint');
             return;
         }
+        // Check if all selected are already added
+        const existingValues = new Set(complaintsRows.map(r => r.value));
+        const hasNewItems = selectedComplaints.some(val => !existingValues.has(val));
+        if (!hasNewItems) {
+            setComplaintsSelectionError('Selected complaints are already added');
+            return;
+        }
         setComplaintsSelectionError(null);
         setComplaintsRows(prev => {
-            const existingValues = new Set(prev.map(r => r.value));
+            const existing = new Set(prev.map(r => r.value));
             const newRows: ComplaintRow[] = [];
             selectedComplaints.forEach(val => {
-                if (!existingValues.has(val)) {
+                if (!existing.has(val)) {
                     const opt = complaintsOptions.find(o => o.value === val);
                     if (opt) {
                         newRows.push({ id: `${val}`, value: val, label: opt.label, comment: '' });
                     }
                 }
             });
-            const next = [...prev, ...newRows];
-            return next;
+            return [...prev, ...newRows];
         });
         // Keep dropdown selections as-is; close menu
         setIsComplaintsOpen(false);
@@ -2658,7 +2664,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                 )}
                                                 {complaintsSelectionError && (
                                                     <p style={{
-                                                        color: '#757575',
+                                                        color: '#d32f2f',
                                                         fontSize: '0.75rem',
                                                         fontWeight: 400,
                                                         fontFamily: "'Roboto', sans-serif",
