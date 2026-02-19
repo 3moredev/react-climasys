@@ -2749,12 +2749,19 @@ export default function Treatment() {
             setComplaintsSelectionError('Please select at least one complaint');
             return;
         }
+        // Check if all selected are already added
+        const existingValues = new Set(complaintsRows.map(r => r.value));
+        const hasNewItems = selectedComplaints.some(val => !existingValues.has(val));
+        if (!hasNewItems) {
+            setComplaintsSelectionError('Selected complaints are already added');
+            return;
+        }
         setComplaintsSelectionError(null);
         setComplaintsRows(prev => {
-            const existingValues = new Set(prev.map(r => r.value));
+            const existingVals = new Set(prev.map(r => r.value));
             const newRows: ComplaintRow[] = [];
             selectedComplaints.forEach(val => {
-                if (!existingValues.has(val)) {
+                if (!existingVals.has(val)) {
                     const opt = complaintsOptions.find(o => o.value === val);
                     if (opt) {
                         newRows.push({
@@ -2771,9 +2778,7 @@ export default function Treatment() {
             // Sort by priority (lower priority number = higher priority)
             return next.sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999));
         });
-        // Clear selections and close menu after adding
-        setSelectedComplaints([]);
-        setIsComplaintsOpen(false);
+        // Keep selectedComplaints intact so clicking Add again shows "already added" instead of "please select"
     };
 
     const handleAddCustomComplaint = () => {
@@ -4676,13 +4681,32 @@ export default function Treatment() {
             setDiagnosesSelectionError('Please select at least one diagnosis');
             return;
         }
+
+        // Check if all selected are already added
+        const existingValues = new Set(diagnosisRows.map(r => r.value?.toLowerCase().trim()).filter(Boolean));
+        const existingDiagnoses = new Set(diagnosisRows.map(r => r.diagnosis?.toLowerCase().trim()).filter(Boolean));
+
+        const allAlreadyAdded = selectedDiagnoses.every(val => {
+            const diagnosisOption = diagnosesOptions.find(opt => opt.value === val);
+            const diagnosisLabel = diagnosisOption?.label || val;
+            const normalizedValue = val?.toLowerCase().trim() || '';
+            const normalizedDiagnosis = diagnosisLabel?.toLowerCase().trim() || '';
+            return existingValues.has(normalizedValue) || existingDiagnoses.has(normalizedDiagnosis);
+        });
+
+        if (allAlreadyAdded) {
+            setDiagnosesSelectionError('Selected diagnoses are already added');
+            return;
+        }
+
         setDiagnosesSelectionError(null);
         setDiagnosisRows(prev => {
             // Normalize existing values and diagnoses for comparison
-            const existingValues = new Set(prev.map(r => r.value?.toLowerCase().trim()).filter(Boolean));
-            const existingDiagnoses = new Set(prev.map(r => r.diagnosis?.toLowerCase().trim()).filter(Boolean));
+            const existingVals = new Set(prev.map(r => r.value?.toLowerCase().trim()).filter(Boolean));
+            const existingDiags = new Set(prev.map(r => r.diagnosis?.toLowerCase().trim()).filter(Boolean));
             const newRows: DiagnosisRow[] = [];
             const duplicateDiagnoses: string[] = [];
+
             // Track what's being added in this batch to prevent duplicates within the same batch
             const currentBatchValues = new Set<string>();
             const currentBatchDiagnoses = new Set<string>();
@@ -4694,8 +4718,8 @@ export default function Treatment() {
                 const normalizedDiagnosis = diagnosisLabel?.toLowerCase().trim() || '';
 
                 // Check for duplicates by both value and diagnosis name (case-insensitive)
-                if (existingValues.has(normalizedValue) ||
-                    existingDiagnoses.has(normalizedDiagnosis) ||
+                if (existingVals.has(normalizedValue) ||
+                    existingDiags.has(normalizedDiagnosis) ||
                     currentBatchValues.has(normalizedValue) ||
                     currentBatchDiagnoses.has(normalizedDiagnosis)) {
                     duplicateDiagnoses.push(diagnosisLabel);
@@ -4724,7 +4748,7 @@ export default function Treatment() {
             // Sort by priority (lower priority number = higher priority)
             return next.sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999));
         });
-        setSelectedDiagnoses([]);
+        // Keep selectedDiagnoses intact so clicking Add again shows "already added" instead of "please select"
     };
 
     const handleDiagnosisCommentChange = (rowValue: string, text: string) => {
@@ -4742,10 +4766,24 @@ export default function Treatment() {
             setMedicinesSelectionError('Please select at least one medicine');
             return;
         }
+
+        // Check if all selected are already added
+        const existingShortDescriptions = new Set(medicineRows.map(r => r.short_description?.toLowerCase().trim()));
+        const allAlreadyAdded = selectedMedicines.every(medicineValue => {
+            const medicineOption = medicinesOptions.find(opt => opt.value === medicineValue);
+            const shortDesc = medicineOption?.short_description?.toLowerCase().trim() || '';
+            return existingShortDescriptions.has(shortDesc);
+        });
+
+        if (allAlreadyAdded) {
+            setMedicinesSelectionError('Selected medicines are already added');
+            return;
+        }
+
         setMedicinesSelectionError(null);
         if (selectedMedicines.length > 0) {
             setMedicineRows(prev => {
-                const existingShortDescriptions = new Set(prev.map(r => r.short_description?.toLowerCase().trim()));
+                const existingShortDescs = new Set(prev.map(r => r.short_description?.toLowerCase().trim()));
                 const newRows: MedicineRow[] = [];
                 const duplicateMedicines: string[] = [];
 
@@ -4755,7 +4793,7 @@ export default function Treatment() {
                         const shortDesc = medicineOption.short_description?.toLowerCase().trim() || '';
 
                         // Check for duplicates by short_description
-                        if (existingShortDescriptions.has(shortDesc)) {
+                        if (existingShortDescs.has(shortDesc)) {
                             duplicateMedicines.push(medicineOption.short_description);
                         } else {
                             newRows.push({
@@ -4771,7 +4809,7 @@ export default function Treatment() {
                                 instruction: medicineOption.instruction || '',
                                 priority: medicineOption.priority ?? medicineOption.priority_value ?? 999
                             });
-                            existingShortDescriptions.add(shortDesc);
+                            existingShortDescs.add(shortDesc);
                         }
                     }
                 });
@@ -4787,7 +4825,7 @@ export default function Treatment() {
                 // Sort by priority (lower priority number = higher priority)
                 return next.sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999));
             });
-            setSelectedMedicines([]);
+            // Keep selectedMedicines intact so clicking Add again shows "already added" instead of "please select"
         }
     };
 
@@ -4816,7 +4854,6 @@ export default function Treatment() {
             setPrescriptionError('Please enter at least one prescription');
             return;
         }
-        setPrescriptionError(null);
 
         if (raw.length > 200) {
             setSnackbarMessage('Prescription cannot exceed 200 characters');
@@ -4828,6 +4865,16 @@ export default function Treatment() {
         // We only use Name as prescription column, split B-L-D into b/l/d, map days and instruction
         const parts = raw.split('|').map(p => p.trim()).filter(p => p.length > 0);
         const name = parts[0] || raw;
+
+        // Check if already added (case-insensitive match on prescription name)
+        const alreadyExists = prescriptionRows.some(r => r.prescription.toLowerCase().trim() === name.toLowerCase().trim());
+        if (alreadyExists) {
+            setPrescriptionError('Selected prescription is already added');
+            return;
+        }
+
+        setPrescriptionError(null);
+
         const dose = (parts[2] || '').replace(/\s+/g, ''); // e.g., 1-1-1
         const days = (parts[3] || '').trim();
         const instruction = parts[4] || '';
@@ -4871,776 +4918,1028 @@ export default function Treatment() {
         ));
     };
 
-    // Investigation handlers
-    const handleAddInvestigations = () => {
-        if (selectedInvestigations.length === 0) {
-            setInvestigationsSelectionError('Please select at least one investigation');
-            return;
-        }
-        setInvestigationsSelectionError(null);
-        setInvestigationRows(prev => {
-            const existingInvestigationLabels = new Set(prev.map(r => r.investigation.toLowerCase()));
-            const newRows: InvestigationRow[] = [];
-            const duplicateInvestigations: string[] = [];
+// Investigation handlers
+const handleAddInvestigations = () => {
+    if (selectedInvestigations.length === 0) {
+        setInvestigationsSelectionError('Please select at least one investigation');
+        return;
+    }
+    // Check if all selected are already added
+    const existingInvestigationLabels = new Set(investigationRows.map(r => r.investigation.toLowerCase()));
+    const hasNewItems = selectedInvestigations.some(val => {
+        const investigationOption = investigationsOptions.find(opt => opt.value === val);
+        const investigationLabel = (investigationOption?.label || val).toLowerCase();
+        return !existingInvestigationLabels.has(investigationLabel);
+    });
+    if (!hasNewItems) {
+        setInvestigationsSelectionError('Selected investigations are already added');
+        return;
+    }
+    setInvestigationsSelectionError(null);
+    setInvestigationRows(prev => {
+        const existingLabels = new Set(prev.map(r => r.investigation.toLowerCase()));
+        const newRows: InvestigationRow[] = [];
+        const duplicateInvestigations: string[] = [];
 
-            selectedInvestigations.forEach(val => {
-                const investigationOption = investigationsOptions.find(opt => opt.value === val);
-                const investigationLabel = (investigationOption?.label || val).toLowerCase();
+        selectedInvestigations.forEach(val => {
+            const investigationOption = investigationsOptions.find(opt => opt.value === val);
+            const investigationLabel = (investigationOption?.label || val).toLowerCase();
 
-                // Check for duplicates by investigation name (case-insensitive)
-                if (existingInvestigationLabels.has(investigationLabel)) {
-                    duplicateInvestigations.push(investigationOption?.label || val);
-                } else {
-                    newRows.push({ id: `inv_${Date.now()}_${val}`, investigation: investigationOption?.label || val });
-                    existingInvestigationLabels.add(investigationLabel);
-                }
-            });
-
-            // Show error if duplicates found
-            if (duplicateInvestigations.length > 0) {
-                setSnackbarMessage(`The following investigation(s) are already added: ${duplicateInvestigations.join(', ')}`);
-                setSnackbarOpen(true);
+            // Check for duplicates by investigation name (case-insensitive)
+            if (existingLabels.has(investigationLabel)) {
+                duplicateInvestigations.push(investigationOption?.label || val);
             } else {
-                setInvestigationsSelectionError(null);
+                newRows.push({ id: `inv_${Date.now()}_${val}`, investigation: investigationOption?.label || val });
+                existingLabels.add(investigationLabel);
             }
-
-            return [...prev, ...newRows];
         });
-        setSelectedInvestigations([]);
-    };
 
-    const handleRemoveInvestigation = (id: string) => {
-        setInvestigationRows(prev => prev.filter(row => row.id !== id));
-    };
-
-    const handleFollowUpChange = (field: string, value: string) => {
-        setFollowUpData(prev => ({
-            ...prev,
-            [field]: value
-        }));
-
-        if (field === 'planAdv') {
-            const { error } = validateField('planAdv', value, 1000, 'Plan / Advice', 'visit');
-            setPlanAdvError(error || null);
+        // Show error if partial duplicates found
+        if (duplicateInvestigations.length > 0) {
+            setInvestigationsSelectionError(`The following investigation(s) are already added: ${duplicateInvestigations.join(', ')}`);
         }
 
-        if (field === 'remarkComments') {
-            const { error } = validateField('remarkComments', value, 1000, 'Remark', 'visit');
-            setRemarkCommentsError(error || null);
-        }
+        return [...prev, ...newRows];
+    });
+    // Keep selectedInvestigations intact so clicking Add again shows "already added" instead of "please select"
+};
 
-        if (field === 'followUp') {
-            const { error } = validateField('followUp', value, 100, 'Follow up', 'visit');
-            setFollowUpError(error || null);
-        }
-    };
+const handleRemoveInvestigation = (id: string) => {
+    setInvestigationRows(prev => prev.filter(row => row.id !== id));
+};
 
-    const handleBillingChange = (field: string, value: string) => {
-        // Strict blocking for discount field AND billed field
-        if ((field === 'discount' || field === 'billed') && value && !/^\d*\.?\d*$/.test(value)) {
-            return; // Block non-numeric input
-        }
+const handleFollowUpChange = (field: string, value: string) => {
+    setFollowUpData(prev => ({
+        ...prev,
+        [field]: value
+    }));
 
-        setBillingData(prev => {
-            const next = { ...prev, [field]: value };
-            const billedNum = parseFloat(next.billed) || 0;
-            const discountNum = parseFloat(next.discount);
+    if (field === 'planAdv') {
+        const { error } = validateField('planAdv', value, 1000, 'Plan / Advice', 'visit');
+        setPlanAdvError(error || null);
+    }
 
-            let newError: string | null = null;
+    if (field === 'remarkComments') {
+        const { error } = validateField('remarkComments', value, 1000, 'Remark', 'visit');
+        setRemarkCommentsError(error || null);
+    }
 
-            if (field === 'discount') {
-                // Dynamic character limit based on billed amount
-                const billedLength = String(Math.floor(billedNum)).length;
-                const maxDiscountLength = Math.max(billedLength, 1); // At least 1 character
+    if (field === 'followUp') {
+        const { error } = validateField('followUp', value, 100, 'Follow up', 'visit');
+        setFollowUpError(error || null);
+    }
+};
 
-                if (value.length >= maxDiscountLength && value.length > 0) {
-                    // Show message when at or exceeding the limit
-                    // Check if the numeric value is greater than billed
-                    const discountValue = parseFloat(value) || 0;
-                    if (discountValue > billedNum && billedNum > 0) {
-                        newError = 'Discount cannot be greater than billed amount';
-                    } else if (value.length === maxDiscountLength && billedNum > 0) {
-                        // Show the "cannot exceed" message when at the limit
-                        newError = `Discount cannot exceed ${Math.floor(billedNum)}`;
-                    }
-                } else if (value && isNaN(Number(value))) {
-                    // Should be caught by blocking above, but fallback
-                    newError = 'Discount must be a valid number';
-                } else if (!isNaN(discountNum) && discountNum < 0) {
-                    newError = 'Discount cannot be negative';
-                } else if ((!isNaN(discountNum) ? discountNum : 0) > billedNum && billedNum > 0) {
+const handleBillingChange = (field: string, value: string) => {
+    // Strict blocking for discount field AND billed field
+    if ((field === 'discount' || field === 'billed') && value && !/^\d*\.?\d*$/.test(value)) {
+        return; // Block non-numeric input
+    }
+
+    setBillingData(prev => {
+        const next = { ...prev, [field]: value };
+        const billedNum = parseFloat(next.billed) || 0;
+        const discountNum = parseFloat(next.discount);
+
+        let newError: string | null = null;
+
+        if (field === 'discount') {
+            // Dynamic character limit based on billed amount
+            const billedLength = String(Math.floor(billedNum)).length;
+            const maxDiscountLength = Math.max(billedLength, 1); // At least 1 character
+
+            if (value.length >= maxDiscountLength && value.length > 0) {
+                // Show message when at or exceeding the limit
+                // Check if the numeric value is greater than billed
+                const discountValue = parseFloat(value) || 0;
+                if (discountValue > billedNum && billedNum > 0) {
                     newError = 'Discount cannot be greater than billed amount';
+                } else if (value.length === maxDiscountLength && billedNum > 0) {
+                    // Show the "cannot exceed" message when at the limit
+                    newError = `Discount cannot exceed ${Math.floor(billedNum)}`;
                 }
+            } else if (value && isNaN(Number(value))) {
+                // Should be caught by blocking above, but fallback
+                newError = 'Discount must be a valid number';
+            } else if (!isNaN(discountNum) && discountNum < 0) {
+                newError = 'Discount cannot be negative';
+            } else if ((!isNaN(discountNum) ? discountNum : 0) > billedNum && billedNum > 0) {
+                newError = 'Discount cannot be greater than billed amount';
             }
+        }
 
-            setDiscountError(newError);
+        setDiscountError(newError);
 
-            // Calculate remaining amount after discount and collection (Dues)
-            const validDiscount = isNaN(discountNum) ? 0 : discountNum;
-            const collectedNum = parseFloat(next.collected) || 0;
-            const remainingAmount = Math.max(0, billedNum - validDiscount - collectedNum);
-            return { ...next, dues: String(remainingAmount) };
-        });
-    };
+        // Calculate remaining amount after discount and collection (Dues)
+        const validDiscount = isNaN(discountNum) ? 0 : discountNum;
+        const collectedNum = parseFloat(next.collected) || 0;
+        const remainingAmount = Math.max(0, billedNum - validDiscount - collectedNum);
+        return { ...next, dues: String(remainingAmount) };
+    });
+};
 
-    // Helper style for disabled state (visual only - individual elements have disabled props)
-    // Note: We don't apply opacity here as it affects all children including enabled buttons
-    const disabledStyle = isFormDisabled ? {
-        cursor: 'not-allowed'
-    } : {};
+// Helper style for disabled state (visual only - individual elements have disabled props)
+// Note: We don't apply opacity here as it affects all children including enabled buttons
+const disabledStyle = isFormDisabled ? {
+    cursor: 'not-allowed'
+} : {};
 
-    if (loading) {
-        return (
-            <div className="page">
-                <div className="body">
-                    <div className="dashboard-header" style={{ background: 'transparent' }}>
-                        <h2 className="dashboard-title">Loading Treatment...</h2>
-                    </div>
-                    <div style={{ padding: '20px', textAlign: 'center' }}>
-                        <div className="spinner-border text-primary" role="status">
-                            <span className="sr-only">Loading...</span>
-                        </div>
+if (loading) {
+    return (
+        <div className="page">
+            <div className="body">
+                <div className="dashboard-header" style={{ background: 'transparent' }}>
+                    <h2 className="dashboard-title">Loading Treatment...</h2>
+                </div>
+                <div style={{ padding: '20px', textAlign: 'center' }}>
+                    <div className="spinner-border text-primary" role="status">
+                        <span className="sr-only">Loading...</span>
                     </div>
                 </div>
             </div>
-        );
-    }
+        </div>
+    );
+}
 
-    return (
-        // <>
-        <div className="page" >
-            <style dangerouslySetInnerHTML={{ __html: durationCommentStyles }} />
-            <style>{`
+return (
+    // <>
+    <div className="page" >
+        <style dangerouslySetInnerHTML={{ __html: durationCommentStyles }} />
+        <style>{`
                 /* Override Material-UI container overflow to prevent duplicate scrollbar */
                 [class*="css-1kjibxc"] {
                     overflow: hidden !important;
                 }
             `}</style>
-            <div className="body" style={{ overflowY: 'auto' }}>
-                {/* Header */}
-                <div className="dashboard-header" style={{ background: 'transparent', display: 'flex', alignItems: 'center', padding: '12px 16px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <h2 className="dashboard-title" style={{ color: '#000' }}>Patient's Treatment Details</h2>
+        <div className="body" style={{ overflowY: 'auto' }}>
+            {/* Header */}
+            <div className="dashboard-header" style={{ background: 'transparent', display: 'flex', alignItems: 'center', padding: '12px 16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h2 className="dashboard-title" style={{ color: '#000' }}>Patient's Treatment Details</h2>
+                </div>
+            </div>
+
+            {/* Main Content - Two Column Layout */}
+            <div style={{ display: 'flex', minHeight: 'calc(100vh - 120px)', fontFamily: "'Roboto', sans-serif", ...disabledStyle }}>
+                {/* Left Sidebar - Previous Visits and Attachments */}
+                <div style={{
+                    width: '240px',
+                    backgroundColor: '#f8f9fa',
+                    borderRight: '1px solid #dee2e6',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    marginTop: '8px',
+                    marginLeft: '15px',
+                    marginBottom: '8px',
+                    marginRight: '24px'
+                }}>
+                    {/* Previous Visits Section */}
+                    <div>
+                        <div style={{
+                            backgroundColor: '#1976d2',
+                            color: 'white',
+                            padding: '12px 15px',
+                            fontWeight: 'bold',
+                            fontSize: '14px'
+                        }}>
+                            Previous Visits ({previousVisits.length})
+                        </div>
+                        <div style={{ padding: '0' }}>
+                            {loadingPreviousVisits ? (
+                                <div style={{
+                                    padding: '20px',
+                                    textAlign: 'center',
+                                    color: '#666',
+                                    fontSize: '13px'
+                                }}>
+                                    Loading previous visits...
+                                </div>
+                            ) : previousVisits.length > 0 ? (
+                                previousVisits.slice(-10).reverse().map((visit, index) => (
+                                    <div
+                                        key={visit.id}
+                                        style={{
+                                            padding: '10px 15px',
+                                            borderBottom: '1px solid #e0e0e0',
+                                            backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white',
+                                            cursor: 'pointer',
+                                            fontSize: '13px',
+                                            transition: 'background-color 0.2s ease'
+                                        }}
+                                        onClick={() => handlePreviousVisitClick(visit)}
+                                        onMouseEnter={(e) => {
+                                            e.currentTarget.style.backgroundColor = '#eeeeee';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.currentTarget.style.backgroundColor = index % 2 === 0 ? '#f8f9fa' : 'white';
+                                        }}
+                                    >
+                                        <div style={{ fontWeight: '500', color: '#333' }}>
+                                            <div style={{ fontSize: '13px', fontWeight: 'bold' }}>
+                                                <a
+                                                    href="#"
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        handlePreviousVisitClick(visit);
+                                                    }}
+                                                    style={{
+                                                        textDecoration: 'underline',
+                                                        color: '#1976d2',
+                                                        cursor: 'pointer',
+                                                        fontWeight: 'bold'
+                                                    }}
+                                                    onMouseEnter={(e) => {
+                                                        e.currentTarget.style.color = '#0d47a1';
+                                                    }}
+                                                    onMouseLeave={(e) => {
+                                                        e.currentTarget.style.color = '#1976d2';
+                                                    }}
+                                                >
+                                                    {formatVisitDate(visit.date)}
+                                                </a> | {visit.type}
+                                            </div>
+                                            <div style={{ fontSize: '11px', color: '#666', marginTop: '2px' }}>
+                                                {visit.doctorName}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : previousVisitsError ? (
+                                <div style={{
+                                    padding: '20px',
+                                    textAlign: 'center',
+                                    color: '#d32f2f',
+                                    fontSize: '13px',
+                                    backgroundColor: '#ffebee',
+                                    border: '1px solid #ffcdd2',
+                                    borderRadius: '4px',
+                                    margin: '8px'
+                                }}>
+                                    <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>Error loading visits</div>
+                                    <div>{previousVisitsError}</div>
+                                    <button
+                                        onClick={fetchPreviousVisits}
+                                        style={{
+                                            marginTop: '8px',
+                                            padding: '4px 8px',
+                                            backgroundColor: '#1976d2',
+                                            color: 'white',
+                                            border: 'none',
+                                            borderRadius: '4px',
+                                            cursor: 'pointer',
+                                            fontSize: '11px'
+                                        }}
+                                    >
+                                        Retry
+                                    </button>
+                                </div>
+                            ) : (
+                                <div style={{
+                                    padding: '20px',
+                                    textAlign: 'center',
+                                    color: '#666',
+                                    fontSize: '13px'
+                                }}>
+                                    No previous visits found
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Attachments Section */}
+                    <div style={{ marginTop: '2px' }}>
+                        <div style={{
+                            backgroundColor: '#1976d2',
+                            color: 'white',
+                            padding: '12px 15px',
+                            fontWeight: 'bold',
+                            fontSize: '14px'
+                        }}>
+                            Attachments
+                        </div>
+                        <div style={{ padding: '10px', maxWidth: '100%', overflowX: 'hidden', boxSizing: 'border-box' }}>
+                            {isLoadingDocuments && (
+                                <div style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    color: '#2e7d32',
+                                    fontSize: '13px'
+                                }}>
+                                    <div style={{
+                                        width: '12px',
+                                        height: '12px',
+                                        border: '2px solid #2e7d32',
+                                        borderTop: '2px solid transparent',
+                                        borderRadius: '50%',
+                                        animation: 'spin 1s linear infinite'
+                                    }}></div>
+                                    Loading documents...
+                                </div>
+                            )}
+
+                            {!isLoadingDocuments && existingDocuments.length === 0 && (
+                                <div style={{ color: '#666', fontSize: '13px' }}>
+                                    No documents found for this visit
+                                </div>
+                            )}
+
+                            {!isLoadingDocuments && existingDocuments.length > 0 && (
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', maxWidth: '100%' }}>
+                                    {existingDocuments.map((doc, index) => {
+                                        const docId: number | undefined = doc.documentId || doc.id || doc.document_id || doc.documentID;
+                                        const isDownloading = downloadingDocumentId === docId;
+                                        const isOpening = openingDocumentId === docId;
+                                        const isProcessing = isDownloading || isOpening;
+                                        return (
+                                            <span key={`existing-${index}`} style={{
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                padding: '4px 8px',
+                                                backgroundColor: '#e8f5e8',
+                                                borderRadius: '6px',
+                                                border: '1px solid #c8e6c9',
+                                                fontSize: '13px',
+                                                fontFamily: "'Roboto', sans-serif",
+                                                fontWeight: 500,
+                                                color: '#2e7d32',
+                                                maxWidth: '100%',
+                                                cursor: docId && !isProcessing ? 'pointer' : 'default',
+                                                opacity: isProcessing ? 0.7 : 1,
+                                                transition: 'opacity 0.2s'
+                                            }}
+                                                onClick={() => {
+                                                    if (docId && !isProcessing) {
+                                                        handleOpenDocument(doc);
+                                                    }
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                    if (docId && !isProcessing) {
+                                                        e.currentTarget.style.backgroundColor = '#d4edda';
+                                                    }
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    if (docId && !isProcessing) {
+                                                        e.currentTarget.style.backgroundColor = '#e8f5e8';
+                                                    }
+                                                }}
+                                                title={isProcessing ? (isOpening ? 'Opening...' : 'Downloading...') : docId ? 'Click to open document' : ''}
+                                            >
+                                                <span style={{ marginRight: '5px' }}>📄</span>
+                                                <span style={{ maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                    {(() => {
+                                                        const fullPath = doc.documentName;
+                                                        // Split by forward or backward slash, filter out empty strings (e.g. trailing slash), and take the last part
+                                                        const parts = String(fullPath).split('/').pop();
+                                                        console.log('/part', parts);
+                                                        return parts || fullPath;
+                                                    })()}
+                                                </span>
+                                                {doc.fileSize && (
+                                                    <span style={{
+                                                        marginLeft: '6px',
+                                                        fontSize: '11px',
+                                                        color: '#2e7d32',
+                                                        fontWeight: 400
+                                                    }}>
+                                                        ({(() => {
+                                                            const size = doc.fileSize;
+                                                            if (size === 0) return '0 B';
+                                                            const units = ['B', 'KB', 'MB', 'GB'];
+                                                            let fileSize = size;
+                                                            let unitIndex = 0;
+                                                            while (fileSize >= 1024 && unitIndex < units.length - 1) {
+                                                                fileSize /= 1024;
+                                                                unitIndex++;
+                                                            }
+                                                            return `${fileSize.toFixed(1)} ${units[unitIndex]}`;
+                                                        })()})
+                                                    </span>
+                                                )}
+                                                {docId && (
+                                                    <span
+                                                        onClick={(e) => {
+                                                            e.stopPropagation(); // Prevent triggering the parent onClick
+                                                            if (!isProcessing) handleDownloadDocument(doc);
+                                                        }}
+                                                        style={{
+                                                            marginLeft: '8px',
+                                                            width: '24px',
+                                                            height: '24px',
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            color: isProcessing ? '#9e9e9e' : '#000000',
+                                                            cursor: isProcessing ? 'not-allowed' : 'pointer'
+                                                        }}
+                                                        title={isProcessing ? (isOpening ? 'Opening...' : 'Downloading...') : 'Download'}
+                                                    >
+                                                        <DownloadIcon style={{ fontSize: '16px' }} />
+                                                    </span>
+                                                )}
+                                            </span>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Past Services Section */}
+                    <div style={{ marginTop: '2px' }}>
+                        <div style={{
+                            backgroundColor: '#1976d2',
+                            color: 'white',
+                            padding: '12px 15px',
+                            fontWeight: 'bold',
+                            fontSize: '14px'
+                        }}>
+                            Past Services
+                        </div>
+                        <div style={{ padding: '0' }}>
+                            {loadingPastServices ? (
+                                <div style={{
+                                    padding: '10px 15px',
+                                    textAlign: 'center',
+                                    color: '#666',
+                                    fontSize: '13px'
+                                }}>
+                                    Loading...
+                                </div>
+                            ) : pastServicesError ? (
+                                <div style={{
+                                    padding: '10px 15px',
+                                    textAlign: 'center',
+                                    color: '#d32f2f',
+                                    fontSize: '13px',
+                                    backgroundColor: '#ffebee',
+                                    border: '1px solid #ffcdd2',
+                                    margin: '8px'
+                                }}>
+                                    {pastServicesError}
+                                </div>
+                            ) : pastServiceDates.length === 0 ? (
+                                <div style={{
+                                    padding: '10px 15px',
+                                    textAlign: 'center',
+                                    color: '#666',
+                                    fontSize: '13px'
+                                }}>
+                                    No past services
+                                </div>
+                            ) : (
+                                pastServiceDates.map((dateStr, idx) => (
+                                    <div
+                                        key={`${dateStr}_${idx}`}
+                                        style={{
+                                            padding: '10px 15px',
+                                            borderBottom: '1px solid #e0e0e0',
+                                            backgroundColor: idx % 2 === 0 ? '#ffffff' : '#f9f9f9',
+                                            fontSize: '13px'
+                                        }}
+                                    >
+                                        <a
+                                            href="#"
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                handlePastServiceDateClick(dateStr);
+                                            }}
+                                            style={{ color: '#1976d2', textDecoration: 'underline', cursor: 'pointer' }}
+                                        >
+                                            {formatPastServiceDate(dateStr)}
+                                        </a>
+                                    </div>
+                                ))
+                            )}
+                        </div>
                     </div>
                 </div>
 
-                {/* Main Content - Two Column Layout */}
-                <div style={{ display: 'flex', minHeight: 'calc(100vh - 120px)', fontFamily: "'Roboto', sans-serif", ...disabledStyle }}>
-                    {/* Left Sidebar - Previous Visits and Attachments */}
-                    <div style={{
-                        width: '240px',
-                        backgroundColor: '#f8f9fa',
-                        borderRight: '1px solid #dee2e6',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        marginTop: '8px',
-                        marginLeft: '15px',
-                        marginBottom: '8px',
-                        marginRight: '24px'
-                    }}>
-                        {/* Previous Visits Section */}
-                        <div>
+                {/* Right Content - Treatment Form */}
+                <div style={{ flex: 1, padding: '15px', display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ flex: 1, overflowY: 'auto', paddingBottom: '20px' }}>
+                        {/* Patient Header */}
+                        <div style={{
+                            marginBottom: '15px',
+                            padding: '0',
+                            backgroundColor: '#f8f9fa',
+                            borderRadius: '4px'
+                        }}>
                             <div style={{
-                                backgroundColor: '#1976d2',
-                                color: 'white',
-                                padding: '12px 15px',
-                                fontWeight: 'bold',
-                                fontSize: '14px'
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center'
                             }}>
-                                Previous Visits ({previousVisits.length})
-                            </div>
-                            <div style={{ padding: '0' }}>
-                                {loadingPreviousVisits ? (
-                                    <div style={{
-                                        padding: '20px',
-                                        textAlign: 'center',
-                                        color: '#666',
-                                        fontSize: '13px'
-                                    }}>
-                                        Loading previous visits...
+                                <PatientNameDisplay
+                                    onClick={() => {
+                                        if (treatmentData?.patientId) {
+                                            setShowQuickRegistration(true);
+                                        }
+                                    }}
+                                    style={{
+                                        fontSize: '16px',
+                                        fontWeight: 'bold',
+                                        color: '#2e7d32',
+                                        cursor: treatmentData?.patientId ? 'pointer' : 'default',
+                                        textDecoration: treatmentData?.patientId ? 'underline' : 'none'
+                                    }}
+                                    title={treatmentData?.patientId ? 'Click to view patient details' : ''}
+                                    patientData={{
+                                        patient: treatmentData?.patientName,
+                                        gender: treatmentData?.gender,
+                                        age: treatmentData?.age,
+                                        contact: treatmentData?.contact,
+                                        dob: treatmentData?.dateOfBirth
+                                    }}
+                                />
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <label style={{ fontWeight: 'bold', color: '#333', fontSize: '13px', whiteSpace: 'nowrap' }}>Referred By:</label>
+                                        <span style={{
+                                            fontSize: '13px',
+                                            color: '#333',
+                                            fontWeight: 500
+                                        }}>
+                                            {(() => {
+                                                // Robust extraction of code/ID (e.g., "D", "S", "1")
+                                                let rawCode = treatmentData?.referralCode ||
+                                                    treatmentData?.referralName ||
+                                                    (treatmentData?.referralName === '');
+
+
+
+                                                // Normalize code (trim, uppercase)
+                                                const code = String(rawCode || '').trim().toUpperCase();
+
+                                                const name = treatmentData?.referralName || formData.referralBy;
+
+
+                                                // Static mapping for known codes (robust fallback)
+                                                const staticMap: Record<string, string> = {
+                                                    'D': 'Doctor',
+                                                    'S': 'Self',
+                                                    'O': 'Other',
+                                                    'F': 'Family-Friend',
+                                                    'I': 'Internet'
+                                                };
+                                                if (code && staticMap[code]) {
+                                                    return staticMap[code];
+                                                }
+
+                                                if (!referByOptions || referByOptions.length === 0) {
+                                                    // Fallback to name if available and not 'Self' (already handled)
+                                                    if (name && name !== 'Self') return name;
+                                                    // If code is descriptive (len > 1), show it (e.g. "Doctor")
+                                                    if (rawCode && String(rawCode).length > 1) return rawCode;
+                                                    return '';
+                                                }
+
+                                                // Helper to extract ID string safely
+                                                const getOptId = (opt: any) => {
+                                                    if (typeof opt.id === 'object' && opt.id !== null) {
+                                                        return String(opt.id.referId || opt.id.id || '').toUpperCase();
+                                                    }
+                                                    return String(opt.id).toUpperCase();
+                                                };
+
+                                                // 1. Try to find option by ID (exact match)
+                                                const optById = referByOptions.find(o => getOptId(o) === code);
+                                                if (optById) {
+                                                    return optById.name || (optById as any).referByDescription || '';
+                                                }
+
+                                                // 2. Try to find option by Name (case-insensitive)
+                                                const optByName = referByOptions.find(o =>
+                                                    o.name.toLowerCase() === code.toLowerCase() ||
+                                                    o.name.toLowerCase() === String(name).toLowerCase()
+                                                );
+                                                if (optByName) {
+                                                    return optByName.name || (optByName as any).referByDescription || '';
+                                                }
+
+                                                // 3. Fallback: If code is a descriptive string allow it
+                                                if (rawCode && String(rawCode).length > 2) {
+                                                    return rawCode;
+                                                }
+
+                                                // 4. Ultimate fallback name
+                                                if (name) {
+                                                    return name;
+                                                }
+
+                                                return '';
+                                            })()}
+
+                                        </span>
                                     </div>
-                                ) : previousVisits.length > 0 ? (
-                                    previousVisits.slice(-10).reverse().map((visit, index) => (
-                                        <div
-                                            key={visit.id}
-                                            style={{
-                                                padding: '10px 15px',
-                                                borderBottom: '1px solid #e0e0e0',
-                                                backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white',
-                                                cursor: 'pointer',
-                                                fontSize: '13px',
-                                                transition: 'background-color 0.2s ease'
-                                            }}
-                                            onClick={() => handlePreviousVisitClick(visit)}
-                                            onMouseEnter={(e) => {
-                                                e.currentTarget.style.backgroundColor = '#eeeeee';
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                e.currentTarget.style.backgroundColor = index % 2 === 0 ? '#f8f9fa' : 'white';
-                                            }}
-                                        >
-                                            <div style={{ fontWeight: '500', color: '#333' }}>
-                                                <div style={{ fontSize: '13px', fontWeight: 'bold' }}>
-                                                    <a
-                                                        href="#"
-                                                        onClick={(e) => {
-                                                            e.preventDefault();
-                                                            handlePreviousVisitClick(visit);
-                                                        }}
-                                                        style={{
-                                                            textDecoration: 'underline',
-                                                            color: '#1976d2',
-                                                            cursor: 'pointer',
-                                                            fontWeight: 'bold'
-                                                        }}
-                                                        onMouseEnter={(e) => {
-                                                            e.currentTarget.style.color = '#0d47a1';
-                                                        }}
-                                                        onMouseLeave={(e) => {
-                                                            e.currentTarget.style.color = '#1976d2';
-                                                        }}
-                                                    >
-                                                        {formatVisitDate(visit.date)}
-                                                    </a> | {visit.type}
-                                                </div>
-                                                <div style={{ fontSize: '11px', color: '#666', marginTop: '2px' }}>
-                                                    {visit.doctorName}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))
-                                ) : previousVisitsError ? (
-                                    <div style={{
-                                        padding: '20px',
-                                        textAlign: 'center',
-                                        color: '#d32f2f',
-                                        fontSize: '13px',
-                                        backgroundColor: '#ffebee',
-                                        border: '1px solid #ffcdd2',
-                                        borderRadius: '4px',
-                                        margin: '8px'
-                                    }}>
-                                        <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>Error loading visits</div>
-                                        <div>{previousVisitsError}</div>
-                                        <button
-                                            onClick={fetchPreviousVisits}
-                                            style={{
-                                                marginTop: '8px',
-                                                padding: '4px 8px',
-                                                backgroundColor: '#1976d2',
-                                                color: 'white',
-                                                border: 'none',
-                                                borderRadius: '4px',
-                                                cursor: 'pointer',
-                                                fontSize: '11px'
-                                            }}
-                                        >
-                                            Retry
-                                        </button>
-                                    </div>
-                                ) : (
-                                    <div style={{
-                                        padding: '20px',
-                                        textAlign: 'center',
-                                        color: '#666',
-                                        fontSize: '13px'
-                                    }}>
-                                        No previous visits found
-                                    </div>
-                                )}
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: (isFormDisabled || inPersonDisabled) ? 'not-allowed' : 'pointer', fontSize: '13px', whiteSpace: 'nowrap' }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={formData.visitType.inPerson}
+                                            // onChange={(e) => handleVisitTypeChange('inPerson', e.target.checked)}
+                                            disabled={true}
+                                            readOnly={inPersonDisabled}
+                                        />
+                                        In-Person
+                                    </label>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: isFormDisabled ? 'not-allowed' : 'pointer', fontSize: '13px', whiteSpace: 'nowrap' }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={formData.visitType.followUp}
+                                            onChange={(e) => handleVisitTypeChange('followUp', e.target.checked)}
+                                            disabled={true}
+                                        />
+                                        Follow-up
+                                    </label>
+                                </div>
+
                             </div>
                         </div>
 
-                        {/* Attachments Section */}
-                        <div style={{ marginTop: '2px' }}>
-                            <div style={{
-                                backgroundColor: '#1976d2',
-                                color: 'white',
-                                padding: '12px 15px',
-                                fontWeight: 'bold',
-                                fontSize: '14px'
-                            }}>
-                                Attachments
-                            </div>
-                            <div style={{ padding: '10px', maxWidth: '100%', overflowX: 'hidden', boxSizing: 'border-box' }}>
-                                {isLoadingDocuments && (
-                                    <div style={{
+                        {/* Medical History Checkboxes */}
+                        <div style={{ marginBottom: '15px' }}>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+                                {Object.entries(formData.medicalHistory).map(([key, value]) => (
+                                    <label key={key} style={{
                                         display: 'flex',
                                         alignItems: 'center',
-                                        gap: '8px',
-                                        color: '#2e7d32',
-                                        fontSize: '13px'
-                                    }}>
-                                        <div style={{
-                                            width: '12px',
-                                            height: '12px',
-                                            border: '2px solid #2e7d32',
-                                            borderTop: '2px solid transparent',
-                                            borderRadius: '50%',
-                                            animation: 'spin 1s linear infinite'
-                                        }}></div>
-                                        Loading documents...
-                                    </div>
-                                )}
-
-                                {!isLoadingDocuments && existingDocuments.length === 0 && (
-                                    <div style={{ color: '#666', fontSize: '13px' }}>
-                                        No documents found for this visit
-                                    </div>
-                                )}
-
-                                {!isLoadingDocuments && existingDocuments.length > 0 && (
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', maxWidth: '100%' }}>
-                                        {existingDocuments.map((doc, index) => {
-                                            const docId: number | undefined = doc.documentId || doc.id || doc.document_id || doc.documentID;
-                                            const isDownloading = downloadingDocumentId === docId;
-                                            const isOpening = openingDocumentId === docId;
-                                            const isProcessing = isDownloading || isOpening;
-                                            return (
-                                                <span key={`existing-${index}`} style={{
-                                                    display: 'inline-flex',
-                                                    alignItems: 'center',
-                                                    padding: '4px 8px',
-                                                    backgroundColor: '#e8f5e8',
-                                                    borderRadius: '6px',
-                                                    border: '1px solid #c8e6c9',
-                                                    fontSize: '13px',
-                                                    fontFamily: "'Roboto', sans-serif",
-                                                    fontWeight: 500,
-                                                    color: '#2e7d32',
-                                                    maxWidth: '100%',
-                                                    cursor: docId && !isProcessing ? 'pointer' : 'default',
-                                                    opacity: isProcessing ? 0.7 : 1,
-                                                    transition: 'opacity 0.2s'
-                                                }}
-                                                    onClick={() => {
-                                                        if (docId && !isProcessing) {
-                                                            handleOpenDocument(doc);
-                                                        }
-                                                    }}
-                                                    onMouseEnter={(e) => {
-                                                        if (docId && !isProcessing) {
-                                                            e.currentTarget.style.backgroundColor = '#d4edda';
-                                                        }
-                                                    }}
-                                                    onMouseLeave={(e) => {
-                                                        if (docId && !isProcessing) {
-                                                            e.currentTarget.style.backgroundColor = '#e8f5e8';
-                                                        }
-                                                    }}
-                                                    title={isProcessing ? (isOpening ? 'Opening...' : 'Downloading...') : docId ? 'Click to open document' : ''}
-                                                >
-                                                    <span style={{ marginRight: '5px' }}>📄</span>
-                                                    <span style={{ maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                        {(() => {
-                                                            const fullPath = doc.documentName;
-                                                            // Split by forward or backward slash, filter out empty strings (e.g. trailing slash), and take the last part
-                                                            const parts = String(fullPath).split('/').pop();
-                                                            console.log('/part', parts);
-                                                            return parts || fullPath;
-                                                        })()}
-                                                    </span>
-                                                    {doc.fileSize && (
-                                                        <span style={{
-                                                            marginLeft: '6px',
-                                                            fontSize: '11px',
-                                                            color: '#2e7d32',
-                                                            fontWeight: 400
-                                                        }}>
-                                                            ({(() => {
-                                                                const size = doc.fileSize;
-                                                                if (size === 0) return '0 B';
-                                                                const units = ['B', 'KB', 'MB', 'GB'];
-                                                                let fileSize = size;
-                                                                let unitIndex = 0;
-                                                                while (fileSize >= 1024 && unitIndex < units.length - 1) {
-                                                                    fileSize /= 1024;
-                                                                    unitIndex++;
-                                                                }
-                                                                return `${fileSize.toFixed(1)} ${units[unitIndex]}`;
-                                                            })()})
-                                                        </span>
-                                                    )}
-                                                    {docId && (
-                                                        <span
-                                                            onClick={(e) => {
-                                                                e.stopPropagation(); // Prevent triggering the parent onClick
-                                                                if (!isProcessing) handleDownloadDocument(doc);
-                                                            }}
-                                                            style={{
-                                                                marginLeft: '8px',
-                                                                width: '24px',
-                                                                height: '24px',
-                                                                display: 'inline-flex',
-                                                                alignItems: 'center',
-                                                                justifyContent: 'center',
-                                                                color: isProcessing ? '#9e9e9e' : '#000000',
-                                                                cursor: isProcessing ? 'not-allowed' : 'pointer'
-                                                            }}
-                                                            title={isProcessing ? (isOpening ? 'Opening...' : 'Downloading...') : 'Download'}
-                                                        >
-                                                            <DownloadIcon style={{ fontSize: '16px' }} />
-                                                        </span>
-                                                    )}
-                                                </span>
-                                            );
-                                        })}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Past Services Section */}
-                        <div style={{ marginTop: '2px' }}>
-                            <div style={{
-                                backgroundColor: '#1976d2',
-                                color: 'white',
-                                padding: '12px 15px',
-                                fontWeight: 'bold',
-                                fontSize: '14px'
-                            }}>
-                                Past Services
-                            </div>
-                            <div style={{ padding: '0' }}>
-                                {loadingPastServices ? (
-                                    <div style={{
-                                        padding: '10px 15px',
-                                        textAlign: 'center',
-                                        color: '#666',
-                                        fontSize: '13px'
-                                    }}>
-                                        Loading...
-                                    </div>
-                                ) : pastServicesError ? (
-                                    <div style={{
-                                        padding: '10px 15px',
-                                        textAlign: 'center',
-                                        color: '#d32f2f',
+                                        gap: '5px',
+                                        cursor: isFormDisabled ? 'not-allowed' : 'pointer',
                                         fontSize: '13px',
-                                        backgroundColor: '#ffebee',
-                                        border: '1px solid #ffcdd2',
-                                        margin: '8px'
+                                        borderRadius: '4px'
                                     }}>
-                                        {pastServicesError}
-                                    </div>
-                                ) : pastServiceDates.length === 0 ? (
-                                    <div style={{
-                                        padding: '10px 15px',
-                                        textAlign: 'center',
-                                        color: '#666',
-                                        fontSize: '13px'
-                                    }}>
-                                        No past services
-                                    </div>
-                                ) : (
-                                    pastServiceDates.map((dateStr, idx) => (
-                                        <div
-                                            key={`${dateStr}_${idx}`}
-                                            style={{
-                                                padding: '10px 15px',
-                                                borderBottom: '1px solid #e0e0e0',
-                                                backgroundColor: idx % 2 === 0 ? '#ffffff' : '#f9f9f9',
-                                                fontSize: '13px'
-                                            }}
-                                        >
-                                            <a
-                                                href="#"
-                                                onClick={(e) => {
-                                                    e.preventDefault();
-                                                    handlePastServiceDateClick(dateStr);
-                                                }}
-                                                style={{ color: '#1976d2', textDecoration: 'underline', cursor: 'pointer' }}
-                                            >
-                                                {formatPastServiceDate(dateStr)}
-                                            </a>
-                                        </div>
-                                    ))
-                                )}
+                                        <input
+                                            type="checkbox"
+                                            checked={value}
+                                            onChange={(e) => handleMedicalHistoryChange(key, e.target.checked)}
+                                            disabled={isFormDisabled}
+                                            style={{ margin: 0 }}
+                                        />
+                                        <span style={{ textTransform: 'capitalize', fontWeight: '500' }}>
+                                            {key === 'ihd' ? 'IHD' : key === 'th' ? 'TH' : key.charAt(0).toUpperCase() + key.slice(1)}
+                                        </span>
+                                    </label>
+                                ))}
                             </div>
                         </div>
-                    </div>
 
-                    {/* Right Content - Treatment Form */}
-                    <div style={{ flex: 1, padding: '15px', display: 'flex', flexDirection: 'column' }}>
-                        <div style={{ flex: 1, overflowY: 'auto', paddingBottom: '20px' }}>
-                            {/* Patient Header */}
-                            <div style={{
-                                marginBottom: '15px',
-                                padding: '0',
-                                backgroundColor: '#f8f9fa',
-                                borderRadius: '4px'
-                            }}>
-                                <div style={{
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center'
-                                }}>
-                                    <PatientNameDisplay
-                                        onClick={() => {
-                                            if (treatmentData?.patientId) {
-                                                setShowQuickRegistration(true);
-                                            }
-                                        }}
-                                        style={{
-                                            fontSize: '16px',
-                                            fontWeight: 'bold',
-                                            color: '#2e7d32',
-                                            cursor: treatmentData?.patientId ? 'pointer' : 'default',
-                                            textDecoration: treatmentData?.patientId ? 'underline' : 'none'
-                                        }}
-                                        title={treatmentData?.patientId ? 'Click to view patient details' : ''}
-                                        patientData={{
-                                            patient: treatmentData?.patientName,
-                                            gender: treatmentData?.gender,
-                                            age: treatmentData?.age,
-                                            contact: treatmentData?.contact,
-                                            dob: treatmentData?.dateOfBirth
-                                        }}
-                                    />
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            <label style={{ fontWeight: 'bold', color: '#333', fontSize: '13px', whiteSpace: 'nowrap' }}>Referred By:</label>
-                                            <span style={{
-                                                fontSize: '13px',
-                                                color: '#333',
-                                                fontWeight: 500
-                                            }}>
-                                                {(() => {
-                                                    // Robust extraction of code/ID (e.g., "D", "S", "1")
-                                                    let rawCode = treatmentData?.referralCode ||
-                                                        treatmentData?.referralName ||
-                                                        (treatmentData?.referralName === '');
-
-
-
-                                                    // Normalize code (trim, uppercase)
-                                                    const code = String(rawCode || '').trim().toUpperCase();
-
-                                                    const name = treatmentData?.referralName || formData.referralBy;
-
-
-                                                    // Static mapping for known codes (robust fallback)
-                                                    const staticMap: Record<string, string> = {
-                                                        'D': 'Doctor',
-                                                        'S': 'Self',
-                                                        'O': 'Other',
-                                                        'F': 'Family-Friend',
-                                                        'I': 'Internet'
-                                                    };
-                                                    if (code && staticMap[code]) {
-                                                        return staticMap[code];
-                                                    }
-
-                                                    if (!referByOptions || referByOptions.length === 0) {
-                                                        // Fallback to name if available and not 'Self' (already handled)
-                                                        if (name && name !== 'Self') return name;
-                                                        // If code is descriptive (len > 1), show it (e.g. "Doctor")
-                                                        if (rawCode && String(rawCode).length > 1) return rawCode;
-                                                        return '';
-                                                    }
-
-                                                    // Helper to extract ID string safely
-                                                    const getOptId = (opt: any) => {
-                                                        if (typeof opt.id === 'object' && opt.id !== null) {
-                                                            return String(opt.id.referId || opt.id.id || '').toUpperCase();
-                                                        }
-                                                        return String(opt.id).toUpperCase();
-                                                    };
-
-                                                    // 1. Try to find option by ID (exact match)
-                                                    const optById = referByOptions.find(o => getOptId(o) === code);
-                                                    if (optById) {
-                                                        return optById.name || (optById as any).referByDescription || '';
-                                                    }
-
-                                                    // 2. Try to find option by Name (case-insensitive)
-                                                    const optByName = referByOptions.find(o =>
-                                                        o.name.toLowerCase() === code.toLowerCase() ||
-                                                        o.name.toLowerCase() === String(name).toLowerCase()
-                                                    );
-                                                    if (optByName) {
-                                                        return optByName.name || (optByName as any).referByDescription || '';
-                                                    }
-
-                                                    // 3. Fallback: If code is a descriptive string allow it
-                                                    if (rawCode && String(rawCode).length > 2) {
-                                                        return rawCode;
-                                                    }
-
-                                                    // 4. Ultimate fallback name
-                                                    if (name) {
-                                                        return name;
-                                                    }
-
-                                                    return '';
-                                                })()}
-
-                                            </span>
-                                        </div>
-                                        <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: (isFormDisabled || inPersonDisabled) ? 'not-allowed' : 'pointer', fontSize: '13px', whiteSpace: 'nowrap' }}>
-                                            <input
-                                                type="checkbox"
-                                                checked={formData.visitType.inPerson}
-                                                // onChange={(e) => handleVisitTypeChange('inPerson', e.target.checked)}
-                                                disabled={true}
-                                                readOnly={inPersonDisabled}
-                                            />
-                                            In-Person
+                        {/* Input Fields Row 1 */}
+                        <div style={{ marginBottom: '15px' }}>
+                            <div className="row row-cols-5 g-3">
+                                {[
+                                    { key: 'allergy', label: 'Allergy' },
+                                    { key: 'medicalHistoryText', label: 'Medical History' },
+                                    { key: 'surgicalHistory', label: 'Surgical History' },
+                                    { key: 'medicines', label: 'Medicines' },
+                                    { key: 'visitComments', label: 'Visit Comments' },
+                                ].map(({ key, label }) => (
+                                    <div key={key} className="col">
+                                        <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                                            {label}
                                         </label>
-                                        <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: isFormDisabled ? 'not-allowed' : 'pointer', fontSize: '13px', whiteSpace: 'nowrap' }}>
-                                            <input
-                                                type="checkbox"
-                                                checked={formData.visitType.followUp}
-                                                onChange={(e) => handleVisitTypeChange('followUp', e.target.checked)}
-                                                disabled={true}
-                                            />
-                                            Follow-up
-                                        </label>
+                                        <ClearableTextField
+                                            value={formData[key as keyof typeof formData] as string}
+                                            onChange={(e) => handleInputChange(key, e)}
+                                            disabled={isFormDisabled}
+                                            error={!!errors[key]}
+                                            helperText={errors[key]}
+                                            style={{
+                                                width: '100%'
+                                            }}
+                                            sx={{
+                                                '& .MuiInputBase-root': {
+                                                    height: '38px',
+                                                    fontSize: '13px'
+                                                }
+                                            }}
+                                        />
                                     </div>
-
-                                </div>
+                                ))}
                             </div>
+                        </div>
 
-                            {/* Medical History Checkboxes */}
-                            <div style={{ marginBottom: '15px' }}>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
-                                    {Object.entries(formData.medicalHistory).map(([key, value]) => (
-                                        <label key={key} style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '5px',
-                                            cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                            fontSize: '13px',
-                                            borderRadius: '4px'
-                                        }}>
-                                            <input
-                                                type="checkbox"
-                                                checked={value}
-                                                onChange={(e) => handleMedicalHistoryChange(key, e.target.checked)}
-                                                disabled={isFormDisabled}
-                                                style={{ margin: 0 }}
-                                            />
-                                            <span style={{ textTransform: 'capitalize', fontWeight: '500' }}>
-                                                {key === 'ihd' ? 'IHD' : key === 'th' ? 'TH' : key.charAt(0).toUpperCase() + key.slice(1)}
-                                            </span>
-                                        </label>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Input Fields Row 1 */}
-                            <div style={{ marginBottom: '15px' }}>
-                                <div className="row row-cols-5 g-3">
-                                    {[
-                                        { key: 'allergy', label: 'Allergy' },
-                                        { key: 'medicalHistoryText', label: 'Medical History' },
-                                        { key: 'surgicalHistory', label: 'Surgical History' },
-                                        { key: 'medicines', label: 'Medicines' },
-                                        { key: 'visitComments', label: 'Visit Comments' },
-                                    ].map(({ key, label }) => (
-                                        <div key={key} className="col">
+                        {/* Vitals Row */}
+                        {/* Vitals Row */}
+                        <div style={{ marginBottom: '15px' }}>
+                            <div className="row g-3">
+                                {[
+                                    { key: 'height', label: 'Height (Cm)' },
+                                    { key: 'weight', label: 'Weight (Kg)' },
+                                    { key: 'bmi', label: 'BMI' },
+                                    { key: 'pulse', label: 'Pulse (/min)' },
+                                    { key: 'bp', label: 'BP' },
+                                    { key: 'sugar', label: 'Sugar' },
+                                    { key: 'tft', label: 'TFT' },
+                                    { key: 'pallorHb', label: 'Pallor/HB' }
+                                ].map(({ key, label }) => {
+                                    const isNumberField = key === 'pulse' || key === 'height' || key === 'weight';
+                                    return (
+                                        <div key={key} className="col-6 col-md">
                                             <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
                                                 {label}
                                             </label>
-                                            <ClearableTextField
-                                                value={formData[key as keyof typeof formData] as string}
-                                                onChange={(e) => handleInputChange(key, e)}
-                                                disabled={isFormDisabled}
-                                                error={!!errors[key]}
-                                                helperText={errors[key]}
-                                                style={{
-                                                    width: '100%'
-                                                }}
-                                                sx={{
-                                                    '& .MuiInputBase-root': {
-                                                        height: '38px',
-                                                        fontSize: '13px'
-                                                    }
-                                                }}
-                                            />
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                                <ClearableTextField
+                                                    value={formData[key as keyof typeof formData] as string}
+                                                    onChange={(value) => {
+                                                        handleInputChange(key, value);
+                                                    }}
+                                                    onKeyDown={(e) => {
+                                                        if (isNumberField) {
+                                                            // Prevent minus key from being entered
+                                                            if (e.key === '-' || e.key === 'e' || e.key === 'E' || e.key === '+') {
+                                                                e.preventDefault();
+                                                            }
+                                                        }
+                                                    }}
+                                                    onBlur={(e) => {
+                                                        if (isNumberField) {
+                                                            // Ensure value is not negative on blur
+                                                            const numValue = parseFloat(e.target.value);
+                                                            if (isNaN(numValue) || numValue < 0) {
+                                                                handleInputChange(key, '');
+                                                            }
+                                                        }
+                                                    }}
+                                                    disabled={key === 'bmi' || isFormDisabled}
+                                                    error={!!errors[key]}
+                                                    helperText={errors[key]}
+                                                    inputProps={{
+                                                        // Removed maxLength to allow validation logic to trigger at/above limit
+                                                    }}
+                                                    sx={{
+                                                        flex: 1,
+                                                        '& .MuiInputBase-root': {
+                                                            height: '38px',
+                                                            fontSize: '13px'
+                                                        },
+                                                        '& .MuiInputBase-input': {
+                                                            padding: '6px 10px',
+                                                            fontSize: '13px',
+                                                        }
+                                                    }}
+                                                />
+                                            </div>
                                         </div>
-                                    ))}
+                                    );
+                                })}
+
+                                {/* Trend Button - Now part of the grid for better alignment */}
+                                <div className="col-6 col-md-auto">
+                                    {/* Spacer label to align button with inputs */}
+                                    <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', fontSize: '13px', visibility: 'hidden' }}>
+                                        &nbsp;
+                                    </label>
+                                    <button
+                                        type="button"
+                                        disabled={isFormDisabled}
+                                        title="Show vitals trend"
+                                        style={{
+                                            padding: '0 14px',
+                                            backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
+                                            color: 'white',
+                                            border: 'none',
+                                            borderRadius: '6px',
+                                            cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                            fontSize: '13px',
+                                            fontWeight: '500',
+                                            height: '38px',
+                                            transition: 'background-color 0.2s',
+                                            whiteSpace: 'nowrap',
+                                            width: '100%' // Full width on small screens, auto on md+
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1565c0';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1976d2';
+                                        }}
+                                        onClick={() => setShowVitalsTrend(true)}
+                                    >
+                                        Trend
+                                    </button>
                                 </div>
                             </div>
+                        </div>
 
-                            {/* Vitals Row */}
-                            {/* Vitals Row */}
-                            <div style={{ marginBottom: '15px' }}>
-                                <div className="row g-3">
-                                    {[
-                                        { key: 'height', label: 'Height (Cm)' },
-                                        { key: 'weight', label: 'Weight (Kg)' },
-                                        { key: 'bmi', label: 'BMI' },
-                                        { key: 'pulse', label: 'Pulse (/min)' },
-                                        { key: 'bp', label: 'BP' },
-                                        { key: 'sugar', label: 'Sugar' },
-                                        { key: 'tft', label: 'TFT' },
-                                        { key: 'pallorHb', label: 'Pallor/HB' }
-                                    ].map(({ key, label }) => {
-                                        const isNumberField = key === 'pulse' || key === 'height' || key === 'weight';
-                                        return (
-                                            <div key={key} className="col-6 col-md">
-                                                <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                                    {label}
-                                                </label>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                                    <ClearableTextField
-                                                        value={formData[key as keyof typeof formData] as string}
-                                                        onChange={(value) => {
-                                                            handleInputChange(key, value);
-                                                        }}
-                                                        onKeyDown={(e) => {
-                                                            if (isNumberField) {
-                                                                // Prevent minus key from being entered
-                                                                if (e.key === '-' || e.key === 'e' || e.key === 'E' || e.key === '+') {
-                                                                    e.preventDefault();
-                                                                }
-                                                            }
-                                                        }}
-                                                        onBlur={(e) => {
-                                                            if (isNumberField) {
-                                                                // Ensure value is not negative on blur
-                                                                const numValue = parseFloat(e.target.value);
-                                                                if (isNaN(numValue) || numValue < 0) {
-                                                                    handleInputChange(key, '');
-                                                                }
-                                                            }
-                                                        }}
-                                                        disabled={key === 'bmi' || isFormDisabled}
-                                                        error={!!errors[key]}
-                                                        helperText={errors[key]}
-                                                        inputProps={{
-                                                            // Removed maxLength to allow validation logic to trigger at/above limit
-                                                        }}
-                                                        sx={{
-                                                            flex: 1,
-                                                            '& .MuiInputBase-root': {
-                                                                height: '38px',
-                                                                fontSize: '13px'
-                                                            },
-                                                            '& .MuiInputBase-input': {
-                                                                padding: '6px 10px',
-                                                                fontSize: '13px',
-                                                            }
-                                                        }}
-                                                    />
-                                                </div>
+
+                        {/* Complaints Section */}
+                        <div style={{ marginBottom: '15px' }}>
+                            <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', alignItems: 'flex-start' }}>
+                                <div style={{ position: 'relative', flex: 1 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px', width: '88%', gap: '8px' }}>
+                                        <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Complaints</label>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                                        <div ref={complaintsRef} style={{ position: 'relative', flex: 1 }}>
+                                            <div
+                                                onClick={() => !isFormDisabled && setIsComplaintsOpen(prev => !prev)}
+                                                style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'space-between',
+                                                    height: '38px',
+                                                    padding: '4px 8px',
+                                                    border: '2px solid #B7B7B7',
+                                                    borderRadius: '6px',
+                                                    fontSize: '13px',
+                                                    fontFamily: "'Roboto', sans-serif",
+                                                    fontWeight: 500,
+                                                    backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
+                                                    cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                                    userSelect: 'none',
+                                                    opacity: isFormDisabled ? 0.6 : 1
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                    (e.currentTarget as HTMLDivElement).style.borderColor = '#1E88E5';
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    (e.currentTarget as HTMLDivElement).style.borderColor = '#B7B7B7';
+                                                }}
+                                            >
+                                                <span style={{ color: selectedComplaints.length ? '#000' : '#9e9e9e' }}>
+                                                    {selectedComplaints.length === 0 && 'Select Complaints'}
+                                                    {selectedComplaints.length === 1 && '1 selected'}
+                                                    {selectedComplaints.length > 1 && `${selectedComplaints.length} selected`}
+                                                </span>
+                                                <ArrowDropDown
+                                                    style={{
+                                                        marginLeft: '8px',
+                                                        color: '#666',
+                                                        fontSize: '24px',
+                                                        transition: 'transform 0.2s',
+                                                        transform: isComplaintsOpen ? 'rotate(180deg)' : 'rotate(0deg)'
+                                                    }}
+                                                />
                                             </div>
-                                        );
-                                    })}
+                                            {complaintsSelectionError && (
+                                                <p style={{
+                                                    color: '#d32f2f',
+                                                    fontSize: '0.75rem',
+                                                    fontWeight: 400,
+                                                    fontFamily: "'Roboto', sans-serif",
+                                                    margin: '3px 0 0 0',
+                                                    textAlign: 'left'
+                                                }}>
+                                                    {complaintsSelectionError}
+                                                </p>
+                                            )}
 
-                                    {/* Trend Button - Now part of the grid for better alignment */}
-                                    <div className="col-6 col-md-auto">
-                                        {/* Spacer label to align button with inputs */}
-                                        <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', fontSize: '13px', visibility: 'hidden' }}>
-                                            &nbsp;
-                                        </label>
+                                            {isComplaintsOpen && (
+                                                <div style={{
+                                                    position: 'absolute',
+                                                    top: '100%',
+                                                    left: 0,
+                                                    right: 0,
+                                                    backgroundColor: 'white',
+                                                    border: '1px solid #B7B7B7',
+                                                    borderRadius: '6px',
+                                                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                                                    zIndex: 1000,
+                                                    marginTop: '4px'
+                                                }}>
+                                                    <div style={{ padding: '6px' }}>
+                                                        <ClearableTextField
+                                                            fullWidth
+                                                            size="small"
+                                                            value={complaintSearch}
+                                                            onChange={(val) => {
+                                                                if (val.length >= 100) {
+                                                                    setComplaintSearchError('Complaints search cannot exceed 100 characters');
+                                                                } else {
+                                                                    setComplaintSearchError(null);
+                                                                }
+                                                                setComplaintSearch(val);
+                                                            }}
+                                                            placeholder="Search complaints"
+                                                            variant="outlined"
+                                                            error={!!complaintSearchError}
+                                                            helperText={complaintSearchError}
+                                                            FormHelperTextProps={{ style: { color: '#757575' } }}
+                                                            inputProps={{ maxLength: 100 }}
+                                                            sx={{
+                                                                '& .MuiOutlinedInput-root': {
+                                                                    height: '38px',
+                                                                    borderRadius: '4px',
+                                                                    fontSize: '13px'
+                                                                }
+                                                            }}
+                                                        />
+                                                    </div>
+
+                                                    <div className="complaints-dropdown" style={{ maxHeight: '200px', overflowY: 'auto', padding: '4px 6px', display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', columnGap: '8px', rowGap: '6px' }}>
+                                                        {complaintsLoading && (
+                                                            <div style={{ padding: '6px', fontSize: '13px', color: '#777', gridColumn: '1 / -1', textAlign: 'center' }}>
+                                                                Loading complaints...
+                                                            </div>
+                                                        )}
+                                                        {complaintsError && (
+                                                            <div style={{ padding: '6px', fontSize: '13px', color: '#d32f2f', gridColumn: '1 / -1', textAlign: 'center' }}>
+                                                                {complaintsError}
+                                                                <button
+                                                                    onClick={() => {
+                                                                        const doctorId = treatmentData?.doctorId || sessionData?.doctorId;
+                                                                        const clinicId = treatmentData?.clinicId || sessionData?.clinicId;
+                                                                        if (!doctorId || !clinicId) {
+                                                                            setComplaintsError('Doctor or clinic details are missing. Please reload the visit.');
+                                                                            return;
+                                                                        }
+
+                                                                        setComplaintsError(null);
+                                                                        setComplaintsLoading(true);
+
+                                                                        complaintService.getAllComplaintsForDoctor(doctorId, clinicId)
+                                                                            .then(setComplaintsOptions)
+                                                                            .catch(e => setComplaintsError(e.message))
+                                                                            .finally(() => setComplaintsLoading(false));
+                                                                    }}
+                                                                    style={{
+                                                                        marginLeft: '8px',
+                                                                        padding: '2px 6px',
+                                                                        fontSize: '10px',
+                                                                        backgroundColor: '#1976d2',
+                                                                        color: 'white',
+                                                                        border: 'none',
+                                                                        borderRadius: '3px',
+                                                                        cursor: 'pointer'
+                                                                    }}
+                                                                >
+                                                                    Retry
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                        {!complaintsLoading && !complaintsError && filteredComplaints.length === 0 && (
+                                                            <div style={{ padding: '6px', fontSize: '13px', color: '#777', gridColumn: '1 / -1' }}>No complaints found</div>
+                                                        )}
+                                                        {!complaintsLoading && !complaintsError && filteredComplaints.map((opt, index) => {
+                                                            const checked = selectedComplaints.includes(opt.value);
+                                                            // Check if this complaint is already added to the table
+                                                            const isAdded = complaintsRows.some(row => row.value === opt.value);
+                                                            const isFirstUnselected = !checked && index > 0 && selectedComplaints.includes(filteredComplaints[index - 1].value);
+
+                                                            return (
+                                                                <React.Fragment key={opt.value}>
+                                                                    {isFirstUnselected && (
+                                                                        <div style={{
+                                                                            gridColumn: '1 / -1',
+                                                                            height: '1px',
+                                                                            backgroundColor: '#e0e0e0',
+                                                                            margin: '4px 0'
+                                                                        }} />
+                                                                    )}
+                                                                    <label
+                                                                        title={opt.label}
+                                                                        style={{
+                                                                            display: 'flex',
+                                                                            alignItems: 'center',
+                                                                            gap: '4px',
+                                                                            padding: '4px 2px',
+                                                                            cursor: isAdded ? 'not-allowed' : 'pointer',
+                                                                            fontSize: '13px',
+                                                                            border: 'none',
+                                                                            backgroundColor: (checked || isAdded) ? '#eeeeee' : 'transparent',
+                                                                            borderRadius: '3px',
+                                                                            fontWeight: 400,
+                                                                            minWidth: 0,
+                                                                            opacity: isAdded ? 0.6 : 1
+                                                                        }}
+                                                                    >
+                                                                        <input
+                                                                            type="checkbox"
+                                                                            checked={checked || isAdded}
+                                                                            disabled={isAdded}
+                                                                            onChange={(e) => {
+                                                                                if (isAdded) return;
+                                                                                setSelectedComplaints(prev => {
+                                                                                    setComplaintsSelectionError(null);
+                                                                                    if (e.target.checked) {
+                                                                                        if (prev.includes(opt.value)) return prev;
+                                                                                        return [...prev, opt.value];
+                                                                                    } else {
+                                                                                        return prev.filter(v => v !== opt.value);
+                                                                                    }
+                                                                                });
+                                                                            }}
+                                                                            style={{ margin: 0 }}
+                                                                        />
+                                                                        <span style={{
+                                                                            whiteSpace: 'nowrap',
+                                                                            overflow: 'hidden',
+                                                                            textOverflow: 'ellipsis'
+                                                                        }}>{opt.label}{isAdded ? ' (Added)' : ''}</span>
+                                                                    </label>
+                                                                </React.Fragment>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
                                         <button
-                                            type="button"
                                             disabled={isFormDisabled}
-                                            title="Show vitals trend"
+                                            title="Add selected complaints"
                                             style={{
-                                                padding: '0 14px',
+                                                padding: '0 10px',
                                                 backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
                                                 color: 'white',
                                                 border: 'none',
@@ -5649,9 +5948,7 @@ export default function Treatment() {
                                                 fontSize: '13px',
                                                 fontWeight: '500',
                                                 height: '38px',
-                                                transition: 'background-color 0.2s',
-                                                whiteSpace: 'nowrap',
-                                                width: '100%' // Full width on small screens, auto on md+
+                                                transition: 'background-color 0.2s'
                                             }}
                                             onMouseEnter={(e) => {
                                                 if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1565c0';
@@ -5659,2743 +5956,2469 @@ export default function Treatment() {
                                             onMouseLeave={(e) => {
                                                 if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1976d2';
                                             }}
-                                            onClick={() => setShowVitalsTrend(true)}
+                                            onClick={handleAddComplaints}
                                         >
-                                            Trend
+                                            Add
                                         </button>
-                                    </div>
-                                </div>
-                            </div>
-
-
-                            {/* Complaints Section */}
-                            <div style={{ marginBottom: '15px' }}>
-                                <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', alignItems: 'flex-start' }}>
-                                    <div style={{ position: 'relative', flex: 1 }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px', width: '88%', gap: '8px' }}>
-                                            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Complaints</label>
-                                        </div>
-                                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                                            <div ref={complaintsRef} style={{ position: 'relative', flex: 1 }}>
-                                                <div
-                                                    onClick={() => !isFormDisabled && setIsComplaintsOpen(prev => !prev)}
-                                                    style={{
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'space-between',
-                                                        height: '38px',
-                                                        padding: '4px 8px',
-                                                        border: '2px solid #B7B7B7',
-                                                        borderRadius: '6px',
-                                                        fontSize: '13px',
-                                                        fontFamily: "'Roboto', sans-serif",
-                                                        fontWeight: 500,
-                                                        backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
-                                                        cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                                        userSelect: 'none',
-                                                        opacity: isFormDisabled ? 0.6 : 1
-                                                    }}
-                                                    onMouseEnter={(e) => {
-                                                        (e.currentTarget as HTMLDivElement).style.borderColor = '#1E88E5';
-                                                    }}
-                                                    onMouseLeave={(e) => {
-                                                        (e.currentTarget as HTMLDivElement).style.borderColor = '#B7B7B7';
-                                                    }}
-                                                >
-                                                    <span style={{ color: selectedComplaints.length ? '#000' : '#9e9e9e' }}>
-                                                        {selectedComplaints.length === 0 && 'Select Complaints'}
-                                                        {selectedComplaints.length === 1 && '1 selected'}
-                                                        {selectedComplaints.length > 1 && `${selectedComplaints.length} selected`}
-                                                    </span>
-                                                    <ArrowDropDown
-                                                        style={{
-                                                            marginLeft: '8px',
-                                                            color: '#666',
-                                                            fontSize: '24px',
-                                                            transition: 'transform 0.2s',
-                                                            transform: isComplaintsOpen ? 'rotate(180deg)' : 'rotate(0deg)'
-                                                        }}
-                                                    />
-                                                </div>
-                                                {complaintsSelectionError && (
-                                                    <p style={{
-                                                        color: '#d32f2f',
-                                                        fontSize: '0.75rem',
-                                                        fontWeight: 400,
-                                                        fontFamily: "'Roboto', sans-serif",
-                                                        margin: '3px 0 0 0',
-                                                        textAlign: 'left'
-                                                    }}>
-                                                        {complaintsSelectionError}
-                                                    </p>
-                                                )}
-
-                                                {isComplaintsOpen && (
-                                                    <div style={{
-                                                        position: 'absolute',
-                                                        top: '38px',
-                                                        left: 0,
-                                                        right: 0,
-                                                        backgroundColor: 'white',
-                                                        border: '1px solid #B7B7B7',
-                                                        borderRadius: '6px',
-                                                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                                                        zIndex: 1000,
-                                                        marginTop: '4px'
-                                                    }}>
-                                                        <div style={{ padding: '6px' }}>
-                                                            <ClearableTextField
-                                                                fullWidth
-                                                                size="small"
-                                                                value={complaintSearch}
-                                                                onChange={(val) => {
-                                                                    if (val.length >= 100) {
-                                                                        setComplaintSearchError('Complaints search cannot exceed 100 characters');
-                                                                    } else {
-                                                                        setComplaintSearchError(null);
-                                                                    }
-                                                                    setComplaintSearch(val);
-                                                                }}
-                                                                placeholder="Search complaints"
-                                                                variant="outlined"
-                                                                error={!!complaintSearchError}
-                                                                helperText={complaintSearchError}
-                                                                FormHelperTextProps={{ style: { color: '#757575' } }}
-                                                                inputProps={{ maxLength: 100 }}
-                                                                sx={{
-                                                                    '& .MuiOutlinedInput-root': {
-                                                                        height: '38px',
-                                                                        borderRadius: '4px',
-                                                                        fontSize: '13px'
-                                                                    }
-                                                                }}
-                                                            />
-                                                        </div>
-
-                                                        <div className="complaints-dropdown" style={{ maxHeight: '200px', overflowY: 'auto', padding: '4px 6px', display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', columnGap: '8px', rowGap: '6px' }}>
-                                                            {complaintsLoading && (
-                                                                <div style={{ padding: '6px', fontSize: '13px', color: '#777', gridColumn: '1 / -1', textAlign: 'center' }}>
-                                                                    Loading complaints...
-                                                                </div>
-                                                            )}
-                                                            {complaintsError && (
-                                                                <div style={{ padding: '6px', fontSize: '13px', color: '#d32f2f', gridColumn: '1 / -1', textAlign: 'center' }}>
-                                                                    {complaintsError}
-                                                                    <button
-                                                                        onClick={() => {
-                                                                            const doctorId = treatmentData?.doctorId || sessionData?.doctorId;
-                                                                            const clinicId = treatmentData?.clinicId || sessionData?.clinicId;
-                                                                            if (!doctorId || !clinicId) {
-                                                                                setComplaintsError('Doctor or clinic details are missing. Please reload the visit.');
-                                                                                return;
-                                                                            }
-
-                                                                            setComplaintsError(null);
-                                                                            setComplaintsLoading(true);
-
-                                                                            complaintService.getAllComplaintsForDoctor(doctorId, clinicId)
-                                                                                .then(setComplaintsOptions)
-                                                                                .catch(e => setComplaintsError(e.message))
-                                                                                .finally(() => setComplaintsLoading(false));
-                                                                        }}
-                                                                        style={{
-                                                                            marginLeft: '8px',
-                                                                            padding: '2px 6px',
-                                                                            fontSize: '10px',
-                                                                            backgroundColor: '#1976d2',
-                                                                            color: 'white',
-                                                                            border: 'none',
-                                                                            borderRadius: '3px',
-                                                                            cursor: 'pointer'
-                                                                        }}
-                                                                    >
-                                                                        Retry
-                                                                    </button>
-                                                                </div>
-                                                            )}
-                                                            {!complaintsLoading && !complaintsError && filteredComplaints.length === 0 && (
-                                                                <div style={{ padding: '6px', fontSize: '13px', color: '#777', gridColumn: '1 / -1' }}>No complaints found</div>
-                                                            )}
-                                                            {!complaintsLoading && !complaintsError && filteredComplaints.map((opt, index) => {
-                                                                const checked = selectedComplaints.includes(opt.value);
-                                                                // Check if this complaint is already added to the table
-                                                                const isAdded = complaintsRows.some(row => row.value === opt.value);
-                                                                const isFirstUnselected = !checked && index > 0 && selectedComplaints.includes(filteredComplaints[index - 1].value);
-
-                                                                return (
-                                                                    <React.Fragment key={opt.value}>
-                                                                        {isFirstUnselected && (
-                                                                            <div style={{
-                                                                                gridColumn: '1 / -1',
-                                                                                height: '1px',
-                                                                                backgroundColor: '#e0e0e0',
-                                                                                margin: '4px 0'
-                                                                            }} />
-                                                                        )}
-                                                                        <label
-                                                                            title={opt.label}
-                                                                            style={{
-                                                                                display: 'flex',
-                                                                                alignItems: 'center',
-                                                                                gap: '4px',
-                                                                                padding: '4px 2px',
-                                                                                cursor: isAdded ? 'not-allowed' : 'pointer',
-                                                                                fontSize: '13px',
-                                                                                border: 'none',
-                                                                                backgroundColor: (checked || isAdded) ? '#eeeeee' : 'transparent',
-                                                                                borderRadius: '3px',
-                                                                                fontWeight: 400,
-                                                                                minWidth: 0,
-                                                                                opacity: isAdded ? 0.6 : 1
-                                                                            }}
-                                                                        >
-                                                                            <input
-                                                                                type="checkbox"
-                                                                                checked={checked || isAdded}
-                                                                                disabled={isAdded}
-                                                                                onChange={(e) => {
-                                                                                    if (isAdded) return;
-                                                                                    setSelectedComplaints(prev => {
-                                                                                        setComplaintsSelectionError(null);
-                                                                                        if (e.target.checked) {
-                                                                                            if (prev.includes(opt.value)) return prev;
-                                                                                            return [...prev, opt.value];
-                                                                                        } else {
-                                                                                            return prev.filter(v => v !== opt.value);
-                                                                                        }
-                                                                                    });
-                                                                                }}
-                                                                                style={{ margin: 0 }}
-                                                                            />
-                                                                            <span style={{
-                                                                                whiteSpace: 'nowrap',
-                                                                                overflow: 'hidden',
-                                                                                textOverflow: 'ellipsis'
-                                                                            }}>{opt.label}{isAdded ? ' (Added)' : ''}</span>
-                                                                        </label>
-                                                                    </React.Fragment>
-                                                                );
-                                                            })}
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-                                            <button
-                                                disabled={isFormDisabled}
-                                                title="Add selected complaints"
-                                                style={{
-                                                    padding: '0 10px',
-                                                    backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
-                                                    color: 'white',
-                                                    border: 'none',
-                                                    borderRadius: '6px',
-                                                    cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                                    fontSize: '13px',
-                                                    fontWeight: '500',
-                                                    height: '38px',
-                                                    transition: 'background-color 0.2s'
-                                                }}
-                                                onMouseEnter={(e) => {
-                                                    if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1565c0';
-                                                }}
-                                                onMouseLeave={(e) => {
-                                                    if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1976d2';
-                                                }}
-                                                onClick={handleAddComplaints}
-                                            >
-                                                Add
-                                            </button>
-                                            <button
-                                                type="button"
-                                                disabled={isFormDisabled}
-                                                title="Add custom complaint"
-                                                style={{
-                                                    backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
-                                                    color: 'white',
-                                                    border: 'none',
-                                                    padding: '6px',
-                                                    borderRadius: '6px',
-                                                    cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                                    width: '32px',
-                                                    height: '38px',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    fontSize: '14px',
-                                                    transition: 'background-color 0.2s'
-                                                }}
-                                                onMouseEnter={(e) => {
-                                                    if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1565c0';
-                                                }}
-                                                onMouseLeave={(e) => {
-                                                    if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1976d2';
-                                                }}
-                                                onClick={handleAddCustomComplaint}
-                                            >
-                                                <Add fontSize="small" />
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Complaints Table */}
-                                {complaintsRows.length > 0 && (
-                                    <div
-                                        style={{
-                                            border: '1px solid #ccc',
-                                            borderRadius: '4px',
-                                            overflow: 'hidden',
-                                            overflowX: 'auto',
-                                            opacity: isFormDisabled ? 0.6 : 1,
-                                            width: '100%'
-                                        }}
-                                    >
-                                        <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
-                                            <thead>
-                                                <tr style={{
-                                                    backgroundColor: '#1976d2',
-                                                    color: 'white',
-                                                    fontSize: '13px'
-                                                }}>
-                                                    <th style={{ borderRight: '1px solid rgba(255,255,255,0.2)', width: '60px', textAlign: 'left', padding: '6px' }} className="py-3">Sr.</th>
-                                                    <th style={{ borderRight: '1px solid rgba(255,255,255,0.2)', width: '250px', textAlign: 'left', padding: '6px' }} className="py-3">Complaint Description</th>
-                                                    <th style={{ borderRight: '1px solid rgba(255,255,255,0.2)', width: 'auto', textAlign: 'left', padding: '6px' }} className="py-3">Duration / Comment</th>
-                                                    <th style={{ width: '80px', textAlign: 'center', padding: '6px' }} className="py-3">Action</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {[...complaintsRows].sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999)).map((row, index) => (
-                                                    <tr key={row.id} style={{
-                                                        backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white',
-                                                        borderBottom: '1px solid #e0e0e0'
-                                                    }}>
-                                                        <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '13px', padding: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} className="px-3">{index + 1}</td>
-                                                        <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '13px', padding: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} className="px-3" title={row.label}>{row.label}</td>
-                                                        <td style={{ borderRight: '1px solid #e0e0e0', boxSizing: 'border-box' }} className="px-1 py-1">
-                                                            <div style={{ position: 'relative' }}>
-                                                                <ClearableTextField
-                                                                    fullWidth
-                                                                    size="small"
-                                                                    value={row.comment}
-                                                                    onChange={(val) => handleComplaintCommentChange(row.value, val)}
-                                                                    disabled={isFormDisabled}
-                                                                    placeholder="Enter duration/comment"
-                                                                    error={row.comment?.length >= 500}
-                                                                    helperText={row.comment?.length >= 500 ? 'Comment cannot exceed 500 characters' : ''}
-                                                                    inputProps={{
-                                                                        maxLength: 501
-                                                                    }}
-                                                                    sx={{
-                                                                        marginBottom: row.comment?.length >= 500 ? '16px' : '0px',
-                                                                        transition: 'margin-bottom 0.2s',
-                                                                        boxSizing: 'border-box',
-                                                                        '& .MuiOutlinedInput-root': {
-                                                                            height: '100%',
-                                                                            borderRadius: 0,
-                                                                            backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
-                                                                            fontSize: '11px',
-                                                                            boxSizing: 'border-box',
-                                                                            '& fieldset': { border: 'none' }
-                                                                        },
-                                                                        '& .MuiFormHelperText-root': {
-                                                                            fontSize: '9px',
-                                                                            margin: '0',
-                                                                            padding: '0 4px',
-                                                                            color: '#666',
-                                                                            whiteSpace: 'nowrap'
-                                                                        },
-                                                                        '& .MuiInputBase-input': {
-                                                                            padding: '8px 10px',
-                                                                            color: isFormDisabled ? '#666' : '#333',
-                                                                            cursor: isFormDisabled ? 'not-allowed' : 'text',
-                                                                            boxSizing: 'border-box'
-                                                                        }
-                                                                    }}
-                                                                />
-                                                            </div>
-                                                        </td>
-                                                        <td style={{ padding: '6px' }}>
-                                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                                <div
-                                                                    onClick={() => {
-                                                                        if (isFormDisabled) return;
-                                                                        handleRemoveComplaint(row.value);
-                                                                    }}
-                                                                    title="Remove"
-                                                                    style={{
-                                                                        display: 'inline-flex',
-                                                                        alignItems: 'center',
-                                                                        justifyContent: 'center',
-                                                                        width: '24px',
-                                                                        height: '24px',
-                                                                        cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                                                        color: isFormDisabled ? '#9e9e9e' : '#000000',
-                                                                        backgroundColor: 'transparent'
-                                                                    }}
-                                                                    onMouseEnter={(e) => {
-                                                                        if (isFormDisabled) return;
-                                                                        (e.currentTarget as HTMLDivElement).style.color = '#EF5350';
-                                                                    }}
-                                                                    onMouseLeave={(e) => {
-                                                                        (e.currentTarget as HTMLDivElement).style.color = isFormDisabled ? '#9e9e9e' : '#000000';
-                                                                    }}
-                                                                >
-                                                                    <Delete fontSize="small" />
-                                                                </div>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Detailed Text Areas */}
-                            <div style={{ marginBottom: '15px' }}>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr' as const, gap: '12px' }}>
-                                    <div>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                                            <label style={{ fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Detailed History</label>
-                                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px' }}>
-                                                {(formData.detailedHistory || '').length}/{getFieldConfig('detailedHistory', 'visit')?.maxLength || 1000}
-                                            </Typography>
-                                        </div>
-                                        <div style={{ position: 'relative' }}>
-                                            <textarea
-                                                value={formData.detailedHistory}
-                                                onChange={(e) => handleInputChange('detailedHistory', e.target.value.slice(0, getFieldConfig('detailedHistory', 'visit')?.maxLength || 1000))}
-                                                disabled={isFormDisabled}
-                                                rows={3}
-                                                maxLength={getFieldConfig('detailedHistory', 'visit')?.maxLength}
-                                                style={{
-                                                    width: '100%',
-                                                    padding: '6px 10px',
-                                                    paddingRight: '28px',
-                                                    border: '1px solid #ccc',
-                                                    borderRadius: '4px',
-                                                    fontSize: '13px',
-                                                    resize: 'vertical',
-                                                    backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
-                                                    color: isFormDisabled ? '#666' : '#333',
-                                                    cursor: isFormDisabled ? 'not-allowed' : 'text'
-                                                }}
-                                            />
-                                            {!isFormDisabled && formData.detailedHistory && (
-                                                <CloseIcon
-                                                    onClick={() => handleInputChange('detailedHistory', '')}
-                                                    titleAccess="Clear"
-                                                    style={{
-                                                        position: 'absolute',
-                                                        top: '6px',
-                                                        right: '6px',
-                                                        fontSize: '18px',
-                                                        color: '#757575',
-                                                        cursor: 'pointer',
-                                                    }}
-                                                />
-                                            )}
-                                        </div>
-                                        {errors.detailedHistory && (
-                                            <div style={{
-                                                color: errors.detailedHistory.includes('cannot exceed') ? '#757575' : '#d32f2f',
-                                                fontSize: '11px',
-                                                marginTop: '4px',
-                                                lineHeight: '1.2'
-                                            }}>
-                                                {errors.detailedHistory}
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                                            <label style={{ fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Examination Findings</label>
-                                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px' }}>
-                                                {(formData.importantFindings || '').length}/{getFieldConfig('importantFindings', 'visit')?.maxLength || 1000}
-                                            </Typography>
-                                        </div>
-                                        <div style={{ position: 'relative' }}>
-                                            <textarea
-                                                value={formData.importantFindings}
-                                                onChange={(e) => handleInputChange('importantFindings', e.target.value.slice(0, getFieldConfig('importantFindings', 'visit')?.maxLength || 1000))}
-                                                disabled={isFormDisabled}
-                                                rows={3}
-                                                maxLength={getFieldConfig('importantFindings', 'visit')?.maxLength}
-                                                style={{
-                                                    width: '100%',
-                                                    padding: '6px 10px',
-                                                    paddingRight: '28px',
-                                                    border: '1px solid #ccc',
-                                                    borderRadius: '4px',
-                                                    fontSize: '13px',
-                                                    resize: 'vertical',
-                                                    backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
-                                                    color: isFormDisabled ? '#666' : '#333',
-                                                    cursor: isFormDisabled ? 'not-allowed' : 'text'
-                                                }}
-                                            />
-                                            {!isFormDisabled && formData.importantFindings && (
-                                                <CloseIcon
-                                                    onClick={() => handleInputChange('importantFindings', '')}
-                                                    titleAccess="Clear"
-                                                    style={{
-                                                        position: 'absolute',
-                                                        top: '6px',
-                                                        right: '6px',
-                                                        fontSize: '18px',
-                                                        color: '#757575',
-                                                        cursor: 'pointer',
-                                                    }}
-                                                />
-                                            )}
-                                        </div>
-                                        {errors.importantFindings && (
-                                            <div style={{
-                                                color: errors.importantFindings.includes('cannot exceed') ? '#757575' : '#d32f2f',
-                                                fontSize: '11px',
-                                                marginTop: '4px',
-                                                lineHeight: '1.2'
-                                            }}>
-                                                {errors.importantFindings}
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                                            <label style={{ fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Additional Comments</label>
-                                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px' }}>
-                                                {(formData.additionalComments || '').length}/{getFieldConfig('additionalComments', 'visit')?.maxLength || 1000}
-                                            </Typography>
-                                        </div>
-                                        <div style={{ position: 'relative' }}>
-                                            <textarea
-                                                value={formData.additionalComments}
-                                                onChange={(e) => handleInputChange('additionalComments', e.target.value.slice(0, getFieldConfig('additionalComments', 'visit')?.maxLength || 1000))}
-                                                disabled={isFormDisabled}
-                                                rows={3}
-                                                maxLength={getFieldConfig('additionalComments', 'visit')?.maxLength}
-                                                style={{
-                                                    width: '100%',
-                                                    padding: '6px 10px',
-                                                    paddingRight: '28px',
-                                                    border: '1px solid #ccc',
-                                                    borderRadius: '4px',
-                                                    fontSize: '13px',
-                                                    resize: 'vertical',
-                                                    backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
-                                                    color: isFormDisabled ? '#666' : '#333',
-                                                    cursor: isFormDisabled ? 'not-allowed' : 'text'
-                                                }}
-                                            />
-                                            {!isFormDisabled && formData.additionalComments && (
-                                                <CloseIcon
-                                                    onClick={() => handleInputChange('additionalComments', '')}
-                                                    titleAccess="Clear"
-                                                    style={{
-                                                        position: 'absolute',
-                                                        top: '6px',
-                                                        right: '6px',
-                                                        fontSize: '18px',
-                                                        color: '#757575',
-                                                        cursor: 'pointer',
-                                                    }}
-                                                />
-                                            )}
-                                        </div>
-                                        {errors.additionalComments && (
-                                            <div style={{
-                                                color: errors.additionalComments.includes('cannot exceed') ? '#757575' : '#d32f2f',
-                                                fontSize: '11px',
-                                                marginTop: '4px',
-                                                lineHeight: '1.2'
-                                            }}>
-                                                {errors.additionalComments}
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Procedure Performed */}
-                            <div style={{ marginBottom: '15px' }}>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr' as const, gap: '12px' }}>
-                                    <div>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                                            <label style={{ fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Procedure Performed</label>
-                                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px' }}>
-                                                {(formData.procedurePerformed || '').length}/{getFieldConfig('procedurePerformed', 'visit')?.maxLength || 1000}
-                                            </Typography>
-                                        </div>
-                                        <div style={{ position: 'relative' }}>
-                                            <textarea
-                                                value={formData.procedurePerformed}
-                                                onChange={(e) => handleInputChange('procedurePerformed', e.target.value.slice(0, getFieldConfig('procedurePerformed', 'visit')?.maxLength || 1000))}
-                                                disabled={isFormDisabled}
-                                                rows={3}
-                                                maxLength={getFieldConfig('procedurePerformed', 'visit')?.maxLength}
-                                                style={{
-                                                    width: '100%',
-                                                    padding: '6px 10px',
-                                                    paddingRight: '28px',
-                                                    border: '1px solid #ccc',
-                                                    borderRadius: '4px',
-                                                    fontSize: '13px',
-                                                    resize: 'vertical',
-                                                    backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
-                                                    color: isFormDisabled ? '#666' : '#333',
-                                                    cursor: isFormDisabled ? 'not-allowed' : 'text'
-                                                }}
-                                            />
-                                            {!isFormDisabled && formData.procedurePerformed && (
-                                                <CloseIcon
-                                                    onClick={() => handleInputChange('procedurePerformed', '')}
-                                                    titleAccess="Clear"
-                                                    style={{
-                                                        position: 'absolute',
-                                                        top: '6px',
-                                                        right: '6px',
-                                                        fontSize: '18px',
-                                                        color: '#757575',
-                                                        cursor: 'pointer',
-                                                    }}
-                                                />
-                                            )}
-                                        </div>
-                                        {errors.procedurePerformed && (
-                                            <div style={{
-                                                color: errors.procedurePerformed.includes('cannot exceed') ? '#757575' : '#d32f2f',
-                                                fontSize: '11px',
-                                                marginTop: '4px',
-                                                lineHeight: '1.2'
-                                            }}>
-                                                {errors.procedurePerformed}
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                                            <label style={{ fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Dressing (body parts)</label>
-                                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px' }}>
-                                                {(formData.dressingBodyParts || '').length}/{getFieldConfig('dressingBodyParts', 'visit')?.maxLength || 1000}
-                                            </Typography>
-                                        </div>
-                                        <div style={{ position: 'relative' }}>
-                                            <textarea
-                                                value={formData.dressingBodyParts}
-                                                onChange={(e) => handleInputChange('dressingBodyParts', e.target.value.slice(0, getFieldConfig('dressingBodyParts', 'visit')?.maxLength || 1000))}
-                                                disabled={isFormDisabled}
-                                                rows={3}
-                                                maxLength={getFieldConfig('dressingBodyParts', 'visit')?.maxLength}
-                                                style={{
-                                                    width: '100%',
-                                                    padding: '6px 10px',
-                                                    paddingRight: '28px',
-                                                    border: '1px solid #ccc',
-                                                    borderRadius: '4px',
-                                                    fontSize: '13px',
-                                                    resize: 'vertical',
-                                                    backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
-                                                    color: isFormDisabled ? '#666' : '#333',
-                                                    cursor: isFormDisabled ? 'not-allowed' : 'text'
-                                                }}
-                                            />
-                                            {!isFormDisabled && formData.dressingBodyParts && (
-                                                <CloseIcon
-                                                    onClick={() => handleInputChange('dressingBodyParts', '')}
-                                                    titleAccess="Clear"
-                                                    style={{
-                                                        position: 'absolute',
-                                                        top: '6px',
-                                                        right: '6px',
-                                                        fontSize: '18px',
-                                                        color: '#757575',
-                                                        cursor: 'pointer',
-                                                    }}
-                                                />
-                                            )}
-                                        </div>
-                                        {errors.dressingBodyParts && (
-                                            <div style={{
-                                                color: errors.dressingBodyParts.includes('cannot exceed') ? '#757575' : '#d32f2f',
-                                                fontSize: '11px',
-                                                marginTop: '4px',
-                                                lineHeight: '1.2'
-                                            }}>
-                                                {errors.dressingBodyParts}
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
-                                        <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px', visibility: 'hidden' }}>
-                                            Button Label
-                                        </label>
                                         <button
                                             type="button"
                                             disabled={isFormDisabled}
-                                            title="Lab Details"
+                                            title="Add custom complaint"
                                             style={{
-                                                width: '100%',
-                                                height: '40px',
-                                                padding: '6px 10px',
                                                 backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
                                                 color: 'white',
                                                 border: 'none',
-                                                borderRadius: '4px',
-                                                fontSize: '13px',
-                                                fontWeight: 'bold',
+                                                padding: '6px',
+                                                borderRadius: '6px',
                                                 cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                                textTransform: 'uppercase'
+                                                width: '32px',
+                                                height: '38px',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                fontSize: '14px',
+                                                transition: 'background-color 0.2s'
                                             }}
-                                            onClick={() => {
-                                                const appointmentRow: any = {
-                                                    patient: treatmentData?.patientName || '',
-                                                    patientId: String(treatmentData?.patientId || ''),
-                                                    age: Number(treatmentData?.age || 0),
-                                                    gender: treatmentData?.gender || '',
-                                                    contact: treatmentData?.contact || '',
-                                                    doctorId: treatmentData?.doctorId || '',
-                                                    clinicId: treatmentData?.clinicId || '',
-                                                    visitNumber: Number(treatmentData?.visitNumber || 0),
-                                                    provider: getDoctorLabelById(treatmentData?.doctorId),
-                                                    shiftId: 1,
-                                                    visitDate: new Date().toISOString().slice(0, 10)
-                                                };
-                                                setSelectedPatientForLab(appointmentRow);
-                                                setShowLabTestEntry(true);
+                                            onMouseEnter={(e) => {
+                                                if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1565c0';
                                             }}
+                                            onMouseLeave={(e) => {
+                                                if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1976d2';
+                                            }}
+                                            onClick={handleAddCustomComplaint}
                                         >
-                                            RECORD LAB TEST RESULT
+                                            <Add fontSize="small" />
                                         </button>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Diagnosis Section  */}
-                            <div style={{ marginBottom: '15px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '5px', width: '88%', gap: '8px' }}>
-                                    <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Diagnosis</label>
-                                </div>
-
-                                <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', alignItems: 'flex-start' }}>
-                                    <div style={{ flex: 1, position: 'relative' }} ref={diagnosesRef}>
-                                        <div
-                                            style={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'space-between',
-                                                height: '38px',
-                                                padding: '4px 8px',
-                                                border: '2px solid #B7B7B7',
-                                                borderRadius: '6px',
-                                                fontSize: '13px',
-                                                fontFamily: "'Roboto', sans-serif",
-                                                fontWeight: 500,
-                                                backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
-                                                cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                                userSelect: 'none',
-                                                opacity: isFormDisabled ? 0.6 : 1
-                                            }}
-                                            onClick={() => !isFormDisabled && setIsDiagnosesOpen(!isDiagnosesOpen)}
-                                            onMouseEnter={(e) => {
-                                                (e.currentTarget as HTMLDivElement).style.borderColor = '#1E88E5';
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                (e.currentTarget as HTMLDivElement).style.borderColor = '#B7B7B7';
-                                            }}
-                                        >
-                                            <span style={{ color: selectedDiagnoses.length > 0 ? '#000' : '#9e9e9e' }}>
-                                                {selectedDiagnoses.length > 0
-                                                    ? `${selectedDiagnoses.length} diagnosis selected`
-                                                    : 'Select Diagnosis'
-                                                }
-                                            </span>
-                                            <ArrowDropDown
-                                                style={{
-                                                    marginLeft: '8px',
-                                                    color: '#666',
-                                                    fontSize: '24px',
-                                                    transition: 'transform 0.2s',
-                                                    transform: isDiagnosesOpen ? 'rotate(180deg)' : 'rotate(0deg)'
-                                                }}
-                                            />
-                                        </div>
-                                        {diagnosesSelectionError && (
-                                            <p style={{
-                                                color: '#d32f2f',
-                                                fontSize: '0.75rem',
-                                                fontWeight: 400,
-                                                fontFamily: "'Roboto', sans-serif",
-                                                margin: '3px 0 0 0',
-                                                textAlign: 'left'
+                            {/* Complaints Table */}
+                            {complaintsRows.length > 0 && (
+                                <div
+                                    style={{
+                                        border: '1px solid #ccc',
+                                        borderRadius: '4px',
+                                        overflow: 'hidden',
+                                        overflowX: 'auto',
+                                        opacity: isFormDisabled ? 0.6 : 1,
+                                        width: '100%'
+                                    }}
+                                >
+                                    <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+                                        <thead>
+                                            <tr style={{
+                                                backgroundColor: '#1976d2',
+                                                color: 'white',
+                                                fontSize: '13px'
                                             }}>
-                                                {diagnosesSelectionError}
-                                            </p>
-                                        )}
-
-                                        {isDiagnosesOpen && (
-                                            <div style={{
-                                                position: 'absolute',
-                                                top: '38px',
-                                                left: 0,
-                                                right: 0,
-                                                backgroundColor: 'white',
-                                                border: '1px solid #B7B7B7',
-                                                borderRadius: '6px',
-                                                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                                                zIndex: 1000,
-                                                marginTop: '4px',
-                                                maxHeight: '300px',
-                                                overflow: 'hidden'
-                                            }}>
-                                                <div style={{ padding: '6px' }}>
-                                                    <ClearableTextField
-                                                        fullWidth
-                                                        size="small"
-                                                        value={diagnosisSearch}
-                                                        onChange={(val) => {
-                                                            if (val.length >= 1000) {
-                                                                setDiagnosisSearchError('Diagnosis search cannot exceed 1000 characters');
-                                                            } else {
-                                                                setDiagnosisSearchError(null);
-                                                            }
-                                                            setDiagnosisSearch(val);
-                                                        }}
-                                                        placeholder="Search diagnoses"
-                                                        variant="outlined"
-                                                        error={!!diagnosisSearchError}
-                                                        helperText={diagnosisSearchError}
-                                                        FormHelperTextProps={{ style: { color: '#757575' } }}
-                                                        inputProps={{ maxLength: 1000 }}
-                                                        sx={{
-                                                            '& .MuiOutlinedInput-root': {
-                                                                height: '38px',
-                                                                borderRadius: '4px',
-                                                                fontSize: '13px'
-                                                            }
-                                                        }}
-                                                    />
-                                                </div>
-
-                                                <div className="diagnoses-dropdown" style={{ maxHeight: '200px', overflowY: 'auto', padding: '4px 6px', display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', columnGap: '8px', rowGap: '6px' }}>
-                                                    {diagnosesLoading && (
-                                                        <div style={{ padding: '6px', fontSize: '13px', color: '#777', gridColumn: '1 / -1', textAlign: 'center' }}>
-                                                            Loading diagnoses...
-                                                        </div>
-                                                    )}
-                                                    {diagnosesError && (
-                                                        <div style={{ padding: '6px', fontSize: '13px', color: '#d32f2f', gridColumn: '1 / -1', textAlign: 'center' }}>
-                                                            {diagnosesError}
-                                                            <button
-                                                                onClick={() => {
-                                                                    setDiagnosesError(null);
-                                                                    // Trigger reload by updating a dependency
-                                                                    const doctorId = treatmentData?.doctorId || sessionData?.doctorId;
-                                                                    const clinicId = treatmentData?.clinicId || sessionData?.clinicId;
-                                                                    if (!doctorId || !clinicId) {
-                                                                        setDiagnosesError('Doctor and clinic information are required to reload diagnoses.');
-                                                                        return;
-                                                                    }
-                                                                    diagnosisService.getDiagnosesFromPatientProfile(doctorId, clinicId)
-                                                                        .then(setDiagnosesOptions)
-                                                                        .catch(e => setDiagnosesError(e.message || 'Failed to load diagnoses.'));
+                                                <th style={{ borderRight: '1px solid rgba(255,255,255,0.2)', width: '60px', textAlign: 'left', padding: '6px' }} className="py-3">Sr.</th>
+                                                <th style={{ borderRight: '1px solid rgba(255,255,255,0.2)', width: '250px', textAlign: 'left', padding: '6px' }} className="py-3">Complaint Description</th>
+                                                <th style={{ borderRight: '1px solid rgba(255,255,255,0.2)', width: 'auto', textAlign: 'left', padding: '6px' }} className="py-3">Duration / Comment</th>
+                                                <th style={{ width: '80px', textAlign: 'center', padding: '6px' }} className="py-3">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {[...complaintsRows].sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999)).map((row, index) => (
+                                                <tr key={row.id} style={{
+                                                    backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white',
+                                                    borderBottom: '1px solid #e0e0e0'
+                                                }}>
+                                                    <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '13px', padding: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} className="px-3">{index + 1}</td>
+                                                    <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '13px', padding: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} className="px-3" title={row.label}>{row.label}</td>
+                                                    <td style={{ borderRight: '1px solid #e0e0e0', boxSizing: 'border-box' }} className="px-1 py-1">
+                                                        <div style={{ position: 'relative' }}>
+                                                            <ClearableTextField
+                                                                fullWidth
+                                                                size="small"
+                                                                value={row.comment}
+                                                                onChange={(val) => handleComplaintCommentChange(row.value, val)}
+                                                                disabled={isFormDisabled}
+                                                                placeholder="Enter duration/comment"
+                                                                error={row.comment?.length >= 500}
+                                                                helperText={row.comment?.length >= 500 ? 'Comment cannot exceed 500 characters' : ''}
+                                                                inputProps={{
+                                                                    maxLength: 501
                                                                 }}
+                                                                sx={{
+                                                                    marginBottom: row.comment?.length >= 500 ? '16px' : '0px',
+                                                                    transition: 'margin-bottom 0.2s',
+                                                                    boxSizing: 'border-box',
+                                                                    '& .MuiOutlinedInput-root': {
+                                                                        height: '100%',
+                                                                        borderRadius: 0,
+                                                                        backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
+                                                                        fontSize: '11px',
+                                                                        boxSizing: 'border-box',
+                                                                        '& fieldset': { border: 'none' }
+                                                                    },
+                                                                    '& .MuiFormHelperText-root': {
+                                                                        fontSize: '9px',
+                                                                        margin: '0',
+                                                                        padding: '0 4px',
+                                                                        color: '#666',
+                                                                        whiteSpace: 'nowrap'
+                                                                    },
+                                                                    '& .MuiInputBase-input': {
+                                                                        padding: '8px 10px',
+                                                                        color: isFormDisabled ? '#666' : '#333',
+                                                                        cursor: isFormDisabled ? 'not-allowed' : 'text',
+                                                                        boxSizing: 'border-box'
+                                                                    }
+                                                                }}
+                                                            />
+                                                        </div>
+                                                    </td>
+                                                    <td style={{ padding: '6px' }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                            <div
+                                                                onClick={() => {
+                                                                    if (isFormDisabled) return;
+                                                                    handleRemoveComplaint(row.value);
+                                                                }}
+                                                                title="Remove"
                                                                 style={{
-                                                                    marginLeft: '8px',
-                                                                    padding: '2px 6px',
-                                                                    fontSize: '10px',
-                                                                    backgroundColor: '#1976d2',
-                                                                    color: 'white',
-                                                                    border: 'none',
-                                                                    borderRadius: '3px',
-                                                                    cursor: 'pointer'
+                                                                    display: 'inline-flex',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'center',
+                                                                    width: '24px',
+                                                                    height: '24px',
+                                                                    cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                                                    color: isFormDisabled ? '#9e9e9e' : '#000000',
+                                                                    backgroundColor: 'transparent'
+                                                                }}
+                                                                onMouseEnter={(e) => {
+                                                                    if (isFormDisabled) return;
+                                                                    (e.currentTarget as HTMLDivElement).style.color = '#EF5350';
+                                                                }}
+                                                                onMouseLeave={(e) => {
+                                                                    (e.currentTarget as HTMLDivElement).style.color = isFormDisabled ? '#9e9e9e' : '#000000';
                                                                 }}
                                                             >
-                                                                Retry
-                                                            </button>
+                                                                <Delete fontSize="small" />
+                                                            </div>
                                                         </div>
-                                                    )}
-                                                    {!diagnosesLoading && !diagnosesError && filteredDiagnoses.length === 0 && (
-                                                        <div style={{ padding: '6px', fontSize: '13px', color: '#777', gridColumn: '1 / -1' }}>No diagnoses found</div>
-                                                    )}
-                                                    {!diagnosesLoading && !diagnosesError && filteredDiagnoses.map((opt, index) => {
-                                                        const checked = selectedDiagnoses.includes(opt.value);
-                                                        // Check if this diagnosis is already added to the table
-                                                        // Using the same logic as the add handler: check value and diagnosis name
-                                                        const normalizedValue = opt.value?.toLowerCase().trim() || '';
-                                                        const normalizedLabel = opt.label?.toLowerCase().trim() || '';
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </div>
 
-                                                        const isAdded = diagnosisRows.some(row =>
-                                                            (row.value && row.value.toLowerCase().trim() === normalizedValue) ||
-                                                            (row.diagnosis && row.diagnosis.toLowerCase().trim() === normalizedLabel)
-                                                        );
-
-                                                        const isFirstUnselected = !checked && index > 0 && selectedDiagnoses.includes(filteredDiagnoses[index - 1].value);
-
-                                                        return (
-                                                            <React.Fragment key={opt.value}>
-                                                                {isFirstUnselected && (
-                                                                    <div style={{
-                                                                        gridColumn: '1 / -1',
-                                                                        height: '1px',
-                                                                        backgroundColor: '#e0e0e0',
-                                                                        margin: '4px 0'
-                                                                    }} />
-                                                                )}
-                                                                <label
-                                                                    title={opt.label}
-                                                                    style={{
-                                                                        display: 'flex',
-                                                                        alignItems: 'center',
-                                                                        gap: '4px',
-                                                                        padding: '4px 2px',
-                                                                        cursor: isAdded ? 'not-allowed' : 'pointer',
-                                                                        fontSize: '13px',
-                                                                        border: 'none',
-                                                                        backgroundColor: (checked || isAdded) ? '#eeeeee' : 'transparent',
-                                                                        borderRadius: '3px',
-                                                                        fontWeight: 400,
-                                                                        minWidth: 0,
-                                                                        opacity: isAdded ? 0.6 : 1
-                                                                    }}
-                                                                >
-                                                                    <input
-                                                                        type="checkbox"
-                                                                        checked={checked || isAdded}
-                                                                        disabled={isAdded}
-                                                                        onChange={(e) => {
-                                                                            if (isAdded) return;
-                                                                            setSelectedDiagnoses(prev => {
-                                                                                setDiagnosesSelectionError(null);
-                                                                                if (e.target.checked) {
-                                                                                    if (prev.includes(opt.value)) return prev;
-                                                                                    return [...prev, opt.value];
-                                                                                } else {
-                                                                                    return prev.filter(v => v !== opt.value);
-                                                                                }
-                                                                            });
-                                                                        }}
-                                                                        style={{ margin: 0 }}
-                                                                    />
-                                                                    <span style={{
-                                                                        whiteSpace: 'nowrap',
-                                                                        overflow: 'hidden',
-                                                                        textOverflow: 'ellipsis'
-                                                                    }}>{opt.label}{isAdded ? ' (Added)' : ''}</span>
-                                                                </label>
-                                                            </React.Fragment>
-                                                        );
-                                                    })}
-                                                </div>
-                                            </div>
+                        {/* Detailed Text Areas */}
+                        <div style={{ marginBottom: '15px' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr' as const, gap: '12px' }}>
+                                <div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                                        <label style={{ fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Detailed History</label>
+                                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px' }}>
+                                            {(formData.detailedHistory || '').length}/{getFieldConfig('detailedHistory', 'visit')?.maxLength || 1000}
+                                        </Typography>
+                                    </div>
+                                    <div style={{ position: 'relative' }}>
+                                        <textarea
+                                            value={formData.detailedHistory}
+                                            onChange={(e) => handleInputChange('detailedHistory', e.target.value.slice(0, getFieldConfig('detailedHistory', 'visit')?.maxLength || 1000))}
+                                            disabled={isFormDisabled}
+                                            rows={3}
+                                            maxLength={getFieldConfig('detailedHistory', 'visit')?.maxLength}
+                                            style={{
+                                                width: '100%',
+                                                padding: '6px 10px',
+                                                paddingRight: '28px',
+                                                border: '1px solid #ccc',
+                                                borderRadius: '4px',
+                                                fontSize: '13px',
+                                                resize: 'vertical',
+                                                backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
+                                                color: isFormDisabled ? '#666' : '#333',
+                                                cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                            }}
+                                        />
+                                        {!isFormDisabled && formData.detailedHistory && (
+                                            <CloseIcon
+                                                onClick={() => handleInputChange('detailedHistory', '')}
+                                                titleAccess="Clear"
+                                                style={{
+                                                    position: 'absolute',
+                                                    top: '6px',
+                                                    right: '6px',
+                                                    fontSize: '18px',
+                                                    color: '#757575',
+                                                    cursor: 'pointer',
+                                                }}
+                                            />
                                         )}
                                     </div>
-                                    <button
-                                        disabled={isFormDisabled}
-                                        title="Add selected diagnoses"
-                                        style={{
-                                            padding: '0 10px',
-                                            backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
-                                            color: 'white',
-                                            border: 'none',
-                                            borderRadius: '6px',
-                                            cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                            fontSize: '13px',
-                                            height: '38px',
-                                            transition: 'background-color 0.2s'
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1565c0';
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1976d2';
-                                        }}
-                                        onClick={handleAddDiagnoses}
-                                    >
-                                        Add
-                                    </button>
+                                    {errors.detailedHistory && (
+                                        <div style={{
+                                            color: errors.detailedHistory.includes('cannot exceed') ? '#757575' : '#d32f2f',
+                                            fontSize: '11px',
+                                            marginTop: '4px',
+                                            lineHeight: '1.2'
+                                        }}>
+                                            {errors.detailedHistory}
+                                        </div>
+                                    )}
+                                </div>
+                                <div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                                        <label style={{ fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Examination Findings</label>
+                                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px' }}>
+                                            {(formData.importantFindings || '').length}/{getFieldConfig('importantFindings', 'visit')?.maxLength || 1000}
+                                        </Typography>
+                                    </div>
+                                    <div style={{ position: 'relative' }}>
+                                        <textarea
+                                            value={formData.importantFindings}
+                                            onChange={(e) => handleInputChange('importantFindings', e.target.value.slice(0, getFieldConfig('importantFindings', 'visit')?.maxLength || 1000))}
+                                            disabled={isFormDisabled}
+                                            rows={3}
+                                            maxLength={getFieldConfig('importantFindings', 'visit')?.maxLength}
+                                            style={{
+                                                width: '100%',
+                                                padding: '6px 10px',
+                                                paddingRight: '28px',
+                                                border: '1px solid #ccc',
+                                                borderRadius: '4px',
+                                                fontSize: '13px',
+                                                resize: 'vertical',
+                                                backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
+                                                color: isFormDisabled ? '#666' : '#333',
+                                                cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                            }}
+                                        />
+                                        {!isFormDisabled && formData.importantFindings && (
+                                            <CloseIcon
+                                                onClick={() => handleInputChange('importantFindings', '')}
+                                                titleAccess="Clear"
+                                                style={{
+                                                    position: 'absolute',
+                                                    top: '6px',
+                                                    right: '6px',
+                                                    fontSize: '18px',
+                                                    color: '#757575',
+                                                    cursor: 'pointer',
+                                                }}
+                                            />
+                                        )}
+                                    </div>
+                                    {errors.importantFindings && (
+                                        <div style={{
+                                            color: errors.importantFindings.includes('cannot exceed') ? '#757575' : '#d32f2f',
+                                            fontSize: '11px',
+                                            marginTop: '4px',
+                                            lineHeight: '1.2'
+                                        }}>
+                                            {errors.importantFindings}
+                                        </div>
+                                    )}
+                                </div>
+                                <div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                                        <label style={{ fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Additional Comments</label>
+                                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px' }}>
+                                            {(formData.additionalComments || '').length}/{getFieldConfig('additionalComments', 'visit')?.maxLength || 1000}
+                                        </Typography>
+                                    </div>
+                                    <div style={{ position: 'relative' }}>
+                                        <textarea
+                                            value={formData.additionalComments}
+                                            onChange={(e) => handleInputChange('additionalComments', e.target.value.slice(0, getFieldConfig('additionalComments', 'visit')?.maxLength || 1000))}
+                                            disabled={isFormDisabled}
+                                            rows={3}
+                                            maxLength={getFieldConfig('additionalComments', 'visit')?.maxLength}
+                                            style={{
+                                                width: '100%',
+                                                padding: '6px 10px',
+                                                paddingRight: '28px',
+                                                border: '1px solid #ccc',
+                                                borderRadius: '4px',
+                                                fontSize: '13px',
+                                                resize: 'vertical',
+                                                backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
+                                                color: isFormDisabled ? '#666' : '#333',
+                                                cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                            }}
+                                        />
+                                        {!isFormDisabled && formData.additionalComments && (
+                                            <CloseIcon
+                                                onClick={() => handleInputChange('additionalComments', '')}
+                                                titleAccess="Clear"
+                                                style={{
+                                                    position: 'absolute',
+                                                    top: '6px',
+                                                    right: '6px',
+                                                    fontSize: '18px',
+                                                    color: '#757575',
+                                                    cursor: 'pointer',
+                                                }}
+                                            />
+                                        )}
+                                    </div>
+                                    {errors.additionalComments && (
+                                        <div style={{
+                                            color: errors.additionalComments.includes('cannot exceed') ? '#757575' : '#d32f2f',
+                                            fontSize: '11px',
+                                            marginTop: '4px',
+                                            lineHeight: '1.2'
+                                        }}>
+                                            {errors.additionalComments}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Procedure Performed */}
+                        <div style={{ marginBottom: '15px' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr' as const, gap: '12px' }}>
+                                <div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                                        <label style={{ fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Procedure Performed</label>
+                                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px' }}>
+                                            {(formData.procedurePerformed || '').length}/{getFieldConfig('procedurePerformed', 'visit')?.maxLength || 1000}
+                                        </Typography>
+                                    </div>
+                                    <div style={{ position: 'relative' }}>
+                                        <textarea
+                                            value={formData.procedurePerformed}
+                                            onChange={(e) => handleInputChange('procedurePerformed', e.target.value.slice(0, getFieldConfig('procedurePerformed', 'visit')?.maxLength || 1000))}
+                                            disabled={isFormDisabled}
+                                            rows={3}
+                                            maxLength={getFieldConfig('procedurePerformed', 'visit')?.maxLength}
+                                            style={{
+                                                width: '100%',
+                                                padding: '6px 10px',
+                                                paddingRight: '28px',
+                                                border: '1px solid #ccc',
+                                                borderRadius: '4px',
+                                                fontSize: '13px',
+                                                resize: 'vertical',
+                                                backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
+                                                color: isFormDisabled ? '#666' : '#333',
+                                                cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                            }}
+                                        />
+                                        {!isFormDisabled && formData.procedurePerformed && (
+                                            <CloseIcon
+                                                onClick={() => handleInputChange('procedurePerformed', '')}
+                                                titleAccess="Clear"
+                                                style={{
+                                                    position: 'absolute',
+                                                    top: '6px',
+                                                    right: '6px',
+                                                    fontSize: '18px',
+                                                    color: '#757575',
+                                                    cursor: 'pointer',
+                                                }}
+                                            />
+                                        )}
+                                    </div>
+                                    {errors.procedurePerformed && (
+                                        <div style={{
+                                            color: errors.procedurePerformed.includes('cannot exceed') ? '#757575' : '#d32f2f',
+                                            fontSize: '11px',
+                                            marginTop: '4px',
+                                            lineHeight: '1.2'
+                                        }}>
+                                            {errors.procedurePerformed}
+                                        </div>
+                                    )}
+                                </div>
+                                <div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                                        <label style={{ fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Dressing (body parts)</label>
+                                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px' }}>
+                                            {(formData.dressingBodyParts || '').length}/{getFieldConfig('dressingBodyParts', 'visit')?.maxLength || 1000}
+                                        </Typography>
+                                    </div>
+                                    <div style={{ position: 'relative' }}>
+                                        <textarea
+                                            value={formData.dressingBodyParts}
+                                            onChange={(e) => handleInputChange('dressingBodyParts', e.target.value.slice(0, getFieldConfig('dressingBodyParts', 'visit')?.maxLength || 1000))}
+                                            disabled={isFormDisabled}
+                                            rows={3}
+                                            maxLength={getFieldConfig('dressingBodyParts', 'visit')?.maxLength}
+                                            style={{
+                                                width: '100%',
+                                                padding: '6px 10px',
+                                                paddingRight: '28px',
+                                                border: '1px solid #ccc',
+                                                borderRadius: '4px',
+                                                fontSize: '13px',
+                                                resize: 'vertical',
+                                                backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
+                                                color: isFormDisabled ? '#666' : '#333',
+                                                cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                            }}
+                                        />
+                                        {!isFormDisabled && formData.dressingBodyParts && (
+                                            <CloseIcon
+                                                onClick={() => handleInputChange('dressingBodyParts', '')}
+                                                titleAccess="Clear"
+                                                style={{
+                                                    position: 'absolute',
+                                                    top: '6px',
+                                                    right: '6px',
+                                                    fontSize: '18px',
+                                                    color: '#757575',
+                                                    cursor: 'pointer',
+                                                }}
+                                            />
+                                        )}
+                                    </div>
+                                    {errors.dressingBodyParts && (
+                                        <div style={{
+                                            color: errors.dressingBodyParts.includes('cannot exceed') ? '#757575' : '#d32f2f',
+                                            fontSize: '11px',
+                                            marginTop: '4px',
+                                            lineHeight: '1.2'
+                                        }}>
+                                            {errors.dressingBodyParts}
+                                        </div>
+                                    )}
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                                    <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px', visibility: 'hidden' }}>
+                                        Button Label
+                                    </label>
                                     <button
                                         type="button"
                                         disabled={isFormDisabled}
-                                        title="Add custom diagnosis"
+                                        title="Lab Details"
                                         style={{
+                                            width: '100%',
+                                            height: '40px',
+                                            padding: '6px 10px',
                                             backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
                                             color: 'white',
                                             border: 'none',
-                                            padding: '6px',
-                                            borderRadius: '6px',
+                                            borderRadius: '4px',
+                                            fontSize: '13px',
+                                            fontWeight: 'bold',
                                             cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                            width: '32px',
-                                            height: '38px',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            fontSize: '14px',
-                                            transition: 'background-color 0.2s'
+                                            textTransform: 'uppercase'
                                         }}
-                                        onMouseEnter={(e) => {
-                                            if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1565c0';
+                                        onClick={() => {
+                                            const appointmentRow: any = {
+                                                patient: treatmentData?.patientName || '',
+                                                patientId: String(treatmentData?.patientId || ''),
+                                                age: Number(treatmentData?.age || 0),
+                                                gender: treatmentData?.gender || '',
+                                                contact: treatmentData?.contact || '',
+                                                doctorId: treatmentData?.doctorId || '',
+                                                clinicId: treatmentData?.clinicId || '',
+                                                visitNumber: Number(treatmentData?.visitNumber || 0),
+                                                provider: getDoctorLabelById(treatmentData?.doctorId),
+                                                shiftId: 1,
+                                                visitDate: new Date().toISOString().slice(0, 10)
+                                            };
+                                            setSelectedPatientForLab(appointmentRow);
+                                            setShowLabTestEntry(true);
                                         }}
-                                        onMouseLeave={(e) => {
-                                            if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1976d2';
-                                        }}
-                                        onClick={handleAddCustomDiagnosis}
                                     >
-                                        <Add fontSize="small" />
+                                        RECORD LAB TEST RESULT
                                     </button>
                                 </div>
+                            </div>
+                        </div>
 
-                                {/* Diagnosis Table */}
-                                {diagnosisRows.length > 0 && (
+                        {/* Diagnosis Section  */}
+                        <div style={{ marginBottom: '15px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '5px', width: '88%', gap: '8px' }}>
+                                <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Diagnosis</label>
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', alignItems: 'flex-start' }}>
+                                <div style={{ flex: 1, position: 'relative' }} ref={diagnosesRef}>
                                     <div
                                         style={{
-                                            border: '1px solid #ccc',
-                                            borderRadius: '4px',
-                                            overflow: 'hidden',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                            height: '38px',
+                                            padding: '4px 8px',
+                                            border: '2px solid #B7B7B7',
+                                            borderRadius: '6px',
+                                            fontSize: '13px',
+                                            fontFamily: "'Roboto', sans-serif",
+                                            fontWeight: 500,
+                                            backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
+                                            cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                            userSelect: 'none',
                                             opacity: isFormDisabled ? 0.6 : 1
                                         }}
+                                        onClick={() => !isFormDisabled && setIsDiagnosesOpen(!isDiagnosesOpen)}
+                                        onMouseEnter={(e) => {
+                                            (e.currentTarget as HTMLDivElement).style.borderColor = '#1E88E5';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            (e.currentTarget as HTMLDivElement).style.borderColor = '#B7B7B7';
+                                        }}
                                     >
-                                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                                            <thead>
-                                                <tr style={{
-                                                    backgroundColor: '#1976d2',
-                                                    color: 'white',
-                                                    fontWeight: 'bold',
-                                                    fontSize: '13px'
-                                                }}>
-                                                    <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '60px', textAlign: 'left' }}>Sr.</th>
-                                                    <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', textAlign: 'left' }}>Provisional Diagnosis</th>
-                                                    <th style={{ padding: '6px', width: '80px', textAlign: 'center' }}>Action</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {[...diagnosisRows].sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999)).map((row, index) => (
-                                                    <tr key={row.id} style={{
-                                                        backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white',
-                                                        borderBottom: '1px solid #e0e0e0'
-                                                    }}>
-                                                        <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '13px' }}>{index + 1}</td>
-                                                        <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '13px' }}>{row.diagnosis}</td>
-                                                        <td style={{ textAlign: 'center' }}>
-                                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                                <div
-                                                                    onClick={() => {
-                                                                        if (isFormDisabled) return;
-                                                                        row.value ? handleRemoveDiagnosisFromSelector(row.value) : handleRemoveDiagnosis(row.id);
-                                                                    }}
-                                                                    title="Remove"
-                                                                    style={{
-                                                                        display: 'inline-flex',
-                                                                        alignItems: 'center',
-                                                                        justifyContent: 'center',
-                                                                        width: '24px',
-                                                                        height: '24px',
-                                                                        cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                                                        color: isFormDisabled ? '#9e9e9e' : '#000000',
-                                                                        backgroundColor: 'transparent'
-                                                                    }}
-                                                                    onMouseEnter={(e) => {
-                                                                        if (isFormDisabled) return;
-                                                                        (e.currentTarget as HTMLDivElement).style.color = '#EF5350';
-                                                                    }}
-                                                                    onMouseLeave={(e) => {
-                                                                        (e.currentTarget as HTMLDivElement).style.color = isFormDisabled ? '#9e9e9e' : '#000000';
-                                                                    }}
-                                                                >
-                                                                    <Delete fontSize="small" />
-                                                                </div>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Medicine Section */}
-                            <div style={{ marginBottom: '15px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '5px', width: '88%', gap: '8px' }}>
-                                    <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Medicine</label>
-                                </div>
-
-                                <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', alignItems: 'flex-start' }}>
-                                    <div style={{ position: 'relative', flex: 1 }} ref={medicinesRef}>
-                                        <div
-                                            onClick={() => !isFormDisabled && setIsMedicinesOpen(!isMedicinesOpen)}
+                                        <span style={{ color: selectedDiagnoses.length > 0 ? '#000' : '#9e9e9e' }}>
+                                            {selectedDiagnoses.length > 0
+                                                ? `${selectedDiagnoses.length} diagnosis selected`
+                                                : 'Select Diagnosis'
+                                            }
+                                        </span>
+                                        <ArrowDropDown
                                             style={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'space-between',
-                                                height: '38px',
-                                                padding: '4px 8px',
-                                                border: '2px solid #B7B7B7',
-                                                borderRadius: '6px',
-                                                fontSize: '13px',
-                                                fontFamily: "'Roboto', sans-serif",
-                                                fontWeight: 500,
-                                                backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
-                                                cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                                userSelect: 'none',
-                                                opacity: isFormDisabled ? 0.6 : 1
+                                                marginLeft: '8px',
+                                                color: '#666',
+                                                fontSize: '24px',
+                                                transition: 'transform 0.2s',
+                                                transform: isDiagnosesOpen ? 'rotate(180deg)' : 'rotate(0deg)'
                                             }}
-                                            onMouseEnter={(e) => {
-                                                (e.currentTarget as HTMLDivElement).style.borderColor = '#1E88E5';
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                (e.currentTarget as HTMLDivElement).style.borderColor = '#B7B7B7';
-                                            }}
-                                        >
-                                            <span style={{ color: selectedMedicines.length ? '#000' : '#9e9e9e' }}>
-                                                {selectedMedicines.length === 0 && 'Select Medicines'}
-                                                {selectedMedicines.length === 1 && '1 selected'}
-                                                {selectedMedicines.length > 1 && `${selectedMedicines.length} selected`}
-                                            </span>
-                                            <ArrowDropDown
-                                                style={{
-                                                    marginLeft: '8px',
-                                                    color: '#666',
-                                                    fontSize: '24px',
-                                                    transition: 'transform 0.2s',
-                                                    transform: isMedicinesOpen ? 'rotate(180deg)' : 'rotate(0deg)'
-                                                }}
-                                            />
-                                        </div>
-                                        {medicinesSelectionError && (
-                                            <p style={{
-                                                color: '#d32f2f',
-                                                fontSize: '0.75rem',
-                                                fontWeight: 400,
-                                                fontFamily: "'Roboto', sans-serif",
-                                                margin: '3px 0 0 0',
-                                                textAlign: 'left'
-                                            }}>
-                                                {medicinesSelectionError}
-                                            </p>
-                                        )}
+                                        />
+                                    </div>
+                                    {diagnosesSelectionError && (
+                                        <p style={{
+                                            color: '#d32f2f',
+                                            fontSize: '0.75rem',
+                                            fontWeight: 400,
+                                            fontFamily: "'Roboto', sans-serif",
+                                            margin: '3px 0 0 0',
+                                            textAlign: 'left'
+                                        }}>
+                                            {diagnosesSelectionError}
+                                        </p>
+                                    )}
 
-                                        {isMedicinesOpen && (
-                                            <div style={{
-                                                position: 'absolute',
-                                                top: '38px',
-                                                left: 0,
-                                                right: 0,
-                                                backgroundColor: 'white',
-                                                border: '1px solid #B7B7B7',
-                                                borderRadius: '6px',
-                                                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                                                zIndex: 1000,
-                                                marginTop: '4px'
-                                            }}>
-                                                {/* Search Field inside dropdown */}
-                                                <div style={{ padding: '6px' }}>
-                                                    <ClearableTextField
-                                                        fullWidth
-                                                        size="small"
-                                                        value={medicineSearch}
-                                                        onChange={(val) => {
-                                                            setMedicineSearch(val);
-                                                            if (val.length >= 1000) {
-                                                                setMedicineSearchError('Medicine search cannot exceed 1000 characters');
-                                                            } else {
-                                                                setMedicineSearchError(null);
-                                                            }
-                                                        }}
-                                                        placeholder="Search medicines"
-                                                        variant="outlined"
-                                                        error={!!medicineSearchError}
-                                                        helperText={medicineSearchError}
-                                                        inputProps={{
-                                                            maxLength: 1000
-                                                        }}
-                                                        sx={{
-                                                            '& .MuiOutlinedInput-root': {
-                                                                height: medicineSearchError ? 'auto' : '32px',
-                                                                borderRadius: '4px',
-                                                                fontSize: '13px'
-                                                            },
-                                                            '& .MuiFormHelperText-root': {
+                                    {isDiagnosesOpen && (
+                                        <div style={{
+                                            position: 'absolute',
+                                            top: '100%',
+                                            left: 0,
+                                            right: 0,
+                                            backgroundColor: 'white',
+                                            border: '1px solid #B7B7B7',
+                                            borderRadius: '6px',
+                                            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                                            zIndex: 1000,
+                                            marginTop: '4px',
+                                            maxHeight: '300px',
+                                            overflow: 'hidden'
+                                        }}>
+                                            <div style={{ padding: '6px' }}>
+                                                <ClearableTextField
+                                                    fullWidth
+                                                    size="small"
+                                                    value={diagnosisSearch}
+                                                    onChange={(val) => {
+                                                        if (val.length >= 1000) {
+                                                            setDiagnosisSearchError('Diagnosis search cannot exceed 1000 characters');
+                                                        } else {
+                                                            setDiagnosisSearchError(null);
+                                                        }
+                                                        setDiagnosisSearch(val);
+                                                    }}
+                                                    placeholder="Search diagnoses"
+                                                    variant="outlined"
+                                                    error={!!diagnosisSearchError}
+                                                    helperText={diagnosisSearchError}
+                                                    FormHelperTextProps={{ style: { color: '#757575' } }}
+                                                    inputProps={{ maxLength: 1000 }}
+                                                    sx={{
+                                                        '& .MuiOutlinedInput-root': {
+                                                            height: '38px',
+                                                            borderRadius: '4px',
+                                                            fontSize: '13px'
+                                                        }
+                                                    }}
+                                                />
+                                            </div>
+
+                                            <div className="diagnoses-dropdown" style={{ maxHeight: '200px', overflowY: 'auto', padding: '4px 6px', display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', columnGap: '8px', rowGap: '6px' }}>
+                                                {diagnosesLoading && (
+                                                    <div style={{ padding: '6px', fontSize: '13px', color: '#777', gridColumn: '1 / -1', textAlign: 'center' }}>
+                                                        Loading diagnoses...
+                                                    </div>
+                                                )}
+                                                {diagnosesError && (
+                                                    <div style={{ padding: '6px', fontSize: '13px', color: '#d32f2f', gridColumn: '1 / -1', textAlign: 'center' }}>
+                                                        {diagnosesError}
+                                                        <button
+                                                            onClick={() => {
+                                                                setDiagnosesError(null);
+                                                                // Trigger reload by updating a dependency
+                                                                const doctorId = treatmentData?.doctorId || sessionData?.doctorId;
+                                                                const clinicId = treatmentData?.clinicId || sessionData?.clinicId;
+                                                                if (!doctorId || !clinicId) {
+                                                                    setDiagnosesError('Doctor and clinic information are required to reload diagnoses.');
+                                                                    return;
+                                                                }
+                                                                diagnosisService.getDiagnosesFromPatientProfile(doctorId, clinicId)
+                                                                    .then(setDiagnosesOptions)
+                                                                    .catch(e => setDiagnosesError(e.message || 'Failed to load diagnoses.'));
+                                                            }}
+                                                            style={{
+                                                                marginLeft: '8px',
+                                                                padding: '2px 6px',
                                                                 fontSize: '10px',
-                                                                margin: '2px 0 0 0'
-                                                            }
-                                                        }}
-                                                    />
-                                                </div>
+                                                                backgroundColor: '#1976d2',
+                                                                color: 'white',
+                                                                border: 'none',
+                                                                borderRadius: '3px',
+                                                                cursor: 'pointer'
+                                                            }}
+                                                        >
+                                                            Retry
+                                                        </button>
+                                                    </div>
+                                                )}
+                                                {!diagnosesLoading && !diagnosesError && filteredDiagnoses.length === 0 && (
+                                                    <div style={{ padding: '6px', fontSize: '13px', color: '#777', gridColumn: '1 / -1' }}>No diagnoses found</div>
+                                                )}
+                                                {!diagnosesLoading && !diagnosesError && filteredDiagnoses.map((opt, index) => {
+                                                    const checked = selectedDiagnoses.includes(opt.value);
+                                                    // Check if this diagnosis is already added to the table
+                                                    // Using the same logic as the add handler: check value and diagnosis name
+                                                    const normalizedValue = opt.value?.toLowerCase().trim() || '';
+                                                    const normalizedLabel = opt.label?.toLowerCase().trim() || '';
 
-                                                <div className="medicines-dropdown" style={{ maxHeight: '200px', overflowY: 'auto', padding: '4px 6px', display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', columnGap: '8px', rowGap: '6px' }}>
-                                                    {medicinesLoading && (
-                                                        <div style={{ padding: '6px', fontSize: '13px', color: '#777', gridColumn: '1 / -1', textAlign: 'center' }}>
-                                                            Loading medicines...
-                                                        </div>
-                                                    )}
-                                                    {medicinesError && (
-                                                        <div style={{ padding: '6px', fontSize: '13px', color: '#d32f2f', gridColumn: '1 / -1', textAlign: 'center' }}>
-                                                            {medicinesError}
-                                                            <button
-                                                                onClick={() => {
-                                                                    setMedicinesError(null);
-                                                                    // Trigger reload by updating a dependency
-                                                                    const doctorId = treatmentData?.doctorId || '1';
-                                                                    const clinicId = sessionData?.clinicId || '1';
-                                                                    medicineService.getActiveMedicinesByDoctorAndClinic(doctorId, clinicId)
-                                                                        .then(setMedicinesOptions)
-                                                                        .catch(e => setMedicinesError(e.message));
-                                                                }}
+                                                    const isAdded = diagnosisRows.some(row =>
+                                                        (row.value && row.value.toLowerCase().trim() === normalizedValue) ||
+                                                        (row.diagnosis && row.diagnosis.toLowerCase().trim() === normalizedLabel)
+                                                    );
+
+                                                    const isFirstUnselected = !checked && index > 0 && selectedDiagnoses.includes(filteredDiagnoses[index - 1].value);
+
+                                                    return (
+                                                        <React.Fragment key={opt.value}>
+                                                            {isFirstUnselected && (
+                                                                <div style={{
+                                                                    gridColumn: '1 / -1',
+                                                                    height: '1px',
+                                                                    backgroundColor: '#e0e0e0',
+                                                                    margin: '4px 0'
+                                                                }} />
+                                                            )}
+                                                            <label
+                                                                title={opt.label}
                                                                 style={{
-                                                                    marginLeft: '8px',
-                                                                    padding: '2px 6px',
-                                                                    fontSize: '10px',
-                                                                    backgroundColor: '#1976d2',
-                                                                    color: 'white',
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    gap: '4px',
+                                                                    padding: '4px 2px',
+                                                                    cursor: isAdded ? 'not-allowed' : 'pointer',
+                                                                    fontSize: '13px',
                                                                     border: 'none',
+                                                                    backgroundColor: (checked || isAdded) ? '#eeeeee' : 'transparent',
                                                                     borderRadius: '3px',
-                                                                    cursor: 'pointer'
+                                                                    fontWeight: 400,
+                                                                    minWidth: 0,
+                                                                    opacity: isAdded ? 0.6 : 1
                                                                 }}
                                                             >
-                                                                Retry
-                                                            </button>
-                                                        </div>
-                                                    )}
-                                                    {!medicinesLoading && !medicinesError && filteredMedicines.length === 0 && (
-                                                        <div style={{ padding: '6px', fontSize: '13px', color: '#777', gridColumn: '1 / -1' }}>No medicines found</div>
-                                                    )}
-                                                    {!medicinesLoading && !medicinesError && filteredMedicines.map((opt, index) => {
-                                                        const checked = selectedMedicines.includes(opt.value);
-                                                        // Check if medicine is already added using short_description mathing the helper logic
-                                                        const shortDesc = opt.short_description?.toLowerCase().trim() || '';
-                                                        const isAdded = medicineRows.some(row =>
-                                                            row.short_description?.toLowerCase().trim() === shortDesc
-                                                        );
-
-                                                        const isFirstUnselected = !checked && index > 0 && selectedMedicines.includes(filteredMedicines[index - 1].value);
-
-                                                        return (
-                                                            <React.Fragment key={opt.value}>
-                                                                {isFirstUnselected && (
-                                                                    <div style={{
-                                                                        gridColumn: '1 / -1',
-                                                                        height: '1px',
-                                                                        backgroundColor: '#e0e0e0',
-                                                                        margin: '4px 0'
-                                                                    }} />
-                                                                )}
-                                                                <label
-                                                                    title={opt.label}
-                                                                    style={{
-                                                                        display: 'flex',
-                                                                        alignItems: 'center',
-                                                                        gap: '4px',
-                                                                        padding: '4px 2px',
-                                                                        cursor: isAdded ? 'not-allowed' : 'pointer',
-                                                                        fontSize: '13px',
-                                                                        border: 'none',
-                                                                        backgroundColor: (checked || isAdded) ? '#eeeeee' : 'transparent',
-                                                                        borderRadius: '3px',
-                                                                        fontWeight: 400,
-                                                                        minWidth: 0,
-                                                                        opacity: isAdded ? 0.6 : 1
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={checked || isAdded}
+                                                                    disabled={isAdded}
+                                                                    onChange={(e) => {
+                                                                        if (isAdded) return;
+                                                                        setSelectedDiagnoses(prev => {
+                                                                            setDiagnosesSelectionError(null);
+                                                                            if (e.target.checked) {
+                                                                                if (prev.includes(opt.value)) return prev;
+                                                                                return [...prev, opt.value];
+                                                                            } else {
+                                                                                return prev.filter(v => v !== opt.value);
+                                                                            }
+                                                                        });
                                                                     }}
-                                                                >
-                                                                    <input
-                                                                        type="checkbox"
-                                                                        checked={checked || isAdded}
-                                                                        disabled={isAdded}
-                                                                        onChange={(e) => {
-                                                                            if (isAdded) return;
-                                                                            setSelectedMedicines(prev => {
-                                                                                setMedicinesSelectionError(null);
-                                                                                if (e.target.checked) {
-                                                                                    if (prev.includes(opt.value)) return prev;
-                                                                                    return [...prev, opt.value];
-                                                                                } else {
-                                                                                    return prev.filter(v => v !== opt.value);
-                                                                                }
-                                                                            });
-                                                                        }}
-                                                                        style={{ margin: 0 }}
-                                                                    />
-                                                                    <span style={{
-                                                                        whiteSpace: 'nowrap',
-                                                                        overflow: 'hidden',
-                                                                        textOverflow: 'ellipsis'
-                                                                    }}>{opt.label}{isAdded ? ' (Added)' : ''}</span>
-                                                                </label>
-                                                            </React.Fragment>
-                                                        );
-                                                    })}
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                    <button
-                                        type="button"
-                                        onClick={handleAddMedicine}
-                                        disabled={isFormDisabled}
-                                        title="Add selected medicines"
-                                        style={{
-                                            backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
-                                            color: 'white',
-                                            border: 'none',
-                                            padding: '6px 12px',
-                                            borderRadius: '4px',
-                                            cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                            fontSize: '13px'
-                                        }}
-                                    >
-                                        Add
-                                    </button>
-                                    <button
-                                        type="button"
-                                        disabled={isFormDisabled}
-                                        title="Add custom medicine"
-                                        style={{
-                                            backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
-                                            color: 'white',
-                                            border: 'none',
-                                            padding: '6px',
-                                            borderRadius: '6px',
-                                            cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                            width: '32px',
-                                            height: '38px',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            fontSize: '14px',
-                                            transition: 'background-color 0.2s'
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1565c0';
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1976d2';
-                                        }}
-                                        onClick={handleAddCustomMedicine}
-                                    >
-                                        <Add fontSize="small" />
-                                    </button>
-                                </div>
-
-                                {/* Medicine Table */}
-                                {medicineRows.length > 0 && (
-                                    <div
-                                        style={{
-                                            border: '1px solid #ccc',
-                                            borderRadius: '4px',
-                                            overflow: 'hidden',
-                                            overflowX: 'auto',
-                                            opacity: isFormDisabled ? 0.6 : 1,
-                                            width: '100%'
-                                        }}
-                                    >
-                                        <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
-                                            <thead>
-                                                <tr style={{
-                                                    backgroundColor: '#1976d2',
-                                                    color: 'white',
-                                                    fontWeight: 'bold',
-                                                    fontSize: '13px'
-                                                }}>
-                                                    <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '50px', textAlign: 'left' }}>Sr.</th>
-                                                    <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '200px', textAlign: 'left' }}>Medicine</th>
-                                                    <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '50px', textAlign: 'center' }}>B</th>
-                                                    <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '50px', textAlign: 'center' }}>L</th>
-                                                    <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '50px', textAlign: 'center' }}>D</th>
-                                                    <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '60px', textAlign: 'center' }}>Days</th>
-                                                    <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: 'auto', textAlign: 'left' }}>Instruction</th>
-                                                    <th style={{ padding: '6px', width: '80px', textAlign: 'center' }}>Action</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {[...medicineRows].sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999)).map((row, index) => (
-                                                    <tr key={row.id} style={{
-                                                        backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white',
-                                                        borderBottom: '1px solid #e0e0e0'
-                                                    }}>
-                                                        <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '13px', padding: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{index + 1}</td>
-                                                        <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '13px', padding: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={row.short_description || row.medicine}>{row.short_description || row.medicine}</td>
-                                                        <td style={{ borderRight: '1px solid #e0e0e0', boxSizing: 'border-box' }} className="px-1 py-1">
-                                                            <ClearableTextField
-                                                                size="small"
-                                                                value={row.b}
-                                                                onChange={(val) => handleMedicineFieldChange(row.id, 'b', val.replace(/\D/g, ''))}
-                                                                disabled={isFormDisabled}
-                                                                disableClearable={true}
-                                                                inputProps={{
-                                                                    inputMode: 'numeric',
-                                                                    pattern: '[0-9]*',
-                                                                    maxLength: 10
-                                                                }}
-                                                                onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
-                                                                sx={{
-                                                                    marginBottom: 0,
-                                                                    boxSizing: 'border-box',
-                                                                    '& .MuiOutlinedInput-root': {
-                                                                        height: '100%',
-                                                                        borderRadius: 0,
-                                                                        backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
-                                                                        fontSize: '11px',
-                                                                        boxSizing: 'border-box',
-                                                                        '& fieldset': { border: 'none' }
-                                                                    },
-                                                                    '& .MuiInputBase-input': {
-                                                                        padding: '8px 6px',
-                                                                        textAlign: 'center',
-                                                                        color: isFormDisabled ? '#666' : '#333',
-                                                                        cursor: isFormDisabled ? 'not-allowed' : 'text',
-                                                                        boxSizing: 'border-box'
-                                                                    }
-                                                                }}
-                                                            />
-                                                        </td>
-                                                        <td style={{ borderRight: '1px solid #e0e0e0' }} className="px-1 py-1">
-                                                            <ClearableTextField
-                                                                size="small"
-                                                                value={row.l}
-                                                                onChange={(val) => handleMedicineFieldChange(row.id, 'l', val.replace(/\D/g, ''))}
-                                                                disabled={isFormDisabled}
-                                                                disableClearable={true}
-                                                                inputProps={{
-                                                                    inputMode: 'numeric',
-                                                                    pattern: '[0-9]*',
-                                                                    maxLength: 10
-                                                                }}
-                                                                onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
-                                                                sx={{
-                                                                    marginBottom: 0,
-                                                                    boxSizing: 'border-box',
-                                                                    '& .MuiOutlinedInput-root': {
-                                                                        height: '100%',
-                                                                        borderRadius: 0,
-                                                                        backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
-                                                                        fontSize: '11px',
-                                                                        boxSizing: 'border-box',
-                                                                        '& fieldset': { border: 'none' }
-                                                                    },
-                                                                    '& .MuiInputBase-input': {
-                                                                        padding: '8px 6px',
-                                                                        textAlign: 'center',
-                                                                        color: isFormDisabled ? '#666' : '#333',
-                                                                        cursor: isFormDisabled ? 'not-allowed' : 'text',
-                                                                        boxSizing: 'border-box'
-                                                                    }
-                                                                }}
-                                                            />
-                                                        </td>
-                                                        <td style={{ borderRight: '1px solid #e0e0e0' }} className="px-1 py-1">
-                                                            <ClearableTextField
-                                                                size="small"
-                                                                value={row.d}
-                                                                onChange={(val) => handleMedicineFieldChange(row.id, 'd', val.replace(/\D/g, ''))}
-                                                                disabled={isFormDisabled}
-                                                                disableClearable={true}
-                                                                inputProps={{
-                                                                    inputMode: 'numeric',
-                                                                    pattern: '[0-9]*',
-                                                                    maxLength: 10
-                                                                }}
-                                                                onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
-                                                                sx={{
-                                                                    marginBottom: 0,
-                                                                    boxSizing: 'border-box',
-                                                                    '& .MuiOutlinedInput-root': {
-                                                                        height: '100%',
-                                                                        borderRadius: 0,
-                                                                        backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
-                                                                        fontSize: '11px',
-                                                                        boxSizing: 'border-box',
-                                                                        '& fieldset': { border: 'none' }
-                                                                    },
-                                                                    '& .MuiInputBase-input': {
-                                                                        padding: '8px 6px',
-                                                                        textAlign: 'center',
-                                                                        color: isFormDisabled ? '#666' : '#333',
-                                                                        cursor: isFormDisabled ? 'not-allowed' : 'text',
-                                                                        boxSizing: 'border-box'
-                                                                    }
-                                                                }}
-                                                            />
-                                                        </td>
-                                                        <td style={{ borderRight: '1px solid #e0e0e0', boxSizing: 'border-box' }} className="px-1 py-1">
-                                                            <ClearableTextField
-                                                                size="small"
-                                                                value={row.days}
-                                                                onChange={(val) => handleMedicineFieldChange(row.id, 'days', val.replace(/\D/g, ''))}
-                                                                disabled={isFormDisabled}
-                                                                disableClearable={true}
-                                                                inputProps={{
-                                                                    inputMode: 'numeric',
-                                                                    pattern: '[0-9]*',
-                                                                    maxLength: 10
-                                                                }}
-                                                                onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
-                                                                sx={{
-                                                                    marginBottom: 0,
-                                                                    boxSizing: 'border-box',
-                                                                    '& .MuiOutlinedInput-root': {
-                                                                        height: '100%',
-                                                                        borderRadius: 0,
-                                                                        backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
-                                                                        fontSize: '11px',
-                                                                        boxSizing: 'border-box',
-                                                                        '& fieldset': { border: 'none' }
-                                                                    },
-                                                                    '& .MuiInputBase-input': {
-                                                                        padding: '8px 6px',
-                                                                        textAlign: 'center',
-                                                                        color: isFormDisabled ? '#666' : '#333',
-                                                                        cursor: isFormDisabled ? 'not-allowed' : 'text',
-                                                                        boxSizing: 'border-box'
-                                                                    }
-                                                                }}
-                                                            />
-                                                        </td>
-                                                        <td style={{ borderRight: '1px solid #e0e0e0', boxSizing: 'border-box' }} className="px-1 py-1">
-                                                            <div style={{ position: 'relative', width: '100%', boxSizing: 'border-box' }}>
-                                                                <ClearableTextField
-                                                                    fullWidth
-                                                                    size="small"
-                                                                    value={row.instruction}
-                                                                    onChange={(val) => handleMedicineInstructionChange(row.id, val)}
-                                                                    disabled={isFormDisabled}
-                                                                    placeholder="Enter instruction"
-                                                                    error={row.instruction?.length >= 4000}
-                                                                    helperText={row.instruction?.length >= 4000 ? 'Instruction cannot exceed 4000 characters' : ''}
-                                                                    inputProps={{
-                                                                        maxLength: 4001
-                                                                    }}
-                                                                    sx={{
-                                                                        marginBottom: row.instruction?.length >= 4000 ? '16px' : '0px',
-                                                                        transition: 'margin-bottom 0.2s',
-                                                                        boxSizing: 'border-box',
-                                                                        '& .MuiOutlinedInput-root': {
-                                                                            height: '100%',
-                                                                            borderRadius: 0,
-                                                                            backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
-                                                                            fontSize: '11px',
-                                                                            boxSizing: 'border-box',
-                                                                            '& fieldset': { border: 'none' }
-                                                                        },
-                                                                        '& .MuiFormHelperText-root': {
-                                                                            fontSize: '9px',
-                                                                            margin: '0',
-                                                                            padding: '0 4px',
-                                                                            color: '#666',
-                                                                            whiteSpace: 'nowrap'
-                                                                        },
-                                                                        '& .MuiInputBase-input': {
-                                                                            padding: '8px 10px',
-                                                                            color: isFormDisabled ? '#666' : '#333',
-                                                                            cursor: isFormDisabled ? 'not-allowed' : 'text',
-                                                                            boxSizing: 'border-box'
-                                                                        }
-                                                                    }}
+                                                                    style={{ margin: 0 }}
                                                                 />
-                                                            </div>
-                                                        </td>
-                                                        <td style={{ padding: '6px', textAlign: 'center' }}>
-                                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                                <div
-                                                                    onClick={() => {
-                                                                        if (isFormDisabled) return;
-                                                                        handleRemoveMedicine(row.id);
-                                                                    }}
-                                                                    title="Remove"
-                                                                    style={{
-                                                                        display: 'inline-flex',
-                                                                        alignItems: 'center',
-                                                                        justifyContent: 'center',
-                                                                        width: '24px',
-                                                                        height: '24px',
-                                                                        cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                                                        color: isFormDisabled ? '#9e9e9e' : '#000000',
-                                                                        backgroundColor: 'transparent'
-                                                                    }}
-                                                                    onMouseEnter={(e) => {
-                                                                        if (isFormDisabled) return;
-                                                                        (e.currentTarget as HTMLDivElement).style.color = '#EF5350';
-                                                                    }}
-                                                                    onMouseLeave={(e) => {
-                                                                        (e.currentTarget as HTMLDivElement).style.color = isFormDisabled ? '#9e9e9e' : '#000000';
-                                                                    }}
-                                                                >
-                                                                    <Delete fontSize="small" />
-                                                                </div>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                )}
+                                                                <span style={{
+                                                                    whiteSpace: 'nowrap',
+                                                                    overflow: 'hidden',
+                                                                    textOverflow: 'ellipsis'
+                                                                }}>{opt.label}{isAdded ? ' (Added)' : ''}</span>
+                                                            </label>
+                                                        </React.Fragment>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                                <button
+                                    disabled={isFormDisabled}
+                                    title="Add selected diagnoses"
+                                    style={{
+                                        padding: '0 10px',
+                                        backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '6px',
+                                        cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                        fontSize: '13px',
+                                        height: '38px',
+                                        transition: 'background-color 0.2s'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1565c0';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1976d2';
+                                    }}
+                                    onClick={handleAddDiagnoses}
+                                >
+                                    Add
+                                </button>
+                                <button
+                                    type="button"
+                                    disabled={isFormDisabled}
+                                    title="Add custom diagnosis"
+                                    style={{
+                                        backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
+                                        color: 'white',
+                                        border: 'none',
+                                        padding: '6px',
+                                        borderRadius: '6px',
+                                        cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                        width: '32px',
+                                        height: '38px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        fontSize: '14px',
+                                        transition: 'background-color 0.2s'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1565c0';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1976d2';
+                                    }}
+                                    onClick={handleAddCustomDiagnosis}
+                                >
+                                    <Add fontSize="small" />
+                                </button>
                             </div>
 
-                            {/* Prescription Section */}
-                            {/* Prescription Section */}
-                            <div style={{ marginBottom: '15px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '5px', width: '88%', gap: '8px' }}>
-                                    <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                        Prescription
-                                    </label>
-                                </div>
-
-                                <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', alignItems: 'flex-start' }}>
-                                    <div style={{ position: 'relative', flex: 1 }} ref={rxRef}>
-                                        <ClearableTextField
-                                            fullWidth
-                                            size="small"
-                                            value={prescriptionInput}
-                                            onChange={(val) => {
-                                                if (!isFormDisabled) {
-                                                    setPrescriptionInput(val);
-                                                    if (val.length >= 200) {
-                                                        setPrescriptionError('Prescription cannot exceed 200 characters');
-                                                    } else {
-                                                        setPrescriptionError(null);
-                                                    }
-                                                }
-                                            }}
-                                            disabled={isFormDisabled}
-                                            placeholder="Enter Brand Name / Prescription"
-                                            variant="outlined"
-                                            inputProps={{
-                                                maxLength: 200
-                                            }}
-                                            sx={{
-                                                '& .MuiOutlinedInput-root': {
-                                                    height: '38px',
-                                                    borderRadius: '6px',
-                                                    fontSize: '13px',
-                                                    backgroundColor: isFormDisabled ? '#f5f5f5' : '#ffffff'
-                                                },
-
-                                                /* Default border */
-                                                '& .MuiOutlinedInput-root fieldset': {
-                                                    borderColor: '#B7B7B7',
-                                                    borderWidth: '2px'
-                                                },
-
-                                                /* Hover border */
-                                                '& .MuiOutlinedInput-root:hover fieldset': {
-                                                    borderColor: isFormDisabled ? '#B7B7B7' : '#1E88E5',
-                                                    borderWidth: '2px'
-                                                },
-
-                                                /* Focus border */
-                                                '& .MuiOutlinedInput-root.Mui-focused fieldset': {
-                                                    borderColor: '#1E88E5',
-                                                    borderWidth: '2px'
-                                                },
-
-                                                /* Override error border to be normal gray */
-                                                '& .MuiOutlinedInput-root.Mui-error fieldset': {
-                                                    borderColor: '#B7B7B7',
-                                                },
-                                                '& .MuiOutlinedInput-root.Mui-error:hover fieldset': {
-                                                    borderColor: '#1E88E5',
-                                                },
-
-                                                '& .MuiInputBase-input': {
-                                                    color: isFormDisabled ? '#666' : '#333',
-                                                    cursor: isFormDisabled ? 'not-allowed' : 'text'
-                                                }
-                                            }}
-                                            error={!!prescriptionError}
-                                            helperText={prescriptionError}
-                                        />
-                                        {isRxOpen && rxSuggestions.length > 0 && (
-                                            <div style={{
-                                                position: 'absolute',
-                                                top: '38px',
-                                                left: 0,
-                                                right: 0,
-                                                backgroundColor: 'white',
-                                                border: '1px solid #B7B7B7',
-                                                borderRadius: '6px',
-                                                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                                                zIndex: 1000,
-                                                marginTop: '4px',
-                                                maxHeight: '200px',
-                                                overflowY: 'auto'
+                            {/* Diagnosis Table */}
+                            {diagnosisRows.length > 0 && (
+                                <div
+                                    style={{
+                                        border: '1px solid #ccc',
+                                        borderRadius: '4px',
+                                        overflow: 'hidden',
+                                        opacity: isFormDisabled ? 0.6 : 1
+                                    }}
+                                >
+                                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                        <thead>
+                                            <tr style={{
+                                                backgroundColor: '#1976d2',
+                                                color: 'white',
+                                                fontWeight: 'bold',
+                                                fontSize: '13px'
                                             }}>
-                                                {rxSuggestions.map((suggestion, index) => (
-                                                    <div
-                                                        key={index}
-                                                        onClick={() => {
-                                                            setPrescriptionInput(suggestion);
-                                                            setIsRxOpen(false);
-                                                        }}
-                                                        style={{
-                                                            padding: '8px 12px',
-                                                            cursor: 'pointer',
-                                                            borderBottom: index < rxSuggestions.length - 1 ? '1px solid #eee' : 'none',
-                                                            fontSize: '13px',
-                                                            color: '#333'
-                                                        }}
-                                                        onMouseEnter={(e) => {
-                                                            e.currentTarget.style.backgroundColor = '#f5f5f5';
-                                                        }}
-                                                        onMouseLeave={(e) => {
-                                                            e.currentTarget.style.backgroundColor = 'white';
-                                                        }}
-                                                    >
-                                                        {suggestion}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <button
-                                        type="button"
-                                        onClick={handleAddPrescription}
-                                        disabled={isFormDisabled}
-                                        title="Add prescription"
-                                        style={{
-                                            backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
-                                            color: 'white',
-                                            border: 'none',
-                                            padding: '0 12px',
-                                            borderRadius: '6px',
-                                            cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                            fontSize: '13px',
-                                            height: '38px',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            fontWeight: '500'
-                                        }}
-                                    >
-                                        Add Rx
-                                    </button>
-
-                                    <button
-                                        type="button"
-                                        disabled={isFormDisabled}
-                                        title="Add custom prescription"
-                                        style={{
-                                            backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
-                                            color: 'white',
-                                            border: 'none',
-                                            padding: '6px',
-                                            borderRadius: '6px',
-                                            cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                            width: '32px',
-                                            height: '38px',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            fontSize: '14px',
-                                            transition: 'background-color 0.2s'
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1565c0';
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1976d2';
-                                        }}
-                                        onClick={handleAddCustomPrescription}
-                                    >
-                                        <Add fontSize="small" />
-                                    </button>
-
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowInstructionPopup(true)}
-                                        disabled={isFormDisabled}
-                                        title="Show instruction groups"
-                                        style={{
-                                            backgroundColor: isFormDisabled
-                                                ? '#ccc'
-                                                : (selectedInstructionGroups && selectedInstructionGroups.length > 0
-                                                    ? '#ffc107'
-                                                    : '#1976d2'),
-                                            color: 'white',
-                                            border: 'none',
-                                            padding: '6px',
-                                            borderRadius: '50%',
-                                            cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                            width: '32px',
-                                            height: '38px',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            fontSize: '14px',
-                                            fontWeight: 'bold',
-                                            transition: 'background-color 0.2s'
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            if (!isFormDisabled) {
-                                                e.currentTarget.style.backgroundColor =
-                                                    (selectedInstructionGroups && selectedInstructionGroups.length > 0)
-                                                        ? '#ffb300'
-                                                        : '#1565c0';
-                                            }
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            if (!isFormDisabled) {
-                                                e.currentTarget.style.backgroundColor =
-                                                    (selectedInstructionGroups && selectedInstructionGroups.length > 0)
-                                                        ? '#ffc107'
-                                                        : '#1976d2';
-                                            }
-                                        }}
-                                    >
-                                        i
-                                    </button>
-                                </div>
-
-                                {/* Prescription Table */}
-                                {prescriptionRows.length > 0 && (
-                                    <div
-                                        style={{
-                                            border: '1px solid #ccc',
-                                            borderRadius: '4px',
-                                            overflow: 'hidden',
-                                            overflowX: 'auto',
-                                            opacity: isFormDisabled ? 0.6 : 1,
-                                            width: '100%',
-                                            marginTop: '10px'
-                                        }}
-                                    >
-                                        <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
-                                            <thead>
-                                                <tr style={{
-                                                    backgroundColor: '#1976d2',
-                                                    color: 'white',
-                                                    fontWeight: 'bold',
-                                                    fontSize: '13px'
+                                                <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '60px', textAlign: 'left' }}>Sr.</th>
+                                                <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', textAlign: 'left' }}>Provisional Diagnosis</th>
+                                                <th style={{ padding: '6px', width: '80px', textAlign: 'center' }}>Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {[...diagnosisRows].sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999)).map((row, index) => (
+                                                <tr key={row.id} style={{
+                                                    backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white',
+                                                    borderBottom: '1px solid #e0e0e0'
                                                 }}>
-                                                    <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '50px', textAlign: 'left' }}>Sr.</th>
-                                                    <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '200px', textAlign: 'left' }}>Prescription</th>
-                                                    <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '50px', textAlign: 'center' }}>B</th>
-                                                    <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '50px', textAlign: 'center' }}>L</th>
-                                                    <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '50px', textAlign: 'center' }}>D</th>
-                                                    <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '60px', textAlign: 'center' }}>Days</th>
-                                                    <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: 'auto', textAlign: 'left' }}>Instruction</th>
-                                                    <th style={{ padding: '6px', width: '80px', textAlign: 'center' }}>Action</th>
+                                                    <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '13px' }}>{index + 1}</td>
+                                                    <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '13px' }}>{row.diagnosis}</td>
+                                                    <td style={{ textAlign: 'center' }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                            <div
+                                                                onClick={() => {
+                                                                    if (isFormDisabled) return;
+                                                                    row.value ? handleRemoveDiagnosisFromSelector(row.value) : handleRemoveDiagnosis(row.id);
+                                                                }}
+                                                                title="Remove"
+                                                                style={{
+                                                                    display: 'inline-flex',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'center',
+                                                                    width: '24px',
+                                                                    height: '24px',
+                                                                    cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                                                    color: isFormDisabled ? '#9e9e9e' : '#000000',
+                                                                    backgroundColor: 'transparent'
+                                                                }}
+                                                                onMouseEnter={(e) => {
+                                                                    if (isFormDisabled) return;
+                                                                    (e.currentTarget as HTMLDivElement).style.color = '#EF5350';
+                                                                }}
+                                                                onMouseLeave={(e) => {
+                                                                    (e.currentTarget as HTMLDivElement).style.color = isFormDisabled ? '#9e9e9e' : '#000000';
+                                                                }}
+                                                            >
+                                                                <Delete fontSize="small" />
+                                                            </div>
+                                                        </div>
+                                                    </td>
                                                 </tr>
-                                            </thead>
-                                            <tbody>
-                                                {prescriptionRows.map((row, index) => (
-                                                    <tr key={row.id} style={{
-                                                        backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white',
-                                                        borderBottom: '1px solid #e0e0e0'
-                                                    }}>
-                                                        <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '13px', padding: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{index + 1}</td>
-                                                        <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '13px', padding: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={row.prescription}>{row.prescription}</td>
-                                                        <td style={{ borderRight: '1px solid #e0e0e0', boxSizing: 'border-box' }} className="px-1 py-1">
-                                                            <ClearableTextField
-                                                                size="small"
-                                                                value={row.b}
-                                                                onChange={(val) => handlePrescriptionFieldChange(row.id, 'b', val.replace(/\D/g, ''))}
-                                                                disabled={isFormDisabled}
-                                                                disableClearable={true}
-                                                                inputProps={{
-                                                                    inputMode: 'numeric',
-                                                                    pattern: '[0-9]*',
-                                                                    maxLength: 10
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Medicine Section */}
+                        <div style={{ marginBottom: '15px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '5px', width: '88%', gap: '8px' }}>
+                                <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Medicine</label>
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', alignItems: 'flex-start' }}>
+                                <div style={{ position: 'relative', flex: 1 }} ref={medicinesRef}>
+                                    <div
+                                        onClick={() => !isFormDisabled && setIsMedicinesOpen(!isMedicinesOpen)}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                            height: '38px',
+                                            padding: '4px 8px',
+                                            border: '2px solid #B7B7B7',
+                                            borderRadius: '6px',
+                                            fontSize: '13px',
+                                            fontFamily: "'Roboto', sans-serif",
+                                            fontWeight: 500,
+                                            backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
+                                            cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                            userSelect: 'none',
+                                            opacity: isFormDisabled ? 0.6 : 1
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            (e.currentTarget as HTMLDivElement).style.borderColor = '#1E88E5';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            (e.currentTarget as HTMLDivElement).style.borderColor = '#B7B7B7';
+                                        }}
+                                    >
+                                        <span style={{ color: selectedMedicines.length ? '#000' : '#9e9e9e' }}>
+                                            {selectedMedicines.length === 0 && 'Select Medicines'}
+                                            {selectedMedicines.length === 1 && '1 selected'}
+                                            {selectedMedicines.length > 1 && `${selectedMedicines.length} selected`}
+                                        </span>
+                                        <ArrowDropDown
+                                            style={{
+                                                marginLeft: '8px',
+                                                color: '#666',
+                                                fontSize: '24px',
+                                                transition: 'transform 0.2s',
+                                                transform: isMedicinesOpen ? 'rotate(180deg)' : 'rotate(0deg)'
+                                            }}
+                                        />
+                                    </div>
+                                    {medicinesSelectionError && (
+                                        <p style={{
+                                            color: '#d32f2f',
+                                            fontSize: '0.75rem',
+                                            fontWeight: 400,
+                                            fontFamily: "'Roboto', sans-serif",
+                                            margin: '3px 0 0 0',
+                                            textAlign: 'left'
+                                        }}>
+                                            {medicinesSelectionError}
+                                        </p>
+                                    )}
+
+                                    {isMedicinesOpen && (
+                                        <div style={{
+                                            position: 'absolute',
+                                            top: '100%',
+                                            left: 0,
+                                            right: 0,
+                                            backgroundColor: 'white',
+                                            border: '1px solid #B7B7B7',
+                                            borderRadius: '6px',
+                                            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                                            zIndex: 1000,
+                                            marginTop: '4px'
+                                        }}>
+                                            {/* Search Field inside dropdown */}
+                                            <div style={{ padding: '6px' }}>
+                                                <ClearableTextField
+                                                    fullWidth
+                                                    size="small"
+                                                    value={medicineSearch}
+                                                    onChange={(val) => {
+                                                        setMedicineSearch(val);
+                                                        if (val.length >= 1000) {
+                                                            setMedicineSearchError('Medicine search cannot exceed 1000 characters');
+                                                        } else {
+                                                            setMedicineSearchError(null);
+                                                        }
+                                                    }}
+                                                    placeholder="Search medicines"
+                                                    variant="outlined"
+                                                    error={!!medicineSearchError}
+                                                    helperText={medicineSearchError}
+                                                    inputProps={{
+                                                        maxLength: 1000
+                                                    }}
+                                                    sx={{
+                                                        '& .MuiOutlinedInput-root': {
+                                                            height: medicineSearchError ? 'auto' : '32px',
+                                                            borderRadius: '4px',
+                                                            fontSize: '13px'
+                                                        },
+                                                        '& .MuiFormHelperText-root': {
+                                                            fontSize: '10px',
+                                                            margin: '2px 0 0 0'
+                                                        }
+                                                    }}
+                                                />
+                                            </div>
+
+                                            <div className="medicines-dropdown" style={{ maxHeight: '200px', overflowY: 'auto', padding: '4px 6px', display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', columnGap: '8px', rowGap: '6px' }}>
+                                                {medicinesLoading && (
+                                                    <div style={{ padding: '6px', fontSize: '13px', color: '#777', gridColumn: '1 / -1', textAlign: 'center' }}>
+                                                        Loading medicines...
+                                                    </div>
+                                                )}
+                                                {medicinesError && (
+                                                    <div style={{ padding: '6px', fontSize: '13px', color: '#d32f2f', gridColumn: '1 / -1', textAlign: 'center' }}>
+                                                        {medicinesError}
+                                                        <button
+                                                            onClick={() => {
+                                                                setMedicinesError(null);
+                                                                // Trigger reload by updating a dependency
+                                                                const doctorId = treatmentData?.doctorId || '1';
+                                                                const clinicId = sessionData?.clinicId || '1';
+                                                                medicineService.getActiveMedicinesByDoctorAndClinic(doctorId, clinicId)
+                                                                    .then(setMedicinesOptions)
+                                                                    .catch(e => setMedicinesError(e.message));
+                                                            }}
+                                                            style={{
+                                                                marginLeft: '8px',
+                                                                padding: '2px 6px',
+                                                                fontSize: '10px',
+                                                                backgroundColor: '#1976d2',
+                                                                color: 'white',
+                                                                border: 'none',
+                                                                borderRadius: '3px',
+                                                                cursor: 'pointer'
+                                                            }}
+                                                        >
+                                                            Retry
+                                                        </button>
+                                                    </div>
+                                                )}
+                                                {!medicinesLoading && !medicinesError && filteredMedicines.length === 0 && (
+                                                    <div style={{ padding: '6px', fontSize: '13px', color: '#777', gridColumn: '1 / -1' }}>No medicines found</div>
+                                                )}
+                                                {!medicinesLoading && !medicinesError && filteredMedicines.map((opt, index) => {
+                                                    const checked = selectedMedicines.includes(opt.value);
+                                                    // Check if medicine is already added using short_description mathing the helper logic
+                                                    const shortDesc = opt.short_description?.toLowerCase().trim() || '';
+                                                    const isAdded = medicineRows.some(row =>
+                                                        row.short_description?.toLowerCase().trim() === shortDesc
+                                                    );
+
+                                                    const isFirstUnselected = !checked && index > 0 && selectedMedicines.includes(filteredMedicines[index - 1].value);
+
+                                                    return (
+                                                        <React.Fragment key={opt.value}>
+                                                            {isFirstUnselected && (
+                                                                <div style={{
+                                                                    gridColumn: '1 / -1',
+                                                                    height: '1px',
+                                                                    backgroundColor: '#e0e0e0',
+                                                                    margin: '4px 0'
+                                                                }} />
+                                                            )}
+                                                            <label
+                                                                title={opt.label}
+                                                                style={{
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    gap: '4px',
+                                                                    padding: '4px 2px',
+                                                                    cursor: isAdded ? 'not-allowed' : 'pointer',
+                                                                    fontSize: '13px',
+                                                                    border: 'none',
+                                                                    backgroundColor: (checked || isAdded) ? '#eeeeee' : 'transparent',
+                                                                    borderRadius: '3px',
+                                                                    fontWeight: 400,
+                                                                    minWidth: 0,
+                                                                    opacity: isAdded ? 0.6 : 1
                                                                 }}
-                                                                sx={{
-                                                                    marginBottom: 0,
-                                                                    '& .MuiOutlinedInput-root': {
-                                                                        height: '32px',
-                                                                        borderRadius: 0,
-                                                                        backgroundColor: 'transparent',
-                                                                        fontSize: '11px',
-                                                                        '& fieldset': { border: 'none' }
-                                                                    },
-                                                                    '& .MuiInputBase-input': {
-                                                                        padding: '4px',
-                                                                        textAlign: 'center'
-                                                                    }
-                                                                }}
-                                                            />
-                                                        </td>
-                                                        <td style={{ borderRight: '1px solid #e0e0e0', boxSizing: 'border-box' }} className="px-1 py-1">
-                                                            <ClearableTextField
-                                                                size="small"
-                                                                value={row.l}
-                                                                onChange={(val) => handlePrescriptionFieldChange(row.id, 'l', val.replace(/\D/g, ''))}
-                                                                disabled={isFormDisabled}
-                                                                disableClearable={true}
-                                                                inputProps={{
-                                                                    inputMode: 'numeric',
-                                                                    pattern: '[0-9]*',
-                                                                    maxLength: 10
-                                                                }}
-                                                                sx={{
-                                                                    marginBottom: 0,
-                                                                    '& .MuiOutlinedInput-root': {
-                                                                        height: '32px',
-                                                                        borderRadius: 0,
-                                                                        backgroundColor: 'transparent',
-                                                                        fontSize: '11px',
-                                                                        '& fieldset': { border: 'none' }
-                                                                    },
-                                                                    '& .MuiInputBase-input': {
-                                                                        padding: '4px',
-                                                                        textAlign: 'center'
-                                                                    }
-                                                                }}
-                                                            />
-                                                        </td>
-                                                        <td style={{ borderRight: '1px solid #e0e0e0', boxSizing: 'border-box' }} className="px-1 py-1">
-                                                            <ClearableTextField
-                                                                size="small"
-                                                                value={row.d}
-                                                                onChange={(val) => handlePrescriptionFieldChange(row.id, 'd', val.replace(/\D/g, ''))}
-                                                                disabled={isFormDisabled}
-                                                                disableClearable={true}
-                                                                inputProps={{
-                                                                    inputMode: 'numeric',
-                                                                    pattern: '[0-9]*',
-                                                                    maxLength: 10
-                                                                }}
-                                                                sx={{
-                                                                    marginBottom: 0,
-                                                                    '& .MuiOutlinedInput-root': {
-                                                                        height: '32px',
-                                                                        borderRadius: 0,
-                                                                        backgroundColor: 'transparent',
-                                                                        fontSize: '11px',
-                                                                        '& fieldset': { border: 'none' }
-                                                                    },
-                                                                    '& .MuiInputBase-input': {
-                                                                        padding: '4px',
-                                                                        textAlign: 'center'
-                                                                    }
-                                                                }}
-                                                            />
-                                                        </td>
-                                                        <td style={{ borderRight: '1px solid #e0e0e0', boxSizing: 'border-box' }} className="px-1 py-1">
-                                                            <ClearableTextField
-                                                                size="small"
-                                                                value={row.days}
-                                                                onChange={(val) => handlePrescriptionFieldChange(row.id, 'days', val.replace(/\D/g, ''))}
-                                                                disabled={isFormDisabled}
-                                                                disableClearable={true}
-                                                                inputProps={{
-                                                                    inputMode: 'numeric',
-                                                                    pattern: '[0-9]*',
-                                                                    maxLength: 10
-                                                                }}
-                                                                sx={{
-                                                                    marginBottom: 0,
-                                                                    '& .MuiOutlinedInput-root': {
-                                                                        height: '32px',
-                                                                        borderRadius: 0,
-                                                                        backgroundColor: 'transparent',
-                                                                        fontSize: '11px',
-                                                                        '& fieldset': { border: 'none' }
-                                                                    },
-                                                                    '& .MuiInputBase-input': {
-                                                                        padding: '4px',
-                                                                        textAlign: 'center'
-                                                                    }
-                                                                }}
-                                                            />
-                                                        </td>
-                                                        <td style={{ borderRight: '1px solid #e0e0e0', boxSizing: 'border-box' }} className="px-1 py-1">
+                                                            >
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={checked || isAdded}
+                                                                    disabled={isAdded}
+                                                                    onChange={(e) => {
+                                                                        if (isAdded) return;
+                                                                        setSelectedMedicines(prev => {
+                                                                            setMedicinesSelectionError(null);
+                                                                            if (e.target.checked) {
+                                                                                if (prev.includes(opt.value)) return prev;
+                                                                                return [...prev, opt.value];
+                                                                            } else {
+                                                                                return prev.filter(v => v !== opt.value);
+                                                                            }
+                                                                        });
+                                                                    }}
+                                                                    style={{ margin: 0 }}
+                                                                />
+                                                                <span style={{
+                                                                    whiteSpace: 'nowrap',
+                                                                    overflow: 'hidden',
+                                                                    textOverflow: 'ellipsis'
+                                                                }}>{opt.label}{isAdded ? ' (Added)' : ''}</span>
+                                                            </label>
+                                                        </React.Fragment>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={handleAddMedicine}
+                                    disabled={isFormDisabled}
+                                    title="Add selected medicines"
+                                    style={{
+                                        backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
+                                        color: 'white',
+                                        border: 'none',
+                                        padding: '6px 12px',
+                                        borderRadius: '4px',
+                                        cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                        fontSize: '13px'
+                                    }}
+                                >
+                                    Add
+                                </button>
+                                <button
+                                    type="button"
+                                    disabled={isFormDisabled}
+                                    title="Add custom medicine"
+                                    style={{
+                                        backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
+                                        color: 'white',
+                                        border: 'none',
+                                        padding: '6px',
+                                        borderRadius: '6px',
+                                        cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                        width: '32px',
+                                        height: '38px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        fontSize: '14px',
+                                        transition: 'background-color 0.2s'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1565c0';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1976d2';
+                                    }}
+                                    onClick={handleAddCustomMedicine}
+                                >
+                                    <Add fontSize="small" />
+                                </button>
+                            </div>
+
+                            {/* Medicine Table */}
+                            {medicineRows.length > 0 && (
+                                <div
+                                    style={{
+                                        border: '1px solid #ccc',
+                                        borderRadius: '4px',
+                                        overflow: 'hidden',
+                                        overflowX: 'auto',
+                                        opacity: isFormDisabled ? 0.6 : 1,
+                                        width: '100%'
+                                    }}
+                                >
+                                    <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+                                        <thead>
+                                            <tr style={{
+                                                backgroundColor: '#1976d2',
+                                                color: 'white',
+                                                fontWeight: 'bold',
+                                                fontSize: '13px'
+                                            }}>
+                                                <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '50px', textAlign: 'left' }}>Sr.</th>
+                                                <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '200px', textAlign: 'left' }}>Medicine</th>
+                                                <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '50px', textAlign: 'center' }}>B</th>
+                                                <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '50px', textAlign: 'center' }}>L</th>
+                                                <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '50px', textAlign: 'center' }}>D</th>
+                                                <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '60px', textAlign: 'center' }}>Days</th>
+                                                <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: 'auto', textAlign: 'left' }}>Instruction</th>
+                                                <th style={{ padding: '6px', width: '80px', textAlign: 'center' }}>Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {[...medicineRows].sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999)).map((row, index) => (
+                                                <tr key={row.id} style={{
+                                                    backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white',
+                                                    borderBottom: '1px solid #e0e0e0'
+                                                }}>
+                                                    <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '13px', padding: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{index + 1}</td>
+                                                    <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '13px', padding: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={row.short_description || row.medicine}>{row.short_description || row.medicine}</td>
+                                                    <td style={{ borderRight: '1px solid #e0e0e0', boxSizing: 'border-box' }} className="px-1 py-1">
+                                                        <ClearableTextField
+                                                            size="small"
+                                                            value={row.b}
+                                                            onChange={(val) => handleMedicineFieldChange(row.id, 'b', val.replace(/\D/g, ''))}
+                                                            disabled={isFormDisabled}
+                                                            disableClearable={true}
+                                                            inputProps={{
+                                                                inputMode: 'numeric',
+                                                                pattern: '[0-9]*',
+                                                                maxLength: 10
+                                                            }}
+                                                            onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
+                                                            sx={{
+                                                                marginBottom: 0,
+                                                                boxSizing: 'border-box',
+                                                                '& .MuiOutlinedInput-root': {
+                                                                    height: '100%',
+                                                                    borderRadius: 0,
+                                                                    backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
+                                                                    fontSize: '11px',
+                                                                    boxSizing: 'border-box',
+                                                                    '& fieldset': { border: 'none' }
+                                                                },
+                                                                '& .MuiInputBase-input': {
+                                                                    padding: '8px 6px',
+                                                                    textAlign: 'center',
+                                                                    color: isFormDisabled ? '#666' : '#333',
+                                                                    cursor: isFormDisabled ? 'not-allowed' : 'text',
+                                                                    boxSizing: 'border-box'
+                                                                }
+                                                            }}
+                                                        />
+                                                    </td>
+                                                    <td style={{ borderRight: '1px solid #e0e0e0' }} className="px-1 py-1">
+                                                        <ClearableTextField
+                                                            size="small"
+                                                            value={row.l}
+                                                            onChange={(val) => handleMedicineFieldChange(row.id, 'l', val.replace(/\D/g, ''))}
+                                                            disabled={isFormDisabled}
+                                                            disableClearable={true}
+                                                            inputProps={{
+                                                                inputMode: 'numeric',
+                                                                pattern: '[0-9]*',
+                                                                maxLength: 10
+                                                            }}
+                                                            onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
+                                                            sx={{
+                                                                marginBottom: 0,
+                                                                boxSizing: 'border-box',
+                                                                '& .MuiOutlinedInput-root': {
+                                                                    height: '100%',
+                                                                    borderRadius: 0,
+                                                                    backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
+                                                                    fontSize: '11px',
+                                                                    boxSizing: 'border-box',
+                                                                    '& fieldset': { border: 'none' }
+                                                                },
+                                                                '& .MuiInputBase-input': {
+                                                                    padding: '8px 6px',
+                                                                    textAlign: 'center',
+                                                                    color: isFormDisabled ? '#666' : '#333',
+                                                                    cursor: isFormDisabled ? 'not-allowed' : 'text',
+                                                                    boxSizing: 'border-box'
+                                                                }
+                                                            }}
+                                                        />
+                                                    </td>
+                                                    <td style={{ borderRight: '1px solid #e0e0e0' }} className="px-1 py-1">
+                                                        <ClearableTextField
+                                                            size="small"
+                                                            value={row.d}
+                                                            onChange={(val) => handleMedicineFieldChange(row.id, 'd', val.replace(/\D/g, ''))}
+                                                            disabled={isFormDisabled}
+                                                            disableClearable={true}
+                                                            inputProps={{
+                                                                inputMode: 'numeric',
+                                                                pattern: '[0-9]*',
+                                                                maxLength: 10
+                                                            }}
+                                                            onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
+                                                            sx={{
+                                                                marginBottom: 0,
+                                                                boxSizing: 'border-box',
+                                                                '& .MuiOutlinedInput-root': {
+                                                                    height: '100%',
+                                                                    borderRadius: 0,
+                                                                    backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
+                                                                    fontSize: '11px',
+                                                                    boxSizing: 'border-box',
+                                                                    '& fieldset': { border: 'none' }
+                                                                },
+                                                                '& .MuiInputBase-input': {
+                                                                    padding: '8px 6px',
+                                                                    textAlign: 'center',
+                                                                    color: isFormDisabled ? '#666' : '#333',
+                                                                    cursor: isFormDisabled ? 'not-allowed' : 'text',
+                                                                    boxSizing: 'border-box'
+                                                                }
+                                                            }}
+                                                        />
+                                                    </td>
+                                                    <td style={{ borderRight: '1px solid #e0e0e0', boxSizing: 'border-box' }} className="px-1 py-1">
+                                                        <ClearableTextField
+                                                            size="small"
+                                                            value={row.days}
+                                                            onChange={(val) => handleMedicineFieldChange(row.id, 'days', val.replace(/\D/g, ''))}
+                                                            disabled={isFormDisabled}
+                                                            disableClearable={true}
+                                                            inputProps={{
+                                                                inputMode: 'numeric',
+                                                                pattern: '[0-9]*',
+                                                                maxLength: 10
+                                                            }}
+                                                            onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
+                                                            sx={{
+                                                                marginBottom: 0,
+                                                                boxSizing: 'border-box',
+                                                                '& .MuiOutlinedInput-root': {
+                                                                    height: '100%',
+                                                                    borderRadius: 0,
+                                                                    backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
+                                                                    fontSize: '11px',
+                                                                    boxSizing: 'border-box',
+                                                                    '& fieldset': { border: 'none' }
+                                                                },
+                                                                '& .MuiInputBase-input': {
+                                                                    padding: '8px 6px',
+                                                                    textAlign: 'center',
+                                                                    color: isFormDisabled ? '#666' : '#333',
+                                                                    cursor: isFormDisabled ? 'not-allowed' : 'text',
+                                                                    boxSizing: 'border-box'
+                                                                }
+                                                            }}
+                                                        />
+                                                    </td>
+                                                    <td style={{ borderRight: '1px solid #e0e0e0', boxSizing: 'border-box' }} className="px-1 py-1">
+                                                        <div style={{ position: 'relative', width: '100%', boxSizing: 'border-box' }}>
                                                             <ClearableTextField
                                                                 fullWidth
                                                                 size="small"
                                                                 value={row.instruction}
-                                                                onChange={(val) => handlePrescriptionInstructionChange(row.id, val)}
+                                                                onChange={(val) => handleMedicineInstructionChange(row.id, val)}
                                                                 disabled={isFormDisabled}
-                                                                placeholder="Instruction"
+                                                                placeholder="Enter instruction"
+                                                                error={row.instruction?.length >= 4000}
+                                                                helperText={row.instruction?.length >= 4000 ? 'Instruction cannot exceed 4000 characters' : ''}
+                                                                inputProps={{
+                                                                    maxLength: 4001
+                                                                }}
                                                                 sx={{
-                                                                    marginBottom: 0,
+                                                                    marginBottom: row.instruction?.length >= 4000 ? '16px' : '0px',
+                                                                    transition: 'margin-bottom 0.2s',
+                                                                    boxSizing: 'border-box',
                                                                     '& .MuiOutlinedInput-root': {
                                                                         height: '100%',
                                                                         borderRadius: 0,
-                                                                        backgroundColor: 'transparent',
+                                                                        backgroundColor: isFormDisabled ? '#f5f5f5' : 'transparent',
                                                                         fontSize: '11px',
+                                                                        boxSizing: 'border-box',
                                                                         '& fieldset': { border: 'none' }
                                                                     },
+                                                                    '& .MuiFormHelperText-root': {
+                                                                        fontSize: '9px',
+                                                                        margin: '0',
+                                                                        padding: '0 4px',
+                                                                        color: '#666',
+                                                                        whiteSpace: 'nowrap'
+                                                                    },
                                                                     '& .MuiInputBase-input': {
-                                                                        padding: '8px 10px'
+                                                                        padding: '8px 10px',
+                                                                        color: isFormDisabled ? '#666' : '#333',
+                                                                        cursor: isFormDisabled ? 'not-allowed' : 'text',
+                                                                        boxSizing: 'border-box'
                                                                     }
                                                                 }}
                                                             />
-                                                        </td>
-                                                        <td style={{ padding: '6px' }}>
-                                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                                <div
-                                                                    onClick={() => !isFormDisabled && handleRemovePrescription(row.id)}
-                                                                    title="Remove"
-                                                                    style={{
-                                                                        display: 'inline-flex',
-                                                                        alignItems: 'center',
-                                                                        justifyContent: 'center',
-                                                                        width: '24px',
-                                                                        height: '24px',
-                                                                        cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                                                        color: isFormDisabled ? '#9e9e9e' : '#000000',
-                                                                        backgroundColor: 'transparent'
-                                                                    }}
-                                                                    onMouseEnter={(e) => {
-                                                                        if (!isFormDisabled) (e.currentTarget as HTMLDivElement).style.color = '#EF5350';
-                                                                    }}
-                                                                    onMouseLeave={(e) => {
-                                                                        if (!isFormDisabled) (e.currentTarget as HTMLDivElement).style.color = '#000000';
-                                                                    }}
-                                                                >
-                                                                    <Delete fontSize="small" />
-                                                                </div>
+                                                        </div>
+                                                    </td>
+                                                    <td style={{ padding: '6px', textAlign: 'center' }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                            <div
+                                                                onClick={() => {
+                                                                    if (isFormDisabled) return;
+                                                                    handleRemoveMedicine(row.id);
+                                                                }}
+                                                                title="Remove"
+                                                                style={{
+                                                                    display: 'inline-flex',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'center',
+                                                                    width: '24px',
+                                                                    height: '24px',
+                                                                    cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                                                    color: isFormDisabled ? '#9e9e9e' : '#000000',
+                                                                    backgroundColor: 'transparent'
+                                                                }}
+                                                                onMouseEnter={(e) => {
+                                                                    if (isFormDisabled) return;
+                                                                    (e.currentTarget as HTMLDivElement).style.color = '#EF5350';
+                                                                }}
+                                                                onMouseLeave={(e) => {
+                                                                    (e.currentTarget as HTMLDivElement).style.color = isFormDisabled ? '#9e9e9e' : '#000000';
+                                                                }}
+                                                            >
+                                                                <Delete fontSize="small" />
                                                             </div>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                )}
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Prescription Section */}
+                        {/* Prescription Section */}
+                        <div style={{ marginBottom: '15px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '5px', width: '88%', gap: '8px' }}>
+                                <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                                    Prescription
+                                </label>
                             </div>
 
-
-                            {/* Previous Visit Section */}
-                            <div style={{ marginBottom: '15px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '5px', width: '100%', gap: '8px' }}>
-                                    <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Prescriptions suggested in previous visit</label>
-                                    <div
-                                        onClick={() => setShowPreviousVisit(!showPreviousVisit)}
-                                        title={showPreviousVisit ? 'Hide previous visit prescriptions' : 'Show previous visit prescriptions'}
-                                        style={{
-                                            cursor: 'pointer',
-                                            fontSize: '13px',
-                                            color: '#000000',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            height: '20px',
-                                            width: '20px',
-                                            lineHeight: '1'
+                            <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', alignItems: 'flex-start' }}>
+                                <div style={{ position: 'relative', flex: 1 }} ref={rxRef}>
+                                    <ClearableTextField
+                                        fullWidth
+                                        size="small"
+                                        value={prescriptionInput}
+                                        onChange={(val) => {
+                                            if (!isFormDisabled) {
+                                                setPrescriptionInput(val);
+                                                if (val.length >= 200) {
+                                                    setPrescriptionError('Prescription cannot exceed 200 characters');
+                                                } else {
+                                                    setPrescriptionError(null);
+                                                }
+                                            }
                                         }}
-                                    >
-                                        {showPreviousVisit ? '▲' : '▼'}
-                                    </div>
+                                        disabled={isFormDisabled}
+                                        placeholder="Enter Brand Name / Prescription"
+                                        variant="outlined"
+                                        inputProps={{
+                                            maxLength: 200
+                                        }}
+                                        sx={{
+                                            '& .MuiOutlinedInput-root': {
+                                                height: '38px',
+                                                borderRadius: '6px',
+                                                fontSize: '13px',
+                                                backgroundColor: isFormDisabled ? '#f5f5f5' : '#ffffff'
+                                            },
+
+                                            /* Default border */
+                                            '& .MuiOutlinedInput-root fieldset': {
+                                                borderColor: '#B7B7B7',
+                                                borderWidth: '2px'
+                                            },
+
+                                            /* Hover border */
+                                            '& .MuiOutlinedInput-root:hover fieldset': {
+                                                borderColor: isFormDisabled ? '#B7B7B7' : '#1E88E5',
+                                                borderWidth: '2px'
+                                            },
+
+                                            /* Focus border */
+                                            '& .MuiOutlinedInput-root.Mui-focused fieldset': {
+                                                borderColor: '#1E88E5',
+                                                borderWidth: '2px'
+                                            },
+
+                                            /* Override error border to be normal gray */
+                                            '& .MuiOutlinedInput-root.Mui-error fieldset': {
+                                                borderColor: '#B7B7B7',
+                                            },
+                                            '& .MuiOutlinedInput-root.Mui-error:hover fieldset': {
+                                                borderColor: '#1E88E5',
+                                            },
+
+                                            '& .MuiInputBase-input': {
+                                                color: isFormDisabled ? '#666' : '#333',
+                                                cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                            }
+                                        }}
+                                        error={!!prescriptionError}
+                                        helperText={prescriptionError}
+                                    />
+                                    {isRxOpen && rxSuggestions.length > 0 && (
+                                        <div style={{
+                                            position: 'absolute',
+                                            top: '38px',
+                                            left: 0,
+                                            right: 0,
+                                            backgroundColor: 'white',
+                                            border: '1px solid #B7B7B7',
+                                            borderRadius: '6px',
+                                            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                                            zIndex: 1000,
+                                            marginTop: '4px',
+                                            maxHeight: '200px',
+                                            overflowY: 'auto'
+                                        }}>
+                                            {rxSuggestions.map((suggestion, index) => (
+                                                <div
+                                                    key={index}
+                                                    onClick={() => {
+                                                        setPrescriptionInput(suggestion);
+                                                        setIsRxOpen(false);
+                                                    }}
+                                                    style={{
+                                                        padding: '8px 12px',
+                                                        cursor: 'pointer',
+                                                        borderBottom: index < rxSuggestions.length - 1 ? '1px solid #eee' : 'none',
+                                                        fontSize: '13px',
+                                                        color: '#333'
+                                                    }}
+                                                    onMouseEnter={(e) => {
+                                                        e.currentTarget.style.backgroundColor = '#f5f5f5';
+                                                    }}
+                                                    onMouseLeave={(e) => {
+                                                        e.currentTarget.style.backgroundColor = 'white';
+                                                    }}
+                                                >
+                                                    {suggestion}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
 
-                                {/* Previous Visit Prescriptions Table */}
-                                {showPreviousVisit && (
-                                    <>
-                                        {previousVisitPrescriptions.length > 0 ? (
-                                            <div style={{ border: '1px solid #ccc', borderRadius: '4px', overflow: 'hidden' }}>
-                                                <div style={{
+                                <button
+                                    type="button"
+                                    onClick={handleAddPrescription}
+                                    disabled={isFormDisabled}
+                                    title="Add prescription"
+                                    style={{
+                                        backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
+                                        color: 'white',
+                                        border: 'none',
+                                        padding: '0 12px',
+                                        borderRadius: '6px',
+                                        cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                        fontSize: '13px',
+                                        height: '38px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        fontWeight: '500'
+                                    }}
+                                >
+                                    Add Rx
+                                </button>
+
+                                <button
+                                    type="button"
+                                    disabled={isFormDisabled}
+                                    title="Add custom prescription"
+                                    style={{
+                                        backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
+                                        color: 'white',
+                                        border: 'none',
+                                        padding: '6px',
+                                        borderRadius: '6px',
+                                        cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                        width: '32px',
+                                        height: '38px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        fontSize: '14px',
+                                        transition: 'background-color 0.2s'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1565c0';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1976d2';
+                                    }}
+                                    onClick={handleAddCustomPrescription}
+                                >
+                                    <Add fontSize="small" />
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => setShowInstructionPopup(true)}
+                                    disabled={isFormDisabled}
+                                    title="Show instruction groups"
+                                    style={{
+                                        backgroundColor: isFormDisabled
+                                            ? '#ccc'
+                                            : (selectedInstructionGroups && selectedInstructionGroups.length > 0
+                                                ? '#ffc107'
+                                                : '#1976d2'),
+                                        color: 'white',
+                                        border: 'none',
+                                        padding: '6px',
+                                        borderRadius: '50%',
+                                        cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                        width: '32px',
+                                        height: '38px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        fontSize: '14px',
+                                        fontWeight: 'bold',
+                                        transition: 'background-color 0.2s'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        if (!isFormDisabled) {
+                                            e.currentTarget.style.backgroundColor =
+                                                (selectedInstructionGroups && selectedInstructionGroups.length > 0)
+                                                    ? '#ffb300'
+                                                    : '#1565c0';
+                                        }
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        if (!isFormDisabled) {
+                                            e.currentTarget.style.backgroundColor =
+                                                (selectedInstructionGroups && selectedInstructionGroups.length > 0)
+                                                    ? '#ffc107'
+                                                    : '#1976d2';
+                                        }
+                                    }}
+                                >
+                                    i
+                                </button>
+                            </div>
+
+                            {/* Prescription Table */}
+                            {prescriptionRows.length > 0 && (
+                                <div
+                                    style={{
+                                        border: '1px solid #ccc',
+                                        borderRadius: '4px',
+                                        overflow: 'hidden',
+                                        overflowX: 'auto',
+                                        opacity: isFormDisabled ? 0.6 : 1,
+                                        width: '100%',
+                                        marginTop: '10px'
+                                    }}
+                                >
+                                    <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+                                        <thead>
+                                            <tr style={{
+                                                backgroundColor: '#1976d2',
+                                                color: 'white',
+                                                fontWeight: 'bold',
+                                                fontSize: '13px'
+                                            }}>
+                                                <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '50px', textAlign: 'left' }}>Sr.</th>
+                                                <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '200px', textAlign: 'left' }}>Prescription</th>
+                                                <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '50px', textAlign: 'center' }}>B</th>
+                                                <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '50px', textAlign: 'center' }}>L</th>
+                                                <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '50px', textAlign: 'center' }}>D</th>
+                                                <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '60px', textAlign: 'center' }}>Days</th>
+                                                <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: 'auto', textAlign: 'left' }}>Instruction</th>
+                                                <th style={{ padding: '6px', width: '80px', textAlign: 'center' }}>Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {prescriptionRows.map((row, index) => (
+                                                <tr key={row.id} style={{
+                                                    backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white',
+                                                    borderBottom: '1px solid #e0e0e0'
+                                                }}>
+                                                    <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '13px', padding: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{index + 1}</td>
+                                                    <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '13px', padding: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={row.prescription}>{row.prescription}</td>
+                                                    <td style={{ borderRight: '1px solid #e0e0e0', boxSizing: 'border-box' }} className="px-1 py-1">
+                                                        <ClearableTextField
+                                                            size="small"
+                                                            value={row.b}
+                                                            onChange={(val) => handlePrescriptionFieldChange(row.id, 'b', val.replace(/\D/g, ''))}
+                                                            disabled={isFormDisabled}
+                                                            disableClearable={true}
+                                                            inputProps={{
+                                                                inputMode: 'numeric',
+                                                                pattern: '[0-9]*',
+                                                                maxLength: 10
+                                                            }}
+                                                            sx={{
+                                                                marginBottom: 0,
+                                                                '& .MuiOutlinedInput-root': {
+                                                                    height: '32px',
+                                                                    borderRadius: 0,
+                                                                    backgroundColor: 'transparent',
+                                                                    fontSize: '11px',
+                                                                    '& fieldset': { border: 'none' }
+                                                                },
+                                                                '& .MuiInputBase-input': {
+                                                                    padding: '4px',
+                                                                    textAlign: 'center'
+                                                                }
+                                                            }}
+                                                        />
+                                                    </td>
+                                                    <td style={{ borderRight: '1px solid #e0e0e0', boxSizing: 'border-box' }} className="px-1 py-1">
+                                                        <ClearableTextField
+                                                            size="small"
+                                                            value={row.l}
+                                                            onChange={(val) => handlePrescriptionFieldChange(row.id, 'l', val.replace(/\D/g, ''))}
+                                                            disabled={isFormDisabled}
+                                                            disableClearable={true}
+                                                            inputProps={{
+                                                                inputMode: 'numeric',
+                                                                pattern: '[0-9]*',
+                                                                maxLength: 10
+                                                            }}
+                                                            sx={{
+                                                                marginBottom: 0,
+                                                                '& .MuiOutlinedInput-root': {
+                                                                    height: '32px',
+                                                                    borderRadius: 0,
+                                                                    backgroundColor: 'transparent',
+                                                                    fontSize: '11px',
+                                                                    '& fieldset': { border: 'none' }
+                                                                },
+                                                                '& .MuiInputBase-input': {
+                                                                    padding: '4px',
+                                                                    textAlign: 'center'
+                                                                }
+                                                            }}
+                                                        />
+                                                    </td>
+                                                    <td style={{ borderRight: '1px solid #e0e0e0', boxSizing: 'border-box' }} className="px-1 py-1">
+                                                        <ClearableTextField
+                                                            size="small"
+                                                            value={row.d}
+                                                            onChange={(val) => handlePrescriptionFieldChange(row.id, 'd', val.replace(/\D/g, ''))}
+                                                            disabled={isFormDisabled}
+                                                            disableClearable={true}
+                                                            inputProps={{
+                                                                inputMode: 'numeric',
+                                                                pattern: '[0-9]*',
+                                                                maxLength: 10
+                                                            }}
+                                                            sx={{
+                                                                marginBottom: 0,
+                                                                '& .MuiOutlinedInput-root': {
+                                                                    height: '32px',
+                                                                    borderRadius: 0,
+                                                                    backgroundColor: 'transparent',
+                                                                    fontSize: '11px',
+                                                                    '& fieldset': { border: 'none' }
+                                                                },
+                                                                '& .MuiInputBase-input': {
+                                                                    padding: '4px',
+                                                                    textAlign: 'center'
+                                                                }
+                                                            }}
+                                                        />
+                                                    </td>
+                                                    <td style={{ borderRight: '1px solid #e0e0e0', boxSizing: 'border-box' }} className="px-1 py-1">
+                                                        <ClearableTextField
+                                                            size="small"
+                                                            value={row.days}
+                                                            onChange={(val) => handlePrescriptionFieldChange(row.id, 'days', val.replace(/\D/g, ''))}
+                                                            disabled={isFormDisabled}
+                                                            disableClearable={true}
+                                                            inputProps={{
+                                                                inputMode: 'numeric',
+                                                                pattern: '[0-9]*',
+                                                                maxLength: 10
+                                                            }}
+                                                            sx={{
+                                                                marginBottom: 0,
+                                                                '& .MuiOutlinedInput-root': {
+                                                                    height: '32px',
+                                                                    borderRadius: 0,
+                                                                    backgroundColor: 'transparent',
+                                                                    fontSize: '11px',
+                                                                    '& fieldset': { border: 'none' }
+                                                                },
+                                                                '& .MuiInputBase-input': {
+                                                                    padding: '4px',
+                                                                    textAlign: 'center'
+                                                                }
+                                                            }}
+                                                        />
+                                                    </td>
+                                                    <td style={{ borderRight: '1px solid #e0e0e0', boxSizing: 'border-box' }} className="px-1 py-1">
+                                                        <ClearableTextField
+                                                            fullWidth
+                                                            size="small"
+                                                            value={row.instruction}
+                                                            onChange={(val) => handlePrescriptionInstructionChange(row.id, val)}
+                                                            disabled={isFormDisabled}
+                                                            placeholder="Instruction"
+                                                            sx={{
+                                                                marginBottom: 0,
+                                                                '& .MuiOutlinedInput-root': {
+                                                                    height: '100%',
+                                                                    borderRadius: 0,
+                                                                    backgroundColor: 'transparent',
+                                                                    fontSize: '11px',
+                                                                    '& fieldset': { border: 'none' }
+                                                                },
+                                                                '& .MuiInputBase-input': {
+                                                                    padding: '8px 10px'
+                                                                }
+                                                            }}
+                                                        />
+                                                    </td>
+                                                    <td style={{ padding: '6px' }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                            <div
+                                                                onClick={() => !isFormDisabled && handleRemovePrescription(row.id)}
+                                                                title="Remove"
+                                                                style={{
+                                                                    display: 'inline-flex',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'center',
+                                                                    width: '24px',
+                                                                    height: '24px',
+                                                                    cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                                                    color: isFormDisabled ? '#9e9e9e' : '#000000',
+                                                                    backgroundColor: 'transparent'
+                                                                }}
+                                                                onMouseEnter={(e) => {
+                                                                    if (!isFormDisabled) (e.currentTarget as HTMLDivElement).style.color = '#EF5350';
+                                                                }}
+                                                                onMouseLeave={(e) => {
+                                                                    if (!isFormDisabled) (e.currentTarget as HTMLDivElement).style.color = '#000000';
+                                                                }}
+                                                            >
+                                                                <Delete fontSize="small" />
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </div>
+
+
+                        {/* Previous Visit Section */}
+                        <div style={{ marginBottom: '15px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '5px', width: '100%', gap: '8px' }}>
+                                <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Prescriptions suggested in previous visit</label>
+                                <div
+                                    onClick={() => setShowPreviousVisit(!showPreviousVisit)}
+                                    title={showPreviousVisit ? 'Hide previous visit prescriptions' : 'Show previous visit prescriptions'}
+                                    style={{
+                                        cursor: 'pointer',
+                                        fontSize: '13px',
+                                        color: '#000000',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        height: '20px',
+                                        width: '20px',
+                                        lineHeight: '1'
+                                    }}
+                                >
+                                    {showPreviousVisit ? '▲' : '▼'}
+                                </div>
+                            </div>
+
+                            {/* Previous Visit Prescriptions Table */}
+                            {showPreviousVisit && (
+                                <>
+                                    {previousVisitPrescriptions.length > 0 ? (
+                                        <div style={{ border: '1px solid #ccc', borderRadius: '4px', overflow: 'hidden' }}>
+                                            <div style={{
+                                                display: 'grid',
+                                                gridTemplateColumns: '50px 1fr 50px 50px 50px 50px 1fr' as const,
+                                                backgroundColor: '#f5f5f5',
+                                                color: '#666',
+                                                fontWeight: 'bold',
+                                                fontSize: '11px',
+                                                borderBottom: '1px solid #ccc'
+                                            }}>
+                                                <div style={{ padding: '6px', borderRight: '1px solid #ccc' }}>Sr.</div>
+                                                <div style={{ padding: '6px', borderRight: '1px solid #ccc' }}>Prescriptions</div>
+                                                <div style={{ padding: '6px', borderRight: '1px solid #ccc' }}>B</div>
+                                                <div style={{ padding: '6px', borderRight: '1px solid #ccc' }}>L</div>
+                                                <div style={{ padding: '6px', borderRight: '1px solid #ccc' }}>D</div>
+                                                <div style={{ padding: '6px', borderRight: '1px solid #ccc' }}>Days</div>
+                                                <div style={{ padding: '6px' }}>Instruction</div>
+                                            </div>
+                                            {previousVisitPrescriptions.map((row, index) => (
+                                                <div key={row.id} style={{
                                                     display: 'grid',
                                                     gridTemplateColumns: '50px 1fr 50px 50px 50px 50px 1fr' as const,
                                                     backgroundColor: '#f5f5f5',
-                                                    color: '#666',
-                                                    fontWeight: 'bold',
-                                                    fontSize: '11px',
                                                     borderBottom: '1px solid #ccc'
                                                 }}>
-                                                    <div style={{ padding: '6px', borderRight: '1px solid #ccc' }}>Sr.</div>
-                                                    <div style={{ padding: '6px', borderRight: '1px solid #ccc' }}>Prescriptions</div>
-                                                    <div style={{ padding: '6px', borderRight: '1px solid #ccc' }}>B</div>
-                                                    <div style={{ padding: '6px', borderRight: '1px solid #ccc' }}>L</div>
-                                                    <div style={{ padding: '6px', borderRight: '1px solid #ccc' }}>D</div>
-                                                    <div style={{ padding: '6px', borderRight: '1px solid #ccc' }}>Days</div>
-                                                    <div style={{ padding: '6px' }}>Instruction</div>
+                                                    <div style={{ padding: '6px', borderRight: '1px solid #ccc', fontSize: '13px', color: '#666' }}>{index + 1}</div>
+                                                    <div style={{ padding: '6px', borderRight: '1px solid #ccc', fontSize: '13px', color: '#666' }}>{row.prescription}</div>
+                                                    <div style={{ padding: '6px', borderRight: '1px solid #ccc', fontSize: '13px', color: '#666', textAlign: 'center' }}>{row.b}</div>
+                                                    <div style={{ padding: '6px', borderRight: '1px solid #ccc', fontSize: '13px', color: '#666', textAlign: 'center' }}>{row.l}</div>
+                                                    <div style={{ padding: '6px', borderRight: '1px solid #ccc', fontSize: '13px', color: '#666', textAlign: 'center' }}>{row.d}</div>
+                                                    <div style={{ padding: '6px', borderRight: '1px solid #ccc', fontSize: '13px', color: '#666', textAlign: 'center' }}>{row.days}</div>
+                                                    <div style={{ padding: '6px', fontSize: '13px', color: '#666' }}>{row.instruction}</div>
                                                 </div>
-                                                {previousVisitPrescriptions.map((row, index) => (
-                                                    <div key={row.id} style={{
-                                                        display: 'grid',
-                                                        gridTemplateColumns: '50px 1fr 50px 50px 50px 50px 1fr' as const,
-                                                        backgroundColor: '#f5f5f5',
-                                                        borderBottom: '1px solid #ccc'
-                                                    }}>
-                                                        <div style={{ padding: '6px', borderRight: '1px solid #ccc', fontSize: '13px', color: '#666' }}>{index + 1}</div>
-                                                        <div style={{ padding: '6px', borderRight: '1px solid #ccc', fontSize: '13px', color: '#666' }}>{row.prescription}</div>
-                                                        <div style={{ padding: '6px', borderRight: '1px solid #ccc', fontSize: '13px', color: '#666', textAlign: 'center' }}>{row.b}</div>
-                                                        <div style={{ padding: '6px', borderRight: '1px solid #ccc', fontSize: '13px', color: '#666', textAlign: 'center' }}>{row.l}</div>
-                                                        <div style={{ padding: '6px', borderRight: '1px solid #ccc', fontSize: '13px', color: '#666', textAlign: 'center' }}>{row.d}</div>
-                                                        <div style={{ padding: '6px', borderRight: '1px solid #ccc', fontSize: '13px', color: '#666', textAlign: 'center' }}>{row.days}</div>
-                                                        <div style={{ padding: '6px', fontSize: '13px', color: '#666' }}>{row.instruction}</div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        ) : (
-                                            <div style={{
-                                                padding: '10px',
-                                                textAlign: 'center',
-                                                color: '#666',
-                                                fontSize: '13px',
-                                                border: '1px solid #ccc',
-                                                borderRadius: '4px',
-                                                backgroundColor: '#f5f5f5'
-                                            }}>
-                                                No Prescriptions suggested in previous visit.
-                                            </div>
-                                        )}
-                                    </>
-                                )}
-                            </div>
-
-                            {/* Investigation Section */}
-                            <div style={{ marginBottom: '15px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '5px', width: '88%', gap: '8px' }}>
-                                    <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Investigation</label>
-                                </div>
-
-                                <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-                                    <div style={{ flex: 1, position: 'relative' }} ref={investigationsRef}>
-                                        <div
-                                            style={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'space-between',
-                                                height: '38px',
-                                                padding: '4px 8px',
-                                                border: '2px solid #B7B7B7',
-                                                borderRadius: '6px',
-                                                fontSize: '13px',
-                                                fontFamily: "'Roboto', sans-serif",
-                                                fontWeight: 500,
-                                                backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
-                                                cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                                userSelect: 'none',
-                                                opacity: isFormDisabled ? 0.6 : 1
-                                            }}
-                                            onClick={() => !isFormDisabled && setIsInvestigationsOpen(!isInvestigationsOpen)}
-                                            onMouseEnter={(e) => {
-                                                (e.currentTarget as HTMLDivElement).style.borderColor = '#1E88E5';
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                (e.currentTarget as HTMLDivElement).style.borderColor = '#B7B7B7';
-                                            }}
-                                        >
-                                            <span style={{ color: selectedInvestigations.length > 0 ? '#000' : '#9e9e9e' }}>
-                                                {selectedInvestigations.length > 0
-                                                    ? `${selectedInvestigations.length} investigation selected`
-                                                    : 'Select Investigation'
-                                                }
-                                            </span>
-                                            <ArrowDropDown
-                                                style={{
-                                                    marginLeft: '8px',
-                                                    color: '#666',
-                                                    fontSize: '24px',
-                                                    transition: 'transform 0.2s',
-                                                    transform: isInvestigationsOpen ? 'rotate(180deg)' : 'rotate(0deg)'
-                                                }}
-                                            />
+                                            ))}
                                         </div>
-
-                                        {investigationsSelectionError && (
-                                            <p style={{
-                                                color: '#d32f2f',
-                                                fontSize: '0.75rem',
-                                                fontWeight: 400,
-                                                fontFamily: "'Roboto', sans-serif",
-                                                margin: '3px 0 0 0',
-                                                textAlign: 'left'
-                                            }}>
-                                                {investigationsSelectionError}
-                                            </p>
-                                        )}
-
-                                        {isInvestigationsOpen && (
-                                            <div style={{
-                                                position: 'absolute',
-                                                top: '38px',
-                                                left: 0,
-                                                right: 0,
-                                                backgroundColor: 'white',
-                                                border: '1px solid #B7B7B7',
-                                                borderRadius: '6px',
-                                                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                                                zIndex: 1000,
-                                                marginTop: '4px',
-                                                maxHeight: '300px',
-                                                overflow: 'hidden'
-                                            }}>
-                                                <div style={{ padding: '6px' }}>
-                                                    <ClearableTextField
-                                                        fullWidth
-                                                        size="small"
-                                                        value={investigationSearch}
-                                                        onChange={(val) => {
-                                                            if (val.length >= 1000) {
-                                                                setInvestigationSearchError('Investigation search cannot exceed 1000 characters');
-                                                            } else {
-                                                                setInvestigationSearchError(null);
-                                                            }
-                                                            setInvestigationSearch(val);
-                                                        }}
-                                                        placeholder="Search investigations"
-                                                        variant="outlined"
-                                                        error={!!investigationSearchError}
-                                                        helperText={investigationSearchError}
-                                                        FormHelperTextProps={{ style: { color: '#757575' } }}
-                                                        inputProps={{ maxLength: 1000 }}
-                                                        sx={{
-                                                            '& .MuiOutlinedInput-root': {
-                                                                height: '38px',
-                                                                borderRadius: '4px',
-                                                                fontSize: '13px'
-                                                            }
-                                                        }}
-                                                    />
-                                                </div>
-
-                                                <div className="investigations-dropdown" style={{ maxHeight: '200px', overflowY: 'auto', padding: '4px 6px', display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', columnGap: '8px', rowGap: '6px' }}>
-                                                    {investigationsLoading && (
-                                                        <div style={{ padding: '6px', fontSize: '13px', color: '#777', gridColumn: '1 / -1', textAlign: 'center' }}>
-                                                            Loading investigations...
-                                                        </div>
-                                                    )}
-                                                    {investigationsError && (
-                                                        <div style={{ padding: '6px', fontSize: '13px', color: '#d32f2f', gridColumn: '1 / -1', textAlign: 'center' }}>
-                                                            {investigationsError}
-                                                            <button
-                                                                onClick={() => {
-                                                                    setInvestigationsError(null);
-                                                                    const doctorId = treatmentData?.doctorId || '1';
-                                                                    const clinicId = sessionData?.clinicId || '1';
-                                                                    investigationService.getInvestigationsForDoctorAndClinic(doctorId, clinicId)
-                                                                        .then(setInvestigationsOptions)
-                                                                        .catch(e => setInvestigationsError(e.message));
-                                                                }}
-                                                                style={{
-                                                                    marginLeft: '8px',
-                                                                    padding: '2px 6px',
-                                                                    fontSize: '10px',
-                                                                    backgroundColor: '#1976d2',
-                                                                    color: 'white',
-                                                                    border: 'none',
-                                                                    borderRadius: '3px',
-                                                                    cursor: 'pointer'
-                                                                }}
-                                                            >
-                                                                Retry
-                                                            </button>
-                                                        </div>
-                                                    )}
-                                                    {!investigationsLoading && !investigationsError && filteredInvestigations.length === 0 && (
-                                                        <div style={{ padding: '6px', fontSize: '13px', color: '#777', gridColumn: '1 / -1' }}>No investigations found</div>
-                                                    )}
-                                                    {!investigationsLoading && !investigationsError && filteredInvestigations.map((opt, index) => {
-                                                        const checked = selectedInvestigations.includes(opt.value);
-                                                        // Check if investigation is already added
-                                                        const normalizedOpt = opt.label?.toLowerCase().trim() || '';
-                                                        const isAdded = investigationRows.some(row =>
-                                                            row.investigation?.toLowerCase().trim() === normalizedOpt
-                                                        );
-
-                                                        const isFirstUnselected = !checked && index > 0 && selectedInvestigations.includes(filteredInvestigations[index - 1].value);
-                                                        return (
-                                                            <React.Fragment key={opt.value}>
-                                                                {isFirstUnselected && (
-                                                                    <div style={{
-                                                                        gridColumn: '1 / -1',
-                                                                        height: '1px',
-                                                                        backgroundColor: '#e0e0e0',
-                                                                        margin: '4px 0'
-                                                                    }} />
-                                                                )}
-                                                                <label
-                                                                    title={opt.label}
-                                                                    style={{
-                                                                        display: 'flex',
-                                                                        alignItems: 'center',
-                                                                        gap: '4px',
-                                                                        padding: '4px 2px',
-                                                                        cursor: isAdded ? 'not-allowed' : 'pointer',
-                                                                        fontSize: '13px',
-                                                                        border: 'none',
-                                                                        backgroundColor: (checked || isAdded) ? '#eeeeee' : 'transparent',
-                                                                        borderRadius: '3px',
-                                                                        fontWeight: 400,
-                                                                        color: isAdded ? '#999' : '#333',
-                                                                        minWidth: 0,
-                                                                        opacity: isAdded ? 0.7 : 1
-                                                                    }}
-                                                                >
-                                                                    <input
-                                                                        type="checkbox"
-                                                                        checked={checked || isAdded}
-                                                                        disabled={isAdded}
-                                                                        onChange={(e) => {
-                                                                            if (isAdded) return;
-                                                                            setInvestigationsSelectionError(null);
-                                                                            setSelectedInvestigations(prev => {
-                                                                                if (e.target.checked) {
-                                                                                    if (prev.includes(opt.value)) return prev;
-                                                                                    return [...prev, opt.value];
-                                                                                } else {
-                                                                                    return prev.filter(v => v !== opt.value);
-                                                                                }
-                                                                            });
-                                                                        }}
-                                                                        style={{ margin: 0 }}
-                                                                    />
-                                                                    <span style={{
-                                                                        whiteSpace: 'nowrap',
-                                                                        overflow: 'hidden',
-                                                                        textOverflow: 'ellipsis'
-                                                                    }}>{opt.label}{isAdded ? ' (Added)' : ''}</span>
-                                                                </label>
-                                                            </React.Fragment>
-                                                        );
-                                                    })}
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                    <button
-                                        disabled={isFormDisabled}
-                                        title="Add selected investigations"
-                                        style={{
-                                            padding: '0 10px',
-                                            backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
-                                            color: 'white',
-                                            border: 'none',
-                                            borderRadius: '6px',
-                                            cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                    ) : (
+                                        <div style={{
+                                            padding: '10px',
+                                            textAlign: 'center',
+                                            color: '#666',
                                             fontSize: '13px',
-                                            height: '38px',
-                                            transition: 'background-color 0.2s'
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1565c0';
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1976d2';
-                                        }}
-                                        onClick={handleAddInvestigations}
-                                    >
-                                        Add
-                                    </button>
-                                    <button
-                                        type="button"
-                                        disabled={isFormDisabled}
-                                        title="Add custom investigation"
-                                        style={{
-                                            backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
-                                            color: 'white',
-                                            border: 'none',
-                                            padding: '6px',
-                                            borderRadius: '6px',
-                                            cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                            width: '32px',
-                                            height: '38px',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            fontSize: '14px',
-                                            transition: 'background-color 0.2s'
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1565c0';
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1976d2';
-                                        }}
-                                        onClick={handleAddCustomTestLab}
-                                    >
-                                        <Add fontSize="small" />
-                                    </button>
-                                    <button
-                                        type="button"
-                                        disabled={isFormDisabled}
-                                        title="Show lab trends"
-                                        style={{
-                                            backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
-                                            color: 'white',
-                                            border: 'none',
-                                            padding: '6px',
-                                            borderRadius: '50%',
-                                            cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                            width: '32px',
-                                            height: '38px',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            fontSize: '14px',
-                                            fontWeight: 'bold',
-                                            transition: 'background-color 0.2s'
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1565c0';
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1976d2';
-                                        }}
-                                        onClick={() => {
-                                            if (!isFormDisabled) {
-                                                setShowLabTrendPopup(true);
-                                            }
-                                        }}
-                                    >
-                                        <TrendingUp fontSize="small" />
-                                    </button>
-                                </div>
-
-                                {/* Investigation Table */}
-                                {investigationRows.length > 0 && (
-                                    <div
-                                        style={{
                                             border: '1px solid #ccc',
                                             borderRadius: '4px',
-                                            overflow: 'hidden',
-                                            opacity: isFormDisabled ? 0.6 : 1
-                                        }}
-                                    >
-                                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                                            <thead>
-                                                <tr style={{
-                                                    backgroundColor: '#1976d2',
-                                                    color: 'white',
-                                                    fontWeight: 'bold',
-                                                    fontSize: '13px'
-                                                }}>
-                                                    <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '60px', textAlign: 'left' }}>Sr.</th>
-                                                    <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', textAlign: 'left' }}>Investigation</th>
-                                                    <th style={{ padding: '6px', width: '80px', textAlign: 'center' }}>Action</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {investigationRows.map((row, index) => (
-                                                    <tr key={row.id} style={{
-                                                        backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white',
-                                                        borderBottom: '1px solid #e0e0e0'
-                                                    }}>
-                                                        <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '13px' }}>{index + 1}</td>
-                                                        <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '13px' }}>{row.investigation}</td>
-                                                        <td style={{ textAlign: 'center' }}>
-                                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                                <div
-                                                                    onClick={() => {
-                                                                        if (isFormDisabled) return;
-                                                                        handleRemoveInvestigation(row.id);
-                                                                    }}
-                                                                    title="Remove"
-                                                                    style={{
-                                                                        display: 'inline-flex',
-                                                                        alignItems: 'center',
-                                                                        justifyContent: 'center',
-                                                                        width: '24px',
-                                                                        height: '24px',
-                                                                        cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                                                        color: isFormDisabled ? '#9e9e9e' : '#000000',
-                                                                        backgroundColor: 'transparent'
-                                                                    }}
-                                                                    onMouseEnter={(e) => {
-                                                                        if (isFormDisabled) return;
-                                                                        (e.currentTarget as HTMLDivElement).style.color = '#EF5350';
-                                                                    }}
-                                                                    onMouseLeave={(e) => {
-                                                                        (e.currentTarget as HTMLDivElement).style.color = isFormDisabled ? '#9e9e9e' : '#000000';
-                                                                    }}
-                                                                >
-                                                                    <Delete fontSize="small" />
-                                                                </div>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                )}
+                                            backgroundColor: '#f5f5f5'
+                                        }}>
+                                            No Prescriptions suggested in previous visit.
+                                        </div>
+                                    )}
+                                </>
+                            )}
+                        </div>
+
+                        {/* Investigation Section */}
+                        <div style={{ marginBottom: '15px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '5px', width: '88%', gap: '8px' }}>
+                                <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>Investigation</label>
                             </div>
 
-                            {/* Follow-up Section */}
-                            <div style={{ marginBottom: '15px' }}>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px', marginBottom: '12px' }}>
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                            Follow-up Type
-                                        </label>
-                                        <ClearableTextField
-                                            disableClearable
-                                            select
-                                            fullWidth
-                                            size="small"
-                                            value={followUpData.followUpType}
-                                            onChange={(val) => handleFollowUpChange('followUpType', val)}
-                                            disabled={followUpTypesLoading || isFormDisabled}
-                                            sx={{
-                                                '& .MuiInputBase-root': {
-                                                    fontSize: '13px',
-                                                    height: '38px',
-                                                    backgroundColor: isFormDisabled ? '#f5f5f5 !important' : 'white !important',
-                                                    cursor: isFormDisabled ? 'not-allowed !important' : 'pointer'
-                                                },
-                                                '& .MuiSelect-select': {
-                                                    padding: '6px 10px !important'
-                                                },
-                                                marginBottom: '0px'
+                            <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                                <div style={{ flex: 1, position: 'relative' }} ref={investigationsRef}>
+                                    <div
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                            height: '38px',
+                                            padding: '4px 8px',
+                                            border: '2px solid #B7B7B7',
+                                            borderRadius: '6px',
+                                            fontSize: '13px',
+                                            fontFamily: "'Roboto', sans-serif",
+                                            fontWeight: 500,
+                                            backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
+                                            cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                            userSelect: 'none',
+                                            opacity: isFormDisabled ? 0.6 : 1
+                                        }}
+                                        onClick={() => !isFormDisabled && setIsInvestigationsOpen(!isInvestigationsOpen)}
+                                        onMouseEnter={(e) => {
+                                            (e.currentTarget as HTMLDivElement).style.borderColor = '#1E88E5';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            (e.currentTarget as HTMLDivElement).style.borderColor = '#B7B7B7';
+                                        }}
+                                    >
+                                        <span style={{ color: selectedInvestigations.length > 0 ? '#000' : '#9e9e9e' }}>
+                                            {selectedInvestigations.length > 0
+                                                ? `${selectedInvestigations.length} investigation selected`
+                                                : 'Select Investigation'
+                                            }
+                                        </span>
+                                        <ArrowDropDown
+                                            style={{
+                                                marginLeft: '8px',
+                                                color: '#666',
+                                                fontSize: '24px',
+                                                transition: 'transform 0.2s',
+                                                transform: isInvestigationsOpen ? 'rotate(180deg)' : 'rotate(0deg)'
                                             }}
-                                            SelectProps={{
-                                                displayEmpty: true,
-                                                renderValue: (selected) => {
-                                                    if (selected === "" || selected === undefined || selected === null) {
-                                                        return <span style={{ color: '#aaa' }}>{followUpTypesLoading ? 'Loading...' : 'Select Follow-up Type'}</span>;
-                                                    }
-                                                    const option = followUpTypesOptions.find(opt => String(opt.id) === String(selected));
-                                                    return option ? option.followUpDescription : selected;
-                                                },
-                                                MenuProps: {
-                                                    PaperProps: {
-                                                        sx: {
-                                                            '& .MuiMenuItem-root.Mui-selected': {
-                                                                backgroundColor: '#eeeeee !important',
-                                                                '&:hover': {
-                                                                    backgroundColor: '#e0e0e0 !important',
-                                                                }
+                                        />
+                                    </div>
+
+                                    {investigationsSelectionError && (
+                                        <p style={{
+                                            color: '#d32f2f',
+                                            fontSize: '0.75rem',
+                                            fontWeight: 400,
+                                            fontFamily: "'Roboto', sans-serif",
+                                            margin: '3px 0 0 0',
+                                            textAlign: 'left'
+                                        }}>
+                                            {investigationsSelectionError}
+                                        </p>
+                                    )}
+
+                                    {isInvestigationsOpen && (
+                                        <div style={{
+                                            position: 'absolute',
+                                            top: '100%',
+                                            left: 0,
+                                            right: 0,
+                                            backgroundColor: 'white',
+                                            border: '1px solid #B7B7B7',
+                                            borderRadius: '6px',
+                                            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                                            zIndex: 1000,
+                                            marginTop: '4px',
+                                            maxHeight: '300px',
+                                            overflow: 'hidden'
+                                        }}>
+                                            <div style={{ padding: '6px' }}>
+                                                <ClearableTextField
+                                                    fullWidth
+                                                    size="small"
+                                                    value={investigationSearch}
+                                                    onChange={(val) => {
+                                                        if (val.length >= 1000) {
+                                                            setInvestigationSearchError('Investigation search cannot exceed 1000 characters');
+                                                        } else {
+                                                            setInvestigationSearchError(null);
+                                                        }
+                                                        setInvestigationSearch(val);
+                                                    }}
+                                                    placeholder="Search investigations"
+                                                    variant="outlined"
+                                                    error={!!investigationSearchError}
+                                                    helperText={investigationSearchError}
+                                                    FormHelperTextProps={{ style: { color: '#757575' } }}
+                                                    inputProps={{ maxLength: 1000 }}
+                                                    sx={{
+                                                        '& .MuiOutlinedInput-root': {
+                                                            height: '38px',
+                                                            borderRadius: '4px',
+                                                            fontSize: '13px'
+                                                        }
+                                                    }}
+                                                />
+                                            </div>
+
+                                            <div className="investigations-dropdown" style={{ maxHeight: '200px', overflowY: 'auto', padding: '4px 6px', display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', columnGap: '8px', rowGap: '6px' }}>
+                                                {investigationsLoading && (
+                                                    <div style={{ padding: '6px', fontSize: '13px', color: '#777', gridColumn: '1 / -1', textAlign: 'center' }}>
+                                                        Loading investigations...
+                                                    </div>
+                                                )}
+                                                {investigationsError && (
+                                                    <div style={{ padding: '6px', fontSize: '13px', color: '#d32f2f', gridColumn: '1 / -1', textAlign: 'center' }}>
+                                                        {investigationsError}
+                                                        <button
+                                                            onClick={() => {
+                                                                setInvestigationsError(null);
+                                                                const doctorId = treatmentData?.doctorId || '1';
+                                                                const clinicId = sessionData?.clinicId || '1';
+                                                                investigationService.getInvestigationsForDoctorAndClinic(doctorId, clinicId)
+                                                                    .then(setInvestigationsOptions)
+                                                                    .catch(e => setInvestigationsError(e.message));
+                                                            }}
+                                                            style={{
+                                                                marginLeft: '8px',
+                                                                padding: '2px 6px',
+                                                                fontSize: '10px',
+                                                                backgroundColor: '#1976d2',
+                                                                color: 'white',
+                                                                border: 'none',
+                                                                borderRadius: '3px',
+                                                                cursor: 'pointer'
+                                                            }}
+                                                        >
+                                                            Retry
+                                                        </button>
+                                                    </div>
+                                                )}
+                                                {!investigationsLoading && !investigationsError && filteredInvestigations.length === 0 && (
+                                                    <div style={{ padding: '6px', fontSize: '13px', color: '#777', gridColumn: '1 / -1' }}>No investigations found</div>
+                                                )}
+                                                {!investigationsLoading && !investigationsError && filteredInvestigations.map((opt, index) => {
+                                                    const checked = selectedInvestigations.includes(opt.value);
+                                                    // Check if investigation is already added
+                                                    const normalizedOpt = opt.label?.toLowerCase().trim() || '';
+                                                    const isAdded = investigationRows.some(row =>
+                                                        row.investigation?.toLowerCase().trim() === normalizedOpt
+                                                    );
+
+                                                    const isFirstUnselected = !checked && index > 0 && selectedInvestigations.includes(filteredInvestigations[index - 1].value);
+                                                    return (
+                                                        <React.Fragment key={opt.value}>
+                                                            {isFirstUnselected && (
+                                                                <div style={{
+                                                                    gridColumn: '1 / -1',
+                                                                    height: '1px',
+                                                                    backgroundColor: '#e0e0e0',
+                                                                    margin: '4px 0'
+                                                                }} />
+                                                            )}
+                                                            <label
+                                                                title={opt.label}
+                                                                style={{
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    gap: '4px',
+                                                                    padding: '4px 2px',
+                                                                    cursor: isAdded ? 'not-allowed' : 'pointer',
+                                                                    fontSize: '13px',
+                                                                    border: 'none',
+                                                                    backgroundColor: (checked || isAdded) ? '#eeeeee' : 'transparent',
+                                                                    borderRadius: '3px',
+                                                                    fontWeight: 400,
+                                                                    color: isAdded ? '#999' : '#333',
+                                                                    minWidth: 0,
+                                                                    opacity: isAdded ? 0.7 : 1
+                                                                }}
+                                                            >
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={checked || isAdded}
+                                                                    disabled={isAdded}
+                                                                    onChange={(e) => {
+                                                                        if (isAdded) return;
+                                                                        setInvestigationsSelectionError(null);
+                                                                        setSelectedInvestigations(prev => {
+                                                                            if (e.target.checked) {
+                                                                                if (prev.includes(opt.value)) return prev;
+                                                                                return [...prev, opt.value];
+                                                                            } else {
+                                                                                return prev.filter(v => v !== opt.value);
+                                                                            }
+                                                                        });
+                                                                    }}
+                                                                    style={{ margin: 0 }}
+                                                                />
+                                                                <span style={{
+                                                                    whiteSpace: 'nowrap',
+                                                                    overflow: 'hidden',
+                                                                    textOverflow: 'ellipsis'
+                                                                }}>{opt.label}{isAdded ? ' (Added)' : ''}</span>
+                                                            </label>
+                                                        </React.Fragment>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                                <button
+                                    disabled={isFormDisabled}
+                                    title="Add selected investigations"
+                                    style={{
+                                        padding: '0 10px',
+                                        backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '6px',
+                                        cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                        fontSize: '13px',
+                                        height: '38px',
+                                        transition: 'background-color 0.2s'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1565c0';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1976d2';
+                                    }}
+                                    onClick={handleAddInvestigations}
+                                >
+                                    Add
+                                </button>
+                                <button
+                                    type="button"
+                                    disabled={isFormDisabled}
+                                    title="Add custom investigation"
+                                    style={{
+                                        backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
+                                        color: 'white',
+                                        border: 'none',
+                                        padding: '6px',
+                                        borderRadius: '6px',
+                                        cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                        width: '32px',
+                                        height: '38px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        fontSize: '14px',
+                                        transition: 'background-color 0.2s'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1565c0';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1976d2';
+                                    }}
+                                    onClick={handleAddCustomTestLab}
+                                >
+                                    <Add fontSize="small" />
+                                </button>
+                                <button
+                                    type="button"
+                                    disabled={isFormDisabled}
+                                    title="Show lab trends"
+                                    style={{
+                                        backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
+                                        color: 'white',
+                                        border: 'none',
+                                        padding: '6px',
+                                        borderRadius: '50%',
+                                        cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                        width: '32px',
+                                        height: '38px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        fontSize: '14px',
+                                        fontWeight: 'bold',
+                                        transition: 'background-color 0.2s'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1565c0';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        if (!isFormDisabled) e.currentTarget.style.backgroundColor = '#1976d2';
+                                    }}
+                                    onClick={() => {
+                                        if (!isFormDisabled) {
+                                            setShowLabTrendPopup(true);
+                                        }
+                                    }}
+                                >
+                                    <TrendingUp fontSize="small" />
+                                </button>
+                            </div>
+
+                            {/* Investigation Table */}
+                            {investigationRows.length > 0 && (
+                                <div
+                                    style={{
+                                        border: '1px solid #ccc',
+                                        borderRadius: '4px',
+                                        overflow: 'hidden',
+                                        opacity: isFormDisabled ? 0.6 : 1
+                                    }}
+                                >
+                                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                        <thead>
+                                            <tr style={{
+                                                backgroundColor: '#1976d2',
+                                                color: 'white',
+                                                fontWeight: 'bold',
+                                                fontSize: '13px'
+                                            }}>
+                                                <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', width: '60px', textAlign: 'left' }}>Sr.</th>
+                                                <th style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)', textAlign: 'left' }}>Investigation</th>
+                                                <th style={{ padding: '6px', width: '80px', textAlign: 'center' }}>Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {investigationRows.map((row, index) => (
+                                                <tr key={row.id} style={{
+                                                    backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white',
+                                                    borderBottom: '1px solid #e0e0e0'
+                                                }}>
+                                                    <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '13px' }}>{index + 1}</td>
+                                                    <td style={{ borderRight: '1px solid #e0e0e0', fontSize: '13px' }}>{row.investigation}</td>
+                                                    <td style={{ textAlign: 'center' }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                            <div
+                                                                onClick={() => {
+                                                                    if (isFormDisabled) return;
+                                                                    handleRemoveInvestigation(row.id);
+                                                                }}
+                                                                title="Remove"
+                                                                style={{
+                                                                    display: 'inline-flex',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'center',
+                                                                    width: '24px',
+                                                                    height: '24px',
+                                                                    cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                                                    color: isFormDisabled ? '#9e9e9e' : '#000000',
+                                                                    backgroundColor: 'transparent'
+                                                                }}
+                                                                onMouseEnter={(e) => {
+                                                                    if (isFormDisabled) return;
+                                                                    (e.currentTarget as HTMLDivElement).style.color = '#EF5350';
+                                                                }}
+                                                                onMouseLeave={(e) => {
+                                                                    (e.currentTarget as HTMLDivElement).style.color = isFormDisabled ? '#9e9e9e' : '#000000';
+                                                                }}
+                                                            >
+                                                                <Delete fontSize="small" />
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Follow-up Section */}
+                        <div style={{ marginBottom: '15px' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px', marginBottom: '12px' }}>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                                        Follow-up Type
+                                    </label>
+                                    <ClearableTextField
+                                        disableClearable
+                                        select
+                                        fullWidth
+                                        size="small"
+                                        value={followUpData.followUpType}
+                                        onChange={(val) => handleFollowUpChange('followUpType', val)}
+                                        disabled={followUpTypesLoading || isFormDisabled}
+                                        sx={{
+                                            '& .MuiInputBase-root': {
+                                                fontSize: '13px',
+                                                height: '38px',
+                                                backgroundColor: isFormDisabled ? '#f5f5f5 !important' : 'white !important',
+                                                cursor: isFormDisabled ? 'not-allowed !important' : 'pointer'
+                                            },
+                                            '& .MuiSelect-select': {
+                                                padding: '6px 10px !important'
+                                            },
+                                            marginBottom: '0px'
+                                        }}
+                                        SelectProps={{
+                                            displayEmpty: true,
+                                            renderValue: (selected) => {
+                                                if (selected === "" || selected === undefined || selected === null) {
+                                                    return <span style={{ color: '#aaa' }}>{followUpTypesLoading ? 'Loading...' : 'Select Follow-up Type'}</span>;
+                                                }
+                                                const option = followUpTypesOptions.find(opt => String(opt.id) === String(selected));
+                                                return option ? option.followUpDescription : selected;
+                                            },
+                                            MenuProps: {
+                                                PaperProps: {
+                                                    sx: {
+                                                        '& .MuiMenuItem-root.Mui-selected': {
+                                                            backgroundColor: '#eeeeee !important',
+                                                            '&:hover': {
+                                                                backgroundColor: '#e0e0e0 !important',
                                                             }
                                                         }
                                                     }
                                                 }
+                                            }
+                                        }}
+                                    >
+                                        <MenuItem value="" sx={{ display: 'none' }}>
+                                            Select Follow-up Type
+                                        </MenuItem>
+                                        {followUpTypesOptions.map((option) => (
+                                            <MenuItem key={option.id} value={option.id}>
+                                                {option.followUpDescription}
+                                            </MenuItem>
+                                        ))}
+                                        {followUpTypesError && (
+                                            <MenuItem value="" disabled>
+                                                Error: {followUpTypesError}
+                                            </MenuItem>
+                                        )}
+                                    </ClearableTextField>
+                                </div>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                                        Follow up
+                                    </label>
+                                    <ClearableTextField
+                                        fullWidth
+                                        size="small"
+                                        value={followUpData.followUp}
+                                        onChange={(val) => handleFollowUpChange('followUp', val)}
+                                        disabled={isFormDisabled}
+                                        inputProps={{
+                                            maxLength: 100
+                                        }}
+                                        placeholder="Enter follow up"
+                                        variant="outlined"
+                                        sx={{
+                                            '& .MuiInputBase-root': {
+                                                height: '38px'
+                                            },
+                                            '& .MuiOutlinedInput-root': {
+                                                borderRadius: '4px',
+                                                fontSize: '13px',
+                                                backgroundColor: isFormDisabled ? '#f5f5f5' : 'white'
+                                            },
+                                            '& .MuiInputBase-input': {
+                                                color: isFormDisabled ? '#666' : '#333',
+                                                cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                            }
+                                        }}
+                                        error={!!followUpError}
+                                        helperText={followUpError}
+                                    />
+                                </div>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                                        Remark Comments
+                                    </label>
+                                    <ClearableTextField
+                                        multiline
+                                        rows={1}
+                                        fullWidth
+                                        value={followUpData.remarkComments}
+                                        onChange={(val) => handleFollowUpChange('remarkComments', val)}
+                                        disabled={isFormDisabled}
+                                        inputProps={{
+                                            maxLength: 1000
+                                        }}
+                                        placeholder="Enter remark comments"
+                                        variant="outlined"
+                                        size="small"
+                                        sx={{
+                                            '& .MuiInputBase-root': {
+                                                height: '38px'
+                                            },
+                                            '& .MuiOutlinedInput-root': {
+                                                borderRadius: '4px',
+                                                fontSize: '13px',
+                                                backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
+                                                minHeight: '38px',
+                                                maxHeight: '38px'
+                                            },
+                                            '& .MuiInputBase-input': {
+                                                color: isFormDisabled ? '#666' : '#333',
+                                                cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                            }
+                                        }}
+                                        error={!!remarkCommentsError}
+                                        helperText={remarkCommentsError}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Plan/Adv Section */}
+                        <div style={{ marginBottom: '15px' }}>
+                            <div style={{ marginBottom: '4px' }}>
+                                <label style={{ fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                                    Plan / Adv
+                                </label>
+                            </div>
+                            <ClearableTextField
+                                multiline
+                                rows={2}
+                                fullWidth
+                                value={followUpData.planAdv}
+                                onChange={(val) => handleFollowUpChange('planAdv', val)}
+                                disabled={isFormDisabled}
+                                inputProps={{
+                                    maxLength: 1000
+                                }}
+                                placeholder="Enter Plan/Advice"
+                                variant="outlined"
+                                size="small"
+                                sx={{
+                                    '& .MuiInputBase-root': {
+                                        fontSize: '13px'
+                                    },
+                                    '& .MuiOutlinedInput-root': {
+                                        borderRadius: '4px',
+                                        backgroundColor: isFormDisabled ? '#f5f5f5' : 'white'
+                                    },
+                                    '& .MuiInputBase-input': {
+                                        color: isFormDisabled ? '#666' : '#333',
+                                        cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                    }
+                                }}
+                                error={!!planAdvError}
+                                helperText={planAdvError}
+                            />
+                        </div>
+
+
+
+                        {/* Billing Section */}
+                        <div style={{ marginBottom: '15px' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                                        Billed (Rs) <span style={{ color: 'red' }}>*</span>
+                                    </label>
+                                    <div style={{ position: 'relative' }}>
+                                        <input
+                                            type="text"
+                                            value={billingData.billed}
+                                            onChange={(e) => handleBillingChange('billed', e.target.value)}
+                                            disabled
+                                            placeholder="Billed Amount"
+                                            style={{
+                                                width: '100%',
+                                                height: '38px',
+                                                padding: '6px 34px 6px 10px',
+                                                border: billingError ? '1px solid red' : '1px solid #ccc',
+                                                borderRadius: '4px',
+                                                fontSize: '13px',
+                                                backgroundColor: '#f5f5f5',
+                                                color: '#666',
+                                                cursor: 'not-allowed',
+                                                boxSizing: 'border-box'
+                                            }}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowBillingPopup(true)}
+                                            title="Add billed item"
+                                            className="fixed-icon-btn"
+                                            style={{
+                                                position: 'absolute',
+                                                right: 6,
+                                                top: '50%',
+                                                transform: 'translateY(-50%)',
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                width: 22,
+                                                height: 22,
+                                                borderRadius: 4,
+                                                border: 'none',
+                                                backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
+                                                color: '#fff',
+                                                fontWeight: 700,
+                                                lineHeight: '22px',
+                                                cursor: isFormDisabled ? 'not-allowed' : 'pointer',
+                                                padding: 0,
+                                                boxSizing: 'border-box',
+                                                outline: 'none',
+                                                boxShadow: 'none',
+                                                transition: 'none',
+                                                zIndex: 1
+                                            }}
+                                            disabled={isFormDisabled}
+                                            onMouseDown={(e) => {
+                                                e.preventDefault();
                                             }}
                                         >
-                                            <MenuItem value="" sx={{ display: 'none' }}>
-                                                Select Follow-up Type
-                                            </MenuItem>
-                                            {followUpTypesOptions.map((option) => (
-                                                <MenuItem key={option.id} value={option.id}>
-                                                    {option.followUpDescription}
-                                                </MenuItem>
-                                            ))}
-                                            {followUpTypesError && (
-                                                <MenuItem value="" disabled>
-                                                    Error: {followUpTypesError}
-                                                </MenuItem>
-                                            )}
-                                        </ClearableTextField>
+                                            +
+                                        </button>
                                     </div>
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                            Follow up
-                                        </label>
-                                        <ClearableTextField
-                                            fullWidth
-                                            size="small"
-                                            value={followUpData.followUp}
-                                            onChange={(val) => handleFollowUpChange('followUp', val)}
-                                            disabled={isFormDisabled}
-                                            inputProps={{
-                                                maxLength: 100
-                                            }}
-                                            placeholder="Enter follow up"
-                                            variant="outlined"
-                                            sx={{
-                                                '& .MuiInputBase-root': {
-                                                    height: '38px'
-                                                },
-                                                '& .MuiOutlinedInput-root': {
-                                                    borderRadius: '4px',
-                                                    fontSize: '13px',
-                                                    backgroundColor: isFormDisabled ? '#f5f5f5' : 'white'
-                                                },
-                                                '& .MuiInputBase-input': {
-                                                    color: isFormDisabled ? '#666' : '#333',
-                                                    cursor: isFormDisabled ? 'not-allowed' : 'text'
-                                                }
-                                            }}
-                                            error={!!followUpError}
-                                            helperText={followUpError}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                            Remark Comments
-                                        </label>
-                                        <ClearableTextField
-                                            multiline
-                                            rows={1}
-                                            fullWidth
-                                            value={followUpData.remarkComments}
-                                            onChange={(val) => handleFollowUpChange('remarkComments', val)}
-                                            disabled={isFormDisabled}
-                                            inputProps={{
-                                                maxLength: 1000
-                                            }}
-                                            placeholder="Enter remark comments"
-                                            variant="outlined"
-                                            size="small"
-                                            sx={{
-                                                '& .MuiInputBase-root': {
-                                                    height: '38px'
-                                                },
-                                                '& .MuiOutlinedInput-root': {
-                                                    borderRadius: '4px',
-                                                    fontSize: '13px',
-                                                    backgroundColor: isFormDisabled ? '#f5f5f5' : 'white',
-                                                    minHeight: '38px',
-                                                    maxHeight: '38px'
-                                                },
-                                                '& .MuiInputBase-input': {
-                                                    color: isFormDisabled ? '#666' : '#333',
-                                                    cursor: isFormDisabled ? 'not-allowed' : 'text'
-                                                }
-                                            }}
-                                            error={!!remarkCommentsError}
-                                            helperText={remarkCommentsError}
-                                        />
-                                    </div>
+                                    {billingError && (
+                                        <div style={{ color: 'red', fontSize: '13px', marginTop: '4px', marginLeft: 0, textAlign: 'left' }}>
+                                            {billingError}
+                                        </div>
+                                    )}
                                 </div>
-                            </div>
-
-                            {/* Plan/Adv Section */}
-                            <div style={{ marginBottom: '15px' }}>
-                                <div style={{ marginBottom: '4px' }}>
-                                    <label style={{ fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                        Plan / Adv
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                                        Discount (Rs)
                                     </label>
-                                </div>
-                                <ClearableTextField
-                                    multiline
-                                    rows={2}
-                                    fullWidth
-                                    value={followUpData.planAdv}
-                                    onChange={(val) => handleFollowUpChange('planAdv', val)}
-                                    disabled={isFormDisabled}
-                                    inputProps={{
-                                        maxLength: 1000
-                                    }}
-                                    placeholder="Enter Plan/Advice"
-                                    variant="outlined"
-                                    size="small"
-                                    sx={{
-                                        '& .MuiInputBase-root': {
-                                            fontSize: '13px'
-                                        },
-                                        '& .MuiOutlinedInput-root': {
-                                            borderRadius: '4px',
-                                            backgroundColor: isFormDisabled ? '#f5f5f5' : 'white'
-                                        },
-                                        '& .MuiInputBase-input': {
-                                            color: isFormDisabled ? '#666' : '#333',
-                                            cursor: isFormDisabled ? 'not-allowed' : 'text'
-                                        }
-                                    }}
-                                    error={!!planAdvError}
-                                    helperText={planAdvError}
-                                />
-                            </div>
-
-
-
-                            {/* Billing Section */}
-                            <div style={{ marginBottom: '15px' }}>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                            Billed (Rs) <span style={{ color: 'red' }}>*</span>
-                                        </label>
-                                        <div style={{ position: 'relative' }}>
-                                            <input
-                                                type="text"
-                                                value={billingData.billed}
-                                                onChange={(e) => handleBillingChange('billed', e.target.value)}
-                                                disabled
-                                                placeholder="Billed Amount"
-                                                style={{
-                                                    width: '100%',
-                                                    height: '38px',
-                                                    padding: '6px 34px 6px 10px',
-                                                    border: billingError ? '1px solid red' : '1px solid #ccc',
-                                                    borderRadius: '4px',
-                                                    fontSize: '13px',
-                                                    backgroundColor: '#f5f5f5',
-                                                    color: '#666',
-                                                    cursor: 'not-allowed',
-                                                    boxSizing: 'border-box'
-                                                }}
-                                            />
-                                            <button
-                                                type="button"
-                                                onClick={() => setShowBillingPopup(true)}
-                                                title="Add billed item"
-                                                className="fixed-icon-btn"
-                                                style={{
-                                                    position: 'absolute',
-                                                    right: 6,
-                                                    top: '50%',
-                                                    transform: 'translateY(-50%)',
-                                                    display: 'inline-flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    width: 22,
-                                                    height: 22,
-                                                    borderRadius: 4,
-                                                    border: 'none',
-                                                    backgroundColor: isFormDisabled ? '#ccc' : '#1976d2',
-                                                    color: '#fff',
-                                                    fontWeight: 700,
-                                                    lineHeight: '22px',
-                                                    cursor: isFormDisabled ? 'not-allowed' : 'pointer',
-                                                    padding: 0,
-                                                    boxSizing: 'border-box',
-                                                    outline: 'none',
-                                                    boxShadow: 'none',
-                                                    transition: 'none',
-                                                    zIndex: 1
-                                                }}
-                                                disabled={isFormDisabled}
-                                                onMouseDown={(e) => {
-                                                    e.preventDefault();
-                                                }}
-                                            >
-                                                +
-                                            </button>
-                                        </div>
-                                        {billingError && (
-                                            <div style={{ color: 'red', fontSize: '13px', marginTop: '4px', marginLeft: 0, textAlign: 'left' }}>
-                                                {billingError}
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                            Discount (Rs)
-                                        </label>
-                                        <div style={{ position: 'relative' }}>
-                                            <ClearableTextField
-                                                fullWidth
-                                                size="small"
-                                                value={billingData.discount}
-                                                onChange={(val) => handleBillingChange('discount', val)}
-                                                disabled={isFormDisabled}
-                                                inputProps={{
-                                                    maxLength: Math.max(String(Math.floor(parseFloat(billingData.billed) || 0)).length, 1)
-                                                }}
-                                                placeholder="0.00"
-                                                variant="outlined"
-                                                sx={{
-                                                    '& .MuiOutlinedInput-root': {
-                                                        borderRadius: '4px',
-                                                        fontSize: '13px',
-                                                        height: '38px',
-                                                        backgroundColor: isFormDisabled ? '#f5f5f5' : 'white'
-                                                    },
-                                                    '& .MuiInputBase-input': {
-                                                        color: isFormDisabled ? '#666' : '#333',
-                                                        cursor: isFormDisabled ? 'not-allowed' : 'text'
-                                                    }
-                                                }}
-                                                error={!!discountError}
-                                                helperText={discountError}
-                                            />
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                            Dues (Rs)
-                                        </label>
+                                    <div style={{ position: 'relative' }}>
                                         <ClearableTextField
                                             fullWidth
                                             size="small"
-                                            value={billingData.dues}
-                                            onChange={(val) => handleBillingChange('dues', val)}
-                                            disabled
+                                            value={billingData.discount}
+                                            onChange={(val) => handleBillingChange('discount', val)}
+                                            disabled={isFormDisabled}
                                             inputProps={{
-                                                maxLength: 10
+                                                maxLength: Math.max(String(Math.floor(parseFloat(billingData.billed) || 0)).length, 1)
                                             }}
                                             placeholder="0.00"
                                             variant="outlined"
@@ -8404,709 +8427,741 @@ export default function Treatment() {
                                                     borderRadius: '4px',
                                                     fontSize: '13px',
                                                     height: '38px',
-                                                    backgroundColor: '#f5f5f5'
+                                                    backgroundColor: isFormDisabled ? '#f5f5f5' : 'white'
                                                 },
                                                 '& .MuiInputBase-input': {
-                                                    color: '#666',
+                                                    color: isFormDisabled ? '#666' : '#333',
+                                                    cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                                }
+                                            }}
+                                            error={!!discountError}
+                                            helperText={discountError}
+                                        />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                                        Dues (Rs)
+                                    </label>
+                                    <ClearableTextField
+                                        fullWidth
+                                        size="small"
+                                        value={billingData.dues}
+                                        onChange={(val) => handleBillingChange('dues', val)}
+                                        disabled
+                                        inputProps={{
+                                            maxLength: 10
+                                        }}
+                                        placeholder="0.00"
+                                        variant="outlined"
+                                        sx={{
+                                            '& .MuiOutlinedInput-root': {
+                                                borderRadius: '4px',
+                                                fontSize: '13px',
+                                                height: '38px',
+                                                backgroundColor: '#f5f5f5'
+                                            },
+                                            '& .MuiInputBase-input': {
+                                                color: '#666',
+                                                cursor: 'not-allowed'
+                                            }
+                                        }}
+                                    />
+                                </div>
+                                <div>
+                                    <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
+                                        <span>A/C Balance (Rs)</span>
+                                        <span
+                                            style={{
+                                                color: '#1976d2',
+                                                fontWeight: 'normal',
+                                                fontSize: '11px',
+                                                cursor: 'pointer',
+                                                userSelect: 'none'
+                                            }}
+                                            onClick={() => setShowAccountsPopup(true)}
+                                            title="View Accounts"
+                                        >Payment History</span>
+                                    </label>
+                                    <div style={{ position: 'relative', width: '100%' }}>
+                                        <ClearableTextField
+                                            fullWidth
+                                            size="small"
+                                            value={Math.abs(parseFloat(billingData.acBalance) || 0).toFixed(2)}
+                                            onChange={(val) => handleBillingChange('acBalance', val)}
+                                            disabled
+                                            placeholder="0.00"
+                                            variant="outlined"
+                                            sx={{
+                                                '& .MuiOutlinedInput-root': {
+                                                    borderRadius: '4px',
+                                                    fontSize: '13px',
+                                                    height: '38px',
+                                                    backgroundColor: '#f5f5f5',
+                                                    paddingRight: folderAmountData?.totalAcBalance !== undefined &&
+                                                        folderAmountData?.totalAcBalance !== null &&
+                                                        folderAmountData?.rows &&
+                                                        folderAmountData.rows.length > 0 ? '120px' : '10px'
+                                                },
+                                                '& .MuiInputBase-input': {
+                                                    color: folderAmountData?.totalAcBalance !== undefined &&
+                                                        folderAmountData?.totalAcBalance !== null &&
+                                                        folderAmountData?.rows &&
+                                                        folderAmountData.rows.length > 0
+                                                        ? (folderAmountData.totalAcBalance < 0 ? '#d32f2f' : '#2e7d32')
+                                                        : '#666',
                                                     cursor: 'not-allowed'
                                                 }
                                             }}
                                         />
-                                    </div>
-                                    <div>
-                                        <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', fontWeight: 'bold', color: '#333', fontSize: '13px' }}>
-                                            <span>A/C Balance (Rs)</span>
-                                            <span
-                                                style={{
-                                                    color: '#1976d2',
-                                                    fontWeight: 'normal',
+                                        {folderAmountData?.totalAcBalance !== undefined &&
+                                            folderAmountData?.totalAcBalance !== null &&
+                                            folderAmountData?.rows &&
+                                            folderAmountData.rows.length > 0 && (
+                                                <span style={{
+                                                    position: 'absolute',
+                                                    right: '10px',
+                                                    top: '50%',
+                                                    transform: 'translateY(-50%)',
                                                     fontSize: '11px',
-                                                    cursor: 'pointer',
-                                                    userSelect: 'none'
-                                                }}
-                                                onClick={() => setShowAccountsPopup(true)}
-                                                title="View Accounts"
-                                            >Payment History</span>
-                                        </label>
-                                        <div style={{ position: 'relative', width: '100%' }}>
-                                            <ClearableTextField
-                                                fullWidth
-                                                size="small"
-                                                value={Math.abs(parseFloat(billingData.acBalance) || 0).toFixed(2)}
-                                                onChange={(val) => handleBillingChange('acBalance', val)}
-                                                disabled
-                                                placeholder="0.00"
-                                                variant="outlined"
-                                                sx={{
-                                                    '& .MuiOutlinedInput-root': {
-                                                        borderRadius: '4px',
-                                                        fontSize: '13px',
-                                                        height: '38px',
-                                                        backgroundColor: '#f5f5f5',
-                                                        paddingRight: folderAmountData?.totalAcBalance !== undefined &&
-                                                            folderAmountData?.totalAcBalance !== null &&
-                                                            folderAmountData?.rows &&
-                                                            folderAmountData.rows.length > 0 ? '120px' : '10px'
-                                                    },
-                                                    '& .MuiInputBase-input': {
-                                                        color: folderAmountData?.totalAcBalance !== undefined &&
-                                                            folderAmountData?.totalAcBalance !== null &&
-                                                            folderAmountData?.rows &&
-                                                            folderAmountData.rows.length > 0
-                                                            ? (folderAmountData.totalAcBalance < 0 ? '#d32f2f' : '#2e7d32')
-                                                            : '#666',
-                                                        cursor: 'not-allowed'
-                                                    }
-                                                }}
-                                            />
-                                            {folderAmountData?.totalAcBalance !== undefined &&
-                                                folderAmountData?.totalAcBalance !== null &&
-                                                folderAmountData?.rows &&
-                                                folderAmountData.rows.length > 0 && (
-                                                    <span style={{
-                                                        position: 'absolute',
-                                                        right: '10px',
-                                                        top: '50%',
-                                                        transform: 'translateY(-50%)',
-                                                        fontSize: '11px',
-                                                        fontWeight: 'bold',
-                                                        color: '#333', // Always black for status text
-                                                        whiteSpace: 'nowrap',
-                                                        pointerEvents: 'none'
-                                                    }}>
-                                                        {folderAmountData.totalAcBalance < 0 ? 'Outstanding' : 'Excess'}
-                                                    </span>
-                                                )}
-                                        </div>
+                                                    fontWeight: 'bold',
+                                                    color: '#333', // Always black for status text
+                                                    whiteSpace: 'nowrap',
+                                                    pointerEvents: 'none'
+                                                }}>
+                                                    {folderAmountData.totalAcBalance < 0 ? 'Outstanding' : 'Excess'}
+                                                </span>
+                                            )}
                                     </div>
                                 </div>
                             </div>
+                        </div>
 
-                            {/* Action Buttons */}
-                            <div style={{
-                                display: 'flex',
-                                justifyContent: 'flex-end',
-                                gap: '8px',
-                                marginTop: '20px',
-                                marginBottom: '40px',
-                                flexWrap: 'wrap',
-                                pointerEvents: 'auto',
-                                opacity: 1,
-                                position: 'relative',
-                                zIndex: 10
-                            }}>
-                                <button
-                                    type="button"
-                                    onClick={() => isAddendumEnabled && setShowAddendumModal(true)}
-                                    disabled={!isAddendumEnabled}
-                                    title="Add an addendum to this visit"
-                                    style={{
-                                        backgroundColor: isAddendumEnabled ? '#1976d2' : '#ccc',
-                                        color: 'white',
-                                        border: 'none',
-                                        padding: '8px 12px',
-                                        borderRadius: '4px',
-                                        cursor: isAddendumEnabled ? 'pointer' : 'not-allowed',
-                                        fontSize: '13px',
-                                        pointerEvents: 'auto',
-                                        opacity: 1,
-                                        zIndex: 11,
-                                        position: 'relative',
-                                        fontWeight: 'bold',
-                                        boxShadow: isAddendumEnabled ? '0 2px 4px rgba(0,0,0,0.2)' : 'none',
-                                        transition: 'background-color 0.2s, box-shadow 0.2s'
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        if (isAddendumEnabled) {
-                                            e.currentTarget.style.backgroundColor = '#1565c0';
-                                            e.currentTarget.style.boxShadow = '0 3px 6px rgba(0,0,0,0.3)';
-                                        }
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        if (isAddendumEnabled) {
-                                            e.currentTarget.style.backgroundColor = '#1976d2';
-                                            e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
-                                        }
-                                    }}
-                                >
-                                    Addendum
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={handlePrint}
-                                    title="Print prescription/report"
-                                    style={{
-                                        backgroundColor: '#1976d2',
-                                        color: 'white',
-                                        border: 'none',
-                                        padding: '8px 12px',
-                                        borderRadius: '4px',
-                                        cursor: 'pointer',
-                                        fontSize: '13px',
-                                        opacity: 1,
-                                        zIndex: 11,
-                                        position: 'relative',
-                                        fontWeight: 'bold',
-                                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                                        transition: 'background-color 0.2s, box-shadow 0.2s'
-                                    }}
-                                    onMouseEnter={(e) => {
+                        {/* Action Buttons */}
+                        <div style={{
+                            display: 'flex',
+                            justifyContent: 'flex-end',
+                            gap: '8px',
+                            marginTop: '20px',
+                            marginBottom: '40px',
+                            flexWrap: 'wrap',
+                            pointerEvents: 'auto',
+                            opacity: 1,
+                            position: 'relative',
+                            zIndex: 10
+                        }}>
+                            <button
+                                type="button"
+                                onClick={() => isAddendumEnabled && setShowAddendumModal(true)}
+                                disabled={!isAddendumEnabled}
+                                title="Add an addendum to this visit"
+                                style={{
+                                    backgroundColor: isAddendumEnabled ? '#1976d2' : '#ccc',
+                                    color: 'white',
+                                    border: 'none',
+                                    padding: '8px 12px',
+                                    borderRadius: '4px',
+                                    cursor: isAddendumEnabled ? 'pointer' : 'not-allowed',
+                                    fontSize: '13px',
+                                    pointerEvents: 'auto',
+                                    opacity: 1,
+                                    zIndex: 11,
+                                    position: 'relative',
+                                    fontWeight: 'bold',
+                                    boxShadow: isAddendumEnabled ? '0 2px 4px rgba(0,0,0,0.2)' : 'none',
+                                    transition: 'background-color 0.2s, box-shadow 0.2s'
+                                }}
+                                onMouseEnter={(e) => {
+                                    if (isAddendumEnabled) {
                                         e.currentTarget.style.backgroundColor = '#1565c0';
                                         e.currentTarget.style.boxShadow = '0 3px 6px rgba(0,0,0,0.3)';
-                                    }}
-                                    onMouseLeave={(e) => {
+                                    }
+                                }}
+                                onMouseLeave={(e) => {
+                                    if (isAddendumEnabled) {
                                         e.currentTarget.style.backgroundColor = '#1976d2';
                                         e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
-                                    }}
-                                >
-                                    Print
-                                </button>
+                                    }
+                                }}
+                            >
+                                Addendum
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handlePrint}
+                                title="Print prescription/report"
+                                style={{
+                                    backgroundColor: '#1976d2',
+                                    color: 'white',
+                                    border: 'none',
+                                    padding: '8px 12px',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer',
+                                    fontSize: '13px',
+                                    opacity: 1,
+                                    zIndex: 11,
+                                    position: 'relative',
+                                    fontWeight: 'bold',
+                                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                                    transition: 'background-color 0.2s, box-shadow 0.2s'
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.backgroundColor = '#1565c0';
+                                    e.currentTarget.style.boxShadow = '0 3px 6px rgba(0,0,0,0.3)';
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.backgroundColor = '#1976d2';
+                                    e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
+                                }}
+                            >
+                                Print
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleBackToAppointments}
+                                title="Cancel and go back to appointments"
+                                style={{
+                                    backgroundColor: '#1976d2',
+                                    color: 'white',
+                                    border: 'none',
+                                    padding: '8px 12px',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer',
+                                    fontSize: '13px'
+                                }}
+                            >
+                                Close
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleTreatmentSave}
+                                disabled={isSubmitting || isFormDisabled}
+                                title="Save treatment"
+                                style={{
+                                    backgroundColor: (isSubmitting || isFormDisabled) ? '#ccc' : '#1976d2',
+                                    color: 'white',
+                                    border: 'none',
+                                    padding: '8px 12px',
+                                    borderRadius: '4px',
+                                    cursor: (isSubmitting || isFormDisabled) ? 'not-allowed' : 'pointer',
+                                    fontSize: '13px'
+                                }}
+                            >
+                                {isSubmitting ? 'Saving...' : 'Save'}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleTreatmentSubmit}
+                                disabled={isSubmitting || isFormDisabled}
+                                title="Submit treatment"
+                                style={{
+                                    backgroundColor: (isSubmitting || isFormDisabled) ? '#ccc' : '#1976d2',
+                                    color: 'white',
+                                    border: 'none',
+                                    padding: '8px 12px',
+                                    borderRadius: '4px',
+                                    cursor: (isSubmitting || isFormDisabled) ? 'not-allowed' : 'pointer',
+                                    fontSize: '13px'
+                                }}
+                            >
+                                {isSubmitting ? 'Submitting...' : 'Submit'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {/* Patient Form Dialog */}
+        {
+            showPatientFormDialog && (
+                <div
+                    style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 9999
+                    }}
+                    onClick={(e) => {
+                        // Close dialog when clicking on the overlay (outside the form)
+                        if (e.target === e.currentTarget) {
+                            setShowPatientFormDialog(false);
+                        }
+                    }}
+                >
+                    <div
+                        style={{
+                            backgroundColor: 'white',
+                            borderRadius: '8px',
+                            width: '95%',
+                            maxWidth: '1200px',
+                            maxHeight: '95vh',
+                            overflow: 'auto',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            position: 'relative'
+                        }}
+                    >
+                        {/* Patient Form Content */}
+                        <PatientFormTest
+                            onClose={() => setShowPatientFormDialog(false)}
+                            initialData={formPatientData || undefined}
+                            visitDates={visitDates}
+                            currentVisitIndex={currentVisitIndex}
+                            onVisitDateChange={(newIndex: number) => {
+                                if (newIndex >= 0 && newIndex < allVisits.length) {
+                                    setCurrentVisitIndex(newIndex);
+                                    const selectedVisit = allVisits[newIndex];
+                                    const patientName = selectedPatientForForm?.name || '';
+                                    const appointmentRow = {
+                                        patientId: treatmentData?.patientId,
+                                        patient: treatmentData?.patientName,
+                                        age: treatmentData?.age,
+                                        gender: treatmentData?.gender,
+                                        contact: treatmentData?.contact,
+                                        doctorId: treatmentData?.doctorId,
+                                        provider: getDoctorLabelById(treatmentData?.doctorId)
+                                    };
+                                    const mapped = mapPreviousVisitToInitialData(selectedVisit, patientName, appointmentRow);
+                                    setFormPatientData(mapped);
+                                }
+                            }}
+                        />
+                    </div>
+                </div>
+            )
+        }
+
+        {/* Add Complaint Popup */}
+        <AddComplaintPopup
+            open={showComplaintPopup}
+            onClose={() => setShowComplaintPopup(false)}
+            onSave={handleSaveComplaint}
+        />
+
+        {/* Add Diagnosis Popup */}
+        <AddDiagnosisPopup
+            open={showDiagnosisPopup}
+            onClose={() => setShowDiagnosisPopup(false)}
+            onSave={handleSaveDiagnosis}
+        />
+
+        {/* Add Medicine Popup */}
+        <AddMedicinePopup
+            open={showMedicinePopup}
+            onClose={() => setShowMedicinePopup(false)}
+            onSave={handleSaveMedicine}
+            onError={(message) => {
+                setSnackbarMessage(message);
+                setSnackbarOpen(true);
+            }}
+            doctorId={treatmentData?.doctorId || sessionData?.doctorId}
+            clinicId={treatmentData?.clinicId || sessionData?.clinicId}
+        />
+
+        {/* Add Prescription Popup */}
+        <AddPrescriptionPopup
+            open={showPrescriptionPopup}
+            onClose={() => setShowPrescriptionPopup(false)}
+            onSave={handleSavePrescription}
+            doctorId={treatmentData?.doctorId || sessionData?.doctorId}
+            clinicId={treatmentData?.clinicId || sessionData?.clinicId}
+        />
+
+        {/* Instruction Groups Popup */}
+        <InstructionGroupsPopup
+            isOpen={showInstructionPopup}
+            onClose={() => {
+                if (selectedInstructionGroups && selectedInstructionGroups.length > 0) {
+                    selectedInstructionGroups.forEach((group, idx) => {
+                        console.log(`Final Group ${idx + 1}:`, {
+                            id: group.id,
+                            name: group.name,
+                            nameHindi: group.nameHindi,
+                            instructions: group.instructions
+                        });
+                    });
+                } else {
+                    console.warn('⚠️ selectedInstructionGroups is EMPTY after closing popup!');
+                }
+                setShowInstructionPopup(false);
+            }}
+            patientName={treatmentData?.patientName || ''}
+            patientAge={Number(treatmentData?.age || 0)}
+            patientGender={(treatmentData?.gender || '').toString()}
+            initialSelectedGroups={selectedInstructionGroups}
+            onChange={(groups) => {
+                // Normalize groups to ensure clean format (only id, name, nameHindi, instructions)
+                const normalizedGroups = normalizeInstructionGroups(groups || []);
+
+                if (normalizedGroups && normalizedGroups.length > 0) {
+                    normalizedGroups.forEach((group, idx) => {
+                        console.log(`Normalized Group ${idx + 1}:`, {
+                            id: group.id,
+                            name: group.name,
+                            nameHindi: group.nameHindi,
+                            instructions: group.instructions
+                        });
+                    });
+                } else {
+                    console.warn('⚠️ Received EMPTY groups array from popup onChange!');
+                }
+
+                // Store normalized (clean) groups
+                setSelectedInstructionGroups(normalizedGroups);
+            }}
+        />
+        {/* Debug: Log when popup opens */}
+        {
+            showInstructionPopup && (() => {
+                if (selectedInstructionGroups && selectedInstructionGroups.length > 0) {
+                    console.log('selectedInstructionGroups content:', JSON.stringify(selectedInstructionGroups, null, 2));
+                    selectedInstructionGroups.forEach((group, idx) => {
+                        console.log(`Group ${idx + 1}:`, {
+                            id: group.id,
+                            name: group.name,
+                            nameHindi: group.nameHindi,
+                            instructions: group.instructions,
+                            hasName: !!group.name,
+                            hasInstructions: !!group.instructions
+                        });
+                    });
+                } else {
+                    console.warn('⚠️ selectedInstructionGroups is EMPTY or UNDEFINED!');
+                }
+                return null;
+            })()
+        }
+
+        {/* Add Test Lab Popup */}
+        <AddTestLabPopup
+            open={showTestLabPopup}
+            onClose={() => setShowTestLabPopup(false)}
+            onSave={handleSaveTestLab}
+            onError={(message) => {
+                setSnackbarMessage(message);
+                setSnackbarOpen(true);
+            }}
+            doctorId={treatmentData?.doctorId || sessionData?.doctorId}
+            clinicId={treatmentData?.clinicId || sessionData?.clinicId}
+        />
+
+        {/* Addendum Modal */}
+        {
+            showAddendumModal && (
+                <div
+                    role="dialog"
+                    aria-modal="true"
+                    style={{
+                        position: 'fixed',
+                        inset: 0,
+                        backgroundColor: 'rgba(0,0,0,0.4)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 100000
+                    }}
+                    onClick={() => setShowAddendumModal(false)}
+                >
+                    <div
+                        style={{
+                            width: '95%',
+                            maxWidth: 700,
+                            maxHeight: '80vh',
+                            overflow: 'auto',
+                            background: '#fff',
+                            borderRadius: 8,
+                            boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
+                            fontFamily: 'Roboto, sans-serif'
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <PatientNameDisplay
+                            style={{
+                                background: 'linear-gradient(90deg, #1976d2 0%, #42a5f5 100%)',
+                                color: '#fff',
+                                padding: '12px 16px',
+                                borderTopLeftRadius: 8,
+                                borderTopRightRadius: 8,
+                                fontWeight: 700,
+                                fontSize: 16,
+                                textDecoration: 'underline'
+                            }}
+                            patientData={{
+                                patient: treatmentData?.patientName,
+                                gender: treatmentData?.gender,
+                                age: treatmentData?.age,
+                                contact: treatmentData?.contact,
+                                dob: treatmentData?.dateOfBirth
+                            }}
+                        />
+
+                        <div style={{ padding: 16 }}>
+                            <div style={{ fontWeight: 600, color: '#2e7d32', marginBottom: 8 }}>Addendum:</div>
+                            <ClearableTextField
+                                multiline
+                                rows={5}
+                                fullWidth
+                                value={addendumText}
+                                onChange={(val) => {
+                                    const text = val.slice(0, 1000);
+                                    setAddendumText(text);
+                                }}
+                                placeholder="Type addendum..."
+                                variant="outlined"
+                                size="small"
+                                inputProps={{
+                                    maxLength: 1000
+                                }}
+                                sx={{
+                                    '& .MuiOutlinedInput-root': {
+                                        borderRadius: 6,
+                                        fontSize: 13,
+                                        backgroundColor: 'white'
+                                    },
+                                    '& .MuiInputBase-input': {
+                                        color: '#333'
+                                    }
+                                }}
+                                helperText="Maximum 1000 character"
+                            />
+
+                            <div style={{ display: 'flex', gap: 8, marginTop: 14, justifyContent: 'flex-end' }}>
                                 <button
                                     type="button"
-                                    onClick={handleBackToAppointments}
-                                    title="Cancel and go back to appointments"
-                                    style={{
-                                        backgroundColor: '#1976d2',
-                                        color: 'white',
-                                        border: 'none',
-                                        padding: '8px 12px',
-                                        borderRadius: '4px',
-                                        cursor: 'pointer',
-                                        fontSize: '13px'
-                                    }}
+                                    onClick={() => setShowAddendumModal(false)}
+                                    title="Close addendum"
+                                    style={{ backgroundColor: 'rgb(24, 120, 215)', color: '#fff', border: '1px solid #cfd8dc', padding: '6px 12px', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
                                 >
                                     Close
                                 </button>
                                 <button
                                     type="button"
-                                    onClick={handleTreatmentSave}
-                                    disabled={isSubmitting || isFormDisabled}
-                                    title="Save treatment"
-                                    style={{
-                                        backgroundColor: (isSubmitting || isFormDisabled) ? '#ccc' : '#1976d2',
-                                        color: 'white',
-                                        border: 'none',
-                                        padding: '8px 12px',
-                                        borderRadius: '4px',
-                                        cursor: (isSubmitting || isFormDisabled) ? 'not-allowed' : 'pointer',
-                                        fontSize: '13px'
-                                    }}
+                                    onClick={() => setAddendumText('')}
+                                    title="Reset addendum"
+                                    style={{ backgroundColor: 'rgb(25, 118, 210)', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
                                 >
-                                    {isSubmitting ? 'Saving...' : 'Save'}
+                                    Reset
                                 </button>
                                 <button
                                     type="button"
-                                    onClick={handleTreatmentSubmit}
-                                    disabled={isSubmitting || isFormDisabled}
-                                    title="Submit treatment"
-                                    style={{
-                                        backgroundColor: (isSubmitting || isFormDisabled) ? '#ccc' : '#1976d2',
-                                        color: 'white',
-                                        border: 'none',
-                                        padding: '8px 12px',
-                                        borderRadius: '4px',
-                                        cursor: (isSubmitting || isFormDisabled) ? 'not-allowed' : 'pointer',
-                                        fontSize: '13px'
+                                    onClick={async () => {
+                                        try {
+                                            const pid = String(treatmentData?.patientId || '').trim();
+                                            const visitNo = Number(treatmentData?.visitNumber || 0);
+                                            const userId = String(sessionData?.userId || '').trim();
+                                            const visitDate = new Date().toISOString().slice(0, 10);
+                                            if (!pid || !visitNo || !userId) {
+                                                throw new Error('Missing patient, visit or user context');
+                                            }
+                                            const resp = await patientService.updateAddendum({
+                                                addendum: addendumText || '',
+                                                visitDate,
+                                                patientId: pid,
+                                                patientVisitNo: visitNo,
+                                                userId
+                                            });
+
+                                            // Update local state so it persists
+                                            setTreatmentData(prev => prev ? { ...prev, addendum: addendumText } : prev);
+
+                                            const msg = resp?.message || 'Addendum updated';
+                                            setSnackbarMessage(msg);
+                                            setSnackbarOpen(true);
+                                            setShowAddendumModal(false);
+                                        } catch (e: any) {
+                                            setSnackbarMessage(e?.message || 'Failed to update addendum');
+                                            setSnackbarOpen(true);
+                                        }
                                     }}
+                                    title="Submit addendum"
+                                    style={{ backgroundColor: '#1976d2', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
                                 >
-                                    {isSubmitting ? 'Submitting...' : 'Submit'}
+                                    Submit
                                 </button>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
+            )
+        }
 
-            {/* Patient Form Dialog */}
-            {
-                showPatientFormDialog && (
-                    <div
-                        style={{
-                            position: 'fixed',
-                            top: 0,
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            zIndex: 9999
-                        }}
-                        onClick={(e) => {
-                            // Close dialog when clicking on the overlay (outside the form)
-                            if (e.target === e.currentTarget) {
-                                setShowPatientFormDialog(false);
-                            }
-                        }}
-                    >
-                        <div
-                            style={{
-                                backgroundColor: 'white',
-                                borderRadius: '8px',
-                                width: '95%',
-                                maxWidth: '1200px',
-                                maxHeight: '95vh',
-                                overflow: 'auto',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                position: 'relative'
-                            }}
-                        >
-                            {/* Patient Form Content */}
-                            <PatientFormTest
-                                onClose={() => setShowPatientFormDialog(false)}
-                                initialData={formPatientData || undefined}
-                                visitDates={visitDates}
-                                currentVisitIndex={currentVisitIndex}
-                                onVisitDateChange={(newIndex: number) => {
-                                    if (newIndex >= 0 && newIndex < allVisits.length) {
-                                        setCurrentVisitIndex(newIndex);
-                                        const selectedVisit = allVisits[newIndex];
-                                        const patientName = selectedPatientForForm?.name || '';
-                                        const appointmentRow = {
-                                            patientId: treatmentData?.patientId,
-                                            patient: treatmentData?.patientName,
-                                            age: treatmentData?.age,
-                                            gender: treatmentData?.gender,
-                                            contact: treatmentData?.contact,
-                                            doctorId: treatmentData?.doctorId,
-                                            provider: getDoctorLabelById(treatmentData?.doctorId)
-                                        };
-                                        const mapped = mapPreviousVisitToInitialData(selectedVisit, patientName, appointmentRow);
-                                        setFormPatientData(mapped);
-                                    }
-                                }}
-                            />
-                        </div>
-                    </div>
-                )
-            }
+        <AddBillingPopup
+            open={showBillingPopup}
+            onClose={() => setShowBillingPopup(false)}
+            isFormDisabled={isFormDisabled}
+            onSubmit={(totalAmount) => {
+                if (isFormDisabled) {
+                    return;
+                }
+                setBillingData(prev => {
+                    const discountNum = parseFloat(prev.discount) || 0;
+                    const billedNum = Number(totalAmount) || 0;
+                    const acBal = Math.max(0, billedNum - discountNum);
+                    return {
+                        ...prev,
+                        billed: billedNum.toFixed(2),
+                        dues: acBal.toFixed(2)
+                    };
+                });
+            }}
+            onTotalFeesChange={(total) => {
+                if (isFormDisabled) {
+                    return;
+                }
+                const billedNum = Number(total) || 0;
+                const discountNum = parseFloat(billingData.discount) || 0;
 
-            {/* Add Complaint Popup */}
-            <AddComplaintPopup
-                open={showComplaintPopup}
-                onClose={() => setShowComplaintPopup(false)}
-                onSave={handleSaveComplaint}
-            />
+                let newError: string | null = null;
+                if (discountNum > 0 && discountNum > billedNum) {
+                    newError = 'Discount cannot be greater than billed amount';
+                }
+                setDiscountError(newError);
 
-            {/* Add Diagnosis Popup */}
-            <AddDiagnosisPopup
-                open={showDiagnosisPopup}
-                onClose={() => setShowDiagnosisPopup(false)}
-                onSave={handleSaveDiagnosis}
-            />
+                setBillingData(prev => {
+                    const acBal = Math.max(0, billedNum - discountNum);
+                    return {
+                        ...prev,
+                        billed: billedNum.toFixed(2),
+                        dues: acBal.toFixed(2)
+                    };
+                });
+            }}
+            billingSearch={billingSearch}
+            setBillingSearch={setBillingSearch}
+            filteredBillingDetails={filteredBillingDetails}
+            selectedBillingDetailIds={selectedBillingDetailIds}
+            setSelectedBillingDetailIds={setSelectedBillingDetailIds}
+            followUp={formData.visitType.followUp}
+            userId={sessionData?.userId ? String(sessionData.userId) : undefined}
+            doctorId={treatmentData?.doctorId || sessionData?.doctorId}
+            patientId={treatmentData?.patientId}
+            clinicId={sessionData?.clinicId || treatmentData?.clinicId}
+            visitDate={toYyyyMmDd(new Date())}
+            patientVisitNo={treatmentData?.visitNumber}
+            shiftId={(sessionData as any)?.shiftId || 1}
+            useOverwrite={false}
+            discount={billingData.discount}
+            discountError={discountError}
+            setDiscountError={setDiscountError}
+        />
 
-            {/* Add Medicine Popup */}
-            <AddMedicinePopup
-                open={showMedicinePopup}
-                onClose={() => setShowMedicinePopup(false)}
-                onSave={handleSaveMedicine}
-                onError={(message) => {
-                    setSnackbarMessage(message);
-                    setSnackbarOpen(true);
-                }}
-                doctorId={treatmentData?.doctorId || sessionData?.doctorId}
-                clinicId={treatmentData?.clinicId || sessionData?.clinicId}
-            />
+        {
+            showLabTestEntry && selectedPatientForLab && (
+                <LabTestEntry
+                    open={true}
+                    onClose={() => {
+                        setShowLabTestEntry(false);
+                        setSelectedPatientForLab(null);
+                    }}
+                    patientData={selectedPatientForLab}
+                    appointment={selectedPatientForLab}
+                    sessionData={sessionData}
+                    onLabTestResultsFetched={handleLabTestResultsFetched}
+                />
+            )
+        }
 
-            {/* Add Prescription Popup */}
-            <AddPrescriptionPopup
-                open={showPrescriptionPopup}
-                onClose={() => setShowPrescriptionPopup(false)}
-                onSave={handleSavePrescription}
-                doctorId={treatmentData?.doctorId || sessionData?.doctorId}
-                clinicId={treatmentData?.clinicId || sessionData?.clinicId}
-            />
+        {/* Past Services Popup */}
+        <PastServicesPopup
+            open={showPastServicesPopup}
+            onClose={() => {
+                setShowPastServicesPopup(false);
+                setSelectedPastServiceDate(null);
+            }}
+            date={selectedPastServiceDate}
+            patientData={treatmentData ? {
+                patientName: treatmentData.patientName,
+                gender: treatmentData.gender,
+                age: treatmentData.age,
+                patientId: treatmentData.patientId
+            } : null}
+            sessionData={sessionData}
+        />
 
-            {/* Instruction Groups Popup */}
-            <InstructionGroupsPopup
-                isOpen={showInstructionPopup}
-                onClose={() => {
-                    if (selectedInstructionGroups && selectedInstructionGroups.length > 0) {
-                        selectedInstructionGroups.forEach((group, idx) => {
-                            console.log(`Final Group ${idx + 1}:`, {
-                                id: group.id,
-                                name: group.name,
-                                nameHindi: group.nameHindi,
-                                instructions: group.instructions
-                            });
-                        });
-                    } else {
-                        console.warn('⚠️ selectedInstructionGroups is EMPTY after closing popup!');
-                    }
-                    setShowInstructionPopup(false);
-                }}
-                patientName={treatmentData?.patientName || ''}
-                patientAge={Number(treatmentData?.age || 0)}
-                patientGender={(treatmentData?.gender || '').toString()}
-                initialSelectedGroups={selectedInstructionGroups}
-                onChange={(groups) => {
-                    // Normalize groups to ensure clean format (only id, name, nameHindi, instructions)
-                    const normalizedGroups = normalizeInstructionGroups(groups || []);
+        {/* Accounts Popup */}
+        <AccountsPopup
+            open={showAccountsPopup}
+            onClose={() => setShowAccountsPopup(false)}
+            patientId={(() => {
+                const pid = selectedPatientForForm?.id || selectedPatientForForm?.patientId || treatmentData?.patientId;
+                const result = pid ? String(pid) : undefined;
+                return result;
+            })()}
+            patientName={selectedPatientForForm?.name || treatmentData?.patientName}
+        />
 
-                    if (normalizedGroups && normalizedGroups.length > 0) {
-                        normalizedGroups.forEach((group, idx) => {
-                            console.log(`Normalized Group ${idx + 1}:`, {
-                                id: group.id,
-                                name: group.name,
-                                nameHindi: group.nameHindi,
-                                instructions: group.instructions
-                            });
-                        });
-                    } else {
-                        console.warn('⚠️ Received EMPTY groups array from popup onChange!');
-                    }
+        {/* Lab Trend Popup */}
+        <LabTrendPopup
+            open={showLabTrendPopup}
+            onClose={() => setShowLabTrendPopup(false)}
+            patientId={treatmentData?.patientId || ''}
+            patientName={treatmentData?.patientName || ''}
+            gender={treatmentData?.gender || ''}
+            age={treatmentData?.age || 0}
+            doctorId={treatmentData?.doctorId || sessionData?.doctorId}
+            clinicId={treatmentData?.clinicId || sessionData?.clinicId || ''}
+            visitDate={new Date().toISOString().split('T')[0]}
+            shiftId={(sessionData as any)?.shiftId || 1}
+            patientVisitNo={treatmentData?.visitNumber || 0}
+        />
 
-                    // Store normalized (clean) groups
-                    setSelectedInstructionGroups(normalizedGroups);
-                }}
-            />
-            {/* Debug: Log when popup opens */}
-            {
-                showInstructionPopup && (() => {
-                    if (selectedInstructionGroups && selectedInstructionGroups.length > 0) {
-                        console.log('selectedInstructionGroups content:', JSON.stringify(selectedInstructionGroups, null, 2));
-                        selectedInstructionGroups.forEach((group, idx) => {
-                            console.log(`Group ${idx + 1}:`, {
-                                id: group.id,
-                                name: group.name,
-                                nameHindi: group.nameHindi,
-                                instructions: group.instructions,
-                                hasName: !!group.name,
-                                hasInstructions: !!group.instructions
-                            });
-                        });
-                    } else {
-                        console.warn('⚠️ selectedInstructionGroups is EMPTY or UNDEFINED!');
-                    }
-                    return null;
-                })()
-            }
+        {/* Vitals Trend Popup */}
+        <VitalsTrendPopup
+            open={showVitalsTrend}
+            onClose={() => setShowVitalsTrend(false)}
+            patientId={treatmentData?.patientId}
+            clinicId={treatmentData?.clinicId || sessionData?.clinicId}
+            doctorId={treatmentData?.doctorId || sessionData?.doctorId}
+            visitNumber={treatmentData?.visitNumber}
+        />
 
-            {/* Add Test Lab Popup */}
-            <AddTestLabPopup
-                open={showTestLabPopup}
-                onClose={() => setShowTestLabPopup(false)}
-                onSave={handleSaveTestLab}
-                onError={(message) => {
-                    setSnackbarMessage(message);
-                    setSnackbarOpen(true);
-                }}
-                doctorId={treatmentData?.doctorId || sessionData?.doctorId}
-                clinicId={treatmentData?.clinicId || sessionData?.clinicId}
-            />
+        {/* Quick Registration Modal - appears on top of Treatment screen */}
+        {
+            showQuickRegistration && treatmentData?.patientId && (
+                <AddPatientPage
+                    open={showQuickRegistration}
+                    onClose={() => {
+                        setShowQuickRegistration(false);
+                    }}
+                    patientId={String(treatmentData.patientId)}
+                    readOnly={true}
+                    doctorId={treatmentData?.doctorId || sessionData?.doctorId}
+                    clinicId={treatmentData?.clinicId || sessionData?.clinicId}
+                />
+            )
+        }
 
-            {/* Addendum Modal */}
-            {
-                showAddendumModal && (
-                    <div
-                        role="dialog"
-                        aria-modal="true"
-                        style={{
-                            position: 'fixed',
-                            inset: 0,
-                            backgroundColor: 'rgba(0,0,0,0.4)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            zIndex: 100000
-                        }}
-                        onClick={() => setShowAddendumModal(false)}
-                    >
-                        <div
-                            style={{
-                                width: '95%',
-                                maxWidth: 700,
-                                maxHeight: '80vh',
-                                overflow: 'auto',
-                                background: '#fff',
-                                borderRadius: 8,
-                                boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
-                                fontFamily: 'Roboto, sans-serif'
-                            }}
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            <PatientNameDisplay
-                                style={{
-                                    background: 'linear-gradient(90deg, #1976d2 0%, #42a5f5 100%)',
-                                    color: '#fff',
-                                    padding: '12px 16px',
-                                    borderTopLeftRadius: 8,
-                                    borderTopRightRadius: 8,
-                                    fontWeight: 700,
-                                    fontSize: 16,
-                                    textDecoration: 'underline'
-                                }}
-                                patientData={{
-                                    patient: treatmentData?.patientName,
-                                    gender: treatmentData?.gender,
-                                    age: treatmentData?.age,
-                                    contact: treatmentData?.contact,
-                                    dob: treatmentData?.dateOfBirth
-                                }}
-                            />
+        {/* Success/Error Snackbar - Always rendered at bottom center */}
+        <Snackbar
+            open={snackbarOpen}
+            autoHideDuration={2000}
+            onClose={() => {
+                setSnackbarOpen(false);
+            }}
+            message={snackbarMessage}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+            sx={{
+                zIndex: 99999, // Ensure snackbar appears above everything
+                '& .MuiSnackbarContent-root': {
+                    backgroundColor: snackbarMessage.toLowerCase().includes('error') ||
+                        snackbarMessage.toLowerCase().includes('failed') ||
+                        snackbarMessage.toLowerCase().includes('already added') ||
+                        snackbarMessage.toLowerCase().includes('required') ||
+                        snackbarMessage.toLowerCase().includes('must be') ||
+                        snackbarMessage.toLowerCase().includes('cannot exceed') ? '#f44336' : '#4caf50',
+                    color: 'white',
+                    fontWeight: 'bold'
+                }
+            }}
+        />
 
-                            <div style={{ padding: 16 }}>
-                                <div style={{ fontWeight: 600, color: '#2e7d32', marginBottom: 8 }}>Addendum:</div>
-                                <ClearableTextField
-                                    multiline
-                                    rows={5}
-                                    fullWidth
-                                    value={addendumText}
-                                    onChange={(val) => {
-                                        const text = val.slice(0, 1000);
-                                        setAddendumText(text);
-                                    }}
-                                    placeholder="Type addendum..."
-                                    variant="outlined"
-                                    size="small"
-                                    inputProps={{
-                                        maxLength: 1000
-                                    }}
-                                    sx={{
-                                        '& .MuiOutlinedInput-root': {
-                                            borderRadius: 6,
-                                            fontSize: 13,
-                                            backgroundColor: 'white'
-                                        },
-                                        '& .MuiInputBase-input': {
-                                            color: '#333'
-                                        }
-                                    }}
-                                    helperText="Maximum 1000 character"
-                                />
-
-                                <div style={{ display: 'flex', gap: 8, marginTop: 14, justifyContent: 'flex-end' }}>
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowAddendumModal(false)}
-                                        title="Close addendum"
-                                        style={{ backgroundColor: 'rgb(24, 120, 215)', color: '#fff', border: '1px solid #cfd8dc', padding: '6px 12px', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
-                                    >
-                                        Close
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setAddendumText('')}
-                                        title="Reset addendum"
-                                        style={{ backgroundColor: 'rgb(25, 118, 210)', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
-                                    >
-                                        Reset
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={async () => {
-                                            try {
-                                                const pid = String(treatmentData?.patientId || '').trim();
-                                                const visitNo = Number(treatmentData?.visitNumber || 0);
-                                                const userId = String(sessionData?.userId || '').trim();
-                                                const visitDate = new Date().toISOString().slice(0, 10);
-                                                if (!pid || !visitNo || !userId) {
-                                                    throw new Error('Missing patient, visit or user context');
-                                                }
-                                                const resp = await patientService.updateAddendum({
-                                                    addendum: addendumText || '',
-                                                    visitDate,
-                                                    patientId: pid,
-                                                    patientVisitNo: visitNo,
-                                                    userId
-                                                });
-
-                                                // Update local state so it persists
-                                                setTreatmentData(prev => prev ? { ...prev, addendum: addendumText } : prev);
-
-                                                const msg = resp?.message || 'Addendum updated';
-                                                setSnackbarMessage(msg);
-                                                setSnackbarOpen(true);
-                                                setShowAddendumModal(false);
-                                            } catch (e: any) {
-                                                setSnackbarMessage(e?.message || 'Failed to update addendum');
-                                                setSnackbarOpen(true);
-                                            }
-                                        }}
-                                        title="Submit addendum"
-                                        style={{ backgroundColor: '#1976d2', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
-                                    >
-                                        Submit
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )
-            }
-
-            <AddBillingPopup
-                open={showBillingPopup}
-                onClose={() => setShowBillingPopup(false)}
-                isFormDisabled={isFormDisabled}
-                onSubmit={(totalAmount) => {
-                    if (isFormDisabled) {
-                        return;
-                    }
-                    setBillingData(prev => {
-                        const discountNum = parseFloat(prev.discount) || 0;
-                        const billedNum = Number(totalAmount) || 0;
-                        const acBal = Math.max(0, billedNum - discountNum);
-                        return {
-                            ...prev,
-                            billed: billedNum.toFixed(2),
-                            dues: acBal.toFixed(2)
-                        };
-                    });
-                }}
-                onTotalFeesChange={(total) => {
-                    if (isFormDisabled) {
-                        return;
-                    }
-                    const billedNum = Number(total) || 0;
-                    const discountNum = parseFloat(billingData.discount) || 0;
-
-                    let newError: string | null = null;
-                    if (discountNum > 0 && discountNum > billedNum) {
-                        newError = 'Discount cannot be greater than billed amount';
-                    }
-                    setDiscountError(newError);
-
-                    setBillingData(prev => {
-                        const acBal = Math.max(0, billedNum - discountNum);
-                        return {
-                            ...prev,
-                            billed: billedNum.toFixed(2),
-                            dues: acBal.toFixed(2)
-                        };
-                    });
-                }}
-                billingSearch={billingSearch}
-                setBillingSearch={setBillingSearch}
-                filteredBillingDetails={filteredBillingDetails}
-                selectedBillingDetailIds={selectedBillingDetailIds}
-                setSelectedBillingDetailIds={setSelectedBillingDetailIds}
-                followUp={formData.visitType.followUp}
-                userId={sessionData?.userId ? String(sessionData.userId) : undefined}
-                doctorId={treatmentData?.doctorId || sessionData?.doctorId}
-                patientId={treatmentData?.patientId}
-                clinicId={sessionData?.clinicId || treatmentData?.clinicId}
-                visitDate={toYyyyMmDd(new Date())}
-                patientVisitNo={treatmentData?.visitNumber}
-                shiftId={(sessionData as any)?.shiftId || 1}
-                useOverwrite={false}
-                discount={billingData.discount}
-                discountError={discountError}
-                setDiscountError={setDiscountError}
-            />
-
-            {
-                showLabTestEntry && selectedPatientForLab && (
-                    <LabTestEntry
-                        open={true}
-                        onClose={() => {
-                            setShowLabTestEntry(false);
-                            setSelectedPatientForLab(null);
-                        }}
-                        patientData={selectedPatientForLab}
-                        appointment={selectedPatientForLab}
-                        sessionData={sessionData}
-                        onLabTestResultsFetched={handleLabTestResultsFetched}
-                    />
-                )
-            }
-
-            {/* Past Services Popup */}
-            <PastServicesPopup
-                open={showPastServicesPopup}
-                onClose={() => {
-                    setShowPastServicesPopup(false);
-                    setSelectedPastServiceDate(null);
-                }}
-                date={selectedPastServiceDate}
-                patientData={treatmentData ? {
-                    patientName: treatmentData.patientName,
-                    gender: treatmentData.gender,
-                    age: treatmentData.age,
-                    patientId: treatmentData.patientId
-                } : null}
-                sessionData={sessionData}
-            />
-
-            {/* Accounts Popup */}
-            <AccountsPopup
-                open={showAccountsPopup}
-                onClose={() => setShowAccountsPopup(false)}
-                patientId={(() => {
-                    const pid = selectedPatientForForm?.id || selectedPatientForForm?.patientId || treatmentData?.patientId;
-                    const result = pid ? String(pid) : undefined;
-                    return result;
-                })()}
-                patientName={selectedPatientForForm?.name || treatmentData?.patientName}
-            />
-
-            {/* Lab Trend Popup */}
-            <LabTrendPopup
-                open={showLabTrendPopup}
-                onClose={() => setShowLabTrendPopup(false)}
-                patientId={treatmentData?.patientId || ''}
-                patientName={treatmentData?.patientName || ''}
-                gender={treatmentData?.gender || ''}
-                age={treatmentData?.age || 0}
-                doctorId={treatmentData?.doctorId || sessionData?.doctorId}
-                clinicId={treatmentData?.clinicId || sessionData?.clinicId || ''}
-                visitDate={new Date().toISOString().split('T')[0]}
-                shiftId={(sessionData as any)?.shiftId || 1}
-                patientVisitNo={treatmentData?.visitNumber || 0}
-            />
-
-            {/* Vitals Trend Popup */}
-            <VitalsTrendPopup
-                open={showVitalsTrend}
-                onClose={() => setShowVitalsTrend(false)}
-                patientId={treatmentData?.patientId}
-                clinicId={treatmentData?.clinicId || sessionData?.clinicId}
-                doctorId={treatmentData?.doctorId || sessionData?.doctorId}
-                visitNumber={treatmentData?.visitNumber}
-            />
-
-            {/* Quick Registration Modal - appears on top of Treatment screen */}
-            {
-                showQuickRegistration && treatmentData?.patientId && (
-                    <AddPatientPage
-                        open={showQuickRegistration}
-                        onClose={() => {
-                            setShowQuickRegistration(false);
-                        }}
-                        patientId={String(treatmentData.patientId)}
-                        readOnly={true}
-                        doctorId={treatmentData?.doctorId || sessionData?.doctorId}
-                        clinicId={treatmentData?.clinicId || sessionData?.clinicId}
-                    />
-                )
-            }
-
-            {/* Success/Error Snackbar - Always rendered at bottom center */}
-            <Snackbar
-                open={snackbarOpen}
-                autoHideDuration={2000}
-                onClose={() => {
-                    setSnackbarOpen(false);
-                }}
-                message={snackbarMessage}
-                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-                sx={{
-                    zIndex: 99999, // Ensure snackbar appears above everything
-                    '& .MuiSnackbarContent-root': {
-                        backgroundColor: snackbarMessage.toLowerCase().includes('error') ||
-                            snackbarMessage.toLowerCase().includes('failed') ||
-                            snackbarMessage.toLowerCase().includes('already added') ||
-                            snackbarMessage.toLowerCase().includes('required') ||
-                            snackbarMessage.toLowerCase().includes('must be') ||
-                            snackbarMessage.toLowerCase().includes('cannot exceed') ? '#f44336' : '#4caf50',
-                        color: 'white',
-                        fontWeight: 'bold'
-                    }
-                }}
-            />
-
-        </div >
-    );
+    </div >
+);
 }

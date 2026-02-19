@@ -2,7 +2,16 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react({
+      babel: {
+        generatorOpts: {
+          compact: false,
+          minified: false
+        }
+      }
+    })
+  ],
   define: {
     global: 'window',
   },
