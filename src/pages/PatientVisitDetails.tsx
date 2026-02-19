@@ -2339,6 +2339,13 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                     fontSize: '18px',
                                                     color: '#757575',
                                                     cursor: 'pointer',
+                                                    transition: 'color 0.2s'
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                    e.currentTarget.style.color = '#757575';
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    e.currentTarget.style.color = '#757575';
                                                 }}
                                             />
                                         )}
@@ -2532,6 +2539,13 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                                             fontSize: '18px',
                                                                             color: '#757575',
                                                                             cursor: 'pointer',
+                                                                            transition: 'color 0.2s'
+                                                                        }}
+                                                                        onMouseEnter={(e) => {
+                                                                            e.currentTarget.style.color = '#757575';
+                                                                        }}
+                                                                        onMouseLeave={(e) => {
+                                                                            e.currentTarget.style.color = '#757575';
                                                                         }}
                                                                     />
                                                                 )}
@@ -2729,6 +2743,13 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                 fontSize: '18px',
                                                 color: '#757575',
                                                 cursor: 'pointer',
+                                                transition: 'color 0.2s'
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                e.currentTarget.style.color = '#757575';
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.currentTarget.style.color = '#757575';
                                             }}
                                         />
                                     )}
@@ -2786,6 +2807,13 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                 fontSize: '18px',
                                                 color: '#757575',
                                                 cursor: 'pointer',
+                                                transition: 'color 0.2s'
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                e.currentTarget.style.color = '#757575';
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.currentTarget.style.color = '#757575';
                                             }}
                                         />
                                     )}
@@ -3059,7 +3087,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                         color: '#2e7d32',
                                                         mr: 0.5,
                                                         fontWeight: 500,
-                                                        cursor: 'pointer',
+                                                        cursor: 'pointer!important',
                                                         textDecoration: 'underline',
                                                         '&:hover': {
                                                             color: '#1b5e20'
@@ -3084,12 +3112,19 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                         marginLeft: '4px',
                                                         display: 'inline-flex',
                                                         alignItems: 'center',
-                                                        cursor: (readOnly || isDeleting) ? 'default' : 'pointer',
-                                                        color: isDeleting ? 'rgba(0, 0, 0, 0.38)' : '#d32f2f'
+                                                        cursor: 'pointer!important',
+                                                        color: isDeleting ? 'rgba(0, 0, 0, 0.38)' : 'rgba(0, 0, 0, 0.54)',
+                                                        transition: 'color 0.2s'
+                                                    }}
+                                                    onMouseEnter={(e) => {
+                                                        if (!readOnly && !isDeleting) e.currentTarget.style.color = 'rgba(0, 0, 0, 0.54)';
+                                                    }}
+                                                    onMouseLeave={(e) => {
+                                                        if (!readOnly && !isDeleting) e.currentTarget.style.color = 'rgba(0, 0, 0, 0.54)';
                                                     }}
                                                     className='py-2 pe-2'
                                                 >
-                                                    <Close fontSize="small" sx={{ fontSize: '16px' }} />
+                                                    <Close fontSize="small" sx={{ fontSize: '16px', cursor: 'pointer!important' }} />
                                                 </span>
                                             </Box>
                                         );
@@ -3123,18 +3158,19 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                         marginLeft: '4px',
                                                         display: 'inline-flex',
                                                         alignItems: 'center',
-                                                        cursor: readOnly ? 'default' : 'pointer',
-                                                        color: 'rgba(0, 0, 0, 0.54)'
+                                                        cursor: readOnly ? 'default' : 'pointer!important',
+                                                        color: 'rgba(0, 0, 0, 0.54)',
+                                                        transition: 'color 0.2s'
                                                     }}
                                                     onMouseEnter={(e) => {
-                                                        if (!readOnly) e.currentTarget.style.color = '#d32f2f';
+                                                        if (!readOnly) e.currentTarget.style.color = 'rgba(0, 0, 0, 0.54)';
                                                     }}
                                                     onMouseLeave={(e) => {
                                                         if (!readOnly) e.currentTarget.style.color = 'rgba(0, 0, 0, 0.54)';
                                                     }}
                                                     className='py-2 pe-2'
                                                 >
-                                                    <Close fontSize="small" sx={{ fontSize: '16px' }} />
+                                                    <Close fontSize="small" sx={{ fontSize: '16px', cursor: 'inherit' }} />
                                                 </span>
                                             </Box>
                                         )

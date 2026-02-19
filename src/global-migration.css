@@ -352,7 +352,7 @@ h6,
 p,
 .MuiTypography-body1,
 .MuiTypography-body2 {
-  color: whitesmoke;
+  /* color: whitesmoke; */
   font-size: 14px !important;
   line-height: 24px !important;
   margin: 0 0 16px 0;
