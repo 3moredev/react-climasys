@@ -37,6 +37,7 @@ export type AppointmentRow = {
     labs: string;
     doctorId?: string;
     visitNumber?: number;
+    inPerson?: boolean;
     shiftId?: number;
     clinicId?: string;
     actions: boolean;

@@ -1458,31 +1458,21 @@ export default function Treatment() {
 
     // Determine In-Person checkbox state based on status
     const inPersonChecked = React.useMemo(() => {
+        // High priority: value from backend
+        if (treatmentData?.inPerson !== undefined) {
+            return treatmentData.inPerson;
+        }
+
         if (!treatmentData?.status) return true; // Default to true if no status
 
         const status = String(treatmentData.status).trim().toUpperCase();
-        // New logic: Only auto-calculate for active statuses (WAITING, WITH DOCTOR, CONSULT ON CALL)
-        // For completed/submitted statuses (WAITING FOR MEDICINE, COMPLETE), respect the backend value
-
-        const isSubmitted = status === 'WAITING FOR MEDICINE' ||
-            status === 'WAITINGFOR MEDICINE' ||
-            status === 'WAITINGFORMEDICINE' ||
-            status === 'COMPLETE' ||
-            status === 'COMPLETED';
-
-        if (isSubmitted) {
-            // If submitted, use the value from backend (treatmentData.inPerson)
-            // If treatmentData.inPerson is undefined, fallback to true but this should come from backend
-            console.log('DEBUG: Treatment inPersonChecked (submitted)', { status, inPerson: treatmentData.inPerson });
-            return treatmentData.inPerson !== undefined ? treatmentData.inPerson : true;
-        }
-
         const normalizedStatus = status === 'ON CALL' ? 'CONSULT ON CALL' : status;
-        // If status is "CONSULT ON CALL" or other non-in-person statuses, set to false
+
+        // Fallback logic (matching backend implementation)
         if (normalizedStatus === 'CONSULT ON CALL' || (normalizedStatus !== 'WAITING' && normalizedStatus !== 'WITH DOCTOR')) {
             return false;
         }
-        return true; // Default to true for WAITING or WITH DOCTOR
+        return true;
     }, [treatmentData?.status, treatmentData?.inPerson]);
 
     // Determine if In-Person checkbox should be disabled based on status
@@ -3416,9 +3406,15 @@ export default function Treatment() {
             };
 
             // Sync treatmentData with fetched details so header display is correct
+            // NOTE: intentionally exclude `inPerson` from the normalized spread.
+            // The appointment-details API often returns inPerson:false even for WAITING/WITH DOCTOR
+            // patients. Because inPersonChecked gives priority to any defined treatmentData.inPerson
+            // value, spreading it here would overwrite the correctly-loaded initial value and cause
+            // the In-Person checkbox to disappear. inPerson is managed by the initial data load only.
+            const { inPerson: _skipInPerson, ...normalizedWithoutInPerson } = normalized;
             setTreatmentData(prev => ({
                 ...prev,
-                ...normalized,
+                ...normalizedWithoutInPerson,
                 // Ensure referBy/referralCode is preserved
                 referralCode: normalized.referralCode,
                 referralName: normalized.referralName,
@@ -3513,26 +3509,34 @@ export default function Treatment() {
                     // Determine inPerson value
                     let computedInPerson = next.visitType?.inPerson ?? true; // Default to current value or true
 
-                    // Get status from appointment data
-                    const status = appointmentData.status || appointmentData.statusDescription || '';
+                    // Get status from appointment data; fall back to treatmentData.status if
+                    // appointmentData doesn't carry a status field (common for visit-detail APIs).
+                    // Without this fallback, status='', which causes '' !== 'WAITING' to be true
+                    // and forces computedInPerson=false even when the API returns inPerson:true.
+                    const rawApptStatus = appointmentData.status || appointmentData.statusDescription || '';
+                    const status = rawApptStatus || treatmentData?.status || '';
                     const normalizedStatus = String(status).trim().toUpperCase();
                     const finalStatus = normalizedStatus === 'ON CALL' ? 'CONSULT ON CALL' : normalizedStatus;
 
-                    // Only patch inPerson if status is "SAVED"
-                    // logic change: DO NOT patch if status is WAITING FOR MEDICINE, as that means
-                    // the visit is already submitted and we should trust the visit data, not appointment data
-                    const shouldPatchInPerson = finalStatus === 'SAVE';
-
-                    if (shouldPatchInPerson && typeof normalized.inPerson === 'boolean') {
-                        // Patch with the actual value from API (true or false)
+                    // If we still have no status to work with, but the API returned an explicit
+                    // inPerson boolean, trust it directly (e.g. inPerson:true → show checked).
+                    if (!finalStatus && typeof normalized.inPerson === 'boolean') {
                         computedInPerson = normalized.inPerson;
-                        console.log('Patching inPerson from API for status', finalStatus, ':', computedInPerson);
-                    } else if (!shouldPatchInPerson) {
-                        // For other statuses, compute based on status logic
-                        if (finalStatus === 'CONSULT ON CALL' || (finalStatus !== 'WAITING' && finalStatus !== 'WITH DOCTOR')) {
-                            computedInPerson = false;
-                        } else if (finalStatus === 'WAITING' || finalStatus === 'WITH DOCTOR') {
-                            computedInPerson = true;
+                        console.log('No status available; trusting API inPerson value:', computedInPerson);
+                    } else {
+                        // Only patch inPerson if status is "SAVE"
+                        const shouldPatchInPerson = finalStatus === 'SAVE';
+
+                        if (shouldPatchInPerson && typeof normalized.inPerson === 'boolean') {
+                            computedInPerson = normalized.inPerson;
+                            console.log('Patching inPerson from API for status', finalStatus, ':', computedInPerson);
+                        } else if (!shouldPatchInPerson) {
+                            // Compute from status
+                            if (finalStatus === 'CONSULT ON CALL' || (finalStatus !== 'WAITING' && finalStatus !== 'WITH DOCTOR')) {
+                                computedInPerson = false;
+                            } else if (finalStatus === 'WAITING' || finalStatus === 'WITH DOCTOR') {
+                                computedInPerson = true;
+                            }
                         }
                     }
 

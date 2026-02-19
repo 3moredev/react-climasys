@@ -36,6 +36,7 @@ export interface VisitDetails {
   notes?: string;
   addendum?: string;
   visitComments?: string;
+  inPerson?: boolean;
 }
 
 // Comprehensive visit data request interface
