@@ -429,18 +429,24 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
     }, [patientData?.provider, (patientData as any)?.doctorId, allDoctors]);
 
     // Determine In-Person checkbox state based on status
-    // Check statusPending first (if status was changed but not saved), then fall back to status
     const inPersonChecked = React.useMemo(() => {
+        // High priority: value from backend (already calculated by VisitController)
+        if (patientData?.inPerson !== undefined) {
+            return patientData.inPerson;
+        }
+
         const currentStatus = (patientData as any)?.statusPending || patientData?.status;
         if (!currentStatus) return true; // Default to true if no status
+
         const status = String(currentStatus).trim().toUpperCase();
         const normalizedStatus = status === 'ON CALL' ? 'CONSULT ON CALL' : status;
-        // If status is "CONSULT ON CALL" or other non-in-person statuses, set to false
+
+        // Fallback logic (matching backend implementation)
         if (normalizedStatus === 'CONSULT ON CALL' || (normalizedStatus !== 'WAITING' && normalizedStatus !== 'WITH DOCTOR')) {
             return false;
         }
-        return true; // Default to true for WAITING or WITH DOCTOR
-    }, [patientData?.status, (patientData as any)?.statusPending]);
+        return true;
+    }, [patientData?.status, (patientData as any)?.statusPending, patientData?.inPerson]);
 
     // Load complaints from API when dialog opens
     React.useEffect(() => {
