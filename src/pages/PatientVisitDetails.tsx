@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Close, Add, Delete } from '@mui/icons-material';
+import { Close, Add, Delete, ArrowDropDown } from '@mui/icons-material';
 import {
     Snackbar, Alert, Dialog, DialogTitle, DialogContent,
     DialogActions, Grid, Box, Typography, TextField, Button,
@@ -2446,7 +2446,15 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                         {selectedComplaints.length === 1 && '1 selected'}
                                                         {selectedComplaints.length > 1 && `${selectedComplaints.length} selected`}
                                                     </span>
-                                                    <span style={{ marginLeft: '8px', color: '#666' }}>▾</span>
+                                                    <ArrowDropDown
+                                                        style={{
+                                                            marginLeft: '8px',
+                                                            color: '#666',
+                                                            fontSize: '24px',
+                                                            transition: 'transform 0.2s',
+                                                            transform: isComplaintsOpen ? 'rotate(180deg)' : 'rotate(0deg)'
+                                                        }}
+                                                    />
                                                 </div>
 
                                                 {isComplaintsOpen && (

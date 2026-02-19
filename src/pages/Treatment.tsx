@@ -6,7 +6,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { visitService, ComprehensiveVisitDataRequest } from '../services/visitService';
 import { sessionService, SessionInfo } from "../services/sessionService";
 import { DocumentService } from "../services/documentService";
-import { Delete, Edit, Add, Info, TrendingUp, Download as DownloadIcon, Close } from '@mui/icons-material';
+import { Delete, Edit, Add, Info, TrendingUp, Download as DownloadIcon, Close, ArrowDropDown } from '@mui/icons-material';
 import { Snackbar, Typography, MenuItem } from '@mui/material';
 import { complaintService, ComplaintOption } from "../services/complaintService";
 import { medicineService, MedicineOption } from "../services/medicineService";
@@ -5703,7 +5703,15 @@ export default function Treatment() {
                                                         {selectedComplaints.length === 1 && '1 selected'}
                                                         {selectedComplaints.length > 1 && `${selectedComplaints.length} selected`}
                                                     </span>
-                                                    <span style={{ marginLeft: '8px', color: '#666', fontSize: '16px', lineHeight: '1' }}>▾</span>
+                                                    <ArrowDropDown
+                                                        style={{
+                                                            marginLeft: '8px',
+                                                            color: '#666',
+                                                            fontSize: '24px',
+                                                            transition: 'transform 0.2s',
+                                                            transform: isComplaintsOpen ? 'rotate(180deg)' : 'rotate(0deg)'
+                                                        }}
+                                                    />
                                                 </div>
                                                 {complaintsSelectionError && (
                                                     <p style={{
@@ -6398,7 +6406,15 @@ export default function Treatment() {
                                                     : 'Select Diagnosis'
                                                 }
                                             </span>
-                                            <span style={{ marginLeft: '8px', color: '#666', fontSize: '16px', lineHeight: '1' }}>▾</span>
+                                            <ArrowDropDown
+                                                style={{
+                                                    marginLeft: '8px',
+                                                    color: '#666',
+                                                    fontSize: '24px',
+                                                    transition: 'transform 0.2s',
+                                                    transform: isDiagnosesOpen ? 'rotate(180deg)' : 'rotate(0deg)'
+                                                }}
+                                            />
                                         </div>
                                         {diagnosesSelectionError && (
                                             <p style={{
@@ -6732,7 +6748,15 @@ export default function Treatment() {
                                                 {selectedMedicines.length === 1 && '1 selected'}
                                                 {selectedMedicines.length > 1 && `${selectedMedicines.length} selected`}
                                             </span>
-                                            <span style={{ marginLeft: '8px', color: '#666', fontSize: '16px', lineHeight: '1' }}>▾</span>
+                                            <ArrowDropDown
+                                                style={{
+                                                    marginLeft: '8px',
+                                                    color: '#666',
+                                                    fontSize: '24px',
+                                                    transition: 'transform 0.2s',
+                                                    transform: isMedicinesOpen ? 'rotate(180deg)' : 'rotate(0deg)'
+                                                }}
+                                            />
                                         </div>
                                         {medicinesSelectionError && (
                                             <p style={{
@@ -7745,7 +7769,15 @@ export default function Treatment() {
                                                     : 'Select Investigation'
                                                 }
                                             </span>
-                                            <span style={{ marginLeft: '8px', color: '#666', fontSize: '16px', lineHeight: '1' }}>▾</span>
+                                            <ArrowDropDown
+                                                style={{
+                                                    marginLeft: '8px',
+                                                    color: '#666',
+                                                    fontSize: '24px',
+                                                    transition: 'transform 0.2s',
+                                                    transform: isInvestigationsOpen ? 'rotate(180deg)' : 'rotate(0deg)'
+                                                }}
+                                            />
                                         </div>
 
                                         {investigationsSelectionError && (
