@@ -4,7 +4,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import PatientNameDisplay from '../components/PatientNameDisplay';
 import { visitService, ComprehensiveVisitDataRequest } from '../services/visitService';
 import { sessionService, SessionInfo } from "../services/sessionService";
-import { Download as DownloadIcon } from '@mui/icons-material';
+import { Download as DownloadIcon, ArrowDropDown } from '@mui/icons-material';
 import { Snackbar, Box, Typography, TextField, MenuItem } from '@mui/material';
 import { complaintService, ComplaintOption } from "../services/complaintService";
 import { medicineService, MedicineOption } from "../services/medicineService";
@@ -3383,7 +3383,16 @@ export default function Treatment() {
                                     aria-label={isDetailsOpen ? 'Hide details' : 'Show details'}
                                     title={isDetailsOpen ? 'Hide details' : 'Show details'}
                                 >
-                                    Show {isDetailsOpen ? '▴' : '▾'}
+                                    Show
+                                    <ArrowDropDown
+                                        style={{
+                                            marginLeft: '4px',
+                                            color: '#666',
+                                            fontSize: '24px',
+                                            transition: 'transform 0.2s',
+                                            transform: isDetailsOpen ? 'rotate(180deg)' : 'rotate(0deg)'
+                                        }}
+                                    />
                                 </div>
                                 {isDetailsOpen && (
                                     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', marginTop: 8 }}>
@@ -3921,10 +3930,15 @@ export default function Treatment() {
                                             '& .MuiSelect-select': {
                                                 padding: '6px 10px !important'
                                             },
+                                            '& .MuiSelect-icon': {
+                                                color: '#757575',
+                                                fontSize: '24px'
+                                            },
                                             marginBottom: '0px'
                                         }}
                                         SelectProps={{
                                             displayEmpty: true,
+                                            IconComponent: ArrowDropDown,
                                             renderValue: (selected) => {
                                                 if (selected === "" || selected === undefined || selected === null) {
                                                     return <span style={{ color: '#aaa' }}>—</span>;
@@ -4299,9 +4313,17 @@ export default function Treatment() {
                                                 '& .MuiOutlinedInput-notchedOutline': {
                                                     borderColor: isFormDisabled ? 'rgba(0, 0, 0, 0.1) !important' : undefined
                                                 }
+                                            },
+                                            '& .MuiSelect-select': {
+                                                padding: '6px 10px !important'
+                                            },
+                                            '& .MuiSelect-icon': {
+                                                color: '#757575',
+                                                fontSize: '24px'
                                             }
                                         }}
                                         SelectProps={{
+                                            IconComponent: ArrowDropDown,
                                             MenuProps: {
                                                 PaperProps: {
                                                     sx: {

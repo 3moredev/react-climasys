@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Delete, Close } from '@mui/icons-material';
+import { Delete, Close, ArrowDropDown } from '@mui/icons-material';
 import { patientService } from '../services/patientService';
 import { sessionService } from '../services/sessionService';
 import { getMaxLength } from '../utils/validationUtils';
@@ -364,7 +364,15 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
                     {selectedGroupIds.length === 1 && '1 selected'}
                     {selectedGroupIds.length > 1 && `${selectedGroupIds.length} selected`}
                   </span>
-                  <span style={{ marginLeft: '8px', color: '#666' }}>▾</span>
+                  <ArrowDropDown
+                    style={{
+                      marginLeft: '8px',
+                      color: '#666',
+                      fontSize: '24px',
+                      transition: 'transform 0.2s',
+                      transform: isGroupsOpen ? 'rotate(180deg)' : 'rotate(0deg)'
+                    }}
+                  />
                 </div>
 
                 {isGroupsOpen && (

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import PatientNameDisplay from './PatientNameDisplay';
-import { Close, Add, Delete } from '@mui/icons-material';
+import { Close, Add, Delete, ArrowDropDown } from '@mui/icons-material';
 import { TextField, InputAdornment, Grid, Box, Typography, DialogContent, FormHelperText } from '@mui/material';
 import ClearableTextField from './ClearableTextField';
 import { validateField } from '../utils/validationUtils';
@@ -1242,7 +1242,15 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                     {selectedLabTests.length === 1 && '1 selected'}
                                                     {selectedLabTests.length > 1 && `${selectedLabTests.length} selected`}
                                                 </span>
-                                                <span style={{ marginLeft: '8px', color: '#666' }}>▾</span>
+                                                <ArrowDropDown
+                                                    style={{
+                                                        marginLeft: '8px',
+                                                        color: '#666',
+                                                        fontSize: '24px',
+                                                        transition: 'transform 0.2s',
+                                                        transform: isLabTestsOpen ? 'rotate(180deg)' : 'rotate(0deg)'
+                                                    }}
+                                                />
                                             </div>
 
                                             {isLabTestsOpen && (
@@ -1564,7 +1572,8 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                                             },
                                                                             '& .MuiInputBase-input': {
                                                                                 padding: '8px 10px',
-                                                                                color: '#333'
+                                                                                color: '#333',
+                                                                                fontSize: 'inherit'
                                                                             }
                                                                         }}
                                                                     />
