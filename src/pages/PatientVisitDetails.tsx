@@ -1318,7 +1318,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
         if (formData.bp) {
             const bpRegex = /^\d{2,3}[\/\-]\d{2,3}$/;
             if (!bpRegex.test(formData.bp)) {
-                errors.bp = 'Invalid BP format (e.g. 120/80)';
+                errors.bp = getFieldConfig('bp', 'visit')?.formatErrorMessage || 'Invalid BP format (e.g. 120/80)';
             }
         }
 
@@ -2991,10 +2991,14 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                                     margin: '0 auto'
                                                                 }}
                                                                 onMouseEnter={(e) => {
-                                                                    e.currentTarget.style.backgroundColor = '#ffebee';
+                                                                    if (!readOnly) {
+                                                                        e.currentTarget.style.backgroundColor = '#ffebee';
+                                                                    }
                                                                 }}
                                                                 onMouseLeave={(e) => {
-                                                                    e.currentTarget.style.backgroundColor = 'transparent';
+                                                                    if (!readOnly) {
+                                                                        e.currentTarget.style.backgroundColor = 'transparent';
+                                                                    }
                                                                 }}
                                                                 title="Remove"
                                                                 disabled={readOnly}
@@ -3117,7 +3121,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                         transition: 'color 0.2s'
                                                     }}
                                                     onMouseEnter={(e) => {
-                                                        if (!readOnly && !isDeleting) e.currentTarget.style.color = 'rgba(0, 0, 0, 0.54)';
+                                                        if (!readOnly && !isDeleting) e.currentTarget.style.color = 'rgba(0, 0, 0, 0.7)';
                                                     }}
                                                     onMouseLeave={(e) => {
                                                         if (!readOnly && !isDeleting) e.currentTarget.style.color = 'rgba(0, 0, 0, 0.54)';
@@ -3163,7 +3167,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                         transition: 'color 0.2s'
                                                     }}
                                                     onMouseEnter={(e) => {
-                                                        if (!readOnly) e.currentTarget.style.color = 'rgba(0, 0, 0, 0.54)';
+                                                        if (!readOnly) e.currentTarget.style.color = 'rgba(0, 0, 0, 0.7)';
                                                     }}
                                                     onMouseLeave={(e) => {
                                                         if (!readOnly) e.currentTarget.style.color = 'rgba(0, 0, 0, 0.54)';

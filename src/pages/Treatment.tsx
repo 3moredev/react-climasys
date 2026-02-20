@@ -4082,6 +4082,12 @@ export default function Treatment() {
 
             // Vitals
             checkLength(formData.bp, 10, 'BP');
+            if (formData.bp) {
+                const bpRegex = /^\d{2,3}[\/\-]\d{2,3}$/;
+                if (!bpRegex.test(formData.bp)) {
+                    validationErrors.push('Invalid BP format (e.g. 120/80)');
+                }
+            }
             checkLength(formData.sugar, 25, 'Sugar');
             checkLength(formData.tft, 25, 'TFT');
             checkLength(formData.pallorHb, 25, 'Pallor/HB');
