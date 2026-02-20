@@ -273,7 +273,7 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
           boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
           width: '95%',
           maxWidth: '800px',
-          maxHeight: '92vh',
+          maxHeight: '89vh',
           overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
@@ -345,8 +345,8 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
 
         {/* Content */}
         <div style={{
-          padding: '24px',
-          paddingBottom: '60px',
+          padding: '20px',
+          paddingBottom: '0px',
           flex: 1,
           overflow: 'auto'
         }}>
@@ -541,7 +541,7 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
 
             {/* Combined Selected Groups and Instructions table */}
             {selectedGroups.length > 0 && (
-              <div style={{ marginTop: '40px', marginBottom: '40px', border: '1px solid #ccc', borderRadius: '4px', overflow: 'hidden' }}>
+              <div style={{ marginTop: '40px', border: '1px solid #ccc', borderRadius: '4px', overflow: 'hidden' }}>
                 {/* Header Table */}
                 <div style={{ backgroundColor: '#1976d2', paddingRight: '16px' }}>
                   <table style={{
@@ -590,7 +590,7 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
 
                 {/* Scrollable Body Table */}
                 <div style={{
-                  maxHeight: '210px',
+                  maxHeight: '274px',
                   overflowY: 'auto',
                   backgroundColor: '#fff'
                 }}>

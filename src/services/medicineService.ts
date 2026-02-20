@@ -64,19 +64,19 @@ export const medicineService = {
       }
 
       console.log('Fetching medicines for doctor:', doctorId);
-      
+
       const response = await api.get<MedicineMaster[]>(`/medicine-master/doctor/${doctorId}`);
       console.log('Get medicines response:', response.data);
-      
+
       return response.data || [];
     } catch (error: any) {
       console.error('Medicines API Error:', error);
-      
+
       // Handle CORS and network errors
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
         throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
       }
-      
+
       // Handle HTTP errors
       if (error.response?.status === 400) {
         throw new Error('Invalid request. Please check your doctor ID.');
@@ -85,12 +85,12 @@ export const medicineService = {
       } else if (error.response?.status === 500) {
         throw new Error('Server error occurred while fetching medicines.');
       }
-      
+
       // Handle backend-specific errors
       if (error.response?.data?.error) {
         throw new Error(error.response.data.error);
       }
-      
+
       throw new Error(error.response?.data?.message || 'Failed to fetch medicines');
     }
   },
@@ -112,21 +112,21 @@ export const medicineService = {
       }
 
       console.log('Searching medicines for doctor:', doctorId, 'with term:', searchTerm);
-      
+
       const response = await api.get<MedicineMaster[]>(`/medicine-master/doctor/${doctorId}/search`, {
         params: { term: searchTerm }
       });
       console.log('Search medicines API response:', response.data);
-      
+
       return response.data || [];
     } catch (error: any) {
       console.error('Search medicines API Error:', error);
-      
+
       // Handle CORS and network errors
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
         throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
       }
-      
+
       // Handle HTTP errors
       if (error.response?.status === 400) {
         throw new Error('Invalid request. Please check your doctor ID.');
@@ -135,12 +135,12 @@ export const medicineService = {
       } else if (error.response?.status === 500) {
         throw new Error('Server error occurred while searching medicines.');
       }
-      
+
       // Handle backend-specific errors
       if (error.response?.data?.error) {
         throw new Error(error.response.data.error);
       }
-      
+
       throw new Error(error.response?.data?.message || 'Failed to search medicines');
     }
   },
@@ -158,21 +158,21 @@ export const medicineService = {
       return response.data;
     } catch (error: any) {
       console.error('Create medicine API Error:', error);
-      
+
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
         throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
       }
-      
+
       if (error.response?.status === 400) {
         throw new Error(error.response?.data?.error || 'Invalid request.');
       } else if (error.response?.status === 500) {
         throw new Error('Server error occurred while creating medicine.');
       }
-      
+
       if (error.response?.data?.error) {
         throw new Error(error.response.data.error);
       }
-      
+
       throw new Error(error.response?.data?.message || 'Failed to create medicine');
     }
   },
@@ -190,11 +190,11 @@ export const medicineService = {
       return response.data;
     } catch (error: any) {
       console.error('Update medicine API Error:', error);
-      
+
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
         throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
       }
-      
+
       if (error.response?.status === 400) {
         throw new Error(error.response?.data?.error || 'Invalid request.');
       } else if (error.response?.status === 404) {
@@ -202,11 +202,11 @@ export const medicineService = {
       } else if (error.response?.status === 500) {
         throw new Error('Server error occurred while updating medicine.');
       }
-      
+
       if (error.response?.data?.error) {
         throw new Error(error.response.data.error);
       }
-      
+
       throw new Error(error.response?.data?.message || 'Failed to update medicine');
     }
   },
@@ -221,16 +221,16 @@ export const medicineService = {
   async deleteMedicine(doctorId: string, clinicId: string, shortDescription: string): Promise<void> {
     try {
       console.log('Deleting medicine:', shortDescription, 'for doctor:', doctorId, 'clinic:', clinicId);
-      
+
       await api.delete(`/medicine-master/doctor/${doctorId}/clinic/${clinicId}/medicine/${encodeURIComponent(shortDescription)}`);
       console.log('Delete medicine successful');
     } catch (error: any) {
       console.error('Delete medicine API Error:', error);
-      
+
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
         throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
       }
-      
+
       if (error.response?.status === 400) {
         throw new Error(error.response?.data?.error || 'Invalid request.');
       } else if (error.response?.status === 404) {
@@ -238,70 +238,71 @@ export const medicineService = {
       } else if (error.response?.status === 500) {
         throw new Error('Server error occurred while deleting medicine.');
       }
-      
+
       if (error.response?.data?.error) {
         throw new Error(error.response.data.error);
       }
-      
+
       throw new Error(error.response?.data?.message || 'Failed to delete medicine');
     }
   },
 
   /**
-   * Get active medicines for a doctor and clinic (legacy method for backward compatibility)
+   * Get active medicines for a doctor and clinic.
+   * Calls /medicine-master/doctor and filters by active===true and clinicId client-side.
    * @param doctorId - Doctor ID
    * @param clinicId - Clinic ID
-   * @returns Promise<MedicineOption[]> - Array of medicine options
+   * @returns Promise<MedicineOption[]> - Array of active medicine options
    */
   async getActiveMedicinesByDoctorAndClinic(doctorId: string, clinicId: string): Promise<MedicineOption[]> {
     try {
-      console.log('Fetching active medicines for doctor:', doctorId, 'and clinic:', clinicId);
-      
-      const response = await api.get(`/medicine/master-data/active-medicines/${doctorId}/clinic/${clinicId}`);
-      console.log('Medicines API response:', response.data);
-      
-      // Transform API response to dropdown options format
-      const medicines: MedicineOption[] = response.data.map((medicine: MedicineApiResponse) => ({
-        value: medicine.short_description, // Use short_description as unique identifier
-        label: medicine.short_description,
-        short_description: medicine.short_description,
-        medicine_description: medicine.medicine_description,
-        morning: medicine.morning,
-        afternoon: medicine.afternoon,
-        night: medicine.night,
-        no_of_days: medicine.no_of_days,
-        instruction: medicine.instruction,
-        priority_value: medicine.priority_value,
-        priority: medicine.priority_value,
-        active: medicine.active,
-        clinic_id: medicine.clinic_id,
-        created_on: medicine.created_on,
-        modified_on: medicine.modified_on
-      }));
-      
-      return medicines;
+      console.log('Fetching active medicines for doctor:', doctorId, 'clinic:', clinicId);
+      const response = await api.get(`/medicine-master/doctor/${doctorId}`);
+      const allMedicines: any[] = Array.isArray(response.data) ? response.data : [];
+
+      // Filter: active === true and (clinicId matches OR record has no clinicId)
+      const activeMedicines = allMedicines.filter((m: any) => {
+        const isActive = m.active === true;
+        const mClinicId = (m.clinicId ?? m.clinic_id ?? '').toString();
+        const clinicMatch = !mClinicId || mClinicId === clinicId;
+        return isActive && clinicMatch;
+      });
+
+      console.log(`Medicines: ${allMedicines.length} total → ${activeMedicines.length} active for clinic ${clinicId}`);
+
+      return activeMedicines.map((m: any): MedicineOption => {
+        const shortDesc: string = m.shortDescription ?? m.short_description ?? '';
+        const medDesc: string = m.medicineDescription ?? m.medicine_description ?? shortDesc;
+        const priority: number = m.priorityValue ?? m.priority_value ?? 0;
+        return {
+          value: shortDesc,
+          label: shortDesc,
+          short_description: shortDesc,
+          medicine_description: medDesc,
+          morning: m.morning ?? 0,
+          afternoon: m.afternoon ?? 0,
+          night: m.night ?? 0,
+          no_of_days: m.noOfDays ?? m.no_of_days ?? 1,
+          instruction: m.instruction ?? '',
+          priority_value: priority,
+          priority: priority,
+          active: m.active ?? true,
+          clinic_id: (m.clinicId ?? m.clinic_id ?? '').toString(),
+          created_on: m.createdOn ?? m.created_on ?? '',
+          modified_on: m.modifiedOn ?? m.modified_on ?? null,
+        };
+      });
     } catch (error: any) {
       console.error('Medicines API Error:', error);
-      
-      // Handle CORS and network errors
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
         throw new Error('Cannot connect to backend server. Please check if the server is running and CORS is configured.');
       }
-      
-      // Handle HTTP errors
-      if (error.response?.status === 400) {
-        throw new Error('Invalid request. Please check your doctor ID and clinic ID.');
-      } else if (error.response?.status === 404) {
+      if (error.response?.status === 404) {
         throw new Error('Medicines endpoint not found. Please check your backend configuration.');
-      } else if (error.response?.status === 500) {
+      }
+      if (error.response?.status === 500) {
         throw new Error('Server error occurred while fetching medicines.');
       }
-      
-      // Handle backend-specific errors
-      if (error.response?.data?.error) {
-        throw new Error(error.response.data.error);
-      }
-      
       throw new Error(error.response?.data?.message || 'Failed to fetch medicines');
     }
   }
