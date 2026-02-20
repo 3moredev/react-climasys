@@ -6743,7 +6743,7 @@ export default function Treatment() {
                                         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                             <thead>
                                                 <tr style={{
-                                                    backgroundColor: '#1976d2',
+                                                    backgroundColor: isFormDisabled ? 'rgb(204, 204, 204)' : '#1976d2',
                                                     color: 'white',
                                                     fontWeight: 'bold',
                                                     fontSize: '13px'
@@ -7081,7 +7081,7 @@ export default function Treatment() {
                                         <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
                                             <thead>
                                                 <tr style={{
-                                                    backgroundColor: '#1976d2',
+                                                    backgroundColor: isFormDisabled ? 'rgb(204, 204, 204)' : '#1976d2',
                                                     color: 'white',
                                                     fontWeight: 'bold',
                                                     fontSize: '13px'
@@ -7553,7 +7553,7 @@ export default function Treatment() {
                                         <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
                                             <thead>
                                                 <tr style={{
-                                                    backgroundColor: '#1976d2',
+                                                    backgroundColor: isFormDisabled ? 'rgb(204, 204, 204)' : '#1976d2',
                                                     color: 'white',
                                                     fontWeight: 'bold',
                                                     fontSize: '13px'
@@ -8142,7 +8142,7 @@ export default function Treatment() {
                                         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                             <thead>
                                                 <tr style={{
-                                                    backgroundColor: '#1976d2',
+                                                    backgroundColor: isFormDisabled ? 'rgb(204, 204, 204)' : '#1976d2',
                                                     color: 'white',
                                                     fontWeight: 'bold',
                                                     fontSize: '13px'
