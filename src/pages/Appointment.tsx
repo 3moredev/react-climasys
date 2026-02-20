@@ -4520,6 +4520,7 @@ export default function AppointmentTable() {
                                                         value={getDoctorLabelById(a.doctorId) || getDoctorLabelById(a.provider) || a.provider || getDoctorLabelById(selectedDoctorId) || ''}
                                                         onChange={(e) => handleProviderChange(originalIndex, e.target.value as string)}
                                                         displayEmpty
+                                                        disabled={isReceptionist && mapStatusLabelToId(a.status) >= 2}
                                                         renderValue={(selected) => {
                                                             if (!selected) {
                                                                 return <em style={{ color: '#999' }}>Select Provider</em>;
@@ -4532,8 +4533,17 @@ export default function AppointmentTable() {
                                                             height: '30px', // Slightly taller for better alignment
                                                             width: '100%',  // Fill the cell
                                                             fontSize: '0.85rem',
-                                                            backgroundColor: '#fff',
+                                                            backgroundColor: (isReceptionist && mapStatusLabelToId(a.status) >= 2) ? '#f5f5f5' : '#fff',
+                                                            cursor: (isReceptionist && mapStatusLabelToId(a.status) >= 2) ? 'not-allowed' : 'pointer',
                                                             borderRadius: '4px',
+                                                            '&.Mui-disabled': {
+                                                                pointerEvents: 'auto',
+                                                                cursor: 'not-allowed',
+                                                                '& .MuiSelect-select': {
+                                                                    cursor: 'not-allowed !important',
+                                                                    pointerEvents: 'auto !important'
+                                                                }
+                                                            },
                                                             '& .MuiSelect-select': {
                                                                 padding: '4px 24px 4px 8px', // Better vertical centering
                                                                 display: 'flex',
@@ -5606,6 +5616,7 @@ export default function AppointmentTable() {
                                                         value={getDoctorLabelById(appointment.doctorId) || getDoctorLabelById(appointment.provider) || appointment.provider || getDoctorLabelById(selectedDoctorId) || ''}
                                                         onChange={(e) => handleProviderChange(originalIndex, e.target.value)}
                                                         displayEmpty
+                                                        disabled={isReceptionist && mapStatusLabelToId(appointment.status) >= 2}
                                                         variant="standard"
                                                         disableUnderline
                                                         sx={{
@@ -5617,7 +5628,16 @@ export default function AppointmentTable() {
                                                                 display: 'flex',
                                                                 alignItems: 'center',
                                                             },
-                                                            backgroundColor: 'white',
+                                                            backgroundColor: (isReceptionist && mapStatusLabelToId(appointment.status) >= 2) ? '#f5f5f5' : 'white',
+                                                            cursor: (isReceptionist && mapStatusLabelToId(appointment.status) >= 2) ? 'not-allowed' : 'pointer',
+                                                            '&.Mui-disabled': {
+                                                                pointerEvents: 'auto',
+                                                                cursor: 'not-allowed',
+                                                                '& .MuiSelect-select': {
+                                                                    cursor: 'not-allowed !important',
+                                                                    pointerEvents: 'auto !important'
+                                                                }
+                                                            },
                                                             border: '1px solid #dee2e6',
                                                             borderRadius: '0.375rem',
                                                             '&:hover': {
