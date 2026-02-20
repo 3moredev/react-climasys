@@ -15,8 +15,9 @@ interface InstructionGroupsPopupProps {
   isOpen: boolean;
   onClose: () => void;
   patientName: string;
-  patientAge: number;
+  patientAge: string | number;
   patientGender: string;
+  patientContact: string;
   initialSelectedGroups?: InstructionGroup[];
   onChange?: (selectedGroups: InstructionGroup[]) => void;
 }
@@ -27,6 +28,7 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
   patientName,
   patientAge,
   patientGender,
+  patientContact,
   initialSelectedGroups = [],
   onChange
 }) => {
@@ -275,7 +277,7 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
           overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
-          fontFamily: "'Roboto', sans-serif",
+          fontFamily: "'Roboto', 'Nirmala UI', 'Noto Sans Devanagari', 'Arial', sans-serif",
           position: 'relative'
         }}
         onClick={(e) => e.stopPropagation()}
@@ -283,15 +285,32 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
         {/* Header */}
         <div style={{
           background: 'white',
-          padding: '12px 20px 8px 20px',
+          padding: '20px 20px 10px 20px',
           borderTopLeftRadius: '8px',
           borderTopRightRadius: '8px',
           display: 'flex',
           justifyContent: 'space-between',
-          alignItems: 'center'
+          alignItems: 'flex-start'
         }}>
-          <div style={{ color: '#000000', fontWeight: 700, fontSize: '18px', fontFamily: "'Roboto', sans-serif" }}>
-            {patientName} / {patientGender} / {patientAge} Y
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <div style={{
+              fontSize: '22px',
+              fontWeight: 700,
+              color: '#000000',
+              lineHeight: '1.2'
+            }}>
+              Instruction
+            </div>
+            <div style={{
+              color: '#4caf50',
+              fontWeight: 500,
+              fontSize: '14px',
+              fontFamily: "'Roboto', sans-serif",
+              textDecoration: 'underline',
+              width: 'fit-content'
+            }}>
+              {patientName} / {patientGender} / {patientAge} / {patientContact}
+            </div>
           </div>
           <button
             type="button"
@@ -308,12 +327,13 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
               justifyContent: 'center',
               color: '#fff',
               fontSize: '18px',
-              width: '36px',
-              height: '36px',
-              transition: 'background-color 0.2s'
+              width: '32px', // Slightly smaller close button to match reference feel
+              height: '32px',
+              transition: 'background-color 0.2s',
+              marginTop: '-4px' // Adjust for header padding
             }}
             onMouseEnter={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgb(25, 118, 210)';
+              (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgb(21, 101, 192)';
             }}
             onMouseLeave={(e) => {
               (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgb(25, 118, 210)';
@@ -332,14 +352,6 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
         }}>
           {/* Instruction Groups Selection */}
           <div style={{ marginBottom: '24px' }}>
-            <h3 style={{
-              margin: '0 0 16px 0',
-              fontSize: '16px',
-              fontWeight: '600',
-              color: '#333333'
-            }}>
-              Instruction Groups
-            </h3>
 
             <div style={{ display: 'flex', gap: '10px', alignItems: 'end', marginBottom: '50px' }}>
               <div ref={groupsRef} style={{ position: 'relative', flex: 1 }}>
@@ -520,57 +532,68 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
               </button>
             </div>
 
-            {/* Selected groups summary table */}
+            {/* Combined Selected Groups and Instructions table */}
             {selectedGroups.length > 0 && (
-              <div style={{ marginTop: '40px' }}>
-                {/* <div style={{
-                  backgroundColor: '#1976d2',
-                  color: 'white',
-                  padding: '12px 16px',
-                  borderRadius: '4px 4px 0 0',
-                  fontWeight: '600',
-                  fontSize: '16px'
-                }}>
-                  Selected Groups
-                </div> */}
-
-                <div style={{ border: '1px solid #ccc', borderRadius: '4px', overflow: 'hidden' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <div style={{ marginTop: '40px', marginBottom: '40px', border: '1px solid #ccc', borderRadius: '4px', overflow: 'hidden' }}>
+                {/* Header Table */}
+                <div style={{ backgroundColor: '#1976d2', paddingRight: '16px' }}>
+                  <table style={{
+                    width: '100%',
+                    borderCollapse: 'separate',
+                    borderSpacing: 0,
+                    tableLayout: 'fixed',
+                    fontFamily: "inherit"
+                  }}>
                     <thead>
                       <tr style={{ backgroundColor: '#1976d2', color: 'white', fontWeight: 'bold', fontSize: '13px' }}>
                         <th style={{
-                          padding: '6px',
+                          padding: '10px 6px',
                           textAlign: 'left',
-                          fontWeight: 'bold',
-                          backgroundColor: '#1976d2',
-                          color: 'white',
-                          borderRight: '1px solid rgba(255,255,255,0.2)',
-                          width: 40
+                          width: '50px',
+                          borderRight: '1px solid rgba(255,255,255,0.2)'
                         }}>
                           Sr.
                         </th>
                         <th style={{
-                          padding: '6px',
+                          padding: '10px 6px',
                           textAlign: 'left',
-                          fontWeight: 'bold',
-                          backgroundColor: '#1976d2',
-                          color: 'white',
+                          width: '150px',
                           borderRight: '1px solid rgba(255,255,255,0.2)'
                         }}>
                           Group
                         </th>
                         <th style={{
-                          padding: '6px',
+                          padding: '10px 6px',
+                          textAlign: 'left',
+                          borderRight: '1px solid rgba(255,255,255,0.2)'
+                        }}>
+                          Instructions
+                        </th>
+                        <th style={{
+                          padding: '10px 6px',
                           textAlign: 'center',
-                          fontWeight: 'bold',
-                          backgroundColor: '#1976d2',
-                          color: 'white',
-                          width: 80
+                          width: '80px'
                         }}>
                           Action
                         </th>
                       </tr>
                     </thead>
+                  </table>
+                </div>
+
+                {/* Scrollable Body Table */}
+                <div style={{
+                  maxHeight: '210px',
+                  overflowY: 'auto',
+                  backgroundColor: '#fff'
+                }}>
+                  <table style={{
+                    width: '100%',
+                    borderCollapse: 'separate',
+                    borderSpacing: 0,
+                    tableLayout: 'fixed',
+                    fontFamily: "inherit"
+                  }}>
                     <tbody>
                       {selectedGroups.map((group, index) => (
                         <tr
@@ -589,20 +612,37 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
                           <td style={{
                             color: '#333',
                             fontSize: '13px',
-                            borderRight: '1px solid #e0e0e0'
-                          }} className='py-2'>
+                            borderRight: '1px solid #e0e0e0',
+                            padding: '12px 6px',
+                            width: '50px',
+                            wordBreak: 'break-word'
+                          }}>
                             {index + 1}
                           </td>
                           <td style={{
                             color: '#333',
                             fontSize: '13px',
-                            borderRight: '1px solid #e0e0e0'
-                          }} className='py-2'>
+                            borderRight: '1px solid #e0e0e0',
+                            padding: '12px 6px',
+                            width: '150px',
+                            wordBreak: 'break-word'
+                          }}>
                             {group.name}
                           </td>
                           <td style={{
-                            textAlign: 'center'
-                          }} className='py-2'>
+                            color: '#333',
+                            fontSize: '13px',
+                            borderRight: '1px solid #e0e0e0',
+                            padding: '12px 6px',
+                            wordBreak: 'break-word'
+                          }}>
+                            {group.instructions}
+                          </td>
+                          <td style={{
+                            textAlign: 'center',
+                            padding: '12px 6px',
+                            width: '80px'
+                          }}>
                             <div
                               onClick={() => handleRemoveGroup(group.id)}
                               title="Remove"
@@ -625,89 +665,6 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
                             >
                               <Delete fontSize="small" />
                             </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            {/* Detailed instructions table */}
-            {selectedGroups.length > 0 && (
-              <div style={{ marginTop: '40px', marginBottom: '40px' }}>
-                <div style={{ border: '1px solid #ccc', borderRadius: '4px', overflow: 'hidden' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead>
-                      <tr style={{ backgroundColor: '#1976d2', color: 'white', fontWeight: 'bold', fontSize: '13px' }}>
-                        <th style={{
-                          padding: '6px',
-                          textAlign: 'left',
-                          fontWeight: 'bold',
-                          backgroundColor: '#1976d2',
-                          color: 'white',
-                          borderRight: '1px solid rgba(255,255,255,0.2)',
-                          width: 40
-                        }}>
-                          Sr.
-                        </th>
-                        <th style={{
-                          padding: '6px',
-                          textAlign: 'left',
-                          fontWeight: 'bold',
-                          backgroundColor: '#1976d2',
-                          color: 'white',
-                          borderRight: '1px solid rgba(255,255,255,0.2)',
-                          width: 200
-                        }}>
-                          Group
-                        </th>
-                        <th style={{
-                          padding: '6px',
-                          textAlign: 'left',
-                          fontWeight: 'bold',
-                          backgroundColor: '#1976d2',
-                          color: 'white'
-                        }}>
-                          Instructions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {selectedGroups.map((group, index) => (
-                        <tr
-                          key={group.id}
-                          style={{
-                            borderBottom: '1px solid #e0e0e0',
-                            backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white'
-                          }}
-                          onMouseEnter={(e) => {
-                            (e.currentTarget as HTMLTableRowElement).style.backgroundColor = '#f5f5f5';
-                          }}
-                          onMouseLeave={(e) => {
-                            (e.currentTarget as HTMLTableRowElement).style.backgroundColor = index % 2 === 0 ? '#f8f9fa' : 'white';
-                          }}
-                        >
-                          <td style={{
-                            color: '#333',
-                            fontSize: '13px',
-                            borderRight: '1px solid #e0e0e0'
-                          }} className='py-2'>
-                            {index + 1}
-                          </td>
-                          <td style={{
-                            color: '#333',
-                            fontSize: '13px',
-                            borderRight: '1px solid #e0e0e0'
-                          }} className='py-2'>
-                            {group.name}
-                          </td>
-                          <td style={{
-                            color: '#333',
-                            fontSize: '13px'
-                          }} className='py-2'>
-                            {group.instructions}
                           </td>
                         </tr>
                       ))}

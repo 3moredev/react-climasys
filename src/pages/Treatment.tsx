@@ -8826,8 +8826,27 @@ export default function Treatment() {
                     setShowInstructionPopup(false);
                 }}
                 patientName={treatmentData?.patientName || ''}
-                patientAge={Number(treatmentData?.age || 0)}
+                patientAge={(() => {
+                    let ageStr = '';
+                    if (treatmentData?.dateOfBirth) {
+                        const birthDate = dayjs(treatmentData.dateOfBirth);
+                        if (birthDate.isValid()) {
+                            const years = dayjs().diff(birthDate, 'year');
+                            if (years > 0) {
+                                ageStr = `${years} Y`;
+                            } else {
+                                const months = dayjs().diff(birthDate, 'month');
+                                ageStr = months > 0 ? `${months} M` : `${dayjs().diff(birthDate, 'day')} D`;
+                            }
+                        }
+                    }
+                    if (!ageStr && treatmentData?.age) {
+                        ageStr = `${treatmentData.age} Y`;
+                    }
+                    return ageStr || '0 Y';
+                })()}
                 patientGender={(treatmentData?.gender || '').toString()}
+                patientContact={treatmentData?.contact || ''}
                 initialSelectedGroups={selectedInstructionGroups}
                 onChange={(groups) => {
                     // Normalize groups to ensure clean format (only id, name, nameHindi, instructions)
