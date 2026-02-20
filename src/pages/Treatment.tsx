@@ -1219,7 +1219,7 @@ export default function Treatment() {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [isRxOpen]);
 
-    // Fetch prescription suggestions from API on input
+    // Fetch prescription suggestions from OPD Master active prescriptions
     React.useEffect(() => {
         const term = prescriptionInput.trim();
         const doctorId = treatmentData?.doctorId;
@@ -1233,18 +1233,15 @@ export default function Treatment() {
         let cancelled = false;
         const timer = setTimeout(async () => {
             try {
-                const q = new URLSearchParams({
-                    prefixText: term,
-                    doctorId: doctorId,
-                    clinicId: clinicId
-                }).toString();
-                const resp = await fetch(`/api/refdata/prescription-search?${q}`);
-                if (!resp.ok) throw new Error(`Failed to load prescriptions (${resp.status})`);
-                const data = await resp.json();
+                const activePrescriptions = await prescriptionDetailsService.getActivePrescriptionsForDoctor(doctorId, clinicId);
                 if (cancelled) return;
-                const list: string[] = Array.isArray(data?.resultSet1) ? data.resultSet1 : [];
-                setRxSuggestions(list);
-                setIsRxOpen(list.length > 0);
+                const termLower = term.toLowerCase();
+                const matchingLabels = activePrescriptions
+                    .map((p) => prescriptionDetailsService.toSearchLabel(p))
+                    .filter((label) => label && label.toLowerCase().includes(termLower));
+                const unique = Array.from(new Set(matchingLabels));
+                setRxSuggestions(unique);
+                setIsRxOpen(unique.length > 0);
             } catch (e) {
                 if (!cancelled) {
                     setRxSuggestions([]);
@@ -1258,6 +1255,8 @@ export default function Treatment() {
             clearTimeout(timer);
         };
     }, [prescriptionInput, treatmentData?.doctorId, sessionData?.clinicId]);
+
+
 
     // Get treatment data from location state or session storage
     useEffect(() => {
@@ -1625,10 +1624,10 @@ export default function Treatment() {
             try {
                 console.log('Loading complaints for doctor:', doctorId, 'clinic:', clinicId);
 
-                const complaints = await complaintService.getAllComplaintsForDoctor(doctorId, clinicId);
+                const complaints = await complaintService.getOperatorVisibleComplaints(doctorId);
                 if (!cancelled) {
                     setComplaintsOptions(complaints);
-                    console.log('Loaded complaints:', complaints);
+                    console.log('Loaded operator-visible complaints:', complaints);
                 }
             } catch (e) {
                 console.error('Failed to load complaints:', e);
@@ -3680,10 +3679,11 @@ export default function Treatment() {
                         }
 
                         const opt = complaintsOptions.find(o => o.value === value);
+                        const cleanLabel = (text: string) => text.includes('*') ? text.split('*').pop()?.trim() || text : text;
                         return {
                             id: `complaint-${index}-${Date.now()}`,
                             value,
-                            label: label,
+                            label: opt?.label || cleanLabel(label),
                             comment: comment,
                             priority: opt?.priority ?? opt?.priority_value ?? row.priority ?? row.priority_value ?? 999
                         };
@@ -3726,8 +3726,8 @@ export default function Treatment() {
                             const commentPart = match[2] ? match[2].trim() : '';
 
                             // Try to match by value first, then by label (case-insensitive)
-                            const byValue = complaintsOptions.find(o => (o.value || '').toLowerCase() === namePart.toLowerCase());
-                            const byLabel = byValue ? undefined : complaintsOptions.find(o => (o.label || '').toLowerCase() === namePart.toLowerCase());
+                            const byValue = complaintsOptions.length > 0 ? complaintsOptions.find(o => (o.value || '').toLowerCase() === namePart.toLowerCase()) : null;
+                            const byLabel = byValue || complaintsOptions.length === 0 ? undefined : complaintsOptions.find(o => (o.label || '').toLowerCase() === namePart.toLowerCase());
                             const matchedOption = byValue || byLabel;
 
                             if (matchedOption && !seen.has(matchedOption.value)) {
@@ -3745,10 +3745,11 @@ export default function Treatment() {
                                 if (!seen.has(namePart)) {
                                     seen.add(namePart);
                                     foundValues.push(namePart);
+                                    const cleanLabel = (text: string) => text.includes('*') ? text.split('*').pop()?.trim() || text : text;
                                     foundRows.push({
                                         id: `complaint-parsed-${index}-${Date.now()}`,
                                         value: namePart,
-                                        label: namePart,
+                                        label: cleanLabel(namePart),
                                         comment: commentPart,
                                         priority: 999
                                     });
@@ -4380,10 +4381,11 @@ export default function Treatment() {
                         const mappedComplaintsRows: ComplaintRow[] = result.complaintsRows.map((row: any, index: number) => {
                             const value = row.value || row.complaint_description || row.short_description || row.complaint || '';
                             const opt = complaintsOptions.find(o => o.value === value);
+                            const cleanLabel = (text: string) => text.includes('*') ? text.split('*').pop()?.trim() || text : text;
                             return {
                                 id: `complaint-${index}-${Date.now()}`,
                                 value,
-                                label: row.label || row.complaint_description || row.complaint || row.short_description || '',
+                                label: opt?.label || cleanLabel(row.label || row.complaint_description || row.complaint || row.short_description || ''),
                                 comment: row.comment || row.complaint_comment || row.duration || '',
                                 priority: opt?.priority ?? opt?.priority_value ?? row.priority ?? row.priority_value ?? 999
                             };
@@ -4609,10 +4611,16 @@ export default function Treatment() {
         // 5. selectedComplaints must have been patched from API (not from manual user selection)
         if (!selectedComplaintsPatchedFromApiRef.current) return;
         if (complaintsRows.length > 0) {
-            complaintsRowsBuiltFromApiRef.current = true; // Mark as built
-            return; // Don't overwrite if rows already exist
+            // Check if any labels need re-resolving (if they currently match their values but shouldn't)
+            const hasUnresolvedLabels = complaintsRows.some(r => r.label === r.value);
+            if (!hasUnresolvedLabels) {
+                complaintsRowsBuiltFromApiRef.current = true;
+                return;
+            }
         }
-        if (complaintsRowsBuiltFromApiRef.current) return; // Don't run if we've already built from API
+        if (complaintsRowsBuiltFromApiRef.current && complaintsRows.length > 0 && !complaintsRows.some(r => r.label === r.value)) {
+            return;
+        }
 
         // Build rows from selectedComplaints (only on initial load from appointment data)
         const newRows: ComplaintRow[] = selectedComplaints.map(val => {

@@ -53,6 +53,47 @@ export const prescriptionDetailsService = {
   },
 
   /**
+   * Build a human-readable autocomplete label for a PrescriptionTemplate.
+   * Combines brandName / catsubDescription / medicineName into a single string.
+   */
+  toSearchLabel(p: PrescriptionTemplate): string {
+    return (p.brandName || p.catsubDescription || p.medicineName || '').trim();
+  },
+
+  /**
+   * Get active prescriptions for a doctor (and optionally a clinic).
+   * Uses the existing /prescription-medicines/doctor endpoint and filters client-side
+   * by active !== false so it mirrors the Manage Prescription (OPD Master) checked list.
+   * @param doctorId - Doctor ID
+   * @param clinicId - Clinic ID (optional filter)
+   * @returns Promise<PrescriptionTemplate[]> - Active prescriptions only
+   */
+  async getActivePrescriptionsForDoctor(doctorId: string, clinicId?: string): Promise<PrescriptionTemplate[]> {
+    try {
+      if (!doctorId) throw new Error('Doctor ID is required.');
+      const response = await api.get<PrescriptionTemplate[]>(`/prescription-medicines/doctor/${doctorId}`);
+      const all: PrescriptionTemplate[] = response.data || [];
+
+      const active = all.filter((p) => {
+        const isActive = p.active !== false; // null or true → active
+        if (clinicId && p.clinicId) {
+          return isActive && p.clinicId === clinicId;
+        }
+        return isActive;
+      });
+
+      console.log(`Prescriptions fallback: ${all.length} total → ${active.length} active for clinic ${clinicId ?? 'any'}`);
+      return active;
+    } catch (error: any) {
+      console.error('PrescriptionDetails getActivePrescriptionsForDoctor error:', error);
+      if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
+        throw new Error('Cannot connect to backend server.');
+      }
+      throw new Error(error.response?.data?.message || 'Failed to fetch active prescriptions');
+    }
+  },
+
+  /**
    * Search prescription templates for a doctor
    */
   async searchPrescriptionsForDoctor(doctorId: string, searchTerm: string): Promise<PrescriptionTemplate[]> {
