@@ -5274,12 +5274,12 @@ export default function Treatment() {
                                                         }
                                                     }}
                                                     onMouseEnter={(e) => {
-                                                        if (docId && !isProcessing) {
+                                                        if (docId && !isProcessing && !isFormDisabled) {
                                                             e.currentTarget.style.backgroundColor = '#d4edda';
                                                         }
                                                     }}
                                                     onMouseLeave={(e) => {
-                                                        if (docId && !isProcessing) {
+                                                        if (docId && !isProcessing && !isFormDisabled) {
                                                             e.currentTarget.style.backgroundColor = '#e8f5e8';
                                                         }
                                                     }}
@@ -5759,10 +5759,14 @@ export default function Treatment() {
                                                         opacity: isFormDisabled ? 0.6 : 1
                                                     }}
                                                     onMouseEnter={(e) => {
-                                                        (e.currentTarget as HTMLDivElement).style.borderColor = '#1E88E5';
+                                                        if (!isFormDisabled) {
+                                                            (e.currentTarget as HTMLDivElement).style.borderColor = '#1E88E5';
+                                                        }
                                                     }}
                                                     onMouseLeave={(e) => {
-                                                        (e.currentTarget as HTMLDivElement).style.borderColor = '#B7B7B7';
+                                                        if (!isFormDisabled) {
+                                                            (e.currentTarget as HTMLDivElement).style.borderColor = '#B7B7B7';
+                                                        }
                                                     }}
                                                 >
                                                     <span style={{ color: selectedComplaints.length ? '#000' : '#9e9e9e' }}>
@@ -6461,10 +6465,14 @@ export default function Treatment() {
                                             }}
                                             onClick={() => !isFormDisabled && setIsDiagnosesOpen(!isDiagnosesOpen)}
                                             onMouseEnter={(e) => {
-                                                (e.currentTarget as HTMLDivElement).style.borderColor = '#1E88E5';
+                                                if (!isFormDisabled) {
+                                                    (e.currentTarget as HTMLDivElement).style.borderColor = '#1E88E5';
+                                                }
                                             }}
                                             onMouseLeave={(e) => {
-                                                (e.currentTarget as HTMLDivElement).style.borderColor = '#B7B7B7';
+                                                if (!isFormDisabled) {
+                                                    (e.currentTarget as HTMLDivElement).style.borderColor = '#B7B7B7';
+                                                }
                                             }}
                                         >
                                             <span style={{ color: selectedDiagnoses.length > 0 ? '#000' : '#9e9e9e' }}>
@@ -6762,6 +6770,7 @@ export default function Treatment() {
                                                                         (e.currentTarget as HTMLDivElement).style.color = '#EF5350';
                                                                     }}
                                                                     onMouseLeave={(e) => {
+                                                                        if (isFormDisabled) return;
                                                                         (e.currentTarget as HTMLDivElement).style.color = isFormDisabled ? '#9e9e9e' : '#000000';
                                                                     }}
                                                                 >
@@ -6804,10 +6813,14 @@ export default function Treatment() {
                                                 opacity: isFormDisabled ? 0.6 : 1
                                             }}
                                             onMouseEnter={(e) => {
-                                                (e.currentTarget as HTMLDivElement).style.borderColor = '#1E88E5';
+                                                if (!isFormDisabled) {
+                                                    (e.currentTarget as HTMLDivElement).style.borderColor = '#1E88E5';
+                                                }
                                             }}
                                             onMouseLeave={(e) => {
-                                                (e.currentTarget as HTMLDivElement).style.borderColor = '#B7B7B7';
+                                                if (!isFormDisabled) {
+                                                    (e.currentTarget as HTMLDivElement).style.borderColor = '#B7B7B7';
+                                                }
                                             }}
                                         >
                                             <span style={{ color: selectedMedicines.length ? '#000' : '#9e9e9e' }}>
@@ -7279,6 +7292,7 @@ export default function Treatment() {
                                                                         (e.currentTarget as HTMLDivElement).style.color = '#EF5350';
                                                                     }}
                                                                     onMouseLeave={(e) => {
+                                                                        if (isFormDisabled) return;
                                                                         (e.currentTarget as HTMLDivElement).style.color = isFormDisabled ? '#9e9e9e' : '#000000';
                                                                     }}
                                                                 >
@@ -7824,10 +7838,14 @@ export default function Treatment() {
                                             }}
                                             onClick={() => !isFormDisabled && setIsInvestigationsOpen(!isInvestigationsOpen)}
                                             onMouseEnter={(e) => {
-                                                (e.currentTarget as HTMLDivElement).style.borderColor = '#1E88E5';
+                                                if (!isFormDisabled) {
+                                                    (e.currentTarget as HTMLDivElement).style.borderColor = '#1E88E5';
+                                                }
                                             }}
                                             onMouseLeave={(e) => {
-                                                (e.currentTarget as HTMLDivElement).style.borderColor = '#B7B7B7';
+                                                if (!isFormDisabled) {
+                                                    (e.currentTarget as HTMLDivElement).style.borderColor = '#B7B7B7';
+                                                }
                                             }}
                                         >
                                             <span style={{ color: selectedInvestigations.length > 0 ? '#000' : '#9e9e9e' }}>
@@ -8151,6 +8169,7 @@ export default function Treatment() {
                                                                         (e.currentTarget as HTMLDivElement).style.color = '#EF5350';
                                                                     }}
                                                                     onMouseLeave={(e) => {
+                                                                        if (isFormDisabled) return;
                                                                         (e.currentTarget as HTMLDivElement).style.color = isFormDisabled ? '#9e9e9e' : '#000000';
                                                                     }}
                                                                 >
