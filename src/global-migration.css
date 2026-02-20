@@ -37,12 +37,21 @@ table th,
 .patient-id,
 .data-display,
 .text-content,
+label:not(button label):not(a label),
 span:not(button span):not(a span):not(.MuiButton-label):not([role="button"]),
 p:not(button p):not(a p) {
   user-select: text !important;
   -webkit-user-select: text !important;
-  cursor: text !important;
+  cursor: text;
 }
+
+/* Ensure inline pointers in React/style props still work despite broad rules above */
+[style*="cursor: pointer"],
+[style*="cursor:pointer"],
+.pointer-cursor {
+  cursor: pointer !important;
+}
+
 
 .page-bg {
   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);

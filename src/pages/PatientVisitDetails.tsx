@@ -3087,7 +3087,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                         color: '#2e7d32',
                                                         mr: 0.5,
                                                         fontWeight: 500,
-                                                        cursor: 'pointer!important',
+                                                        cursor: 'pointer',
                                                         textDecoration: 'underline',
                                                         '&:hover': {
                                                             color: '#1b5e20'
@@ -3112,7 +3112,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                         marginLeft: '4px',
                                                         display: 'inline-flex',
                                                         alignItems: 'center',
-                                                        cursor: 'pointer!important',
+                                                        cursor: 'pointer',
                                                         color: isDeleting ? 'rgba(0, 0, 0, 0.38)' : 'rgba(0, 0, 0, 0.54)',
                                                         transition: 'color 0.2s'
                                                     }}
@@ -3124,7 +3124,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                     }}
                                                     className='py-2 pe-2'
                                                 >
-                                                    <Close fontSize="small" sx={{ fontSize: '16px', cursor: 'pointer!important' }} />
+                                                    <Close fontSize="small" sx={{ fontSize: '16px', cursor: 'pointer' }} />
                                                 </span>
                                             </Box>
                                         );
@@ -3158,7 +3158,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                         marginLeft: '4px',
                                                         display: 'inline-flex',
                                                         alignItems: 'center',
-                                                        cursor: readOnly ? 'default' : 'pointer!important',
+                                                        cursor: readOnly ? 'default' : 'pointer',
                                                         color: 'rgba(0, 0, 0, 0.54)',
                                                         transition: 'color 0.2s'
                                                     }}
