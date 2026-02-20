@@ -8,6 +8,8 @@ export interface FieldConfig {
     fieldName: string;
     type?: 'text' | 'email' | 'number' | 'textarea';
     pattern?: RegExp;
+    formatPattern?: RegExp;
+    formatErrorMessage?: string;
     min?: number;
     max?: number;
 }
@@ -68,8 +70,8 @@ export const VISIT_FIELDS = {
     pulse: { maxLength: 3, fieldName: 'Pulse', type: 'number' as const, min: 30, max: 220 },
     height: { maxLength: 3, fieldName: 'Height', type: 'number' as const, pattern: /^\d*\.?\d*$/, min: 30, max: 250 },
     weight: { maxLength: 5, fieldName: 'Weight', type: 'number' as const, pattern: /^\d*\.?\d*$/, min: 1, max: 250 },
-    bloodPressure: { maxLength: 10, fieldName: 'Blood pressure', type: 'text' as const },
-    bp: { maxLength: 10, fieldName: 'Blood pressure', type: 'text' as const }, // Frontend alias
+    bloodPressure: { maxLength: 10, fieldName: 'Blood pressure', type: 'text' as const, formatPattern: /^\d{2,3}[\/\-]\d{2,3}$/, formatErrorMessage: 'Invalid BP format (e.g. 120/80)' },
+    bp: { maxLength: 10, fieldName: 'Blood pressure', type: 'text' as const, formatPattern: /^\d{2,3}[\/\-]\d{2,3}$/, formatErrorMessage: 'Invalid BP format (e.g. 120/80)' }, // Frontend alias
     sugar: { maxLength: 25, fieldName: 'Sugar', type: 'text' as const },
     tft: { maxLength: 25, fieldName: 'TFT', type: 'text' as const },
     tpr: { maxLength: 10, fieldName: 'TPR', type: 'text' as const },

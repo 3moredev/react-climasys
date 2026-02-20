@@ -102,6 +102,13 @@ export const validateField = (
         error = 'Mobile number must be 10 digits';
     }
 
+    // Format pattern check (for real-time feedback that doesn't block typing)
+    if (config?.formatPattern && strValue.length > 0) {
+        if (!config.formatPattern.test(strValue)) {
+            error = config.formatErrorMessage || 'Invalid format';
+        }
+    }
+
     return { allowed: true, error };
 };
 
