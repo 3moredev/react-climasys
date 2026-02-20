@@ -352,7 +352,14 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
         }}>
           {/* Instruction Groups Selection */}
           <div style={{ marginBottom: '24px' }}>
-
+            <div style={{
+              fontSize: '14px',
+              fontWeight: 600,
+              color: '#333',
+              marginBottom: '8px'
+            }}>
+              Instruction Group
+            </div>
             <div style={{ display: 'flex', gap: '10px', alignItems: 'end', marginBottom: '50px' }}>
               <div ref={groupsRef} style={{ position: 'relative', flex: 1 }}>
                 <div
