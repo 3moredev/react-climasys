@@ -305,10 +305,13 @@ export default function Treatment() {
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
     const [billingError, setBillingError] = useState<string | null>(null);
     const [discountError, setDiscountError] = useState<string | null>(null);
+    const discountErrorTimerRef = useRef<any>(null);
     const [followUpError, setFollowUpError] = useState<string | null>(null);
     const [planAdvError, setPlanAdvError] = useState<string | null>(null);
     const [remarkCommentsError, setRemarkCommentsError] = useState<string | null>(null);
+    const remarkCommentsErrorTimerRef = useRef<any>(null);
     const [prescriptionError, setPrescriptionError] = useState<string | null>(null);
+    const prescriptionErrorTimerRef = useRef<any>(null);
     const [complaintsSelectionError, setComplaintsSelectionError] = useState<string | null>(null);
     const [diagnosesSelectionError, setDiagnosesSelectionError] = useState<string | null>(null);
     const [medicinesSelectionError, setMedicinesSelectionError] = useState<string | null>(null);
@@ -439,6 +442,7 @@ export default function Treatment() {
     const complaintsRowsBuiltFromApiRef = React.useRef(false);
     const selectedComplaintsPatchedFromApiRef = React.useRef(false);
     const [complaintSearchError, setComplaintSearchError] = useState<string | null>(null);
+    const complaintSearchErrorTimerRef = useRef<any>(null);
     const complaintsRowsLoadedFromSaveResponseRef = React.useRef(false);
     const diagnosisRowsLoadedFromSaveResponseRef = React.useRef(false);
     const medicineRowsLoadedFromSaveResponseRef = React.useRef(false);
@@ -484,6 +488,7 @@ export default function Treatment() {
     const [selectedMedicines, setSelectedMedicines] = useState<string[]>([]);
     const [medicineSearch, setMedicineSearch] = useState('');
     const [medicineSearchError, setMedicineSearchError] = useState<string | null>(null);
+    const medicineSearchErrorTimerRef = useRef<any>(null);
     const [isMedicinesOpen, setIsMedicinesOpen] = useState(false);
     const medicinesRef = React.useRef<HTMLDivElement | null>(null);
     const [medicinesOptions, setMedicinesOptions] = useState<MedicineOption[]>([]);
@@ -534,6 +539,7 @@ export default function Treatment() {
     const [diagnosesLoading, setDiagnosesLoading] = useState(false);
     const [diagnosesError, setDiagnosesError] = useState<string | null>(null);
     const [diagnosisSearchError, setDiagnosisSearchError] = useState<string | null>(null);
+    const diagnosisSearchErrorTimerRef = useRef<any>(null);
 
     const filteredDiagnoses = React.useMemo(() => {
         const term = diagnosisSearch.trim().toLowerCase();
@@ -589,6 +595,7 @@ export default function Treatment() {
     const [investigationsLoading, setInvestigationsLoading] = useState(false);
     const [investigationsError, setInvestigationsError] = useState<string | null>(null);
     const [investigationSearchError, setInvestigationSearchError] = useState<string | null>(null);
+    const investigationSearchErrorTimerRef = useRef<any>(null);
 
     const filteredInvestigations = React.useMemo(() => {
         const term = investigationSearch.trim().toLowerCase();
@@ -1447,11 +1454,13 @@ export default function Treatment() {
     // Check if form should be disabled (status is "Waiting for Medicine" or "Complete")
     const isFormDisabled = React.useMemo(() => {
         if (!treatmentData) return false;
-        const statusId = treatmentData.statusId;
+        const statusId = Number(treatmentData.statusId);
         const status = (treatmentData.status || '').toUpperCase().trim();
-        const isWaitingForMedicine = status === 'WAITING FOR MEDICINE' || status === 'WAITINGFOR MEDICINE' || status === 'WAITINGFORMEDICINE';
-        const isComplete = status === 'COMPLETE' || status === 'COMPLETED';
-        // Consider common IDs as well (4: Waiting for Medicine, 6: Complete/Submitted in some flows)
+        const isWaitingForMedicine = status.startsWith('WAITING FOR MEDICINE') || status.startsWith('WAITINGFOR MEDICINE') || status.startsWith('WAITINGFORMEDICINE') || status.startsWith('PRESCRIPTION/COLLECTION') || statusId === 4;
+        const isComplete = status.startsWith('COMPLETE') || status.startsWith('COMPLETED') || status.startsWith('SUBMITTED') || status.startsWith('COLLECTION') || [5, 6, 10].includes(statusId);
+        // Consider common IDs as well:
+        // 4: Waiting for Medicine / Prescription/Collection
+        // 6: Complete / Submitted / Collection
         return isWaitingForMedicine || isComplete || statusId === 4 || statusId === 6;
     }, [treatmentData?.statusId, treatmentData?.status]);
 
@@ -1520,14 +1529,17 @@ export default function Treatment() {
     }, [treatmentData?.patientId, treatmentData?.referralName, treatmentData?.referralCode]);
 
 
-    // Check if Addendum button should be enabled (for "Waiting for Medicine" and "Complete")
+    // Check if Addendum button should be enabled
     const isAddendumEnabled = React.useMemo(() => {
         if (!treatmentData) return false;
-        const statusId = treatmentData.statusId;
+
+        const statusId = Number(treatmentData.statusId);
         const status = (treatmentData.status || '').toUpperCase().trim();
-        const isWaitingForMedicine = status === 'WAITING FOR MEDICINE' || status === 'WAITINGFOR MEDICINE' || status === 'WAITINGFORMEDICINE';
-        const isComplete = status === 'COMPLETE' || status === 'COMPLETED';
-        return isWaitingForMedicine || isComplete || statusId === 4 || statusId === 6;
+
+        const isWaitingForMedicine = status.startsWith('WAITING FOR MEDICINE') || status.startsWith('WAITINGFOR MEDICINE') || status.startsWith('WAITINGFORMEDICINE') || status.startsWith('PRESCRIPTION/COLLECTION') || statusId === 4;
+        const isComplete = status.startsWith('COMPLETE') || status.startsWith('COMPLETED') || status.startsWith('SUBMITTED') || status.startsWith('COLLECTION') || [5, 6, 10].includes(statusId);
+
+        return isWaitingForMedicine || isComplete;
     }, [treatmentData?.statusId, treatmentData?.status]);
 
     // Close Investigation dropdown on outside click
@@ -4151,11 +4163,15 @@ export default function Treatment() {
 
             if (followUpData.remarkComments && followUpData.remarkComments.length >= 1000) {
                 setRemarkCommentsError('Remark cannot exceed 1000 characters');
+                if (remarkCommentsErrorTimerRef.current) clearTimeout(remarkCommentsErrorTimerRef.current);
+                remarkCommentsErrorTimerRef.current = setTimeout(() => setRemarkCommentsError(null), 3000);
                 validationErrors.push('Remark cannot exceed 1000 characters');
             }
 
             if (prescriptionInput && prescriptionInput.length >= 200) {
                 setPrescriptionError('Prescription cannot exceed 200 characters');
+                if (prescriptionErrorTimerRef.current) clearTimeout(prescriptionErrorTimerRef.current);
+                prescriptionErrorTimerRef.current = setTimeout(() => setPrescriptionError(null), 3000);
                 validationErrors.push('Prescription cannot exceed 200 characters');
             }
             checkLength(followUpData.followUp, 100, 'Follow-up');
@@ -4421,6 +4437,16 @@ export default function Treatment() {
             if (result.success) {
                 setSnackbarMessage(`Treatment ${isSubmit ? 'submitted' : 'saved'} successfully!`);
                 setSnackbarOpen(true);
+
+                // Update status locally immediately for instant UI feedback (enables Addendum button instantly)
+                setTreatmentData(prev => {
+                    if (!prev) return prev;
+                    return {
+                        ...prev,
+                        statusId: isSubmit ? 4 : 9,
+                        status: isSubmit ? 'Prescription/Collection' : 'SAVE'
+                    };
+                });
 
                 // Load rows directly from save response if available
                 // Load complaints rows from save response first (to preserve deletions)
@@ -5151,7 +5177,18 @@ export default function Treatment() {
                 }
             }
 
-            setDiscountError(newError);
+            if (discountErrorTimerRef.current) {
+                clearTimeout(discountErrorTimerRef.current);
+            }
+
+            if (newError && newError.includes('cannot exceed')) {
+                setDiscountError(newError);
+                discountErrorTimerRef.current = setTimeout(() => {
+                    setDiscountError(null);
+                }, 3000);
+            } else {
+                setDiscountError(newError);
+            }
 
             // Calculate remaining amount after discount and collection (Dues)
             const validDiscount = isNaN(discountNum) ? 0 : discountNum;
@@ -5941,7 +5978,11 @@ export default function Treatment() {
                                                                 onChange={(val) => {
                                                                     if (val.length >= 100) {
                                                                         setComplaintSearchError('Complaints search cannot exceed 100 characters');
+                                                                        if (complaintSearchErrorTimerRef.current) clearTimeout(complaintSearchErrorTimerRef.current);
+                                                                        complaintSearchErrorTimerRef.current = setTimeout(() => setComplaintSearchError(null), 3000);
+                                                                        if (val.length > 100) return; // Block beyond limit
                                                                     } else {
+                                                                        if (complaintSearchErrorTimerRef.current) clearTimeout(complaintSearchErrorTimerRef.current);
                                                                         setComplaintSearchError(null);
                                                                     }
                                                                     setComplaintSearch(val);
@@ -5951,7 +5992,6 @@ export default function Treatment() {
                                                                 error={!!complaintSearchError}
                                                                 helperText={complaintSearchError}
                                                                 FormHelperTextProps={{ style: { color: '#757575' } }}
-                                                                inputProps={{ maxLength: 100 }}
                                                                 sx={{
                                                                     '& .MuiOutlinedInput-root': {
                                                                         height: '38px',
@@ -6173,7 +6213,6 @@ export default function Treatment() {
                                                                     error={row.comment?.length >= 500}
                                                                     helperText={row.comment?.length >= 500 ? 'Comment cannot exceed 500 characters' : ''}
                                                                     inputProps={{
-                                                                        maxLength: 501
                                                                     }}
                                                                     sx={{
                                                                         marginBottom: row.comment?.length >= 500 ? '16px' : '0px',
@@ -6258,7 +6297,6 @@ export default function Treatment() {
                                                 onChange={(e) => handleInputChange('detailedHistory', e.target.value.slice(0, getFieldConfig('detailedHistory', 'visit')?.maxLength || 1000))}
                                                 disabled={isFormDisabled}
                                                 rows={3}
-                                                maxLength={getFieldConfig('detailedHistory', 'visit')?.maxLength}
                                                 style={{
                                                     width: '100%',
                                                     padding: '6px 10px',
@@ -6311,7 +6349,6 @@ export default function Treatment() {
                                                 onChange={(e) => handleInputChange('importantFindings', e.target.value.slice(0, getFieldConfig('importantFindings', 'visit')?.maxLength || 1000))}
                                                 disabled={isFormDisabled}
                                                 rows={3}
-                                                maxLength={getFieldConfig('importantFindings', 'visit')?.maxLength}
                                                 style={{
                                                     width: '100%',
                                                     padding: '6px 10px',
@@ -6364,7 +6401,6 @@ export default function Treatment() {
                                                 onChange={(e) => handleInputChange('additionalComments', e.target.value.slice(0, getFieldConfig('additionalComments', 'visit')?.maxLength || 1000))}
                                                 disabled={isFormDisabled}
                                                 rows={3}
-                                                maxLength={getFieldConfig('additionalComments', 'visit')?.maxLength}
                                                 style={{
                                                     width: '100%',
                                                     padding: '6px 10px',
@@ -6423,7 +6459,6 @@ export default function Treatment() {
                                                 onChange={(e) => handleInputChange('procedurePerformed', e.target.value.slice(0, getFieldConfig('procedurePerformed', 'visit')?.maxLength || 1000))}
                                                 disabled={isFormDisabled}
                                                 rows={3}
-                                                maxLength={getFieldConfig('procedurePerformed', 'visit')?.maxLength}
                                                 style={{
                                                     width: '100%',
                                                     padding: '6px 10px',
@@ -6476,7 +6511,6 @@ export default function Treatment() {
                                                 onChange={(e) => handleInputChange('dressingBodyParts', e.target.value.slice(0, getFieldConfig('dressingBodyParts', 'visit')?.maxLength || 1000))}
                                                 disabled={isFormDisabled}
                                                 rows={3}
-                                                maxLength={getFieldConfig('dressingBodyParts', 'visit')?.maxLength}
                                                 style={{
                                                     width: '100%',
                                                     padding: '6px 10px',
@@ -6650,7 +6684,11 @@ export default function Treatment() {
                                                         onChange={(val) => {
                                                             if (val.length >= 1000) {
                                                                 setDiagnosisSearchError('Diagnosis search cannot exceed 1000 characters');
+                                                                if (diagnosisSearchErrorTimerRef.current) clearTimeout(diagnosisSearchErrorTimerRef.current);
+                                                                diagnosisSearchErrorTimerRef.current = setTimeout(() => setDiagnosisSearchError(null), 3000);
+                                                                if (val.length > 1000) return; // Block beyond limit
                                                             } else {
+                                                                if (diagnosisSearchErrorTimerRef.current) clearTimeout(diagnosisSearchErrorTimerRef.current);
                                                                 setDiagnosisSearchError(null);
                                                             }
                                                             setDiagnosisSearch(val);
@@ -6660,7 +6698,6 @@ export default function Treatment() {
                                                         error={!!diagnosisSearchError}
                                                         helperText={diagnosisSearchError}
                                                         FormHelperTextProps={{ style: { color: '#757575' } }}
-                                                        inputProps={{ maxLength: 1000 }}
                                                         sx={{
                                                             '& .MuiOutlinedInput-root': {
                                                                 height: '38px',
@@ -6994,20 +7031,21 @@ export default function Treatment() {
                                                         size="small"
                                                         value={medicineSearch}
                                                         onChange={(val) => {
-                                                            setMedicineSearch(val);
                                                             if (val.length >= 1000) {
                                                                 setMedicineSearchError('Medicine search cannot exceed 1000 characters');
+                                                                if (medicineSearchErrorTimerRef.current) clearTimeout(medicineSearchErrorTimerRef.current);
+                                                                medicineSearchErrorTimerRef.current = setTimeout(() => setMedicineSearchError(null), 3000);
+                                                                if (val.length > 1000) return; // Block beyond limit
                                                             } else {
+                                                                if (medicineSearchErrorTimerRef.current) clearTimeout(medicineSearchErrorTimerRef.current);
                                                                 setMedicineSearchError(null);
                                                             }
+                                                            setMedicineSearch(val);
                                                         }}
                                                         placeholder="Search medicines"
                                                         variant="outlined"
                                                         error={!!medicineSearchError}
                                                         helperText={medicineSearchError}
-                                                        inputProps={{
-                                                            maxLength: 1000
-                                                        }}
                                                         sx={{
                                                             '& .MuiOutlinedInput-root': {
                                                                 height: medicineSearchError ? 'auto' : '32px',
@@ -7222,8 +7260,7 @@ export default function Treatment() {
                                                                 disableClearable={true}
                                                                 inputProps={{
                                                                     inputMode: 'numeric',
-                                                                    pattern: '[0-9]*',
-                                                                    maxLength: 10
+                                                                    pattern: '[0-9]*'
                                                                 }}
                                                                 onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
                                                                 sx={{
@@ -7256,8 +7293,7 @@ export default function Treatment() {
                                                                 disableClearable={true}
                                                                 inputProps={{
                                                                     inputMode: 'numeric',
-                                                                    pattern: '[0-9]*',
-                                                                    maxLength: 10
+                                                                    pattern: '[0-9]*'
                                                                 }}
                                                                 onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
                                                                 sx={{
@@ -7290,8 +7326,7 @@ export default function Treatment() {
                                                                 disableClearable={true}
                                                                 inputProps={{
                                                                     inputMode: 'numeric',
-                                                                    pattern: '[0-9]*',
-                                                                    maxLength: 10
+                                                                    pattern: '[0-9]*'
                                                                 }}
                                                                 onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
                                                                 sx={{
@@ -7324,8 +7359,7 @@ export default function Treatment() {
                                                                 disableClearable={true}
                                                                 inputProps={{
                                                                     inputMode: 'numeric',
-                                                                    pattern: '[0-9]*',
-                                                                    maxLength: 10
+                                                                    pattern: '[0-9]*'
                                                                 }}
                                                                 onKeyDown={(e) => { const k = e.key; if (k === 'e' || k === 'E' || k === '+' || k === '-' || k === '.') { e.preventDefault(); } }}
                                                                 sx={{
@@ -7361,7 +7395,6 @@ export default function Treatment() {
                                                                     error={row.instruction?.length >= 4000}
                                                                     helperText={row.instruction?.length >= 4000 ? 'Instruction cannot exceed 4000 characters' : ''}
                                                                     inputProps={{
-                                                                        maxLength: 4001
                                                                     }}
                                                                     sx={{
                                                                         marginBottom: row.instruction?.length >= 4000 ? '16px' : '0px',
@@ -7448,20 +7481,21 @@ export default function Treatment() {
                                             value={prescriptionInput}
                                             onChange={(val) => {
                                                 if (!isFormDisabled) {
-                                                    setPrescriptionInput(val);
                                                     if (val.length >= 200) {
                                                         setPrescriptionError('Prescription cannot exceed 200 characters');
+                                                        if (prescriptionErrorTimerRef.current) clearTimeout(prescriptionErrorTimerRef.current);
+                                                        prescriptionErrorTimerRef.current = setTimeout(() => setPrescriptionError(null), 3000);
+                                                        if (val.length > 200) return; // Block beyond limit
                                                     } else {
+                                                        if (prescriptionErrorTimerRef.current) clearTimeout(prescriptionErrorTimerRef.current);
                                                         setPrescriptionError(null);
                                                     }
+                                                    setPrescriptionInput(val);
                                                 }
                                             }}
                                             disabled={isFormDisabled}
                                             placeholder="Enter Brand Name / Prescription"
                                             variant="outlined"
-                                            inputProps={{
-                                                maxLength: 200
-                                            }}
                                             sx={{
                                                 '& .MuiOutlinedInput-root': {
                                                     height: '38px',
@@ -7685,8 +7719,7 @@ export default function Treatment() {
                                                                 disableClearable={true}
                                                                 inputProps={{
                                                                     inputMode: 'numeric',
-                                                                    pattern: '[0-9]*',
-                                                                    maxLength: 10
+                                                                    pattern: '[0-9]*'
                                                                 }}
                                                                 sx={{
                                                                     marginBottom: 0,
@@ -7713,8 +7746,7 @@ export default function Treatment() {
                                                                 disableClearable={true}
                                                                 inputProps={{
                                                                     inputMode: 'numeric',
-                                                                    pattern: '[0-9]*',
-                                                                    maxLength: 10
+                                                                    pattern: '[0-9]*'
                                                                 }}
                                                                 sx={{
                                                                     marginBottom: 0,
@@ -7741,8 +7773,7 @@ export default function Treatment() {
                                                                 disableClearable={true}
                                                                 inputProps={{
                                                                     inputMode: 'numeric',
-                                                                    pattern: '[0-9]*',
-                                                                    maxLength: 10
+                                                                    pattern: '[0-9]*'
                                                                 }}
                                                                 sx={{
                                                                     marginBottom: 0,
@@ -7769,8 +7800,7 @@ export default function Treatment() {
                                                                 disableClearable={true}
                                                                 inputProps={{
                                                                     inputMode: 'numeric',
-                                                                    pattern: '[0-9]*',
-                                                                    maxLength: 10
+                                                                    pattern: '[0-9]*'
                                                                 }}
                                                                 sx={{
                                                                     marginBottom: 0,
@@ -8017,7 +8047,11 @@ export default function Treatment() {
                                                         onChange={(val) => {
                                                             if (val.length >= 1000) {
                                                                 setInvestigationSearchError('Investigation search cannot exceed 1000 characters');
+                                                                if (investigationSearchErrorTimerRef.current) clearTimeout(investigationSearchErrorTimerRef.current);
+                                                                investigationSearchErrorTimerRef.current = setTimeout(() => setInvestigationSearchError(null), 3000);
+                                                                if (val.length > 1000) return; // Block beyond limit
                                                             } else {
+                                                                if (investigationSearchErrorTimerRef.current) clearTimeout(investigationSearchErrorTimerRef.current);
                                                                 setInvestigationSearchError(null);
                                                             }
                                                             setInvestigationSearch(val);
@@ -8027,7 +8061,6 @@ export default function Treatment() {
                                                         error={!!investigationSearchError}
                                                         helperText={investigationSearchError}
                                                         FormHelperTextProps={{ style: { color: '#757575' } }}
-                                                        inputProps={{ maxLength: 1000 }}
                                                         sx={{
                                                             '& .MuiOutlinedInput-root': {
                                                                 height: '38px',
@@ -8377,7 +8410,6 @@ export default function Treatment() {
                                             onChange={(val) => handleFollowUpChange('followUp', val)}
                                             disabled={isFormDisabled}
                                             inputProps={{
-                                                maxLength: 100
                                             }}
                                             placeholder="Enter follow up"
                                             variant="outlined"
@@ -8411,7 +8443,6 @@ export default function Treatment() {
                                             onChange={(val) => handleFollowUpChange('remarkComments', val)}
                                             disabled={isFormDisabled}
                                             inputProps={{
-                                                maxLength: 1000
                                             }}
                                             placeholder="Enter remark comments"
                                             variant="outlined"
@@ -8454,7 +8485,6 @@ export default function Treatment() {
                                     onChange={(val) => handleFollowUpChange('planAdv', val)}
                                     disabled={isFormDisabled}
                                     inputProps={{
-                                        maxLength: 1000
                                     }}
                                     placeholder="Enter Plan/Advice"
                                     variant="outlined"
@@ -8561,7 +8591,6 @@ export default function Treatment() {
                                                 onChange={(val) => handleBillingChange('discount', val)}
                                                 disabled={isFormDisabled}
                                                 inputProps={{
-                                                    maxLength: Math.max(String(Math.floor(parseFloat(billingData.billed) || 0)).length, 1)
                                                 }}
                                                 placeholder="0.00"
                                                 variant="outlined"
@@ -8593,7 +8622,6 @@ export default function Treatment() {
                                             onChange={(val) => handleBillingChange('dues', val)}
                                             disabled
                                             inputProps={{
-                                                maxLength: 10
                                             }}
                                             placeholder="0.00"
                                             variant="outlined"
@@ -9079,7 +9107,6 @@ export default function Treatment() {
                                     variant="outlined"
                                     size="small"
                                     inputProps={{
-                                        maxLength: 1000
                                     }}
                                     sx={{
                                         '& .MuiOutlinedInput-root': {
