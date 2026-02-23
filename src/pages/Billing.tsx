@@ -23,6 +23,7 @@ import AddPatientPage from "./AddPatientPage";
 import { buildPrescriptionPrintHTML, buildLabTestsPrintHTML, getHeaderImageUrl } from "../utils/printTemplates";
 import PrintReceiptPopup, { PrintReceiptFormValues } from "../components/PrintReceiptPopup";
 import ClearableTextField from "../components/ClearableTextField";
+import { filterNumericInput, validateField } from '../utils/validationUtils';
 
 
 // Specific styles for Duration/Comment input in table
@@ -205,7 +206,7 @@ interface BillingDetailOption {
     sequence_no?: number;
 }
 
-export default function Treatment() {
+export default function Billing() {
     const navigate = useNavigate();
     const location = useLocation();
     const [sessionData, setSessionData] = useState<SessionInfo | null>(null);
@@ -2476,9 +2477,17 @@ export default function Treatment() {
     };
 
     const handleInputChange = (field: string, value: any) => {
+        let processedValue = value;
+
+        if (field === 'pulse') {
+            processedValue = filterNumericInput(value, false);
+        } else if (field === 'height' || field === 'weight' || field === 'sugar' || field === 'tft' || field === 'pallorHb' || field === 'bmi' || field === 'billed' || field === 'discount' || field === 'collected' || field === 'receiptAmount') {
+            processedValue = filterNumericInput(value, true);
+        }
+
         setFormData(prev => ({
             ...prev,
-            [field]: value
+            [field]: processedValue
         }));
     };
 
@@ -2769,9 +2778,8 @@ export default function Treatment() {
     };
 
     const handleBillingChange = (field: string, value: string) => {
-        // Strict blocking for numeric fields
-        if ((field === 'discount' || field === 'billed' || field === 'feesCollected') && value && !/^\d*\.?\d*$/.test(value)) {
-            return; // Block non-numeric input
+        if (field === 'discount' || field === 'billed' || field === 'feesCollected') {
+            value = filterNumericInput(value, true);
         }
 
         const sanitizedValue = value;

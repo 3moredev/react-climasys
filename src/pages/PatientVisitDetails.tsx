@@ -16,7 +16,7 @@ import AddPatientPage from './AddPatientPage';
 import PatientNameDisplay from '../components/PatientNameDisplay';
 import ClearableTextField from '../components/ClearableTextField';
 import { getFieldConfig } from '../utils/fieldValidationConfig';
-import { validateField } from '../utils/validationUtils';
+import { validateField, filterNumericInput } from '../utils/validationUtils';
 
 interface AppointmentRow {
     reports_received: any;
@@ -1068,14 +1068,9 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
         if (field === 'referralName') {
             processedValue = value.replace(/[^a-zA-Z\s.'-]/g, '');
         } else if (field === 'referralContact' || field === 'pulse') {
-            processedValue = value.replace(/[^0-9]/g, '');
-        } else if (field === 'height' || field === 'weight') {
-            // Allow digits and at most one dot
-            processedValue = value.replace(/[^0-9.]/g, '');
-            const parts = processedValue.split('.');
-            if (parts.length > 2) {
-                processedValue = parts[0] + '.' + parts.slice(1).join('');
-            }
+            processedValue = filterNumericInput(value, false);
+        } else if (field === 'height' || field === 'weight' || field === 'sugar' || field === 'tft' || field === 'pallorHb' || field === 'bmi' || field === 'billed' || field === 'discount' || field === 'collected' || field === 'receiptAmount') {
+            processedValue = filterNumericInput(value, true);
         }
 
         // Real-time Validation Result
