@@ -2598,7 +2598,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                                     </button>
                                                                 </div>
                                                             )}
-                                                            {!complaintsLoading && !complaintsError && filteredComplaints.length === 0 && (
+                                                            {!complaintsLoading && !complaintsError && !complaintSearchError && filteredComplaints.length === 0 && (
                                                                 <div style={{ padding: '6px', fontSize: '12px', color: '#777', gridColumn: '1 / -1' }}>No complaints found</div>
                                                             )}
                                                             {!complaintsLoading && !complaintsError && filteredComplaints.map((opt, index) => {

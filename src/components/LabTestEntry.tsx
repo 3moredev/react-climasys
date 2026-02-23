@@ -1348,7 +1348,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                                     </button>
                                                                 </div>
                                                             )}
-                                                            {!labTestsLoading && !labTestsError && filteredLabTests.length === 0 && (
+                                                            {!labTestsLoading && !labTestsError && !labTestSearchError && filteredLabTests.length === 0 && (
                                                                 <div style={{ padding: '6px', fontSize: '12px', color: '#777' }}>No lab tests found</div>
                                                             )}
                                                             {!labTestsLoading && !labTestsError && filteredLabTests.map((opt) => {
