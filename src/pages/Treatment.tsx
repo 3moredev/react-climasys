@@ -3646,10 +3646,21 @@ export default function Treatment() {
 
             // Load complaints rows from API response (support multiple shapes)
             // Skip if we just loaded from save response to prevent overwriting deletions
+            let complaintsLoadedFromStructuredSource = false;
             if (!complaintsRowsLoadedFromSaveResponseRef.current) {
+                // Robust check for complaints array in multiple possible locations
                 const complaintsSource = Array.isArray(appointmentData.complaintsRows)
                     ? appointmentData.complaintsRows
-                    : (Array.isArray(appointmentData.complaints) ? appointmentData.complaints : null);
+                    : (Array.isArray(appointmentData.complaints)
+                        ? appointmentData.complaints
+                        : (Array.isArray(appointmentData.data?.complaints)
+                            ? appointmentData.data.complaints
+                            : (Array.isArray(appointmentData.data?.complaintsRows)
+                                ? appointmentData.data.complaintsRows
+                                : (Array.isArray(result.data?.complaints)
+                                    ? result.data.complaints
+                                    : null))));
+
                 if (complaintsSource && complaintsSource.length > 0) {
                     const mappedComplaintsRows: ComplaintRow[] = complaintsSource.map((row: any, index: number) => {
                         let value = row.value || row.complaint_description || row.short_description || row.complaint || '';
@@ -3659,7 +3670,8 @@ export default function Treatment() {
                         // Attempt to parse "Name (Comment)" format if present in value/label and comment is empty
                         // OR if value/label contains parenthesis
                         const parseString = (str: string) => {
-                            const match = str.match(/^(.*?)(?:\s*\((.*)\))?$/);
+                            if (!str) return null;
+                            const match = String(str).match(/^(.*?)(?:\s*\((.*)\))?$/);
                             if (match && match[2]) {
                                 return { name: match[1].trim(), comment: match[2].trim() };
                             }
@@ -3691,17 +3703,25 @@ export default function Treatment() {
                     // Sort by priority (lower priority number = higher priority)
                     const sortedRows = mappedComplaintsRows.sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999));
                     setComplaintsRows(sortedRows);
+                    // Sync dropdown selection state
+                    setSelectedComplaints(sortedRows.map(r => r.value));
+
                     complaintsRowsBuiltFromApiRef.current = true; // Mark as built from API
+                    complaintsLoadedFromStructuredSource = true;
                     console.log('Loaded complaints rows from API (parsed):', mappedComplaintsRows);
                 } else if (Array.isArray(complaintsSource)) {
                     // Empty array - clear existing rows
                     setComplaintsRows([]);
+                    setSelectedComplaints([]);
                     complaintsRowsBuiltFromApiRef.current = false; // Reset flag
+                    complaintsLoadedFromStructuredSource = true;
                 }
             } else {
                 console.log('Skipping complaints rows reload - already loaded from save response');
                 // Reset the flag after skipping so future loads work normally
                 complaintsRowsLoadedFromSaveResponseRef.current = false;
+                // Treat as loaded from structured source for the logic below since we want to preserve these rows
+                complaintsLoadedFromStructuredSource = true;
             }
 
             // Update complaint selections if available (for dropdown display)
@@ -3758,10 +3778,15 @@ export default function Treatment() {
                         });
 
                         if (foundValues.length > 0) {
-                            selectedComplaintsPatchedFromApiRef.current = true;
-                            setSelectedComplaints(foundValues);
-                            setComplaintsRows(foundRows);
-                            console.log('Patched selectedComplaints from appointment details (parsed):', foundValues);
+                            // Only apply parsed fallback if we DID NOT find structured data
+                            if (!complaintsLoadedFromStructuredSource) {
+                                selectedComplaintsPatchedFromApiRef.current = true;
+                                setSelectedComplaints(foundValues);
+                                setComplaintsRows(foundRows);
+                                console.log('Patched selectedComplaints from appointment details (parsed fallback):', foundValues);
+                            } else {
+                                console.log('Skipping parsed fallback - structured data already loaded');
+                            }
                         }
                     }
                 }
@@ -3772,7 +3797,14 @@ export default function Treatment() {
             if (!diagnosisRowsLoadedFromSaveResponseRef.current) {
                 const diagnosisSource = Array.isArray(appointmentData.diagnosisRows)
                     ? appointmentData.diagnosisRows
-                    : (Array.isArray(appointmentData.diagnosis) ? appointmentData.diagnosis : null);
+                    : (Array.isArray(appointmentData.diagnosis)
+                        ? appointmentData.diagnosis
+                        : (Array.isArray(appointmentData.data?.diagnosis)
+                            ? appointmentData.data.diagnosis
+                            : (Array.isArray(appointmentData.data?.diagnosisRows)
+                                ? appointmentData.data.diagnosisRows
+                                : null)));
+
                 if (diagnosisSource && diagnosisSource.length > 0) {
                     const mappedDiagnosisRows: DiagnosisRow[] = diagnosisSource.map((row: any, index: number) => {
                         const value = row.short_description || row.diagnosis_description || row.desease_description || '';
@@ -3803,7 +3835,14 @@ export default function Treatment() {
             if (!medicineRowsLoadedFromSaveResponseRef.current) {
                 const medicineSource = Array.isArray(appointmentData.medicineRows)
                     ? appointmentData.medicineRows
-                    : (Array.isArray(appointmentData.medicines) ? appointmentData.medicines : null);
+                    : (Array.isArray(appointmentData.medicines)
+                        ? appointmentData.medicines
+                        : (Array.isArray(appointmentData.data?.medicines)
+                            ? appointmentData.data.medicines
+                            : (Array.isArray(appointmentData.data?.medicineRows)
+                                ? appointmentData.data.medicineRows
+                                : null)));
+
                 if (medicineSource && medicineSource.length > 0) {
                     const mappedMedicineRows: MedicineRow[] = medicineSource.map((row: any, index: number) => {
                         const shortDesc = row.short_description || row.medicine_description || '';
@@ -3816,7 +3855,7 @@ export default function Treatment() {
                         const instruction = row.instruction ?? row.medicine_instruction ?? '';
                         return {
                             id: `med-${index}-${Date.now()}`,
-                            medicine: row.medicine || row.medicine_description || row.short_description || '',
+                            medicine: row.medicine || row.medicine_description || '',
                             short_description: shortDesc,
                             morning: morning,
                             afternoon: afternoon,
@@ -3845,7 +3884,14 @@ export default function Treatment() {
             if (!prescriptionRowsLoadedFromSaveResponseRef.current) {
                 const prescriptionSource = Array.isArray(appointmentData.prescriptionRows)
                     ? appointmentData.prescriptionRows
-                    : (Array.isArray(appointmentData.prescriptions) ? appointmentData.prescriptions : null);
+                    : (Array.isArray(appointmentData.prescriptions)
+                        ? appointmentData.prescriptions
+                        : (Array.isArray(appointmentData.data?.prescriptions)
+                            ? appointmentData.data.prescriptions
+                            : (Array.isArray(appointmentData.data?.prescriptionRows)
+                                ? appointmentData.data.prescriptionRows
+                                : null)));
+
                 if (prescriptionSource && prescriptionSource.length > 0) {
                     const mappedPrescriptionRows: PrescriptionRow[] = prescriptionSource.map((row: any, index: number) => ({
                         id: `pres-${index}-${Date.now()}`,
@@ -3871,7 +3917,14 @@ export default function Treatment() {
             if (!investigationRowsLoadedFromSaveResponseRef.current) {
                 const investigationSource = Array.isArray(appointmentData.investigationRows)
                     ? appointmentData.investigationRows
-                    : (Array.isArray(appointmentData.investigations) ? appointmentData.investigations : null);
+                    : (Array.isArray(appointmentData.investigations)
+                        ? appointmentData.investigations
+                        : (Array.isArray(appointmentData.data?.investigations)
+                            ? appointmentData.data.investigations
+                            : (Array.isArray(appointmentData.data?.investigationRows)
+                                ? appointmentData.data.investigationRows
+                                : null)));
+
                 if (investigationSource && investigationSource.length > 0) {
                     const mappedInvestigationRows: InvestigationRow[] = investigationSource.map((row: any, index: number) => ({
                         id: `inv-${index}-${Date.now()}`,
@@ -4376,9 +4429,20 @@ export default function Treatment() {
 
                 // Load rows directly from save response if available
                 // Load complaints rows from save response first (to preserve deletions)
-                if (result.complaintsRows && Array.isArray(result.complaintsRows)) {
-                    if (result.complaintsRows.length > 0) {
-                        const mappedComplaintsRows: ComplaintRow[] = result.complaintsRows.map((row: any, index: number) => {
+                // Robust check for complaints array in multiple possible locations
+                const complaintsSource = Array.isArray(result.complaintsRows)
+                    ? result.complaintsRows
+                    : (Array.isArray(result.complaints)
+                        ? result.complaints
+                        : (Array.isArray(result.data?.complaints)
+                            ? result.data.complaints
+                            : (Array.isArray(result.data?.complaintsRows)
+                                ? result.data.complaintsRows
+                                : null)));
+
+                if (complaintsSource && Array.isArray(complaintsSource)) {
+                    if (complaintsSource.length > 0) {
+                        const mappedComplaintsRows: ComplaintRow[] = complaintsSource.map((row: any, index: number) => {
                             const value = row.value || row.complaint_description || row.short_description || row.complaint || '';
                             const opt = complaintsOptions.find(o => o.value === value);
                             const cleanLabel = (text: string) => text.includes('*') ? text.split('*').pop()?.trim() || text : text;
@@ -4393,26 +4457,40 @@ export default function Treatment() {
                         // Sort by priority (lower priority number = higher priority)
                         const sortedRows = mappedComplaintsRows.sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999));
                         setComplaintsRows(sortedRows);
+                        // Sync dropdown selection state
+                        setSelectedComplaints(sortedRows.map(r => r.value));
+
                         complaintsRowsBuiltFromApiRef.current = true; // Mark as built from API
                         complaintsRowsLoadedFromSaveResponseRef.current = true; // Mark as loaded from save response
                     } else {
                         // Empty array - clear existing rows
                         setComplaintsRows([]);
+                        setSelectedComplaints([]);
                         complaintsRowsBuiltFromApiRef.current = false;
                         complaintsRowsLoadedFromSaveResponseRef.current = true; // Mark as loaded from save response (even if empty)
                     }
                 }
 
                 // Load diagnosis rows from save response (to preserve deletions)
-                if (result.diagnosisRows && Array.isArray(result.diagnosisRows)) {
-                    if (result.diagnosisRows.length > 0) {
-                        const mappedDiagnosisRows: DiagnosisRow[] = result.diagnosisRows.map((row: any, index: number) => {
-                            const value = row.short_description || '';
+                const diagnosisSource = Array.isArray(result.diagnosisRows)
+                    ? result.diagnosisRows
+                    : (Array.isArray(result.diagnosis)
+                        ? result.diagnosis
+                        : (Array.isArray(result.data?.diagnosis)
+                            ? result.data.diagnosis
+                            : (Array.isArray(result.data?.diagnosisRows)
+                                ? result.data.diagnosisRows
+                                : null)));
+
+                if (diagnosisSource && Array.isArray(diagnosisSource)) {
+                    if (diagnosisSource.length > 0) {
+                        const mappedDiagnosisRows: DiagnosisRow[] = diagnosisSource.map((row: any, index: number) => {
+                            const value = row.short_description || row.diagnosis_description || row.desease_description || '';
                             const opt = diagnosesOptions.find(o => o.value === value);
                             return {
                                 id: `diag-${index}-${Date.now()}`,
                                 value,
-                                diagnosis: row.diagnosis || row.desease_description || '',
+                                diagnosis: row.diagnosis || row.desease_description || row.diagnosis_description || '',
                                 comment: '',
                                 priority: opt?.priority ?? opt?.priority_value ?? row.priority ?? row.priority_value ?? 999
                             };
@@ -4429,10 +4507,20 @@ export default function Treatment() {
                 }
 
                 // Load medicine rows from save response (to preserve deletions)
-                if (result.medicineRows && Array.isArray(result.medicineRows)) {
-                    if (result.medicineRows.length > 0) {
-                        const mappedMedicineRows: MedicineRow[] = result.medicineRows.map((row: any, index: number) => {
-                            const shortDesc = row.short_description || '';
+                const medicineSource = Array.isArray(result.medicineRows)
+                    ? result.medicineRows
+                    : (Array.isArray(result.medicines)
+                        ? result.medicines
+                        : (Array.isArray(result.data?.medicines)
+                            ? result.data.medicines
+                            : (Array.isArray(result.data?.medicineRows)
+                                ? result.data.medicineRows
+                                : null)));
+
+                if (medicineSource && Array.isArray(medicineSource)) {
+                    if (medicineSource.length > 0) {
+                        const mappedMedicineRows: MedicineRow[] = medicineSource.map((row: any, index: number) => {
+                            const shortDesc = row.short_description || row.medicine_description || '';
                             const opt = medicinesOptions.find(o => o.short_description === shortDesc);
                             // Handle various field name variations from API
                             const morning = row.morning ?? row.morning_value ?? 0;
@@ -4466,11 +4554,21 @@ export default function Treatment() {
                 }
 
                 // Load prescription rows from save response (to preserve deletions)
-                if (result.prescriptionRows && Array.isArray(result.prescriptionRows)) {
-                    if (result.prescriptionRows.length > 0) {
-                        const mappedPrescriptionRows: PrescriptionRow[] = result.prescriptionRows.map((row: any, index: number) => ({
+                const prescriptionSource = Array.isArray(result.prescriptionRows)
+                    ? result.prescriptionRows
+                    : (Array.isArray(result.prescriptions)
+                        ? result.prescriptions
+                        : (Array.isArray(result.data?.prescriptions)
+                            ? result.data.prescriptions
+                            : (Array.isArray(result.data?.prescriptionRows)
+                                ? result.data.prescriptionRows
+                                : null)));
+
+                if (prescriptionSource && Array.isArray(prescriptionSource)) {
+                    if (prescriptionSource.length > 0) {
+                        const mappedPrescriptionRows: PrescriptionRow[] = prescriptionSource.map((row: any, index: number) => ({
                             id: `pres-${index}-${Date.now()}`,
-                            prescription: row.prescription || `${row.brand_name || ''} ${row.medicine_name || ''}`.trim() || '',
+                            prescription: row.prescription || `${row.brand_name || ''} ${row.medicine_name || ''}`.trim() || row.medicine_description || row.short_description || '',
                             b: String(row.b || row.morning || ''),
                             l: String(row.l || row.afternoon || ''),
                             d: String(row.d || row.night || ''),
@@ -4487,11 +4585,21 @@ export default function Treatment() {
                 }
 
                 // Load investigation rows from save response (to preserve deletions)
-                if (result.investigationRows && Array.isArray(result.investigationRows)) {
-                    if (result.investigationRows.length > 0) {
-                        const mappedInvestigationRows: InvestigationRow[] = result.investigationRows.map((row: any, index: number) => ({
+                const investigationSource = Array.isArray(result.investigationRows)
+                    ? result.investigationRows
+                    : (Array.isArray(result.investigations)
+                        ? result.investigations
+                        : (Array.isArray(result.data?.investigations)
+                            ? result.data.investigations
+                            : (Array.isArray(result.data?.investigationRows)
+                                ? result.data.investigationRows
+                                : null)));
+
+                if (investigationSource && Array.isArray(investigationSource)) {
+                    if (investigationSource.length > 0) {
+                        const mappedInvestigationRows: InvestigationRow[] = investigationSource.map((row: any, index: number) => ({
                             id: `inv-${index}-${Date.now()}`,
-                            investigation: row.investigation || row.lab_test_description || ''
+                            investigation: row.investigation || row.lab_test_description || row.id || ''
                         }));
                         setInvestigationRows(mappedInvestigationRows);
                         investigationRowsLoadedFromSaveResponseRef.current = true;
