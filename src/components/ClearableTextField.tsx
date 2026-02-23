@@ -70,11 +70,14 @@ const ClearableTextField: React.FC<ClearableTextFieldProps> = ({
                     cursor: isReadOnly ? 'not-allowed !important' : 'inherit',
                 },
                 '& .MuiOutlinedInput-notchedOutline': {
-                    borderColor: isReadOnly ? 'rgba(0, 0, 0, 0.1) !important' : (shouldUseGrayError ? '#616161 !important' : undefined),
-                    borderWidth: (isReadOnly || shouldUseGrayError) ? '1px !important' : undefined
+                    borderColor: isReadOnly ? 'rgba(0, 0, 0, 0.1) !important' : (effectiveError ? '#d32f2f !important' : (shouldUseGrayError ? '#616161 !important' : undefined)),
+                    borderWidth: (isReadOnly || shouldUseGrayError || effectiveError) ? '1px !important' : undefined
                 },
                 '&:hover .MuiOutlinedInput-notchedOutline': {
-                    borderColor: isReadOnly ? 'rgba(0, 0, 0, 0.1) !important' : (shouldUseGrayError ? '#424242 !important' : undefined)
+                    borderColor: isReadOnly ? 'rgba(0, 0, 0, 0.1) !important' : (effectiveError ? '#d32f2f !important' : (shouldUseGrayError ? '#424242 !important' : undefined))
+                },
+                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                    borderColor: effectiveError ? '#d32f2f !important' : undefined
                 },
                 '&.Mui-disabled .MuiOutlinedInput-notchedOutline, & .MuiOutlinedInput-root.Mui-disabled .MuiOutlinedInput-notchedOutline': {
                     borderColor: 'rgba(0, 0, 0, 0.08) !important',

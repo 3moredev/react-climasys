@@ -37,7 +37,7 @@ import prescriptionDetailsService, {
 } from "../services/prescriptionDetailsService";
 import ClearableTextField from "../components/ClearableTextField";
 import { getFieldConfig } from '../utils/fieldValidationConfig';
-import { validateField, filterNumericInput } from '../utils/validationUtils';
+import { filterNumericInput, validateField } from '../utils/validationUtils';
 
 
 // Specific styles for Duration/Comment input in table
@@ -2952,7 +2952,7 @@ export default function Treatment() {
                 trimmedDiagnosisDescription;
             setSnackbarMessage(`Diagnosis "${duplicateName}" is already added.`);
             setSnackbarOpen(true);
-            setDiagnosesError(null);
+            setDiagnosesError(null); // Clear any existing error
             // Do NOT close popup here; signal to popup to stay open
             return false;
         }
@@ -3053,9 +3053,9 @@ export default function Treatment() {
 
     const handleSaveMedicine = (medicineData: MedicineData) => {
         const doctorId = treatmentData?.doctorId || sessionData?.doctorId;
-        const clinicId = treatmentData?.clinicId || sessionData?.clinicId || '';
+        const clinicIdForPayload = treatmentData?.clinicId || sessionData?.clinicId || '';
 
-        if (!doctorId || !clinicId) {
+        if (!doctorId || !clinicIdForPayload) {
             setMedicinesError('Doctor and clinic information are required to add a medicine.');
             return;
         }
@@ -3131,7 +3131,7 @@ export default function Treatment() {
                         afternoon: normalizedLunch,
                         priority_value: normalizedPriority,
                         active: true,
-                        clinic_id: clinicId,
+                        clinic_id: clinicIdForPayload,
                         created_on: new Date().toISOString(),
                         modified_on: null
                     }
@@ -3198,12 +3198,11 @@ export default function Treatment() {
             };
 
             setPrescriptionRows((prev) => [...prev, newPrescription]);
+            setShowPrescriptionPopup(false);
         } catch (error: any) {
             console.error("Failed to create prescription from Treatment screen:", error);
             setSnackbarMessage(error?.message || "Failed to create prescription. Please try again.");
             setSnackbarOpen(true);
-        } finally {
-            setShowPrescriptionPopup(false);
         }
     };
 
@@ -3236,9 +3235,10 @@ export default function Treatment() {
             const duplicateName = existingInTable?.investigation ||
                 existingInOptions?.label ||
                 normalizedName;
-            setSnackbarMessage(`Investigation "${duplicateName}" is already added.`);
+            const msg = `Investigation "${duplicateName}" is already added.`;
+            setSnackbarMessage(msg);
             setSnackbarOpen(true);
-            setInvestigationsError(null);
+            setInvestigationsSelectionError(msg);
             // Do NOT close popup here; signal to popup to stay open
             return false;
         }
@@ -5871,7 +5871,7 @@ export default function Treatment() {
                                                         justifyContent: 'space-between',
                                                         height: '38px',
                                                         padding: '4px 8px',
-                                                        border: '2px solid #B7B7B7',
+                                                        border: complaintsSelectionError ? '2px solid #d32f2f' : '2px solid #B7B7B7',
                                                         borderRadius: '6px',
                                                         fontSize: '13px',
                                                         fontFamily: "'Roboto', sans-serif",
@@ -5883,12 +5883,12 @@ export default function Treatment() {
                                                     }}
                                                     onMouseEnter={(e) => {
                                                         if (!isFormDisabled) {
-                                                            (e.currentTarget as HTMLDivElement).style.borderColor = '#1E88E5';
+                                                            (e.currentTarget as HTMLDivElement).style.borderColor = complaintsSelectionError ? '#d32f2f' : '#1E88E5';
                                                         }
                                                     }}
                                                     onMouseLeave={(e) => {
                                                         if (!isFormDisabled) {
-                                                            (e.currentTarget as HTMLDivElement).style.borderColor = '#B7B7B7';
+                                                            (e.currentTarget as HTMLDivElement).style.borderColor = complaintsSelectionError ? '#d32f2f' : '#B7B7B7';
                                                         }
                                                     }}
                                                 >
@@ -6576,7 +6576,7 @@ export default function Treatment() {
                                                 justifyContent: 'space-between',
                                                 height: '38px',
                                                 padding: '4px 8px',
-                                                border: '2px solid #B7B7B7',
+                                                border: diagnosesSelectionError ? '2px solid #d32f2f' : '2px solid #B7B7B7',
                                                 borderRadius: '6px',
                                                 fontSize: '13px',
                                                 fontFamily: "'Roboto', sans-serif",
@@ -6589,12 +6589,12 @@ export default function Treatment() {
                                             onClick={() => !isFormDisabled && setIsDiagnosesOpen(!isDiagnosesOpen)}
                                             onMouseEnter={(e) => {
                                                 if (!isFormDisabled) {
-                                                    (e.currentTarget as HTMLDivElement).style.borderColor = '#1E88E5';
+                                                    (e.currentTarget as HTMLDivElement).style.borderColor = diagnosesSelectionError ? '#d32f2f' : '#1E88E5';
                                                 }
                                             }}
                                             onMouseLeave={(e) => {
                                                 if (!isFormDisabled) {
-                                                    (e.currentTarget as HTMLDivElement).style.borderColor = '#B7B7B7';
+                                                    (e.currentTarget as HTMLDivElement).style.borderColor = diagnosesSelectionError ? '#d32f2f' : '#B7B7B7';
                                                 }
                                             }}
                                         >
@@ -6925,7 +6925,7 @@ export default function Treatment() {
                                                 justifyContent: 'space-between',
                                                 height: '38px',
                                                 padding: '4px 8px',
-                                                border: '2px solid #B7B7B7',
+                                                border: medicinesSelectionError ? '2px solid #d32f2f' : '2px solid #B7B7B7',
                                                 borderRadius: '6px',
                                                 fontSize: '13px',
                                                 fontFamily: "'Roboto', sans-serif",
@@ -6937,12 +6937,12 @@ export default function Treatment() {
                                             }}
                                             onMouseEnter={(e) => {
                                                 if (!isFormDisabled) {
-                                                    (e.currentTarget as HTMLDivElement).style.borderColor = '#1E88E5';
+                                                    (e.currentTarget as HTMLDivElement).style.borderColor = medicinesSelectionError ? '#d32f2f' : '#1E88E5';
                                                 }
                                             }}
                                             onMouseLeave={(e) => {
                                                 if (!isFormDisabled) {
-                                                    (e.currentTarget as HTMLDivElement).style.borderColor = '#B7B7B7';
+                                                    (e.currentTarget as HTMLDivElement).style.borderColor = medicinesSelectionError ? '#d32f2f' : '#B7B7B7';
                                                 }
                                             }}
                                         >
@@ -7487,15 +7487,6 @@ export default function Treatment() {
                                                     borderColor: '#1E88E5',
                                                     borderWidth: '2px'
                                                 },
-
-                                                /* Override error border to be normal gray */
-                                                '& .MuiOutlinedInput-root.Mui-error fieldset': {
-                                                    borderColor: '#B7B7B7',
-                                                },
-                                                '& .MuiOutlinedInput-root.Mui-error:hover fieldset': {
-                                                    borderColor: '#1E88E5',
-                                                },
-
                                                 '& .MuiInputBase-input': {
                                                     color: isFormDisabled ? '#666' : '#333',
                                                     cursor: isFormDisabled ? 'not-allowed' : 'text'
@@ -7949,7 +7940,9 @@ export default function Treatment() {
                                                 justifyContent: 'space-between',
                                                 height: '38px',
                                                 padding: '4px 8px',
-                                                border: '2px solid #B7B7B7',
+                                                height: '38px',
+                                                padding: '4px 8px',
+                                                border: investigationsSelectionError ? '2px solid #d32f2f' : '2px solid #B7B7B7',
                                                 borderRadius: '6px',
                                                 fontSize: '13px',
                                                 fontFamily: "'Roboto', sans-serif",
@@ -7962,12 +7955,12 @@ export default function Treatment() {
                                             onClick={() => !isFormDisabled && setIsInvestigationsOpen(!isInvestigationsOpen)}
                                             onMouseEnter={(e) => {
                                                 if (!isFormDisabled) {
-                                                    (e.currentTarget as HTMLDivElement).style.borderColor = '#1E88E5';
+                                                    (e.currentTarget as HTMLDivElement).style.borderColor = investigationsSelectionError ? '#d32f2f' : '#1E88E5';
                                                 }
                                             }}
                                             onMouseLeave={(e) => {
                                                 if (!isFormDisabled) {
-                                                    (e.currentTarget as HTMLDivElement).style.borderColor = '#B7B7B7';
+                                                    (e.currentTarget as HTMLDivElement).style.borderColor = investigationsSelectionError ? '#d32f2f' : '#B7B7B7';
                                                 }
                                             }}
                                         >
@@ -8504,7 +8497,7 @@ export default function Treatment() {
                                                     width: '100%',
                                                     height: '38px',
                                                     padding: '6px 34px 6px 10px',
-                                                    border: billingError ? '1px solid red' : '1px solid #ccc',
+                                                    border: billingError ? '2px solid red' : '1px solid #ccc',
                                                     borderRadius: '4px',
                                                     fontSize: '13px',
                                                     backgroundColor: '#f5f5f5',

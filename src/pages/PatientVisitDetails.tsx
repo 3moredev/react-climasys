@@ -2433,7 +2433,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                         justifyContent: 'space-between',
                                                         height: '40px',
                                                         padding: '4px 8px',
-                                                        border: '2px solid #B7B7B7',
+                                                        border: complaintsSelectionError ? '2px solid #d32f2f' : '2px solid #B7B7B7',
                                                         borderRadius: '8px',
                                                         fontSize: '12px',
                                                         fontFamily: "'Roboto', sans-serif",
@@ -2446,12 +2446,12 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                     }}
                                                     onMouseEnter={(e) => {
                                                         if (!readOnly) {
-                                                            (e.currentTarget as HTMLDivElement).style.borderColor = '#1E88E5';
+                                                            (e.currentTarget as HTMLDivElement).style.borderColor = complaintsSelectionError ? '#d32f2f' : '#1E88E5';
                                                         }
                                                     }}
                                                     onMouseLeave={(e) => {
                                                         if (!readOnly) {
-                                                            (e.currentTarget as HTMLDivElement).style.borderColor = '#B7B7B7';
+                                                            (e.currentTarget as HTMLDivElement).style.borderColor = complaintsSelectionError ? '#d32f2f' : '#B7B7B7';
                                                         }
                                                     }}
                                                 >

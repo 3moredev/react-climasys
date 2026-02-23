@@ -1115,12 +1115,13 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                     <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
                                                         Report Date <span style={{ color: 'red' }}>*</span>
                                                     </Typography>
-                                                    <TextField
+                                                    <ClearableTextField
+                                                        disableClearable
                                                         fullWidth
                                                         type="date"
                                                         required
                                                         value={formData.reportDate}
-                                                        onChange={(e) => handleInputChange('reportDate', e.target.value)}
+                                                        onChange={(val) => handleInputChange('reportDate', val)}
                                                         variant="outlined"
                                                         size="small"
                                                         sx={{
@@ -1218,7 +1219,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                     justifyContent: 'space-between',
                                                     height: '32px',
                                                     padding: '4px 8px',
-                                                    border: '2px solid #B7B7B7',
+                                                    border: dropdownError ? '2px solid #d32f2f' : '2px solid #B7B7B7',
                                                     borderRadius: '6px',
                                                     fontSize: '12px',
                                                     fontFamily: "'Roboto', sans-serif",
@@ -1231,10 +1232,10 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                     position: 'relative'
                                                 }}
                                                 onMouseEnter={(e) => {
-                                                    e.currentTarget.style.borderColor = '#1E88E5';
+                                                    e.currentTarget.style.borderColor = dropdownError ? '#d32f2f' : '#1E88E5';
                                                 }}
                                                 onMouseLeave={(e) => {
-                                                    e.currentTarget.style.borderColor = '#B7B7B7';
+                                                    e.currentTarget.style.borderColor = dropdownError ? '#d32f2f' : '#B7B7B7';
                                                 }}
                                             >
                                                 <span style={{ color: selectedLabTests.length ? '#000' : '#9e9e9e' }}>
