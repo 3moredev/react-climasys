@@ -6003,7 +6003,7 @@ export default function Treatment() {
                                                                     </button>
                                                                 </div>
                                                             )}
-                                                            {!complaintsLoading && !complaintsError && filteredComplaints.length === 0 && (
+                                                            {!complaintsLoading && !complaintsError && !complaintSearchError && filteredComplaints.length === 0 && (
                                                                 <div style={{ padding: '6px', fontSize: '13px', color: '#777', gridColumn: '1 / -1' }}>No complaints found</div>
                                                             )}
                                                             {!complaintsLoading && !complaintsError && filteredComplaints.map((opt, index) => {
@@ -6709,7 +6709,7 @@ export default function Treatment() {
                                                             </button>
                                                         </div>
                                                     )}
-                                                    {!diagnosesLoading && !diagnosesError && filteredDiagnoses.length === 0 && (
+                                                    {!diagnosesLoading && !diagnosesError && !diagnosisSearchError && filteredDiagnoses.length === 0 && (
                                                         <div style={{ padding: '6px', fontSize: '13px', color: '#777', gridColumn: '1 / -1' }}>No diagnoses found</div>
                                                     )}
                                                     {!diagnosesLoading && !diagnosesError && filteredDiagnoses.map((opt, index) => {
@@ -7056,7 +7056,7 @@ export default function Treatment() {
                                                             </button>
                                                         </div>
                                                     )}
-                                                    {!medicinesLoading && !medicinesError && filteredMedicines.length === 0 && (
+                                                    {!medicinesLoading && !medicinesError && !medicineSearchError && filteredMedicines.length === 0 && (
                                                         <div style={{ padding: '6px', fontSize: '13px', color: '#777', gridColumn: '1 / -1' }}>No medicines found</div>
                                                     )}
                                                     {!medicinesLoading && !medicinesError && filteredMedicines.map((opt, index) => {
@@ -8071,7 +8071,7 @@ export default function Treatment() {
                                                             </button>
                                                         </div>
                                                     )}
-                                                    {!investigationsLoading && !investigationsError && filteredInvestigations.length === 0 && (
+                                                    {!investigationsLoading && !investigationsError && !investigationSearchError && filteredInvestigations.length === 0 && (
                                                         <div style={{ padding: '6px', fontSize: '13px', color: '#777', gridColumn: '1 / -1' }}>No investigations found</div>
                                                     )}
                                                     {!investigationsLoading && !investigationsError && filteredInvestigations.map((opt, index) => {
