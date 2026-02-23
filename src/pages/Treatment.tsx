@@ -37,7 +37,7 @@ import prescriptionDetailsService, {
 } from "../services/prescriptionDetailsService";
 import ClearableTextField from "../components/ClearableTextField";
 import { getFieldConfig } from '../utils/fieldValidationConfig';
-import { validateField } from '../utils/validationUtils';
+import { validateField, filterNumericInput } from '../utils/validationUtils';
 
 
 // Specific styles for Duration/Comment input in table
@@ -2658,14 +2658,9 @@ export default function Treatment() {
 
         // Strict Character Filtering at Source (Matching PatientVisitDetails.tsx)
         if (field === 'pulse') {
-            processedValue = String(value).replace(/[^0-9]/g, '');
-        } else if (field === 'height' || field === 'weight') {
-            // Allow digits and at most one dot
-            processedValue = String(value).replace(/[^0-9.]/g, '');
-            const parts = processedValue.split('.');
-            if (parts.length > 2) {
-                processedValue = parts[0] + '.' + parts.slice(1).join('');
-            }
+            processedValue = filterNumericInput(value, false);
+        } else if (field === 'height' || field === 'weight' || field === 'sugar' || field === 'tft' || field === 'pallorHb' || field === 'bmi') {
+            processedValue = filterNumericInput(value, true);
         }
 
         // Validate the field early
@@ -4956,8 +4951,11 @@ export default function Treatment() {
     };
 
     const handleMedicineFieldChange = (id: string, field: string, value: string) => {
+        const filteredValue = (field === 'b' || field === 'l' || field === 'd' || field === 'days')
+            ? filterNumericInput(value, true)
+            : value;
         setMedicineRows(prev => prev.map(row =>
-            row.id === id ? { ...row, [field]: value } : row
+            row.id === id ? { ...row, [field]: filteredValue } : row
         ));
     };
 
@@ -4966,7 +4964,7 @@ export default function Treatment() {
         // Allow up to 4001 for validation message to trigger
         if (instruction.length > 4001) return; // Block input that exceeds buffer
         setMedicineRows(prev => prev.map(row =>
-            row.id === id ? { ...row, instruction } : row
+            row.id === id ? { ...row, instruction } : r
         ));
     };
 
@@ -5035,8 +5033,11 @@ export default function Treatment() {
     };
 
     const handlePrescriptionFieldChange = (id: string, field: string, value: string) => {
+        const filteredValue = (field === 'b' || field === 'l' || field === 'd' || field === 'days')
+            ? filterNumericInput(value, true)
+            : value;
         setPrescriptionRows(prev => prev.map(row =>
-            row.id === id ? { ...row, [field]: value } : row
+            row.id === id ? { ...row, [field]: filteredValue } : row
         ));
     };
 
@@ -5113,9 +5114,9 @@ export default function Treatment() {
     };
 
     const handleBillingChange = (field: string, value: string) => {
-        // Strict blocking for discount field AND billed field
-        if ((field === 'discount' || field === 'billed') && value && !/^\d*\.?\d*$/.test(value)) {
-            return; // Block non-numeric input
+        // Strict blocking for numeric fields: allow only digits and at most one dot
+        if (field === 'discount' || field === 'billed' || field === 'collected') {
+            value = filterNumericInput(value, true);
         }
 
         setBillingData(prev => {

@@ -17,8 +17,8 @@ import {
 } from '@mui/material';
 import medicineService, { MedicineMaster } from '../services/medicineService';
 import { sessionService } from '../services/sessionService';
-import { validateField } from '../utils/validationUtils';
 import ClearableTextField from '../components/ClearableTextField';
+import { filterNumericInput } from '../utils/validationUtils';
 
 export interface MedicineData {
     shortDescription: string;
@@ -98,7 +98,7 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
 
     // Numeric-only helper for dose/priority inputs
     const handleNumericChange = (setter: (v: string) => void, field: string, rawValue: string) => {
-        const cleaned = rawValue.replace(/[^0-9.]/g, ''); // Allow decimal for doses
+        const cleaned = filterNumericInput(rawValue, true); // Allow decimal for doses
         const { allowed, error } = validateField(field, cleaned, undefined, undefined, 'medicine');
         if (allowed) {
             setter(cleaned);
@@ -365,7 +365,10 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                                     variant="outlined"
                                     size="small"
                                     value={priority}
-                                    onChange={(val) => handleInputChange(setPriority, 'priority', val)}
+                                    onChange={(val) => {
+                                        const filtered = filterNumericInput(val, false);
+                                        handleInputChange(setPriority, 'priority', filtered);
+                                    }}
                                     inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
                                     error={!!errors.priority}
                                     helperText={errors.priority}

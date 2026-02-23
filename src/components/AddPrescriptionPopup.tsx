@@ -26,6 +26,7 @@ import prescriptionSubCategoryService, {
 import { validateField } from '../utils/validationUtils';
 import { getFieldConfig } from '../utils/fieldValidationConfig';
 import ClearableTextField from '../components/ClearableTextField';
+import { filterNumericInput } from '../utils/validationUtils';
 
 interface AddPrescriptionPopupProps {
     open: boolean;
@@ -237,7 +238,8 @@ const AddPrescriptionPopup: React.FC<AddPrescriptionPopupProps> = ({
 
     // Restrict certain fields to numeric input only
     const handleNumericChange = (field: keyof PrescriptionData, rawValue: string) => {
-        const cleaned = rawValue.replace(/\D/g, '');
+        const allowDecimal = field === 'breakfast' || field === 'lunch' || field === 'dinner';
+        const cleaned = filterNumericInput(rawValue, allowDecimal);
         handleInputChange(field, cleaned);
     };
 

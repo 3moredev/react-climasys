@@ -238,3 +238,39 @@ export const validateTextInput = (value: string, maxLength: number, fieldName: s
 
     return { allowed: true, error };
 };
+
+/**
+ * Filters input to allow only digits and at most one decimal point.
+ * 
+ * @param value The raw input value
+ * @param allowDecimal Whether to allow a decimal point (default: true)
+ * @returns Filtered string
+ */
+export const filterNumericInput = (value: string, allowDecimal: boolean = true): string => {
+    if (value === null || value === undefined) return '';
+
+    let processedValue = String(value);
+
+    if (allowDecimal) {
+        // Allow digits and at most one dot
+        processedValue = processedValue.replace(/[^0-9.]/g, '');
+        const parts = processedValue.split('.');
+        if (parts.length > 2) {
+            processedValue = parts[0] + '.' + parts.slice(1).join('');
+        }
+    } else {
+        // Digits only
+        processedValue = processedValue.replace(/[^0-9]/g, '');
+    }
+
+    return processedValue;
+};
+
+/**
+ * Validates if a string is a valid numeric input (digits and at most one dot).
+ * Useful for blocking non-numeric input in onChange handlers.
+ */
+export const isValidNumericInput = (value: string): boolean => {
+    if (!value) return true;
+    return /^\d*\.?\d*$/.test(value);
+};
