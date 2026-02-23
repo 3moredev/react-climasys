@@ -18,7 +18,7 @@ import {
 import medicineService, { MedicineMaster } from '../services/medicineService';
 import { sessionService } from '../services/sessionService';
 import ClearableTextField from '../components/ClearableTextField';
-import { filterNumericInput } from '../utils/validationUtils';
+import { filterNumericInput, validateField } from '../utils/validationUtils';
 
 export interface MedicineData {
     shortDescription: string;
@@ -250,6 +250,7 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
                 const match = errorMessage.match(/short description ['"]([^'"]+)['"]/i);
                 const shortDesc = match ? match[1] : shortDescription.trim().toUpperCase();
                 userFriendlyMessage = `Medicine "${shortDesc}" is already added.`;
+                setErrors(prev => ({ ...prev, shortDescription: userFriendlyMessage }));
 
                 if (onError) {
                     onError(userFriendlyMessage);
