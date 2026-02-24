@@ -777,7 +777,7 @@ export default function Treatment() {
             setOpeningDocumentId(docId);
             const { blob, filename } = await DocumentService.downloadDocumentFile(docId);
             const objectUrl = window.URL.createObjectURL(blob);
-            window.open(objectUrl, '_blank');
+            window.open(objectUrl, '_self');
             // Note: We don't revoke the URL immediately as the new tab needs it
             // The browser will clean it up when the tab is closed
         } catch (e) {
@@ -4991,7 +4991,7 @@ export default function Treatment() {
         // Allow up to 4001 for validation message to trigger
         if (instruction.length > 4001) return; // Block input that exceeds buffer
         setMedicineRows(prev => prev.map(row =>
-            row.id === id ? { ...row, instruction } : r
+            row.id === id ? { ...row, instruction } : row
         ));
     };
 
