@@ -741,6 +741,7 @@ export default function Treatment() {
         }
     }, [treatmentData?.patientId, treatmentData?.visitNumber]);
 
+
     // Download a document by ID
     const handleDownloadDocument = async (doc: any) => {
         // Support various id field names
@@ -8984,7 +8985,7 @@ export default function Treatment() {
                     return ageStr || '0 Y';
                 })()}
                 patientGender={(treatmentData?.gender || '').toString()}
-                patientContact={treatmentData?.contact || ''}
+                patientContact={treatmentData?.contact || 'NA'}
                 initialSelectedGroups={selectedInstructionGroups}
                 onChange={(groups) => {
                     // Normalize groups to ensure clean format (only id, name, nameHindi, instructions)
