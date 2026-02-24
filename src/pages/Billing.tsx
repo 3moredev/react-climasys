@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { useNavigate, useLocation } from "react-router-dom";
 import PatientNameDisplay from '../components/PatientNameDisplay';
@@ -299,6 +299,10 @@ export default function Billing() {
     const [complaintSearch, setComplaintSearch] = useState('');
     const [isComplaintsOpen, setIsComplaintsOpen] = useState(false);
     const complaintsRef = React.useRef<HTMLDivElement | null>(null);
+    const discountErrorTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const collectedErrorTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const reasonErrorTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const paymentRemarkErrorTimerRef = useRef<NodeJS.Timeout | null>(null);
     const [complaintsOptions, setComplaintsOptions] = useState<ComplaintOption[]>([]);
     const [complaintsLoading, setComplaintsLoading] = useState(false);
     const [complaintsError, setComplaintsError] = useState<string | null>(null);
@@ -2794,7 +2798,15 @@ export default function Billing() {
             if (field === 'reason') {
                 if (value.length > 200) {
                     setReasonError('Reason cannot exceed 200 characters');
+                    if (reasonErrorTimerRef.current) clearTimeout(reasonErrorTimerRef.current);
+                    reasonErrorTimerRef.current = setTimeout(() => setReasonError(null), 3000);
+                    return prev; // Block the update
+                } else if (value.length === 200) {
+                    setReasonError('Reason cannot exceed 200 characters');
+                    if (reasonErrorTimerRef.current) clearTimeout(reasonErrorTimerRef.current);
+                    reasonErrorTimerRef.current = setTimeout(() => setReasonError(null), 3000);
                 } else {
+                    if (reasonErrorTimerRef.current) clearTimeout(reasonErrorTimerRef.current);
                     setReasonError(null);
                 }
             }
@@ -2802,7 +2814,15 @@ export default function Billing() {
             if (field === 'paymentRemark') {
                 if (value.length > 200) {
                     setPaymentRemarkError('Payment Remark cannot exceed 200 characters');
+                    if (paymentRemarkErrorTimerRef.current) clearTimeout(paymentRemarkErrorTimerRef.current);
+                    paymentRemarkErrorTimerRef.current = setTimeout(() => setPaymentRemarkError(null), 3000);
+                    return prev; // Block the update
+                } else if (value.length === 200) {
+                    setPaymentRemarkError('Payment Remark cannot exceed 200 characters');
+                    if (paymentRemarkErrorTimerRef.current) clearTimeout(paymentRemarkErrorTimerRef.current);
+                    paymentRemarkErrorTimerRef.current = setTimeout(() => setPaymentRemarkError(null), 3000);
                 } else {
+                    if (paymentRemarkErrorTimerRef.current) clearTimeout(paymentRemarkErrorTimerRef.current);
                     setPaymentRemarkError(null);
                 }
             }
@@ -2818,11 +2838,16 @@ export default function Billing() {
             if (field === 'feesCollected') {
                 if (value.length > 10) {
                     setCollectedError('Collected (Rs) cannot exceed 10 characters');
+                    if (collectedErrorTimerRef.current) clearTimeout(collectedErrorTimerRef.current);
+                    collectedErrorTimerRef.current = setTimeout(() => setCollectedError(null), 3000);
                 } else if (value && isNaN(Number(value))) {
+                    if (collectedErrorTimerRef.current) clearTimeout(collectedErrorTimerRef.current);
                     setCollectedError('Collected amount must be a valid number');
                 } else if (Number(value) < 0) {
+                    if (collectedErrorTimerRef.current) clearTimeout(collectedErrorTimerRef.current);
                     setCollectedError('Collected amount cannot be negative');
                 } else {
+                    if (collectedErrorTimerRef.current) clearTimeout(collectedErrorTimerRef.current);
                     setCollectedError(null);
                 }
             }
@@ -2843,17 +2868,25 @@ export default function Billing() {
                         // Check if the numeric value is greater than billed
                         const discountValue = parseFloat(value) || 0;
                         if (discountValue > billedNum && billedNum > 0) {
+                            if (discountErrorTimerRef.current) clearTimeout(discountErrorTimerRef.current);
                             newError = 'Discount cannot be greater than billed amount';
                         } else if (value.length === maxDiscountLength && billedNum > 0) {
                             // Show the "cannot exceed" message when at the limit
                             newError = `Discount cannot exceed ${Math.floor(billedNum)}`;
+                            if (discountErrorTimerRef.current) clearTimeout(discountErrorTimerRef.current);
+                            discountErrorTimerRef.current = setTimeout(() => setDiscountError(null), 3000);
                         }
                     } else if (value && isNaN(Number(value))) {
+                        if (discountErrorTimerRef.current) clearTimeout(discountErrorTimerRef.current);
                         newError = 'Discount must be a valid number';
                     } else if (!isNaN(discountNum) && discountNum < 0) {
+                        if (discountErrorTimerRef.current) clearTimeout(discountErrorTimerRef.current);
                         newError = 'Discount cannot be negative';
                     } else if ((!isNaN(discountNum) ? discountNum : 0) > billedNum && billedNum > 0) {
+                        if (discountErrorTimerRef.current) clearTimeout(discountErrorTimerRef.current);
                         newError = 'Discount cannot be greater than billed amount';
+                    } else {
+                        if (discountErrorTimerRef.current) clearTimeout(discountErrorTimerRef.current);
                     }
                 }
                 // If billed changes, we should also re-validate if discount is now invalid?
@@ -3601,11 +3634,14 @@ export default function Billing() {
                             </div>
 
                             {isDetailsOpen && (
-                                <div style={{ border: '1px solid #e0e0e0', borderRadius: 4, overflow: 'hidden', marginBottom: 12 }}>
+                                <div style={{
+                                    border: '1px solid #e0e0e0', borderRadius: 4, overflow: 'hidden', marginBottom: 12, opacity: (isFormDisabled || isSubmitting) ? 0.5 : 1,
+                                    cursor: (isFormDisabled || isSubmitting) ? 'not-allowed' : 'pointer',
+                                }}>
                                     {/* <div style={{ background: '#1976d2', color: '#fff', padding: '8px 10px', fontWeight: 600, fontSize: 13 }}>Complaints, Diagnosis, Medicines</div> */}
                                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                         <thead>
-                                            <tr style={{ background: '#1976D2' }}>
+                                            <tr style={{ background: (isFormDisabled || isSubmitting) ? 'rgb(204, 204, 204)' : '#1976D2' }}>
                                                 {['Sr.', 'Complaint Description', 'Duration / Comment'].map(h => (
                                                     <th key={h} style={{ padding: 8, borderBottom: '1px solid #e0e0e0', fontSize: 12, color: 'white', textAlign: 'left' }}>{h}</th>
                                                 ))}
@@ -3653,11 +3689,14 @@ export default function Billing() {
                             )}
 
                             {isDetailsOpen && (
-                                <div style={{ border: '1px solid #e0e0e0', borderRadius: 4, overflow: 'hidden', marginBottom: 12 }}>
+                                <div style={{
+                                    border: '1px solid #e0e0e0', borderRadius: 4, overflow: 'hidden', marginBottom: 12, opacity: (isFormDisabled || isSubmitting) ? 0.5 : 1,
+                                    pointerEvents: (isFormDisabled || isSubmitting) ? 'none' : 'auto',
+                                }}>
                                     {/* <div style={{ background: '#1976d2', color: '#fff', padding: '8px 10px', fontWeight: 600, fontSize: 13 }}>Provisional Diagnosis</div> */}
                                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                         <thead>
-                                            <tr style={{ background: '#1976d2' }}>
+                                            <tr style={{ background: (isFormDisabled || isSubmitting) ? 'rgb(204, 204, 204)' : '#1976D2' }}>
                                                 {['Sr.', 'Provisional Diagnosis'].map(h => (
                                                     <th key={h} style={{ padding: 8, borderBottom: '1px solid #e0e0e0', fontSize: 12, color: '#fff', textAlign: 'left' }}>{h}</th>
                                                 ))}
@@ -3679,11 +3718,14 @@ export default function Billing() {
                                 </div>
                             )}
 
-                            <div style={{ border: '1px solid #e0e0e0', borderRadius: 4, overflow: 'hidden', marginBottom: 12 }}>
+                            <div style={{
+                                border: '1px solid #e0e0e0', borderRadius: 4, overflow: 'hidden', marginBottom: 12, opacity: (isFormDisabled || isSubmitting) ? 0.5 : 1,
+                                pointerEvents: (isFormDisabled || isSubmitting) ? 'none' : 'auto',
+                            }}>
                                 {/* <div style={{ background: '#1976d2', color: '#fff', padding: '8px 10px', fontWeight: 600, fontSize: 13 }}>Medicines</div> */}
                                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                     <thead>
-                                        <tr style={{ background: '#1976d2' }}>
+                                        <tr style={{ background: (isFormDisabled || isSubmitting) ? 'rgb(204, 204, 204)' : '#1976D2' }}>
                                             {['Sr.', 'Medicines', 'B', 'L', 'D', 'Days', 'Instruction'].map(h => (
                                                 <th key={h} style={{ padding: 8, borderBottom: '1px solid #e0e0e0', fontSize: 12, color: '#fff', textAlign: 'left' }}>{h}</th>
                                             ))}
@@ -3709,11 +3751,14 @@ export default function Billing() {
                                 </table>
                             </div>
 
-                            <div style={{ border: '1px solid #e0e0e0', borderRadius: 4, overflow: 'hidden', marginBottom: 12 }}>
+                            <div style={{
+                                border: '1px solid #e0e0e0', borderRadius: 4, overflow: 'hidden', marginBottom: 12, opacity: (isFormDisabled || isSubmitting) ? 0.5 : 1,
+                                pointerEvents: (isFormDisabled || isSubmitting) ? 'none' : 'auto',
+                            }}>
                                 {/* <div style={{ background: '#1976d2', color: '#fff', padding: '8px 10px', fontWeight: 600, fontSize: 13 }}>Prescriptions</div> */}
                                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                     <thead>
-                                        <tr style={{ background: '#1976d2' }}>
+                                        <tr style={{ background: (isFormDisabled || isSubmitting) ? 'rgb(204, 204, 204)' : '#1976D2' }}>
                                             {['Sr.', 'Prescriptions', 'B', 'L', 'D', 'Days', 'Instruction'].map(h => (
                                                 <th key={h} style={{ padding: 8, borderBottom: '1px solid #e0e0e0', fontSize: 12, color: '#fff', textAlign: 'left' }}>{h}</th>
                                             ))}
@@ -3892,11 +3937,14 @@ export default function Billing() {
                                 </div>
                             )}
 
-                            <div style={{ border: '1px solid #e0e0e0', borderRadius: 4, overflow: 'hidden', marginBottom: 12 }}>
+                            <div style={{
+                                border: '1px solid #e0e0e0', borderRadius: 4, overflow: 'hidden', marginBottom: 12, opacity: (isFormDisabled || isSubmitting) ? 0.5 : 1,
+                                pointerEvents: (isFormDisabled || isSubmitting) ? 'none' : 'auto',
+                            }}>
                                 {/* <div style={{ background: '#1976d2', color: '#fff', padding: '8px 10px', fontWeight: 600, fontSize: 13 }}>Suggested Tests</div> */}
                                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                     <thead>
-                                        <tr style={{ background: '#1976d2' }}>
+                                        <tr style={{ background: (isFormDisabled || isSubmitting) ? 'rgb(204, 204, 204)' : '#1976D2' }}>
                                             {['Sr.', 'Suggested Tests'].map(h => (
                                                 <th key={h} style={{ padding: 8, borderBottom: '1px solid #e0e0e0', fontSize: 12, color: '#fff', textAlign: 'left' }}>{h}</th>
                                             ))}
@@ -4117,7 +4165,6 @@ export default function Billing() {
                                         error={!!discountError}
                                         helperText={discountError}
                                         inputProps={{
-                                            maxLength: Math.max(String(Math.floor(parseFloat(billingData.billed) || 0)).length, 1)
                                         }}
                                         sx={{
                                             '& .MuiInputBase-root': {
@@ -4367,7 +4414,6 @@ export default function Billing() {
                                         onClear={() => handleBillingChange('paymentRemark', '')}
                                         error={!!paymentRemarkError}
                                         helperText={paymentRemarkError}
-                                        inputProps={{ maxLength: 201 }}
                                         sx={{
                                             marginBottom: '18px',
                                             '& .MuiInputBase-root': {
