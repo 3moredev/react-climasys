@@ -3,6 +3,7 @@ import { Delete, Close, ArrowDropDown } from '@mui/icons-material';
 import { patientService } from '../services/patientService';
 import { sessionService } from '../services/sessionService';
 import { getMaxLength } from '../utils/validationUtils';
+import { Alert, Snackbar, Button, Box, Typography } from '@mui/material';
 
 export interface InstructionGroup {
   id: string;
@@ -20,6 +21,7 @@ interface InstructionGroupsPopupProps {
   patientContact: string;
   initialSelectedGroups?: InstructionGroup[];
   onChange?: (selectedGroups: InstructionGroup[]) => void;
+  onSave?: (groups: InstructionGroup[]) => void;
 }
 
 const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
@@ -48,7 +50,15 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
   // Dynamic instruction groups fetched from backend
   const [instructionGroups, setInstructionGroups] = useState<InstructionGroup[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<{
+    instructionGroups: string;
+    searchTerm: string;
+  }>({
+    instructionGroups: '',
+    searchTerm: '',
+  });
+  const [errorMessage, setErrorMessage] = useState('');
+  const [showSnackbar, setShowSnackbar] = useState(false);
 
   // Load instruction groups when popup opens
   useEffect(() => {
@@ -56,7 +66,7 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
     async function loadGroups() {
       if (!isOpen) return;
       setLoading(true);
-      setError(null);
+      setErrors(prev => ({ ...prev, instructionGroups: '' }));
       try {
         // Get session for doctor/clinic
         const session = await sessionService.getSessionInfo();
@@ -111,7 +121,7 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
       } catch (e: any) {
         if (!cancelled) {
           setInstructionGroups([]);
-          setError(e?.message || 'Failed to load instruction groups');
+          setErrors(prev => ({ ...prev, instructionGroups: e?.message || 'Failed to load instruction groups' }));
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -215,30 +225,29 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
   };
 
   const handleAddGroups = () => {
-    if (selectedGroupIds.length === 0) return;
+    if (selectedGroupIds.length === 0) {
+      setErrors(prev => ({ ...prev, instructionGroups: 'Please select at least one group' }));
+      return;
+    }
 
-    const newGroups = instructionGroups.filter(group =>
-      selectedGroupIds.includes(group.id) &&
-      !selectedGroups.some(selected => selected.id === group.id)
+    const newGroups = instructionGroups.filter(
+      group => selectedGroupIds.includes(group.id) &&
+        !selectedGroups.some(selected => selected.id === group.id)
     );
 
     if (newGroups.length === 0) {
-      console.log('No new groups to add from dropdown selection.');
+      setErrors(prev => ({ ...prev, instructionGroups: 'These groups are already added' }));
       return;
     }
 
     const updatedGroups = [...selectedGroups, ...newGroups];
-    console.log('Adding groups from dropdown to tables:', newGroups);
     setSelectedGroups(updatedGroups);
     setSelectedGroupIds([]);
     setIsGroupsOpen(false);
+    setErrors(prev => ({ ...prev, instructionGroups: '' })); // Clear error on success
 
-    // Notify parent component of the change
-    if (onChange) {
-      onChange(updatedGroups);
-    }
+    if (onChange) onChange(updatedGroups);
   };
-
   const handleRemoveGroup = (groupId: string) => {
     const updatedGroups = selectedGroups.filter(g => g.id !== groupId);
     setSelectedGroups(updatedGroups);
@@ -246,6 +255,42 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
     // Notify parent component of the change
     if (onChange) {
       onChange(updatedGroups);
+    }
+  };
+
+  const handleSubmit = () => {
+    // If there's search term that matches something but not added, should we add it?
+    // Follow existing logic: only already selected groups are submitted.
+    if (selectedGroups.length === 0) {
+      setErrors(prev => ({ ...prev, instructionGroups: 'Please select at least one group' }));
+      setErrorMessage('Please select at least one group');
+      setShowSnackbar(true);
+      return;
+    }
+
+    // Include any currently checked dropdown items not yet added
+    const pendingGroups = instructionGroups.filter(group =>
+      selectedGroupIds.includes(group.id) &&
+      !selectedGroups.some(g => g.id === group.id)
+    );
+
+    const finalGroups = [...selectedGroups, ...pendingGroups];
+
+    // Update state and notify parent
+    setSelectedGroups(finalGroups);
+    if (onChange) onChange(finalGroups);
+
+    onClose();
+  };
+
+  const handleReset = () => {
+    setSelectedGroups([]);
+    setSelectedGroupIds([]);
+    setSearchTerm('');
+    setErrors({ instructionGroups: '', searchTerm: '' }); // Clear errors on reset
+
+    if (onChange) {
+      onChange([]);
     }
   };
 
@@ -360,7 +405,7 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
             }}>
               Instruction Group
             </div>
-            <div style={{ display: 'flex', gap: '10px', alignItems: 'end', marginBottom: '50px' }}>
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', marginBottom: '20px' }}>
               <div ref={groupsRef} style={{ position: 'relative', flex: 1 }}>
                 <div
                   onClick={() => setIsGroupsOpen(prev => !prev)}
@@ -394,6 +439,12 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
                   />
                 </div>
 
+                {errors.instructionGroups && (
+                  <div style={{ color: '#d32f2f', fontSize: '12px', marginTop: '4px' }}>
+                    {errors.instructionGroups}
+                  </div>
+                )}
+
                 {isGroupsOpen && (
                   <div
                     ref={dropdownRef}
@@ -419,7 +470,18 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
                       <input
                         type="text"
                         value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          const limit = getMaxLength('groupDescription') || 50;
+                          if (val.length <= limit) {
+                            setSearchTerm(val);
+                            if (val.length === limit) {
+                              setErrors(prev => ({ ...prev, searchTerm: `Instruction Group Search cannot exceed ${limit} characters` }));
+                            } else {
+                              setErrors(prev => ({ ...prev, searchTerm: '' }));
+                            }
+                          }
+                        }}
                         maxLength={getMaxLength('groupDescription') || 50}
                         placeholder="Search instruction groups"
                         style={{
@@ -468,21 +530,29 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
                         ))}
                       </div>
                     )}
+                    <div style={{ padding: '6px' }}>
+                      {errors.searchTerm && (
+                        <div style={{
+                          color: errors.searchTerm.toLowerCase().includes('cannot exceed') ? '#666' : '#d32f2f',
+                          fontSize: '12px',
+                          marginBottom: '4px',
+                          lineHeight: '1.2',
+                          fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif'
+                        }}>
+                          {errors.searchTerm}
+                        </div>
+                      )}
+                    </div>
                     <div style={{ flex: 1, overflowY: 'auto', padding: '4px 6px', display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', columnGap: '8px', rowGap: '6px' }}>
                       {loading && (
                         <div style={{ padding: '6px', fontSize: '12px', color: '#777', gridColumn: '1 / -1', textAlign: 'center' }}>
                           Loading instruction groups...
                         </div>
                       )}
-                      {error && !loading && (
-                        <div style={{ padding: '6px', fontSize: '12px', color: '#d32f2f', gridColumn: '1 / -1', textAlign: 'center' }}>
-                          {error}
-                        </div>
-                      )}
-                      {filteredGroups.length === 0 && (
+                      {!errors.searchTerm && filteredGroups.length === 0 && (
                         <div style={{ padding: '6px', fontSize: '12px', color: '#777', gridColumn: '1 / -1' }}>No instruction groups found</div>
                       )}
-                      {filteredGroups.map((group) => (
+                      {!errors.searchTerm && filteredGroups.map((group) => (
                         <label key={group.id} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 2px', cursor: 'pointer', fontSize: '12px', border: 'none' }}>
                           <input
                             type="checkbox"
@@ -496,6 +566,7 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
                                   return prev.filter(id => id !== group.id);
                                 }
                               });
+                              setErrors(prev => ({ ...prev, instructionGroups: '' }));
                             }}
                             style={{ margin: 0, maxWidth: 16 }}
                           />
@@ -685,35 +756,74 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
 
         {/* Footer */}
         <div style={{
-          padding: '20px 24px',
+          padding: '12px 24px',
           borderTop: '1px solid #F5F5F5',
           display: 'flex',
-          justifyContent: 'flex-end'
+          justifyContent: 'flex-end',
+          gap: '12px'
         }}>
-          <button
-            type="button"
+          <Button
             onClick={onClose}
-            style={{
-              backgroundColor: '#1976d2',
-              color: '#fff',
-              border: 'none',
-              padding: '8px 16px',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: '500',
-              transition: 'background-color 0.2s'
-            }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#1565c0';
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#1976d2';
+            variant="contained"
+            sx={{
+              backgroundColor: 'rgb(0, 123, 255)',
+              textTransform: 'none',
+              height: '38px',
+              padding: '8px 24px',
+              '&:hover': {
+                backgroundColor: 'rgb(0, 100, 200)',
+              }
             }}
           >
             Close
-          </button>
+          </Button>
+          <Button
+            onClick={handleReset}
+            variant="contained"
+            sx={{
+              backgroundColor: 'rgb(0, 123, 255)',
+              textTransform: 'none',
+              height: '38px',
+              padding: '8px 24px',
+              '&:hover': {
+                backgroundColor: 'rgb(0, 100, 200)',
+              }
+            }}
+          >
+            Reset
+          </Button>
+          <Button
+            onClick={handleSubmit}
+            variant="contained"
+            sx={{
+              backgroundColor: 'rgb(0, 123, 255)',
+              textTransform: 'none',
+              height: '38px',
+              padding: '8px 24px',
+              '&:hover': {
+                backgroundColor: 'rgb(0, 100, 200)',
+              }
+            }}
+          >
+            Submit
+          </Button>
         </div>
+        <Snackbar
+          open={showSnackbar}
+          autoHideDuration={4000}
+          onClose={() => setShowSnackbar(false)}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+          sx={{ zIndex: 110000 }} // Higher than the modal's 100000
+        >
+          <Alert
+            onClose={() => setShowSnackbar(false)}
+            severity="error"
+            variant="filled"
+            sx={{ width: '100%', fontWeight: 'bold' }}
+          >
+            {errorMessage}
+          </Alert>
+        </Snackbar>
       </div>
     </div>
   );
