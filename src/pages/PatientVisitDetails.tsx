@@ -470,7 +470,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
             try {
                 console.log('Loading complaints for doctor:', doctorId, 'clinic:', clinicId);
 
-                const complaints = await complaintService.getAllComplaintsForDoctor(String(doctorId), String(clinicId));
+                const complaints = await complaintService.getOperatorVisibleComplaints(String(doctorId));
                 if (!cancelled) {
                     setComplaintsOptions(complaints);
                     console.log('Loaded complaints:', complaints);
@@ -2577,7 +2577,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                                             }
                                                                             setComplaintsError(null);
                                                                             setComplaintsLoading(true);
-                                                                            complaintService.getAllComplaintsForDoctor(String(doctorId), String(clinicId))
+                                                                            complaintService.getOperatorVisibleComplaints(String(doctorId))
                                                                                 .then(setComplaintsOptions)
                                                                                 .catch(e => setComplaintsError(e.message))
                                                                                 .finally(() => setComplaintsLoading(false));
