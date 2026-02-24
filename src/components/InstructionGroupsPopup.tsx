@@ -451,7 +451,7 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
                     onMouseDown={(e) => e.stopPropagation()}
                     style={{
                       position: 'absolute',
-                      top: '100%',
+                      top: '40px', // Fixed height of the toggle box to ensure no gap and cover errors
                       left: 0,
                       right: 0,
                       backgroundColor: 'white',
@@ -459,7 +459,7 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
                       borderRadius: '6px',
                       boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
                       zIndex: 1000,
-                      marginTop: '4px',
+                      marginTop: '0px', // Removed gap
                       maxHeight: '350px',
                       overflow: 'hidden',
                       display: 'flex',
