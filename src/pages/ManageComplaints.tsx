@@ -684,6 +684,7 @@ export default function ManageComplaints() {
                         type="checkbox"
                         checked={complaint.displayToOperator}
                         readOnly
+                        disabled
                         style={{ cursor: 'pointer' }}
                       />
                     </td>
