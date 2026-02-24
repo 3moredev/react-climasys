@@ -918,8 +918,6 @@ export default function Billing() {
                 }
             } catch (error) {
                 console.error('Error fetching session data:', error);
-            } finally {
-                setLoading(false);
             }
         };
 
@@ -1002,9 +1000,13 @@ export default function Billing() {
             const shiftId = (sessionData as any)?.shiftId ?? 1;
 
             // We need at least doctor and clinic to load billing options
-            if (!doctorId || !clinicId) return;
+            if (!doctorId || !clinicId) {
+                if (sessionData) setLoading(false);
+                return;
+            }
 
             try {
+                setLoading(true); // Maintain/set loading state while fetching all data
                 // 1. Define Fetch for Billing Options
                 const fetchBillingOptions = async () => {
                     const encDr = encodeURIComponent(doctorId);
@@ -1197,7 +1199,9 @@ export default function Billing() {
 
                                 const loadedStatusId = vitals?.statusId ?? vitals?.status_id ?? uiFields?.statusId ?? dataRoot?.statusId;
                                 if (loadedStatusId !== undefined && loadedStatusId !== null) {
-                                    setStatusId(Number(loadedStatusId));
+                                    const sId = Number(loadedStatusId);
+                                    setStatusId(sId);
+                                    setIsFormDisabled(sId === 5); // Set disabled state immediately
                                 }
                             } catch (_) { /* ignore */ }
                         }
@@ -1336,12 +1340,14 @@ export default function Billing() {
 
             } catch (error) {
                 console.error('Error loading initial billing data:', error);
+            } finally {
+                if (!cancelled) setLoading(false);
             }
         }
 
         loadAllData();
         return () => { cancelled = true; };
-    }, [treatmentData?.doctorId, sessionData?.clinicId, treatmentData?.patientId, treatmentData?.visitNumber]);
+    }, [treatmentData?.doctorId, sessionData?.clinicId, treatmentData?.patientId, treatmentData?.visitNumber, sessionData]); // Added sessionData to dependencies to ensure it runs after session is loaded
 
     // Get treatment data from location state
     useEffect(() => {
@@ -3723,28 +3729,32 @@ export default function Billing() {
                                 pointerEvents: (isFormDisabled || isSubmitting) ? 'none' : 'auto',
                             }}>
                                 {/* <div style={{ background: '#1976d2', color: '#fff', padding: '8px 10px', fontWeight: 600, fontSize: 13 }}>Medicines</div> */}
-                                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
                                     <thead>
                                         <tr style={{ background: (isFormDisabled || isSubmitting) ? 'rgb(204, 204, 204)' : '#1976D2' }}>
-                                            {['Sr.', 'Medicines', 'B', 'L', 'D', 'Days', 'Instruction'].map(h => (
-                                                <th key={h} style={{ padding: 8, borderBottom: '1px solid #e0e0e0', fontSize: 12, color: '#fff', textAlign: 'left' }}>{h}</th>
-                                            ))}
+                                            <th style={{ padding: '6px', borderBottom: '1px solid #e0e0e0', fontSize: 12, color: '#fff', textAlign: 'left', width: '50px' }}>Sr.</th>
+                                            <th style={{ padding: '6px', borderBottom: '1px solid #e0e0e0', fontSize: 12, color: '#fff', textAlign: 'left', width: '200px' }}>Medicines</th>
+                                            <th style={{ padding: '6px', borderBottom: '1px solid #e0e0e0', fontSize: 12, color: '#fff', textAlign: 'center', width: '50px' }}>B</th>
+                                            <th style={{ padding: '6px', borderBottom: '1px solid #e0e0e0', fontSize: 12, color: '#fff', textAlign: 'center', width: '50px' }}>L</th>
+                                            <th style={{ padding: '6px', borderBottom: '1px solid #e0e0e0', fontSize: 12, color: '#fff', textAlign: 'center', width: '50px' }}>D</th>
+                                            <th style={{ padding: '6px', borderBottom: '1px solid #e0e0e0', fontSize: 12, color: '#fff', textAlign: 'center', width: '60px' }}>Days</th>
+                                            <th style={{ padding: '6px', borderBottom: '1px solid #e0e0e0', fontSize: 12, color: '#fff', textAlign: 'left' }}>Instruction</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {mlMedicinesTable.length === 0 ? (
                                             <tr>
-                                                <td colSpan={7} style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12, color: '#777' }}>No medicines</td>
+                                                <td colSpan={7} style={{ padding: '6px', borderBottom: '1px solid #eee', fontSize: 12, color: '#777', textAlign: 'center' }}>No medicines</td>
                                             </tr>
                                         ) : mlMedicinesTable.map((row, idx) => (
                                             <tr key={row.id} style={{ background: idx % 2 === 0 ? '#fff' : '#fafafa' }}>
-                                                <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{idx + 1}</td>
-                                                <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{row.prescription}</td>
-                                                <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{row.b}</td>
-                                                <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{row.l}</td>
-                                                <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{row.d}</td>
-                                                <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{row.days}</td>
-                                                <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{row.instruction}</td>
+                                                <td style={{ padding: '6px', borderBottom: '1px solid #eee', fontSize: 12, textAlign: 'left' }}>{idx + 1}</td>
+                                                <td style={{ padding: '6px', borderBottom: '1px solid #eee', fontSize: 12, textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={row.prescription}>{row.prescription}</td>
+                                                <td style={{ padding: '6px', borderBottom: '1px solid #eee', fontSize: 12, textAlign: 'center' }}>{row.b}</td>
+                                                <td style={{ padding: '6px', borderBottom: '1px solid #eee', fontSize: 12, textAlign: 'center' }}>{row.l}</td>
+                                                <td style={{ padding: '6px', borderBottom: '1px solid #eee', fontSize: 12, textAlign: 'center' }}>{row.d}</td>
+                                                <td style={{ padding: '6px', borderBottom: '1px solid #eee', fontSize: 12, textAlign: 'center' }}>{row.days}</td>
+                                                <td style={{ padding: '6px', borderBottom: '1px solid #eee', fontSize: 12, textAlign: 'left' }}>{row.instruction}</td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -3756,28 +3766,32 @@ export default function Billing() {
                                 pointerEvents: (isFormDisabled || isSubmitting) ? 'none' : 'auto',
                             }}>
                                 {/* <div style={{ background: '#1976d2', color: '#fff', padding: '8px 10px', fontWeight: 600, fontSize: 13 }}>Prescriptions</div> */}
-                                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
                                     <thead>
                                         <tr style={{ background: (isFormDisabled || isSubmitting) ? 'rgb(204, 204, 204)' : '#1976D2' }}>
-                                            {['Sr.', 'Prescriptions', 'B', 'L', 'D', 'Days', 'Instruction'].map(h => (
-                                                <th key={h} style={{ padding: 8, borderBottom: '1px solid #e0e0e0', fontSize: 12, color: '#fff', textAlign: 'left' }}>{h}</th>
-                                            ))}
+                                            <th style={{ padding: '6px', borderBottom: '1px solid #e0e0e0', fontSize: 12, color: '#fff', textAlign: 'left', width: '50px' }}>Sr.</th>
+                                            <th style={{ padding: '6px', borderBottom: '1px solid #e0e0e0', fontSize: 12, color: '#fff', textAlign: 'left', width: '200px' }}>Prescriptions</th>
+                                            <th style={{ padding: '6px', borderBottom: '1px solid #e0e0e0', fontSize: 12, color: '#fff', textAlign: 'center', width: '50px' }}>B</th>
+                                            <th style={{ padding: '6px', borderBottom: '1px solid #e0e0e0', fontSize: 12, color: '#fff', textAlign: 'center', width: '50px' }}>L</th>
+                                            <th style={{ padding: '6px', borderBottom: '1px solid #e0e0e0', fontSize: 12, color: '#fff', textAlign: 'center', width: '50px' }}>D</th>
+                                            <th style={{ padding: '6px', borderBottom: '1px solid #e0e0e0', fontSize: 12, color: '#fff', textAlign: 'center', width: '60px' }}>Days</th>
+                                            <th style={{ padding: '6px', borderBottom: '1px solid #e0e0e0', fontSize: 12, color: '#fff', textAlign: 'left' }}>Instruction</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {mlPrescriptionsTable.length === 0 ? (
                                             <tr>
-                                                <td colSpan={7} style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12, color: '#777' }}>No prescriptions</td>
+                                                <td colSpan={7} style={{ padding: '6px', borderBottom: '1px solid #eee', fontSize: 12, color: '#777', textAlign: 'center' }}>No prescriptions</td>
                                             </tr>
                                         ) : mlPrescriptionsTable.map((row, idx) => (
                                             <tr key={row.id} style={{ background: idx % 2 === 0 ? '#fff' : '#fafafa' }}>
-                                                <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{idx + 1}</td>
-                                                <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{row.prescription}</td>
-                                                <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{row.b}</td>
-                                                <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{row.l}</td>
-                                                <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{row.d}</td>
-                                                <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{row.days}</td>
-                                                <td style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 12 }}>{row.instruction}</td>
+                                                <td style={{ padding: '6px', borderBottom: '1px solid #eee', fontSize: 12, textAlign: 'left' }}>{idx + 1}</td>
+                                                <td style={{ padding: '6px', borderBottom: '1px solid #eee', fontSize: 12, textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={row.prescription}>{row.prescription}</td>
+                                                <td style={{ padding: '6px', borderBottom: '1px solid #eee', fontSize: 12, textAlign: 'center' }}>{row.b}</td>
+                                                <td style={{ padding: '6px', borderBottom: '1px solid #eee', fontSize: 12, textAlign: 'center' }}>{row.l}</td>
+                                                <td style={{ padding: '6px', borderBottom: '1px solid #eee', fontSize: 12, textAlign: 'center' }}>{row.d}</td>
+                                                <td style={{ padding: '6px', borderBottom: '1px solid #eee', fontSize: 12, textAlign: 'center' }}>{row.days}</td>
+                                                <td style={{ padding: '6px', borderBottom: '1px solid #eee', fontSize: 12, textAlign: 'left' }}>{row.instruction}</td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -3869,17 +3883,17 @@ export default function Billing() {
                                             <thead>
                                                 <tr style={{ backgroundColor: '#1976d2' }}>
                                                     <th style={{
-                                                        padding: '12px',
+                                                        padding: '6px',
                                                         textAlign: 'left',
                                                         borderBottom: '1px solid #ddd',
                                                         fontWeight: '600',
                                                         color: 'white',
-                                                        width: '60px'
+                                                        width: '50px'
                                                     }}>
                                                         Sr.
                                                     </th>
                                                     <th style={{
-                                                        padding: '12px',
+                                                        padding: '6px',
                                                         textAlign: 'left',
                                                         borderBottom: '1px solid #ddd',
                                                         fontWeight: '600',
@@ -3889,7 +3903,7 @@ export default function Billing() {
                                                         Group
                                                     </th>
                                                     <th style={{
-                                                        padding: '12px',
+                                                        padding: '6px',
                                                         textAlign: 'left',
                                                         borderBottom: '1px solid #ddd',
                                                         fontWeight: '600',
@@ -3903,29 +3917,29 @@ export default function Billing() {
                                                 {mlInstructionsTable.map((row, idx) => (
                                                     <tr key={row.id}>
                                                         <td style={{
-                                                            padding: '12px',
+                                                            padding: '6px',
                                                             borderBottom: '1px solid #eee',
                                                             color: '#666',
-                                                            height: '38px',
-                                                            fontSize: '14px'
+                                                            fontSize: '12px',
+                                                            textAlign: 'left'
                                                         }}>
                                                             {idx + 1}
                                                         </td>
                                                         <td style={{
-                                                            padding: '12px',
+                                                            padding: '6px',
                                                             borderBottom: '1px solid #eee',
                                                             color: '#666',
-                                                            height: '38px',
-                                                            fontSize: '14px'
+                                                            fontSize: '12px',
+                                                            textAlign: 'left'
                                                         }}>
                                                             {row.prescription}
                                                         </td>
                                                         <td style={{
-                                                            padding: '12px',
+                                                            padding: '6px',
                                                             borderBottom: '1px solid #eee',
                                                             color: '#666',
-                                                            height: '38px',
-                                                            fontSize: '14px'
+                                                            fontSize: '12px',
+                                                            textAlign: 'left'
                                                         }}>
                                                             {row.instruction}
                                                         </td>
@@ -4520,7 +4534,7 @@ export default function Billing() {
                                     onClick={handleTreatmentSubmit}
                                     disabled={isSubmitting || hasSubmittedSuccessfully || isFormDisabled}
                                     style={{
-                                        backgroundColor: (isSubmitting || hasSubmittedSuccessfully || isFormDisabled) ? '#eee' : '#1976d2',
+                                        backgroundColor: (isSubmitting || hasSubmittedSuccessfully || isFormDisabled) ? 'rgb(204, 204, 204)' : '#1976d2',
                                         color: (isSubmitting || hasSubmittedSuccessfully || isFormDisabled) ? '#666' : 'white',
                                         border: 'none',
                                         padding: '8px 12px',
