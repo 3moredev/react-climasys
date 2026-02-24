@@ -46,6 +46,7 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
   const [showSelectedTable, setShowSelectedTable] = useState(false);
   const groupsRef = useRef<HTMLDivElement | null>(null);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
+  const prevOpenRef = useRef<boolean>(false);
 
   // Dynamic instruction groups fetched from backend
   const [instructionGroups, setInstructionGroups] = useState<InstructionGroup[]>([]);
@@ -58,6 +59,7 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
     searchTerm: '',
   });
   const [errorMessage, setErrorMessage] = useState('');
+  const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>('error');
   const [showSnackbar, setShowSnackbar] = useState(false);
 
   // Load instruction groups when popup opens
@@ -141,6 +143,13 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
     console.log('Current selectedGroups state:', selectedGroups);
 
     if (isOpen) {
+      // Only reset snackbar and errors when the popup is FIRST opened
+      if (!prevOpenRef.current) {
+        setShowSnackbar(false);
+        setErrorMessage('');
+        setErrors({ instructionGroups: '', searchTerm: '' });
+      }
+
       if (initialSelectedGroups && initialSelectedGroups.length > 0) {
         // Display saved instructions from master-lists API in the tables
         console.log('✅ POPUP: Setting selectedGroups from initialSelectedGroups');
@@ -174,6 +183,7 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
         setSelectedGroupIds([]);
       }
     }
+    prevOpenRef.current = isOpen;
   }, [isOpen, initialSelectedGroups, instructionGroups]);
 
   const filteredGroups = instructionGroups.filter(group =>
@@ -259,15 +269,6 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
   };
 
   const handleSubmit = () => {
-    // If there's search term that matches something but not added, should we add it?
-    // Follow existing logic: only already selected groups are submitted.
-    if (selectedGroups.length === 0) {
-      setErrors(prev => ({ ...prev, instructionGroups: 'Please select at least one group' }));
-      setErrorMessage('Please select at least one group');
-      setShowSnackbar(true);
-      return;
-    }
-
     // Include any currently checked dropdown items not yet added
     const pendingGroups = instructionGroups.filter(group =>
       selectedGroupIds.includes(group.id) &&
@@ -276,11 +277,24 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
 
     const finalGroups = [...selectedGroups, ...pendingGroups];
 
+    if (finalGroups.length === 0) {
+      setErrors(prev => ({ ...prev, instructionGroups: 'Please select at least one group' }));
+      return;
+    }
+
     // Update state and notify parent
     setSelectedGroups(finalGroups);
     if (onChange) onChange(finalGroups);
 
-    onClose();
+    // Show success message before closing
+    setErrorMessage('Instructions added successfully');
+    setSnackbarSeverity('success');
+    setShowSnackbar(true);
+
+    // Delay closing to let user see success message
+    setTimeout(() => {
+      onClose();
+    }, 1500);
   };
 
   const handleReset = () => {
@@ -817,9 +831,13 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
         >
           <Alert
             onClose={() => setShowSnackbar(false)}
-            severity="error"
+            severity={snackbarSeverity}
             variant="filled"
-            sx={{ width: '100%', fontWeight: 'bold' }}
+            sx={{
+              width: '100%',
+              fontWeight: 'bold',
+              backgroundColor: snackbarSeverity === 'success' ? '#4caf50' : '#d32f2f'
+            }}
           >
             {errorMessage}
           </Alert>
