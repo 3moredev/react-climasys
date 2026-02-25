@@ -772,24 +772,26 @@ export default function ManageMedicine() {
       )}
 
       {/* Add Medicine Popup */}
-      <AddMedicinePopup
-        open={showAddPopup}
-        onClose={handleCloseAddPopup}
-        onSave={handleSaveMedicine}
-        doctorId={selectedDoctorId}
-        clinicId={clinicId}
-        editData={editingMedicine ? {
-          shortDescription: editingMedicine.shortDescription,
-          medicineName: editingMedicine.medicineName,
-          priority: editingMedicine.priority,
-          breakfast: editingMedicine.b,
-          lunch: editingMedicine.l,
-          dinner: editingMedicine.d,
-          days: editingMedicine.days,
-          instruction: editingMedicine.instruction,
-          addToActiveList: editingMedicine.addToActiveList !== undefined ? editingMedicine.addToActiveList : true
-        } : undefined}
-      />
+      {showAddPopup && (
+        <AddMedicinePopup
+          open={showAddPopup}
+          onClose={handleCloseAddPopup}
+          onSave={handleSaveMedicine}
+          doctorId={selectedDoctorId}
+          clinicId={clinicId}
+          editData={editingMedicine ? {
+            shortDescription: editingMedicine.shortDescription,
+            medicineName: editingMedicine.medicineName,
+            priority: editingMedicine.priority,
+            breakfast: editingMedicine.b,
+            lunch: editingMedicine.l,
+            dinner: editingMedicine.d,
+            days: editingMedicine.days,
+            instruction: editingMedicine.instruction,
+            addToActiveList: editingMedicine.addToActiveList !== undefined ? editingMedicine.addToActiveList : true
+          } : undefined}
+        />
+      )}
 
       {/* Success/Error Snackbar */}
       <GlobalSnackbar
