@@ -841,18 +841,18 @@ export default function AppointmentTable() {
                 const clinicId = sessionData.clinicId;
 
                 if (isDoctor) {
-                    // Fetch appointments ONLY for the logged-in doctor
-                    const doctorId = sessionData?.doctorId || '';
-                    console.log('📅 Loading appointments for logged-in doctor:', doctorId, 'clinic:', clinicId);
+                    // Fetch appointments for the selected doctor (defaults to logged-in doctor)
+                    const doctorIdToFetch = selectedDoctorId || sessionData?.doctorId || '';
+                    console.log('📅 Loading appointments for doctor:', doctorIdToFetch, 'clinic:', clinicId);
 
-                    if (!doctorId) {
-                        console.warn('Doctor ID not available in session data');
+                    if (!doctorIdToFetch) {
+                        console.warn('Doctor ID not available');
                         setAppointments([]);
                         return;
                     }
 
                     const resp: TodayAppointmentsResponse = await appointmentService.getAppointmentsForDateSP({
-                        doctorId: doctorId,
+                        doctorId: doctorIdToFetch,
                         clinicId,
                         futureDate: today,
                         languageId: 1
@@ -862,12 +862,12 @@ export default function AppointmentTable() {
                     // Ensure each row has the correct doctorId and provider name
                     const appointmentsWithProvider = rows.map(row => ({
                         ...row,
-                        doctorId: doctorId,
-                        provider: getDoctorLabelById(doctorId) || sessionData?.doctorName || 'Doctor'
+                        doctorId: doctorIdToFetch,
+                        provider: getDoctorLabelById(doctorIdToFetch) || sessionData?.doctorName || 'Doctor'
                     }));
 
                     setAppointments(appointmentsWithProvider);
-                    console.log('✅ Appointments loaded for logged-in doctor', doctorId, ':', appointmentsWithProvider.length, 'appointments');
+                    console.log('✅ Appointments loaded for doctor', doctorIdToFetch, ':', appointmentsWithProvider.length, 'appointments');
                 } else {
                     // Receptionist view: fetch for selected doctor only
                     const doctorId = selectedDoctorId;
@@ -1756,18 +1756,18 @@ export default function AppointmentTable() {
             const clinicId = sessionData.clinicId;
 
             if (isDoctor) {
-                // Refresh appointments ONLY for the logged-in doctor
-                const doctorId = sessionData?.doctorId || '';
-                console.log('🔄 Refreshing appointments for logged-in doctor:', doctorId);
+                // Refresh appointments for the selected doctor
+                const doctorIdToFetch = selectedDoctorId || sessionData?.doctorId || '';
+                console.log('🔄 Refreshing appointments for doctor:', doctorIdToFetch);
 
-                if (!doctorId) {
-                    console.warn('Doctor ID not available in session data');
+                if (!doctorIdToFetch) {
+                    console.warn('Doctor ID not available');
                     setAppointments([]);
                     return;
                 }
 
                 const resp: TodayAppointmentsResponse = await appointmentService.getAppointmentsForDateSP({
-                    doctorId: doctorId,
+                    doctorId: doctorIdToFetch,
                     clinicId: clinicId,
                     futureDate: today,
                     languageId: 1
@@ -1777,12 +1777,12 @@ export default function AppointmentTable() {
                 // Ensure each row has the correct doctorId and provider name
                 const appointmentsWithProvider = rows.map(row => ({
                     ...row,
-                    doctorId: doctorId,
-                    provider: getDoctorLabelById(doctorId) || sessionData?.doctorName || 'Doctor'
+                    doctorId: doctorIdToFetch,
+                    provider: getDoctorLabelById(doctorIdToFetch) || sessionData?.doctorName || 'Doctor'
                 }));
 
                 setAppointments(appointmentsWithProvider);
-                console.log('✅ Appointments refreshed for logged-in doctor', doctorId, ':', appointmentsWithProvider.length, 'appointments');
+                console.log('✅ Appointments refreshed for doctor', doctorIdToFetch, ':', appointmentsWithProvider.length, 'appointments');
             } else {
                 // Receptionist view: refresh selected doctor only
                 console.log('🔄 Refreshing appointments for selected doctor:', selectedDoctorId);
@@ -2879,20 +2879,61 @@ export default function AppointmentTable() {
                         Search
                     </button>
 
-                    {/* Status filter
-                    <select
-                        className="form-select"
-                        value={filterStatus}
-                        onChange={(e) => setFilterStatus(e.target.value)}
-                        style={{ height: '38px', width: '160px', color: filterStatus ? '#212121' : '#6c757d', padding: '6px 12px', lineHeight: '1.5', fontSize: '1rem' }}
-                    >
-                        <option value="">Select Status</option>
-                        {(availableStatuses.length ? availableStatuses : [
-                            'WAITING','WITH DOCTOR','WITH DOCTOR (ON PHONE)','CHECK OUT','SAVE','COMPLETE'
-                        ]).map(s => (
-                            <option key={s} value={s}>{s}</option>
-                        ))}
-                    </select> */}
+
+                    {/* Status filter */}
+                    <FormControl sx={{ minWidth: 200, height: 38 }}>
+                        <Select
+                            value={filterStatus}
+                            onChange={(e) => {
+                                setFilterStatus(e.target.value as string);
+                                setSearchTerm("");
+                                setSearchResults([]);
+                                setShowDropdown(false);
+                            }}
+                            displayEmpty
+                            size="small"
+                            sx={{
+                                height: 38,
+                                backgroundColor: '#FFFFFF',
+                                color: filterStatus ? '#212121' : '#6c757d',
+                                '& .MuiSelect-select': {
+                                    padding: '6px 12px',
+                                    fontSize: '1rem',
+                                    fontFamily: "'Roboto', sans-serif",
+                                    fontWeight: 500,
+                                    textAlign: 'left',
+                                }
+                            }}
+                            MenuProps={{
+                                anchorOrigin: {
+                                    vertical: 'bottom',
+                                    horizontal: 'left',
+                                },
+                                transformOrigin: {
+                                    vertical: 'top',
+                                    horizontal: 'left',
+                                },
+                                PaperProps: {
+                                    sx: {
+                                        marginTop: '4px',
+                                    }
+                                }
+                            }}
+                        >
+                            <MenuItem value="">ALL</MenuItem>
+                            {(() => {
+                                const filteredStatuses = (availableStatuses.length ? availableStatuses : [
+                                    'WAITING', 'WITH DOCTOR', 'CONSULT ON CALL', 'CHECK OUT', 'SAVE', 'COMPLETE', 'PRESCRIPTION/COLLECTION'
+                                ]).filter(status => {
+                                    const statusId = mapStatusLabelToId(status);
+                                    return statusId === 1 || statusId === 2 || statusId === 3 || statusId === 4 || statusId === 5; // show key workflow statuses
+                                });
+                                return filteredStatuses.map(s => (
+                                    <MenuItem key={s} value={s}>{s}</MenuItem>
+                                ));
+                            })()}
+                        </Select>
+                    </FormControl>
 
                     {/* List/Card toggle */}
                     <div
