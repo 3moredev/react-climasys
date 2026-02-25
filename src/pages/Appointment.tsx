@@ -2926,7 +2926,7 @@ export default function AppointmentTable() {
                                     'WAITING', 'WITH DOCTOR', 'CONSULT ON CALL', 'CHECK OUT', 'SAVE', 'COMPLETE', 'PRESCRIPTION/COLLECTION'
                                 ]).filter(status => {
                                     const statusId = mapStatusLabelToId(status);
-                                    return statusId === 1 || statusId === 2 || statusId === 3 || statusId === 4 || statusId === 5; // show key workflow statuses
+                                    return statusId === 1 || statusId === 2 || statusId === 3 || statusId === 4 || statusId === 5 || statusId === 9; // show key workflow statuses including SAVE (9)
                                 });
                                 return filteredStatuses.map(s => (
                                     <MenuItem key={s} value={s}>{s}</MenuItem>
@@ -4383,7 +4383,7 @@ export default function AppointmentTable() {
                                 'WAITING', 'WITH DOCTOR', 'CONSULT ON CALL', 'CHECK OUT', 'SAVE', 'COMPLETE', 'PRESCRIPTION/COLLECTION'
                             ]).filter(status => {
                                 const statusId = mapStatusLabelToId(status);
-                                return statusId === 1 || statusId === 2 || statusId === 3 || statusId === 4 || statusId === 5; // show key workflow statuses
+                                return statusId === 1 || statusId === 2 || statusId === 3 || statusId === 4 || statusId === 5 || statusId === 9; // show key workflow statuses
                             });
                             return filteredStatuses.map(s => (
                                 <MenuItem key={s} value={s}>{s}</MenuItem>
