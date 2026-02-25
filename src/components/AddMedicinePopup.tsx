@@ -43,17 +43,16 @@ interface AddMedicinePopupProps {
 }
 
 const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSave, onError, editData, doctorId, clinicId }) => {
-    const [shortDescription, setShortDescription] = useState('');
-    const [medicineName, setMedicineName] = useState('');
-    const [priority, setPriority] = useState('');
-    const [breakfast, setBreakfast] = useState('');
-    const [lunch, setLunch] = useState('');
-    const [dinner, setDinner] = useState('');
-    const [days, setDays] = useState('');
-    const [instruction, setInstruction] = useState('');
-    const [addToActiveList, setAddToActiveList] = useState(true);
+    const [shortDescription, setShortDescription] = useState(editData?.shortDescription || '');
+    const [medicineName, setMedicineName] = useState(editData?.medicineName || '');
+    const [priority, setPriority] = useState(editData?.priority || '');
+    const [breakfast, setBreakfast] = useState(editData?.breakfast || '');
+    const [lunch, setLunch] = useState(editData?.lunch || '');
+    const [dinner, setDinner] = useState(editData?.dinner || '');
+    const [days, setDays] = useState(editData?.days || '');
+    const [instruction, setInstruction] = useState(editData?.instruction || '');
+    const [addToActiveList, setAddToActiveList] = useState(editData?.addToActiveList !== undefined ? editData.addToActiveList : true);
 
-    // Validation state
     // Validation state
     const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -61,32 +60,12 @@ const AddMedicinePopup: React.FC<AddMedicinePopupProps> = ({ open, onClose, onSa
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
     const [loading, setLoading] = useState(false);
 
-    // Populate form when editData changes or popup opens
+    // Cleanup on close
     React.useEffect(() => {
-        if (open && editData) {
-            setShortDescription(editData.shortDescription || '');
-            setMedicineName(editData.medicineName || '');
-            setPriority(editData.priority || '');
-            setBreakfast(editData.breakfast || '');
-            setLunch(editData.lunch || '');
-            setDinner(editData.dinner || '');
-            setDays(editData.days || '');
-            setInstruction(editData.instruction || '');
-            setAddToActiveList(editData.addToActiveList !== undefined ? editData.addToActiveList : true);
-        } else if (open && !editData) {
-            // Reset form for new medicine
-            setShortDescription('');
-            setMedicineName('');
-            setPriority('');
-            setBreakfast('');
-            setLunch('');
-            setDinner('');
-            setDays('');
-            setInstruction('');
-            setAddToActiveList(true);
+        if (!open) {
+            setErrors({});
         }
-        setErrors({});
-    }, [open, editData]);
+    }, [open]);
 
     const handleInputChange = (setter: (v: string) => void, field: string, value: string) => {
         const { allowed, error } = validateField(field, value, undefined, undefined, 'medicine');

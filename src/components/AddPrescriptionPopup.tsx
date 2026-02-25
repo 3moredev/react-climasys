@@ -80,7 +80,15 @@ const AddPrescriptionPopup: React.FC<AddPrescriptionPopupProps> = ({
     doctorId,
     clinicId,
 }) => {
-    const [prescriptionData, setPrescriptionData] = useState<PrescriptionData>(createDefaultPrescription());
+    const [prescriptionData, setPrescriptionData] = useState<PrescriptionData>(() => {
+        if (initialData) {
+            return {
+                ...initialData,
+                addToActiveList: initialData.addToActiveList ?? true
+            };
+        }
+        return createDefaultPrescription();
+    });
 
     // Validation state
     const [errors, setErrors] = useState<Record<string, string>>({});
@@ -102,20 +110,11 @@ const AddPrescriptionPopup: React.FC<AddPrescriptionPopupProps> = ({
     const isEditing = useMemo(() => Boolean(initialData), [initialData]);
 
     useEffect(() => {
-        if (open) {
-            if (initialData) {
-                // Ensure addToActiveList is properly set (default to true if undefined)
-                setPrescriptionData({
-                    ...initialData,
-                    addToActiveList: initialData.addToActiveList ?? true
-                });
-            } else {
-                setPrescriptionData(createDefaultPrescription());
-            }
-            // Reset errors on open
+        if (!open) {
+            // Cleanup on close
             setErrors({});
         }
-    }, [open, initialData]);
+    }, [open]);
 
     // Load categories for the selected doctor (for dropdown)
     useEffect(() => {
@@ -243,7 +242,9 @@ const AddPrescriptionPopup: React.FC<AddPrescriptionPopupProps> = ({
         handleInputChange(field, cleaned);
     };
 
-    const handleSave = () => {
+    const [loading, setLoading] = useState(false);
+
+    const handleSave = async () => {
         let hasError = false;
         const newErrors: Record<string, string> = {
             categoryName: '',
@@ -287,23 +288,34 @@ const AddPrescriptionPopup: React.FC<AddPrescriptionPopupProps> = ({
             return;
         }
 
-        // Call the parent onSave callback with the prescription data
-        onSave({
-            ...prescriptionData,
-            clinicId: clinicId ?? prescriptionData.clinicId,
-        });
+        try {
+            setLoading(true);
+            // Call the parent onSave callback with the prescription data and await it
+            await onSave({
+                ...prescriptionData,
+                clinicId: clinicId ?? prescriptionData.clinicId,
+            });
 
-        // Show success snackbar
-        setSnackbar({
-            open: true,
-            message: isEditing ? 'Prescription updated successfully!' : 'Prescription added successfully!',
-            severity: 'success'
-        });
+            // Show success snackbar
+            setSnackbar({
+                open: true,
+                message: isEditing ? 'Prescription updated successfully!' : 'Prescription added successfully!',
+                severity: 'success'
+            });
 
-        // Close popup after showing success message
-        setTimeout(() => {
-            handleClose();
-        }, 1500);
+            // Close popup after showing success message
+            setTimeout(() => {
+                handleClose();
+            }, 1000);
+        } catch (err: any) {
+            setSnackbar({
+                open: true,
+                message: err.message || 'Failed to save prescription',
+                severity: 'error'
+            });
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleClose = () => {
@@ -666,6 +678,7 @@ const AddPrescriptionPopup: React.FC<AddPrescriptionPopupProps> = ({
                     <Button
                         onClick={handleSave}
                         variant="contained"
+                        disabled={loading}
                         sx={{
                             backgroundColor: '#1976d2',
                             textTransform: 'none',
@@ -674,7 +687,7 @@ const AddPrescriptionPopup: React.FC<AddPrescriptionPopupProps> = ({
                             }
                         }}
                     >
-                        Submit
+                        {loading ? 'Saving...' : 'Submit'}
                     </Button>
                 </DialogActions>
             </Dialog>
