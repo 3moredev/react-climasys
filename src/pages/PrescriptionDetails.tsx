@@ -197,8 +197,9 @@ export default function PrescriptionDetails() {
       setError(null)
 
       // Normalize text fields to uppercase before saving
-      const newCatShortName = data.categoryName.trim().toUpperCase()
-      const newCatsubDescription = data.subCategoryName.trim().toUpperCase()
+      // Note: Category and SubCategory are master data, preserve original casing to match DB records
+      const newCatShortName = data.categoryName.trim()
+      const newCatsubDescription = data.subCategoryName.trim()
       const newBrandName = data.brandName.trim().toUpperCase()
       const newMedicineName = data.genericName.trim().toUpperCase()
       const newMarketedBy = (data.marketedBy || '').trim().toUpperCase()
@@ -817,19 +818,21 @@ export default function PrescriptionDetails() {
         </div>
       )}
 
-      <AddPrescriptionPopup
-        open={showPopup}
-        onClose={() => {
-          setShowPopup(false)
-          setEditingRow(null)
-        }}
-        onSave={handleSavePrescription}
-        initialData={popupInitialData}
-        title={editingRow ? 'Edit Prescription' : 'Add Prescription'}
-        primaryActionLabel={editingRow ? 'Update' : 'Save'}
-        doctorId={selectedDoctorId}
-        clinicId={clinicId}
-      />
+      {showPopup && (
+        <AddPrescriptionPopup
+          open={showPopup}
+          onClose={() => {
+            setShowPopup(false)
+            setEditingRow(null)
+          }}
+          onSave={handleSavePrescription}
+          initialData={popupInitialData}
+          title={editingRow ? 'Edit Prescription' : 'Add Prescription'}
+          primaryActionLabel={editingRow ? 'Update' : 'Save'}
+          doctorId={selectedDoctorId}
+          clinicId={clinicId}
+        />
+      )}
 
       {/* Success/Error Snackbar */}
       <Snackbar

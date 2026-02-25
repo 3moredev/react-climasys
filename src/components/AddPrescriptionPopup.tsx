@@ -169,7 +169,8 @@ const AddPrescriptionPopup: React.FC<AddPrescriptionPopupProps> = ({
 
     const handleInputChange = (field: keyof PrescriptionData, value: string | boolean) => {
         if (typeof value === 'string') {
-            const val = value.toUpperCase();
+            // Categories and SubCategories are master data, preserve original casing to match DB records
+            const val = (field === 'categoryName' || field === 'subCategoryName') ? value : value.toUpperCase();
 
             if (field === 'brandName') {
                 const { allowed, error } = validateField('brandName', val, undefined, undefined, 'prescriptionDetails');
