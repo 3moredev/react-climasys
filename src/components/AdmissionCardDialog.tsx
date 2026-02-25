@@ -6,6 +6,7 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import AddPatientPage from "../pages/AddPatientPage";
 import { sessionService } from "../services/sessionService";
 import { admissionService, AdmissionCardRequest, Department, InsuranceCompany } from "../services/admissionService";
+import { getFieldConfig } from '../utils/fieldValidationConfig';
 
 interface AdmissionCardDialogProps {
   open: boolean;
@@ -317,8 +318,10 @@ export default function AdmissionCardDialog({
   const handleRelativeContactChange = (value: string) => {
     // Remove all non-digit characters
     const digitsOnly = value.replace(/\D/g, '');
-    // Limit to 10 digits
-    if (digitsOnly.length <= 10) {
+    // Limit to 20 digits (matching other mobile/contact fields)
+    const contactConfig = getFieldConfig('relativeContactNo', 'admission') || { maxLength: 20 };
+    const maxLength = contactConfig.maxLength || 20;
+    if (digitsOnly.length <= maxLength) {
       handleInputChange("relativeContactNo", digitsOnly);
     }
   };
@@ -545,7 +548,7 @@ export default function AdmissionCardDialog({
                 label="Relative Contact No"
                 value={formData.relativeContactNo}
                 onChange={handleRelativeContactChange}
-                maxLength={10}
+                maxLength={getFieldConfig('relativeContactNo', 'admission')?.maxLength || 20}
               />
               <HorizontalField
                 label="Date of Admission"
@@ -590,6 +593,8 @@ export default function AdmissionCardDialog({
                 label="Comments / Notes"
                 value={formData.commentsNotes}
                 onChange={(v) => handleInputChange("commentsNotes", v)}
+                maxLength={getFieldConfig('commentsNote', 'admission')?.maxLength || 1000}
+                isTextarea
               />
               <HorizontalField
                 label="Date of Discharge"

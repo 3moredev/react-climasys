@@ -24,6 +24,7 @@ import { buildPrescriptionPrintHTML, buildLabTestsPrintHTML, getHeaderImageUrl }
 import PrintReceiptPopup, { PrintReceiptFormValues } from "../components/PrintReceiptPopup";
 import ClearableTextField from "../components/ClearableTextField";
 import { filterNumericInput, validateField } from '../utils/validationUtils';
+import { getFieldConfig } from '../utils/fieldValidationConfig';
 
 
 // Specific styles for Duration/Comment input in table
@@ -2802,13 +2803,15 @@ export default function Billing() {
 
             // Validation logic
             if (field === 'reason') {
-                if (value.length > 200) {
-                    setReasonError('Reason cannot exceed 200 characters');
+                const config = getFieldConfig('reason', 'billing');
+                const maxLength = config?.maxLength || 200;
+                if (value.length > maxLength) {
+                    setReasonError(`Reason cannot exceed ${maxLength} characters`);
                     if (reasonErrorTimerRef.current) clearTimeout(reasonErrorTimerRef.current);
                     reasonErrorTimerRef.current = setTimeout(() => setReasonError(null), 3000);
                     return prev; // Block the update
-                } else if (value.length === 200) {
-                    setReasonError('Reason cannot exceed 200 characters');
+                } else if (value.length === maxLength) {
+                    setReasonError(`Reason cannot exceed ${maxLength} characters`);
                     if (reasonErrorTimerRef.current) clearTimeout(reasonErrorTimerRef.current);
                     reasonErrorTimerRef.current = setTimeout(() => setReasonError(null), 3000);
                 } else {
@@ -2818,13 +2821,15 @@ export default function Billing() {
             }
 
             if (field === 'paymentRemark') {
-                if (value.length > 200) {
-                    setPaymentRemarkError('Payment Remark cannot exceed 200 characters');
+                const config = getFieldConfig('paymentRemark', 'visit');
+                const maxLength = config?.maxLength || 1000;
+                if (value.length > maxLength) {
+                    setPaymentRemarkError(`Payment Remark cannot exceed ${maxLength} characters`);
                     if (paymentRemarkErrorTimerRef.current) clearTimeout(paymentRemarkErrorTimerRef.current);
                     paymentRemarkErrorTimerRef.current = setTimeout(() => setPaymentRemarkError(null), 3000);
                     return prev; // Block the update
-                } else if (value.length === 200) {
-                    setPaymentRemarkError('Payment Remark cannot exceed 200 characters');
+                } else if (value.length === maxLength) {
+                    setPaymentRemarkError(`Payment Remark cannot exceed ${maxLength} characters`);
                     if (paymentRemarkErrorTimerRef.current) clearTimeout(paymentRemarkErrorTimerRef.current);
                     paymentRemarkErrorTimerRef.current = setTimeout(() => setPaymentRemarkError(null), 3000);
                 } else {
@@ -2842,8 +2847,10 @@ export default function Billing() {
             }
 
             if (field === 'feesCollected') {
-                if (value.length > 10) {
-                    setCollectedError('Collected (Rs) cannot exceed 10 characters');
+                const config = getFieldConfig('feesCollected', 'billing');
+                const maxLength = config?.maxLength || 10;
+                if (value.length > maxLength) {
+                    setCollectedError(`Collected (Rs) cannot exceed ${maxLength} characters`);
                     if (collectedErrorTimerRef.current) clearTimeout(collectedErrorTimerRef.current);
                     collectedErrorTimerRef.current = setTimeout(() => setCollectedError(null), 3000);
                 } else if (value && isNaN(Number(value))) {

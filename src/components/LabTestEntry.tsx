@@ -10,6 +10,7 @@ import { SessionInfo } from '../services/sessionService';
 import { doctorService, Doctor } from '../services/doctorService';
 import AddPatientPage from '../pages/AddPatientPage';
 import GlobalSnackbar from './GlobalSnackbar';
+import { getFieldConfig } from '../utils/fieldValidationConfig';
 
 interface AppointmentRow {
     reports_received: any;
@@ -658,10 +659,14 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
         }
     };
 
-    const handleRemoveResult = (id: string) => {
+    const handleRemoveResult = async (id: string) => {
+        console.log("Removing ID:", id);
+        console.log("Before:", labTestResults);
         const resultToRemove = labTestResults.find(r => r.id === id);
         const nextResults = labTestResults.filter(result => result.id !== id);
+        console.log("After:", nextResults);
 
+        // Optimistically remove from UI immediately
         setLabTestResults(nextResults);
 
         // Also remove any error for this ID since it's being removed
@@ -680,6 +685,92 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                 if (option) {
                     setSelectedLabTests(prev => prev.filter(val => val !== option.value));
                 }
+            }
+        }
+
+        // For persisted results (IDs starting with "existing-"), also delete from backend
+        if (resultToRemove && id.startsWith('existing-')) {
+            try {
+                // Get required parameters (matching logic in the fetch useEffect)
+                const patientId = String((patientData as any)?.patientId || '');
+                const patientVisitNo = Number((patientData as any)?.patient_visit_no || (patientData as any)?.visitNumber || 0);
+                const doctorId = String((patientData as any)?.doctorId || (patientData as any)?.provider || (sessionData as any)?.doctorId || '');
+                const clinicId = String((patientData as any)?.clinicId || (sessionData as any)?.clinicId || '');
+                const shiftId = Number((patientData as any)?.shiftId || (sessionData as any)?.shiftId || 1);
+
+                // Build visitDateStr to match EXACTLY how submit saves it: YYYY-MM-DD + T00:00:00
+                // IMPORTANT: Do NOT use new Date().toISOString() — it converts to UTC which shifts
+                // the time in non-UTC timezones (e.g. IST UTC+5:30 turns T00:00:00 into T18:30:00
+                // of the previous day), causing the backend lookup to fail.
+                const visitDateString =
+                    (patientData as any)?.visitDate ||
+                    (patientData as any)?.visit_date ||
+                    new Date().toISOString().slice(0, 10);
+
+                let visitDateStr: string;
+                try {
+                    const rawStr = String(visitDateString);
+
+                    // Pattern 1: dd-MM-yyyy  →  yyyy-MM-ddT00:00:00
+                    const ddMMyyyyRegex = /^(\d{2})-(\d{2})-(\d{4})$/;
+                    const ddMMyyyyMatch = rawStr.match(ddMMyyyyRegex);
+                    if (ddMMyyyyMatch) {
+                        const [, day, month, year] = ddMMyyyyMatch;
+                        visitDateStr = `${year}-${month}-${day}T00:00:00`;
+                    } else {
+                        // Pattern 2 & 3: extract the date portion (before T or space) then
+                        // verify it is yyyy-MM-dd, and always append T00:00:00
+                        // This avoids any timezone conversion.
+                        const datePart = rawStr.split('T')[0].split(' ')[0];
+                        const yyyyMMddRegex = /^(\d{4})-(\d{2})-(\d{2})$/;
+                        if (yyyyMMddRegex.test(datePart)) {
+                            visitDateStr = `${datePart}T00:00:00`;
+                        } else {
+                            // Last resort: try to get a date string without UTC offset
+                            // by extracting just yyyy-MM-dd and appending midnight
+                            const fallbackDate = new Date(rawStr);
+                            if (!isNaN(fallbackDate.getTime())) {
+                                const y = fallbackDate.getFullYear();
+                                const m = String(fallbackDate.getMonth() + 1).padStart(2, '0');
+                                const d = String(fallbackDate.getDate()).padStart(2, '0');
+                                visitDateStr = `${y}-${m}-${d}T00:00:00`;
+                            } else if (rawStr.includes(' ')) {
+                                visitDateStr = rawStr.replace(' ', 'T');
+                            } else {
+                                visitDateStr = `${rawStr}T00:00:00`;
+                            }
+                        }
+                    }
+                } catch (error) {
+                    const today = new Date();
+                    const y = today.getFullYear();
+                    const m = String(today.getMonth() + 1).padStart(2, '0');
+                    const d = String(today.getDate()).padStart(2, '0');
+                    visitDateStr = `${y}-${m}-${d}T00:00:00`;
+                }
+
+                const userId = (sessionData as any)?.userId || '';
+
+                await patientService.deleteLabTestResultParameter({
+                    patientId,
+                    patientVisitNo,
+                    shiftId,
+                    clinicId,
+                    doctorId,
+                    visitDateStr,
+                    labTestDescription: resultToRemove.labTestName,
+                    parameterName: resultToRemove.parameterName || 'Result',
+                    userId
+                });
+
+                console.log('Successfully deleted lab test result parameter from backend');
+            } catch (err) {
+                console.error('Failed to delete lab test result parameter from backend:', err);
+                // Rollback: re-add the removed result
+                setLabTestResults(prev => [...prev, resultToRemove]);
+                const errorMessage = err instanceof Error ? err.message : 'Failed to delete parameter';
+                setSnackbarMessage(errorMessage);
+                setSnackbarOpen(true);
             }
         }
     };
@@ -1148,7 +1239,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                     Comment
                                                 </Typography>
                                                 <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                                                    {(formData.comment || '').length}/1000
+                                                    {(formData.comment || '').length}/{getFieldConfig('comment', 'visit')?.maxLength || 1000}
                                                 </Typography>
                                             </div>
                                             <div style={{ position: 'relative' }}>
@@ -1157,8 +1248,8 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                     rows={3}
                                                     placeholder="Comment"
                                                     value={formData.comment}
-                                                    onChange={(e) => handleInputChange('comment', e.target.value.slice(0, 1000))}
-                                                    maxLength={1000}
+                                                    onChange={(e) => handleInputChange('comment', e.target.value.slice(0, getFieldConfig('comment', 'visit')?.maxLength || 1000))}
+                                                    maxLength={getFieldConfig('comment', 'visit')?.maxLength || 1000}
                                                     style={{
                                                         width: '100%',
                                                         padding: '8px',
@@ -1272,8 +1363,10 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                             fullWidth
                                                             value={labTestSearch}
                                                             onChange={(val) => {
-                                                                if (val.length >= 100) {
-                                                                    setLabTestSearchError('Lab test search cannot exceed 100 characters');
+                                                                const config = getFieldConfig('labTestSearch', 'visit') || { maxLength: 100 };
+                                                                const maxLength = config.maxLength || 100;
+                                                                if (val.length >= maxLength) {
+                                                                    setLabTestSearchError(`Lab test search cannot exceed ${maxLength} characters`);
                                                                 } else {
                                                                     setLabTestSearchError(null);
                                                                 }
@@ -1282,7 +1375,7 @@ const LabTestEntry: React.FC<LabTestEntryProps> = ({ open, onClose, patientData,
                                                             error={!!labTestSearchError}
                                                             helperText={labTestSearchError}
                                                             FormHelperTextProps={{ style: { color: '#757575' } }}
-                                                            inputProps={{ maxLength: 100 }}
+                                                            inputProps={{ maxLength: getFieldConfig('labTestSearch', 'visit')?.maxLength || 100 }}
                                                             placeholder="Search lab tests"
                                                             variant="outlined"
                                                             size="small"

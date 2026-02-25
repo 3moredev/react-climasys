@@ -185,7 +185,7 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
 
     const handleComplaintCommentChange = (rowValue: string, text: string) => {
         const config = getFieldConfig('complaintComment', 'visit');
-        const maxLength = config?.maxLength || 500;
+        const maxLength = config?.maxLength;
 
         // Use the same logic as handleInputChange for consistency
         const { allowed, error } = validateField('complaintComment', text, maxLength, 'Duration/Comment', 'visit');

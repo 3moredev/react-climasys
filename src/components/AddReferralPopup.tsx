@@ -6,6 +6,7 @@ import api from '../services/api';
 import ClearableTextField from './ClearableTextField';
 
 import { validateField, getMaxLength } from '../utils/validationUtils';
+import { getFieldConfig } from '../utils/fieldValidationConfig';
 
 interface AddReferralPopupProps {
     open: boolean;
@@ -183,14 +184,18 @@ const AddReferralPopup: React.FC<AddReferralPopupProps> = ({ open, onClose, onSa
         }
 
         // Validate Address length
-        if (formData.doctorAddress.length > 150) {
-            setAddressError('Address cannot exceed 150 characters');
+        const addressConfig = getFieldConfig('doctorAddress', 'referralDoctor');
+        const addressMaxLength = addressConfig?.maxLength || 150;
+        if (formData.doctorAddress.length > addressMaxLength) {
+            setAddressError(`Address cannot exceed ${addressMaxLength} characters`);
             return;
         }
 
         // Validate Remarks length
-        if (formData.remarks.length > 150) {
-            setRemarksError('Remarks cannot exceed 150 characters');
+        const remarksConfig = getFieldConfig('remarks', 'referralDoctor');
+        const remarksMaxLength = remarksConfig?.maxLength || 500;
+        if (formData.remarks.length > remarksMaxLength) {
+            setRemarksError(`Remarks cannot exceed ${remarksMaxLength} characters`);
             return;
         }
 

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { buildReceiptPrintHTML, getHeaderImageUrl } from "../utils/printTemplates";
 import { receiptService, SaveReceiptPayload } from "../services/receiptService";
 import { Close } from "@mui/icons-material";
+import { getFieldConfig } from "../utils/fieldValidationConfig";
 
 export interface PrintReceiptFormValues {
     receiptNo: string;
@@ -405,13 +406,13 @@ const PrintReceiptPopup: React.FC<PrintReceiptPopupProps> = ({
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <label style={fieldLabelStyle}>Details</label>
                                 <span style={{ fontSize: '11px', color: '#666', marginBottom: '4px' }}>
-                                    {(formValues.details || '').length}/150
+                                    {(formValues.details || '').length}/{getFieldConfig('details', 'receipt')?.maxLength || 150}
                                 </span>
                             </div>
                             <textarea
                                 value={formValues.details}
                                 onChange={(e) => handleChange("details", e.target.value)}
-                                maxLength={150}
+                                maxLength={getFieldConfig('details', 'receipt')?.maxLength || 150}
                                 style={{ ...inputStyle, minHeight: 70, resize: "vertical" }}
                             />
                         </div>

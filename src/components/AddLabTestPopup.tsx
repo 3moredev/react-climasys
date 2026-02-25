@@ -15,6 +15,7 @@ import {
     Alert
 } from '@mui/material';
 import { validateField, getMaxLength } from '../utils/validationUtils';
+import { getFieldConfig } from '../utils/fieldValidationConfig';
 import ClearableTextField from '../components/ClearableTextField';
 
 export interface LabTestRow {
@@ -268,7 +269,7 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
                                     error={!!errors.labTestName && !errors.labTestName.includes('cannot exceed')}
                                     helperText={errors.labTestName && !errors.labTestName.includes('cannot exceed') ? errors.labTestName : ''}
                                 />
-                                {(errors.labTestName && errors.labTestName.includes('cannot exceed')) || testLabData.labTestName.length === 80 ? (
+                                {(errors.labTestName && errors.labTestName.includes('cannot exceed')) || testLabData.labTestName.length === (getFieldConfig('labTestName', 'labMaster')?.maxLength || 80) ? (
                                     <div style={{
                                         color: '#666',
                                         fontSize: '11px',
@@ -276,7 +277,7 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
                                         lineHeight: '1.2',
                                         fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif'
                                     }}>
-                                        Lab Test Name cannot exceed 80 characters
+                                        Lab Test Name cannot exceed {getFieldConfig('labTestName', 'labMaster')?.maxLength || 80} characters
                                     </div>
                                 ) : null}
                             </Box>
@@ -297,7 +298,7 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
                                     error={!!errors.priority && !errors.priority.includes('cannot exceed')}
                                     helperText={errors.priority && !errors.priority.includes('cannot exceed') ? errors.priority : ''}
                                 />
-                                {(errors.priority && errors.priority.includes('cannot exceed')) || testLabData.priority.length === 10 ? (
+                                {(errors.priority && errors.priority.includes('cannot exceed')) || testLabData.priority.length === (getFieldConfig('priority', 'labMaster')?.maxLength || 10) ? (
                                     <div style={{
                                         color: '#666',
                                         fontSize: '11px',
@@ -305,7 +306,7 @@ const AddTestLabPopup: React.FC<AddTestLabPopupProps> = ({ open, onClose, onSave
                                         lineHeight: '1.2',
                                         fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif'
                                     }}>
-                                        Priority cannot exceed 10 characters
+                                        Priority cannot exceed {getFieldConfig('priority', 'labMaster')?.maxLength || 10} characters
                                     </div>
                                 ) : null}
                             </Box>
