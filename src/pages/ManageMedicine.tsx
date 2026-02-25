@@ -776,6 +776,8 @@ export default function ManageMedicine() {
         open={showAddPopup}
         onClose={handleCloseAddPopup}
         onSave={handleSaveMedicine}
+        doctorId={selectedDoctorId}
+        clinicId={clinicId}
         editData={editingMedicine ? {
           shortDescription: editingMedicine.shortDescription,
           medicineName: editingMedicine.medicineName,
