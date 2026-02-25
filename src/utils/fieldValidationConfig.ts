@@ -139,7 +139,7 @@ export const VISIT_FIELDS = {
     referralEmail: { maxLength: 60, fieldName: 'Referral email', type: 'email' as const },
     referralAddress: { maxLength: 150, fieldName: 'Referral address', type: 'text' as const },
     pastSurgicalHistory: { maxLength: 1000, fieldName: 'Past surgical history', type: 'textarea' as const },
-    complaintComment: { maxLength: 500, fieldName: 'Duration/Comment', type: 'text' as const },
+    complaintComment: { maxLength: 250, fieldName: 'Duration/Comment', type: 'text' as const },
     complaintSearch: { maxLength: 100, fieldName: 'Complaint Search', type: 'text' as const },
 } as const;
 
@@ -204,12 +204,26 @@ export const PROCEDURE_FIELDS = {
     priority: { maxLength: 10, fieldName: 'Priority', type: 'number' as const },
 } as const;
 
-/**
- * Group Instruction Master Fields
- */
 export const GROUP_INSTRUCTION_FIELDS = {
     groupDescription: { maxLength: 200, fieldName: 'Group Description', type: 'text' as const },
+    instructionsDescription: { maxLength: 1000, fieldName: 'Instructions Description', type: 'text' as const },
     priority: { maxLength: 10, fieldName: 'Priority', type: 'number' as const },
+} as const;
+
+/**
+ * Admission Data Fields
+ */
+export const ADMISSION_FIELDS = {
+    referredDoctor: { maxLength: 50, fieldName: 'Referred Doctor', type: 'text' as const },
+    relativeContactNo: { maxLength: 20, fieldName: 'Relative Contact No', type: 'text' as const },
+    commentsNote: { maxLength: 4000, fieldName: 'Comments / Notes', type: 'textarea' as const }, // TEXT in DB, using 4000 as safe UI limit
+} as const;
+
+/**
+ * Insurance Master Fields
+ */
+export const INSURANCE_FIELDS = {
+    companyName: { maxLength: 1000, fieldName: 'Company Name', type: 'text' as const }, // TEXT in DB
 } as const;
 
 /**
@@ -235,7 +249,7 @@ export const LAB_MASTER_FIELDS = {
  * Billing Details Fields
  */
 export const BILLING_DETAILS_FIELDS = {
-    details: { maxLength: 150, fieldName: 'Details', type: 'text' as const },
+    details: { maxLength: 50, fieldName: 'Details', type: 'text' as const },
     defaultFee: {
         maxLength: 10,
         fieldName: 'Default Fee',
@@ -248,6 +262,8 @@ export const BILLING_DETAILS_FIELDS = {
         type: 'number' as const,
         pattern: /^\d*$/
     },
+    reason: { maxLength: 200, fieldName: 'Reason', type: 'textarea' as const },
+    feesCollected: { maxLength: 10, fieldName: 'Collected fees', type: 'number' as const },
 } as const;
 
 /**
@@ -260,7 +276,7 @@ export const PRESCRIPTION_CATEGORY_FIELDS = {
         type: 'text' as const,
         pattern: /^[a-zA-Z\s\-\'.]*$/
     },
-    description: { maxLength: 200, fieldName: 'Category Description', type: 'text' as const },
+    description: { maxLength: 300, fieldName: 'Category Description', type: 'text' as const },
 } as const;
 
 export const PRESCRIPTION_SUB_CATEGORY_FIELDS = {
@@ -290,9 +306,11 @@ export const FIELD_CONFIG = {
     labMaster: LAB_MASTER_FIELDS,
     billing: BILLING_DETAILS_FIELDS,
     prescriptionCategory: PRESCRIPTION_CATEGORY_FIELDS,
-    prescriptionSubCategory: PRESCRIPTION_SUB_CATEGORY_FIELDS,
-    prescriptionDetails: PRESCRIPTION_DETAILS_FIELDS,
-    instructionGroup: GROUP_INSTRUCTION_FIELDS,
+    prescriptionSubCategory: { ...PRESCRIPTION_SUB_CATEGORY_FIELDS },
+    prescriptionDetails: { ...PRESCRIPTION_DETAILS_FIELDS },
+    instructionGroup: { ...GROUP_INSTRUCTION_FIELDS },
+    admission: { ...ADMISSION_FIELDS },
+    insurance: { ...INSURANCE_FIELDS },
 } as const;
 
 /**
@@ -322,6 +340,9 @@ export function getFieldConfig(fieldName: string, entity?: keyof typeof FIELD_CO
     if (fieldName in PRESCRIPTION_CATEGORY_FIELDS) return PRESCRIPTION_CATEGORY_FIELDS[fieldName as keyof typeof PRESCRIPTION_CATEGORY_FIELDS];
     if (fieldName in PRESCRIPTION_SUB_CATEGORY_FIELDS) return PRESCRIPTION_SUB_CATEGORY_FIELDS[fieldName as keyof typeof PRESCRIPTION_SUB_CATEGORY_FIELDS];
     if (fieldName in PRESCRIPTION_DETAILS_FIELDS) return PRESCRIPTION_DETAILS_FIELDS[fieldName as keyof typeof PRESCRIPTION_DETAILS_FIELDS];
+    if (fieldName in GROUP_INSTRUCTION_FIELDS) return GROUP_INSTRUCTION_FIELDS[fieldName as keyof typeof GROUP_INSTRUCTION_FIELDS];
+    if (fieldName in ADMISSION_FIELDS) return ADMISSION_FIELDS[fieldName as keyof typeof ADMISSION_FIELDS];
+    if (fieldName in INSURANCE_FIELDS) return INSURANCE_FIELDS[fieldName as keyof typeof INSURANCE_FIELDS];
 
     return undefined;
 }

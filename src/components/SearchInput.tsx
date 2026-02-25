@@ -40,9 +40,10 @@ const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(({
         }
     };
 
-    const maxLengthReached = value.length === 50;
+    const configMaxLength = 100; // Updated from 50 to 100 as per common search patterns
+    const maxLengthReached = value.length === configMaxLength;
     const displayError = error || maxLengthReached;
-    const errorMsg = maxLengthReached ? "Search cannot exceed 50 characters" : helperText;
+    const errorMsg = maxLengthReached ? `Search cannot exceed ${configMaxLength} characters` : helperText;
 
     return (
         <div className={`search-input-wrapper ${className}`} style={{ position: 'relative', display: 'flex', flexDirection: 'column' }}>
@@ -65,7 +66,7 @@ const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(({
                         fontSize: '0.9rem',
                         ...inputStyle
                     }}
-                    maxLength={50}
+                    maxLength={configMaxLength}
                 />
                 {showSearchIcon && (
                     <Search

@@ -4158,22 +4158,26 @@ export default function Treatment() {
             checkLength(formData.weight, 5, 'Weight'); // Updated from 10 to 5 to match fieldValidationConfig.ts
 
             // Follow-up
-            checkLength(followUpData.planAdv, 1000, 'Plan / Advice');
-            checkLength(followUpData.planAdv, 1000, 'Plan / Advice');
-            checkLength(followUpData.remarkComments, 1000, 'Remark');
+            const planAdvConfig = getFieldConfig('planAdv', 'visit');
+            const planAdvMaxLength = planAdvConfig?.maxLength || 1000;
+            checkLength(followUpData.planAdv, planAdvMaxLength, 'Plan / Advice');
 
-            if (followUpData.remarkComments && followUpData.remarkComments.length >= 1000) {
-                setRemarkCommentsError('Remark cannot exceed 1000 characters');
+            const remarkConfig = getFieldConfig('remarkComments', 'visit');
+            const remarkMaxLength = remarkConfig?.maxLength || 1000;
+            if (followUpData.remarkComments && followUpData.remarkComments.length >= remarkMaxLength) {
+                setRemarkCommentsError(`Remark cannot exceed ${remarkMaxLength} characters`);
                 if (remarkCommentsErrorTimerRef.current) clearTimeout(remarkCommentsErrorTimerRef.current);
                 remarkCommentsErrorTimerRef.current = setTimeout(() => setRemarkCommentsError(null), 3000);
-                validationErrors.push('Remark cannot exceed 1000 characters');
+                validationErrors.push(`Remark cannot exceed ${remarkMaxLength} characters`);
             }
 
-            if (prescriptionInput && prescriptionInput.length >= 200) {
-                setPrescriptionError('Prescription cannot exceed 200 characters');
+            const prescriptionConfig = getFieldConfig('prescription', 'visit') || getFieldConfig('medicineDescription', 'medicine'); // Fallback or specific config
+            const prescriptionMaxLength = prescriptionConfig?.maxLength || 200;
+            if (prescriptionInput && prescriptionInput.length >= prescriptionMaxLength) {
+                setPrescriptionError(`Prescription cannot exceed ${prescriptionMaxLength} characters`);
                 if (prescriptionErrorTimerRef.current) clearTimeout(prescriptionErrorTimerRef.current);
                 prescriptionErrorTimerRef.current = setTimeout(() => setPrescriptionError(null), 3000);
-                validationErrors.push('Prescription cannot exceed 200 characters');
+                validationErrors.push(`Prescription cannot exceed ${prescriptionMaxLength} characters`);
             }
             checkLength(followUpData.followUp, 100, 'Follow-up');
 
@@ -4196,10 +4200,29 @@ export default function Treatment() {
                 checkLength(row.instruction, 4000, `${prefix} Instruction`);
             });
 
+            // Complaints total length validation
+            const totalComplaintsString = complaintsRows.map(row => {
+                const cleanLabel = (row.label || '').trim();
+                const cleanComment = (row.comment || '').trim();
+                if (cleanComment) {
+                    return `${cleanLabel} (${cleanComment})`;
+                }
+                return cleanLabel;
+            }).join(', ');
+
+            if (totalComplaintsString.length > 1000) {
+                validationErrors.push(`Total length of complaints and comments (${totalComplaintsString.length}) exceeds maximum limit of 1000 characters. Please shorten your comments.`);
+            }
+
             // Filter out length warnings from blocking the submission
             const criticalValidationErrors = validationErrors.filter(err =>
-                !err.includes('cannot exceed') && !err.includes('exceeds maximum length')
+                !err.includes('cannot exceed') && !err.includes('exceeds maximum length') && !err.includes('limit of 1000 characters')
             );
+
+            // Special case: Total complaints length is a critical error to prevent 500
+            if (totalComplaintsString.length > 1000) {
+                criticalValidationErrors.push(`Total length of complaints and comments exceeds 1000 characters (${totalComplaintsString.length})`);
+            }
 
             if (criticalValidationErrors.length > 0) {
                 const firstError = criticalValidationErrors[0];
@@ -4272,7 +4295,7 @@ export default function Treatment() {
                 attendedById: 0,
                 followUp: followUpData.followUpType ? String(followUpData.followUpType).charAt(0) : 'N', // First character of followUpType or 'N'
                 followUpFlag: formData.visitType.followUp,
-                currentComplaint: Array.from(new Set(selectedComplaints)).join(','),
+                currentComplaint: totalComplaintsString, // Use concatenated string instead of comma-separated IDs
                 visitCommentsField: formData.visitComments,
 
                 // Clinical fields
@@ -4714,9 +4737,12 @@ export default function Treatment() {
     };
 
     const handleComplaintCommentChange = (rowValue: string, text: string) => {
-        // Validate character limit (500 chars for complaintComment)
-        // Allow up to 501 for validation message to trigger
-        if (text.length > 501) {
+        // Validate character limit (250 chars for complaintComment from config)
+        const config = getFieldConfig('complaintComment', 'visit');
+        const maxLength = config?.maxLength || 250;
+
+        // Allow up to maxLength + 1 for validation message to trigger
+        if (text.length > maxLength + 1) {
             return; // Block input that exceeds buffer
         }
         setComplaintsRows(prev => prev.map(r => r.value === rowValue ? { ...r, comment: text } : r));
@@ -5002,8 +5028,10 @@ export default function Treatment() {
             return;
         }
 
-        if (raw.length > 200) {
-            setSnackbarMessage('Prescription cannot exceed 200 characters');
+        const prescriptionConfig = getFieldConfig('prescription', 'visit');
+        const prescriptionMaxLength = prescriptionConfig?.maxLength || 200;
+        if (raw.length > prescriptionMaxLength) {
+            setSnackbarMessage(`Prescription cannot exceed ${prescriptionMaxLength} characters`);
             setSnackbarOpen(true);
             return;
         }
@@ -5977,11 +6005,13 @@ export default function Treatment() {
                                                                 size="small"
                                                                 value={complaintSearch}
                                                                 onChange={(val) => {
-                                                                    if (val.length >= 100) {
-                                                                        setComplaintSearchError('Complaints search cannot exceed 100 characters');
+                                                                    const config = getFieldConfig('complaintSearch', 'visit');
+                                                                    const maxLength = config?.maxLength || 100;
+                                                                    if (val.length >= maxLength) {
+                                                                        setComplaintSearchError(`Complaints search cannot exceed ${maxLength} characters`);
                                                                         if (complaintSearchErrorTimerRef.current) clearTimeout(complaintSearchErrorTimerRef.current);
                                                                         complaintSearchErrorTimerRef.current = setTimeout(() => setComplaintSearchError(null), 3000);
-                                                                        if (val.length > 100) return; // Block beyond limit
+                                                                        if (val.length > maxLength) return; // Block beyond limit
                                                                     } else {
                                                                         if (complaintSearchErrorTimerRef.current) clearTimeout(complaintSearchErrorTimerRef.current);
                                                                         setComplaintSearchError(null);
@@ -6211,8 +6241,8 @@ export default function Treatment() {
                                                                     onChange={(val) => handleComplaintCommentChange(row.value, val)}
                                                                     disabled={isFormDisabled}
                                                                     placeholder="Enter duration/comment"
-                                                                    error={row.comment?.length >= 500}
-                                                                    helperText={row.comment?.length >= 500 ? 'Comment cannot exceed 500 characters' : ''}
+                                                                    error={row.comment?.length >= (getFieldConfig('complaintComment', 'visit')?.maxLength || 250)}
+                                                                    helperText={row.comment?.length >= (getFieldConfig('complaintComment', 'visit')?.maxLength || 250) ? `Comment cannot exceed ${getFieldConfig('complaintComment', 'visit')?.maxLength || 250} characters` : ''}
                                                                     inputProps={{
                                                                     }}
                                                                     sx={{
@@ -6683,11 +6713,13 @@ export default function Treatment() {
                                                         size="small"
                                                         value={diagnosisSearch}
                                                         onChange={(val) => {
-                                                            if (val.length >= 1000) {
-                                                                setDiagnosisSearchError('Diagnosis search cannot exceed 1000 characters');
+                                                            const config = getFieldConfig('diagnosisSearch', 'visit') || { maxLength: 1000 };
+                                                            const maxLength = config.maxLength || 1000;
+                                                            if (val.length >= maxLength) {
+                                                                setDiagnosisSearchError(`Diagnosis search cannot exceed ${maxLength} characters`);
                                                                 if (diagnosisSearchErrorTimerRef.current) clearTimeout(diagnosisSearchErrorTimerRef.current);
                                                                 diagnosisSearchErrorTimerRef.current = setTimeout(() => setDiagnosisSearchError(null), 3000);
-                                                                if (val.length > 1000) return; // Block beyond limit
+                                                                if (val.length > maxLength) return; // Block beyond limit
                                                             } else {
                                                                 if (diagnosisSearchErrorTimerRef.current) clearTimeout(diagnosisSearchErrorTimerRef.current);
                                                                 setDiagnosisSearchError(null);
@@ -7032,11 +7064,13 @@ export default function Treatment() {
                                                         size="small"
                                                         value={medicineSearch}
                                                         onChange={(val) => {
-                                                            if (val.length >= 1000) {
-                                                                setMedicineSearchError('Medicine search cannot exceed 1000 characters');
+                                                            const config = getFieldConfig('medicineSearch', 'visit') || { maxLength: 1000 };
+                                                            const maxLength = config.maxLength || 1000;
+                                                            if (val.length >= maxLength) {
+                                                                setMedicineSearchError(`Medicine search cannot exceed ${maxLength} characters`);
                                                                 if (medicineSearchErrorTimerRef.current) clearTimeout(medicineSearchErrorTimerRef.current);
                                                                 medicineSearchErrorTimerRef.current = setTimeout(() => setMedicineSearchError(null), 3000);
-                                                                if (val.length > 1000) return; // Block beyond limit
+                                                                if (val.length > maxLength) return; // Block beyond limit
                                                             } else {
                                                                 if (medicineSearchErrorTimerRef.current) clearTimeout(medicineSearchErrorTimerRef.current);
                                                                 setMedicineSearchError(null);
@@ -7393,8 +7427,8 @@ export default function Treatment() {
                                                                     onChange={(val) => handleMedicineInstructionChange(row.id, val)}
                                                                     disabled={isFormDisabled}
                                                                     placeholder="Enter instruction"
-                                                                    error={row.instruction?.length >= 4000}
-                                                                    helperText={row.instruction?.length >= 4000 ? 'Instruction cannot exceed 4000 characters' : ''}
+                                                                    error={row.instruction?.length >= (getFieldConfig('instruction', 'medicine')?.maxLength || 4000)}
+                                                                    helperText={row.instruction?.length >= (getFieldConfig('instruction', 'medicine')?.maxLength || 4000) ? `Instruction cannot exceed ${getFieldConfig('instruction', 'medicine')?.maxLength || 4000} characters` : ''}
                                                                     inputProps={{
                                                                     }}
                                                                     sx={{
@@ -7482,11 +7516,13 @@ export default function Treatment() {
                                             value={prescriptionInput}
                                             onChange={(val) => {
                                                 if (!isFormDisabled) {
-                                                    if (val.length >= 200) {
-                                                        setPrescriptionError('Prescription cannot exceed 200 characters');
+                                                    const prescriptionConfig = getFieldConfig('prescription', 'visit');
+                                                    const prescriptionMaxLength = prescriptionConfig?.maxLength || 200;
+                                                    if (val.length >= prescriptionMaxLength) {
+                                                        setPrescriptionError(`Prescription cannot exceed ${prescriptionMaxLength} characters`);
                                                         if (prescriptionErrorTimerRef.current) clearTimeout(prescriptionErrorTimerRef.current);
                                                         prescriptionErrorTimerRef.current = setTimeout(() => setPrescriptionError(null), 3000);
-                                                        if (val.length > 200) return; // Block beyond limit
+                                                        if (val.length > prescriptionMaxLength) return; // Block beyond limit
                                                     } else {
                                                         if (prescriptionErrorTimerRef.current) clearTimeout(prescriptionErrorTimerRef.current);
                                                         setPrescriptionError(null);
@@ -8046,11 +8082,13 @@ export default function Treatment() {
                                                         size="small"
                                                         value={investigationSearch}
                                                         onChange={(val) => {
-                                                            if (val.length >= 1000) {
-                                                                setInvestigationSearchError('Investigation search cannot exceed 1000 characters');
+                                                            const config = getFieldConfig('investigationSearch', 'visit') || { maxLength: 1000 };
+                                                            const maxLength = config.maxLength || 1000;
+                                                            if (val.length >= maxLength) {
+                                                                setInvestigationSearchError(`Investigation search cannot exceed ${maxLength} characters`);
                                                                 if (investigationSearchErrorTimerRef.current) clearTimeout(investigationSearchErrorTimerRef.current);
                                                                 investigationSearchErrorTimerRef.current = setTimeout(() => setInvestigationSearchError(null), 3000);
-                                                                if (val.length > 1000) return; // Block beyond limit
+                                                                if (val.length > maxLength) return; // Block beyond limit
                                                             } else {
                                                                 if (investigationSearchErrorTimerRef.current) clearTimeout(investigationSearchErrorTimerRef.current);
                                                                 setInvestigationSearchError(null);
