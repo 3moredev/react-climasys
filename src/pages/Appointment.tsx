@@ -506,6 +506,7 @@ export default function AppointmentTable() {
             case 'COLLECTION': return 6;
             case 'WAITING FOR SERVICE': return 7;
             case 'SERVICE COMPLETED': return 8;
+            case 'CHECK OUT': return 7;
             case 'SAVE': return 9;
             case 'BOOKED': return 10;
             case 'FUTURE': return 11;
@@ -4681,7 +4682,7 @@ export default function AppointmentTable() {
                                                                             filtered: filteredStatuses,
                                                                             statusIds: filteredStatuses.map(s => ({ status: s, id: mapStatusLabelToId(s) }))
                                                                         });
-                                                                        setAvailableStatuses(filteredStatuses);
+                                                                        // setAvailableStatuses(filteredStatuses); // ❌ REMOVED: Overwriting global state with filtered set caused inconsistency
                                                                     }
                                                                 } catch (err) {
                                                                     console.error('Failed loading clinic status options', err);
