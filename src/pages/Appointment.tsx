@@ -2410,7 +2410,7 @@ export default function AppointmentTable() {
             margin-bottom: 6px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.10);
             position: relative;
-            min-height: 150px;
+            min-height:stretch;
         }
         .appointment-card:before {
             content: '';
@@ -3475,7 +3475,7 @@ export default function AppointmentTable() {
                                                         </div>
                                                         <div
                                                             className="crm-btn"
-                                                            title="Checkout"
+                                                            title="Visit Details"
                                                             style={{
                                                                 cursor: 'not-allowed',
                                                                 backgroundColor: '#f5f5f5',
@@ -3484,7 +3484,7 @@ export default function AppointmentTable() {
                                                                 opacity: 0.5
                                                             }}
                                                         >
-                                                            <img src="/images/avatar/Visit_details.svg" alt="Checkout" style={{ width: 16, height: 16, filter: 'brightness(0)' }} />
+                                                            <img src="/images/avatar/Visit_details.svg" alt="Visit Details" style={{ width: 16, height: 16, filter: 'brightness(0)' }} />
                                                         </div>
                                                     </div>
                                                     <div className="kv">
