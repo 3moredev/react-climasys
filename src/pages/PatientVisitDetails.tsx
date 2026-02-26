@@ -2939,9 +2939,9 @@ const PatientVisitDetails: React.FC<PatientVisitDetailsProps> = ({ open, onClose
                                                                 disabled={readOnly}
                                                                 placeholder="Enter Duration/Comment"
                                                                 variant="outlined"
-                                                                error={!!validationErrors[`complaintComment_${row.value}`] || (row.comment || '').length >= 500}
-                                                                helperText={(row.comment || '').length >= 500 ? 'Comment cannot exceed 500 characters' : (validationErrors[`complaintComment_${row.value}`] || '')}
-                                                                inputProps={{ maxLength: 500 }}
+                                                                error={!!validationErrors[`complaintComment_${row.value}`] || (row.comment || '').length >= (getFieldConfig('complaintComment', 'visit')?.maxLength || 250)}
+                                                                helperText={(row.comment || '').length >= (getFieldConfig('complaintComment', 'visit')?.maxLength || 250) ? `Comment cannot exceed ${getFieldConfig('complaintComment', 'visit')?.maxLength || 250} characters` : (validationErrors[`complaintComment_${row.value}`] || '')}
+                                                                inputProps={{ maxLength: (getFieldConfig('complaintComment', 'visit')?.maxLength || 250) }}
                                                                 sx={{
                                                                     marginBottom: 0,
                                                                     '& .MuiOutlinedInput-root': {

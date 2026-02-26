@@ -114,7 +114,7 @@ export const VISIT_FIELDS = {
     importantFindings: { maxLength: 1000, fieldName: 'Important Findings', type: 'textarea' as const },
     additionalComments: { maxLength: 1000, fieldName: 'Additional Comments', type: 'textarea' as const },
     procedurePerformed: { maxLength: 1000, fieldName: 'Procedure Performed', type: 'textarea' as const },
-    dressingBodyParts: { maxLength: 1000, fieldName: 'Dressing (body parts)', type: 'textarea' as const },
+    dressingBodyParts: { maxLength: 100, fieldName: 'Dressing (body parts)', type: 'textarea' as const },
     pc: { maxLength: 1000, fieldName: 'PC', type: 'textarea' as const },
     addendum: { maxLength: 1000, fieldName: 'Addendum', type: 'textarea' as const },
     fmp: { maxLength: 1000, fieldName: 'FMP', type: 'textarea' as const },
@@ -205,8 +205,8 @@ export const PROCEDURE_FIELDS = {
 } as const;
 
 export const GROUP_INSTRUCTION_FIELDS = {
-    groupDescription: { maxLength: 200, fieldName: 'Group Description', type: 'text' as const },
-    instructionsDescription: { maxLength: 1000, fieldName: 'Instructions Description', type: 'text' as const },
+    groupDescription: { maxLength: 120, fieldName: 'Group Description', type: 'text' as const },
+    instructionsDescription: { maxLength: 500, fieldName: 'Instructions Description', type: 'text' as const },
     priority: { maxLength: 10, fieldName: 'Priority', type: 'number' as const },
 } as const;
 
@@ -216,7 +216,7 @@ export const GROUP_INSTRUCTION_FIELDS = {
 export const ADMISSION_FIELDS = {
     referredDoctor: { maxLength: 50, fieldName: 'Referred Doctor', type: 'text' as const },
     relativeContactNo: { maxLength: 20, fieldName: 'Relative Contact No', type: 'text' as const },
-    commentsNote: { maxLength: 4000, fieldName: 'Comments / Notes', type: 'textarea' as const }, // TEXT in DB, using 4000 as safe UI limit
+    commentsNote: { maxLength: 1000, fieldName: 'Comments / Notes', type: 'textarea' as const },
 } as const;
 
 /**

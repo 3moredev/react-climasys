@@ -4295,7 +4295,7 @@ export default function Treatment() {
                 attendedById: 0,
                 followUp: followUpData.followUpType ? String(followUpData.followUpType).charAt(0) : 'N', // First character of followUpType or 'N'
                 followUpFlag: formData.visitType.followUp,
-                currentComplaint: totalComplaintsString, // Use concatenated string instead of comma-separated IDs
+                currentComplaint: totalComplaintsString.slice(0, 1000), // Truncate to match DB current_complaints VARCHAR(1000)
                 visitCommentsField: formData.visitComments,
 
                 // Clinical fields
@@ -8005,8 +8005,6 @@ export default function Treatment() {
                                                 display: 'flex',
                                                 alignItems: 'center',
                                                 justifyContent: 'space-between',
-                                                height: '38px',
-                                                padding: '4px 8px',
                                                 height: '38px',
                                                 padding: '4px 8px',
                                                 border: investigationsSelectionError ? '2px solid #d32f2f' : '2px solid #B7B7B7',
