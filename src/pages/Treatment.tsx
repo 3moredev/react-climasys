@@ -189,6 +189,7 @@ interface TreatmentData {
     referralCode?: string;
     dateOfBirth?: string;
     inPerson?: boolean;
+    addendum?: string;
 }
 
 
@@ -311,6 +312,7 @@ export default function Treatment() {
     const [remarkCommentsError, setRemarkCommentsError] = useState<string | null>(null);
     const remarkCommentsErrorTimerRef = useRef<any>(null);
     const [prescriptionError, setPrescriptionError] = useState<string | null>(null);
+    const [masterPrescriptionLabels, setMasterPrescriptionLabels] = useState<Set<string>>(new Set());
     const prescriptionErrorTimerRef = useRef<any>(null);
     const [complaintsSelectionError, setComplaintsSelectionError] = useState<string | null>(null);
     const [diagnosesSelectionError, setDiagnosesSelectionError] = useState<string | null>(null);
@@ -1243,9 +1245,12 @@ export default function Treatment() {
             try {
                 const activePrescriptions = await prescriptionDetailsService.getActivePrescriptionsForDoctor(doctorId, clinicId);
                 if (cancelled) return;
+
+                const allLabels = activePrescriptions.map((p) => prescriptionDetailsService.toSearchLabel(p));
+                setMasterPrescriptionLabels(new Set(allLabels));
+
                 const termLower = term.toLowerCase();
-                const matchingLabels = activePrescriptions
-                    .map((p) => prescriptionDetailsService.toSearchLabel(p))
+                const matchingLabels = allLabels
                     .filter((label) => label && label.toLowerCase().includes(termLower));
                 const unique = Array.from(new Set(matchingLabels));
                 setRxSuggestions(unique);
@@ -5041,6 +5046,15 @@ export default function Treatment() {
         const parts = raw.split('|').map(p => p.trim()).filter(p => p.length > 0);
         const name = parts[0] || raw;
 
+        // Validation against master list (case-insensitive check)
+        const nameLower = name.toLowerCase().trim();
+        const isValid = Array.from(masterPrescriptionLabels).some(label => label.toLowerCase().trim() === nameLower);
+
+        if (!isValid) {
+            setPrescriptionError('No Prescription found');
+            return;
+        }
+
         // Check if already added (case-insensitive match on prescription name)
         const alreadyExists = prescriptionRows.some(r => r.prescription.toLowerCase().trim() === name.toLowerCase().trim());
         if (alreadyExists) {
@@ -7538,32 +7552,29 @@ export default function Treatment() {
                                                     height: '38px',
                                                     borderRadius: '6px',
                                                     fontSize: '13px',
-                                                    backgroundColor: isFormDisabled ? '#f5f5f5' : '#ffffff'
-                                                },
-
-                                                /* Default border */
-                                                '& .MuiOutlinedInput-root fieldset': {
-                                                    borderColor: '#B7B7B7',
-                                                    borderWidth: '2px'
-                                                },
-
-                                                /* Hover border */
-                                                '& .MuiOutlinedInput-root:hover fieldset': {
-                                                    borderColor: isFormDisabled ? '#B7B7B7' : '#1E88E5',
-                                                    borderWidth: '2px'
-                                                },
-
-                                                /* Focus border */
-                                                '& .MuiOutlinedInput-root.Mui-focused fieldset': {
-                                                    borderColor: '#1E88E5',
-                                                    borderWidth: '2px'
+                                                    backgroundColor: isFormDisabled ? '#f5f5f5' : '#ffffff',
+                                                    '& fieldset': {
+                                                        borderColor: '#B7B7B7',
+                                                        borderWidth: '2px'
+                                                    },
+                                                    '&:hover fieldset': {
+                                                        borderColor: isFormDisabled ? '#B7B7B7' : '#1E88E5',
+                                                        borderWidth: '2px'
+                                                    },
+                                                    '&.Mui-focused fieldset': {
+                                                        borderColor: '#1E88E5',
+                                                        borderWidth: '2px'
+                                                    }
                                                 },
                                                 '& .MuiInputBase-input': {
                                                     color: isFormDisabled ? '#666' : '#333',
                                                     cursor: isFormDisabled ? 'not-allowed' : 'text'
+                                                },
+                                                '& .MuiFormHelperText-root': {
+                                                    color: prescriptionError === 'No Prescription found' ? 'gray !important' : 'inherit'
                                                 }
                                             }}
-                                            error={!!prescriptionError}
+                                            error={!!prescriptionError && prescriptionError !== 'No Prescription found'}
                                             helperText={prescriptionError}
                                         />
                                         {isRxOpen && rxSuggestions.length > 0 && (
@@ -7586,6 +7597,7 @@ export default function Treatment() {
                                                         key={index}
                                                         onClick={() => {
                                                             setPrescriptionInput(suggestion);
+                                                            setPrescriptionError(null);
                                                             setIsRxOpen(false);
                                                         }}
                                                         style={{
