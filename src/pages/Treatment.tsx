@@ -777,7 +777,7 @@ export default function Treatment() {
             setOpeningDocumentId(docId);
             const { blob, filename } = await DocumentService.downloadDocumentFile(docId);
             const objectUrl = window.URL.createObjectURL(blob);
-            window.open(objectUrl, '_self');
+            window.open(objectUrl, '_blank');
             // Note: We don't revoke the URL immediately as the new tab needs it
             // The browser will clean it up when the tab is closed
         } catch (e) {
