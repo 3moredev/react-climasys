@@ -3355,7 +3355,11 @@ export default function AppointmentTable() {
                                             <div className="appointment-card">
                                                 <div className="card-header">
                                                     <div className="d-flex align-items-center" style={{ gap: '8px' }}>
-                                                        <span className={`d-inline-block rounded-circle ${((appointment as any).statusColorPending || appointment.statusColor) === 'bg-orange-custom' ? '' : ((appointment as any).statusColorPending || appointment.statusColor)}`} style={{ width: '10px', height: '10px', backgroundColor: ((appointment as any).statusColorPending || appointment.statusColor) === 'bg-orange-custom' ? '#FF9800' : undefined }}></span>
+                                                        <span
+                                                            title={appointment.status || ""}
+                                                            className={`d-inline-block rounded-circle ${((appointment as any).statusColorPending || appointment.statusColor) === 'bg-orange-custom' ? '' : ((appointment as any).statusColorPending || appointment.statusColor)}`}
+                                                            style={{ width: '10px', height: '10px', backgroundColor: ((appointment as any).statusColorPending || appointment.statusColor) === 'bg-orange-custom' ? '#FF9800' : undefined }}
+                                                        ></span>
                                                         <a
                                                             href="#"
                                                             onClick={(e) => {
@@ -5500,7 +5504,11 @@ export default function AppointmentTable() {
                                         <div className="appointment-card">
                                             <div className="card-header">
                                                 <div className="d-flex align-items-center" style={{ gap: '8px' }}>
-                                                    <span className={`d-inline-block rounded-circle ${appointment.statusColor === 'bg-orange-custom' ? '' : appointment.statusColor}`} style={{ width: '10px', height: '10px', backgroundColor: appointment.statusColor === 'bg-orange-custom' ? '#FF9800' : undefined }}></span>
+                                                    <span
+                                                        title={appointment.status || ""}
+                                                        className={`d-inline-block rounded-circle ${appointment.statusColor === 'bg-orange-custom' ? '' : appointment.statusColor}`}
+                                                        style={{ width: '10px', height: '10px', backgroundColor: appointment.statusColor === 'bg-orange-custom' ? '#FF9800' : undefined }}
+                                                    ></span>
                                                     <a
                                                         href="#"
                                                         onClick={(e) => {
