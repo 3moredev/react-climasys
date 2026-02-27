@@ -26,6 +26,7 @@ export interface PatientTrendItem {
   tpr: string | null
   importantFindings: string | null
   additionalComments: string | null
+  symptomComment: string | null
   systemic: string | null
   odeama: string | null
   pallor: string | null
@@ -46,6 +47,7 @@ export interface PatientTrendItem {
   preHeightInCms?: string | null
   preImportantFindings?: string | null
   preAdditionalComments?: string | null
+  preSymptomComment?: string | null
   prePallor?: string | null
   preGc?: string | null
 }
