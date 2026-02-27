@@ -5048,7 +5048,10 @@ export default function Treatment() {
 
         // Validation against master list (case-insensitive check)
         const nameLower = name.toLowerCase().trim();
-        const isValid = Array.from(masterPrescriptionLabels).some(label => label.toLowerCase().trim() === nameLower);
+        const isValid = Array.from(masterPrescriptionLabels).some(label => {
+            const labelMain = label.split('|')[0].toLowerCase().trim();
+            return labelMain === nameLower;
+        });
 
         if (!isValid) {
             setPrescriptionError('No Prescription found');
