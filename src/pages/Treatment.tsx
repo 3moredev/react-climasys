@@ -2761,36 +2761,50 @@ export default function Treatment() {
             setComplaintsSelectionError('Please select at least one complaint');
             return;
         }
+
         // Check if all selected are already added
-        const existingValues = new Set(complaintsRows.map(r => r.value));
-        const hasNewItems = selectedComplaints.some(val => !existingValues.has(val));
-        if (!hasNewItems) {
+        const existingValues = new Set(complaintsRows.map(r => r.value?.toLowerCase().trim()).filter(Boolean));
+        const existingLabels = new Set(complaintsRows.map(r => r.label?.toLowerCase().trim()).filter(Boolean));
+
+        const allAlreadyAdded = selectedComplaints.every(val => {
+            const opt = complaintsOptions.find(o => o.value === val);
+            const label = opt?.label || val;
+            const normalizedValue = val?.toLowerCase().trim() || '';
+            const normalizedLabel = label?.toLowerCase().trim() || '';
+            return existingValues.has(normalizedValue) || existingLabels.has(normalizedLabel);
+        });
+
+        if (allAlreadyAdded) {
             setComplaintsSelectionError('Selected complaints are already added');
             return;
         }
+
         setComplaintsSelectionError(null);
         setComplaintsRows(prev => {
-            const existingVals = new Set(prev.map(r => r.value));
+            const existingVals = new Set(prev.map(r => r.value?.toLowerCase().trim()).filter(Boolean));
+            const existingLabs = new Set(prev.map(r => r.label?.toLowerCase().trim()).filter(Boolean));
             const newRows: ComplaintRow[] = [];
+
             selectedComplaints.forEach(val => {
-                if (!existingVals.has(val)) {
-                    const opt = complaintsOptions.find(o => o.value === val);
-                    if (opt) {
-                        newRows.push({
-                            id: `${val}`,
-                            value: val,
-                            label: opt.label,
-                            comment: '',
-                            priority: opt.priority ?? opt.priority_value ?? 999
-                        });
-                    }
+                const opt = complaintsOptions.find(o => o.value === val);
+                const label = opt?.label || val;
+                const normalizedValue = val?.toLowerCase().trim() || '';
+                const normalizedLabel = label?.toLowerCase().trim() || '';
+
+                if (!existingVals.has(normalizedValue) && !existingLabs.has(normalizedLabel)) {
+                    newRows.push({
+                        id: Date.now().toString() + Math.random(),
+                        value: val,
+                        label: label,
+                        comment: '',
+                        priority: opt?.priority ?? opt?.priority_value ?? 999
+                    });
                 }
             });
+
             const next = [...prev, ...newRows];
-            // Sort by priority (lower priority number = higher priority)
             return next.sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999));
         });
-        // Keep selectedComplaints intact so clicking Add again shows "already added" instead of "please select"
     };
 
     const handleAddCustomComplaint = () => {
@@ -6097,7 +6111,12 @@ export default function Treatment() {
                                                             {!complaintsLoading && !complaintsError && filteredComplaints.map((opt, index) => {
                                                                 const checked = selectedComplaints.includes(opt.value);
                                                                 // Check if this complaint is already added to the table
-                                                                const isAdded = complaintsRows.some(row => row.value === opt.value);
+                                                                const normalizedValue = opt.value?.toLowerCase().trim() || '';
+                                                                const normalizedLabel = opt.label?.toLowerCase().trim() || '';
+                                                                const isAdded = complaintsRows.some(row => 
+                                                                    (row.value && row.value.toLowerCase().trim() === normalizedValue) ||
+                                                                    (row.label && row.label.toLowerCase().trim() === normalizedLabel)
+                                                                );
                                                                 const isFirstUnselected = !checked && index > 0 && selectedComplaints.includes(filteredComplaints[index - 1].value);
 
                                                                 return (
