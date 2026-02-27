@@ -57,7 +57,13 @@ export const prescriptionDetailsService = {
    * Combines brandName / catsubDescription / medicineName into a single string.
    */
   toSearchLabel(p: PrescriptionTemplate): string {
-    return (p.brandName || p.catsubDescription || p.medicineName || '').trim();
+    const name = (p.brandName || p.catsubDescription || p.medicineName || '').trim();
+    const composition = (p.medicineName || '').trim();
+    const dose = `${p.morning ?? 0}-${p.afternoon ?? 0}-${p.night ?? 0}`;
+    const days = p.noOfDays ?? '';
+    const instruction = p.instruction || '';
+    
+    return `${name} | ${composition} | ${dose} | ${days} | ${instruction}`;
   },
 
   /**
