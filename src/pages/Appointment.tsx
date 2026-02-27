@@ -2410,7 +2410,9 @@ export default function AppointmentTable() {
             margin-bottom: 6px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.10);
             position: relative;
-            min-height:stretch;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
         }
         .appointment-card:before {
             content: '';
@@ -2434,7 +2436,7 @@ export default function AppointmentTable() {
         }
         .price-text { font-weight: 700; color: #2E7D32; font-family: 'Roboto', sans-serif; }
         .subtitle { color: #6b7280; margin-bottom: 8px; font-size: 0.85rem; font-family: 'Roboto', sans-serif; }
-        .card-details { display: grid; grid-template-columns: 3fr 1fr; gap: 6px 12px; margin-bottom: 10px; }
+        .card-details { display: grid; grid-template-columns: 3fr 1fr; gap: 6px 12px; margin-bottom: 10px; flex-grow: 1; }
         .kv { display: flex; gap: 6px; align-items: center; min-width: 0; }
         .kv .k { color: #607D8B; font-size: 0.76rem; }
         .kv .v { color: #111827; font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -3400,6 +3402,7 @@ export default function AppointmentTable() {
                                                     <div className="kv"><span className="k">Contact:</span><span className="v">{appointment.contact}</span></div>
                                                     <div className="kv"><span className="k">Age:</span><span className="v">{getAgeString(appointment.dob)}</span></div>
                                                     <div className="kv"><span className="k">Provider:</span><span className="v">{formatProviderLabel(appointment.provider)}</span></div>
+                                                    <div className="kv"><span className="k">Gender:</span><span className="v">{appointment.gender}</span></div>
                                                     <div className="kv">
                                                         <span className="k">Last Visit:</span>
                                                         <span className="v">
@@ -3436,7 +3439,6 @@ export default function AppointmentTable() {
                                                             })()}
                                                         </span>
                                                     </div>
-                                                    <div className="kv"><span className="k">Gender:</span><span className="v">{appointment.gender}</span></div>
                                                     <div className="kv"><span className="k">Time:</span><span className="v">{extractTime(appointment.time)}</span></div>
                                                 </div>
                                                 <div className="d-flex align-items-center" style={{ gap: '8px' }}>
@@ -3511,13 +3513,13 @@ export default function AppointmentTable() {
                                                         title={(() => {
                                                             const statusId = mapStatusLabelToId(appointment.status);
                                                             const normalizedStatus = normalizeStatusLabel(appointment.status);
-                                                            const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'PRESCRIPTION/COLLECTION' || statusId === 5;
+                                                            const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'PRESCRIPTION/COLLECTION' || statusId === 5;
                                                             return isEnabled ? "Treatment" : "Treatment";
                                                         })()}
                                                         onClick={() => {
                                                             const statusId = mapStatusLabelToId(appointment.status);
                                                             const normalizedStatus = normalizeStatusLabel(appointment.status);
-                                                            const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'PRESCRIPTION/COLLECTION' || statusId === 5;
+                                                            const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'PRESCRIPTION/COLLECTION' || statusId === 5;
                                                             if (isEnabled) {
                                                                 // Treatment button functionality - can be implemented as needed
                                                                 console.log('Treatment clicked for patient:', appointment.patientId);
@@ -3545,31 +3547,31 @@ export default function AppointmentTable() {
                                                             cursor: (() => {
                                                                 const statusId = mapStatusLabelToId(appointment.status);
                                                                 const normalizedStatus = normalizeStatusLabel(appointment.status);
-                                                                const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'PRESCRIPTION/COLLECTION' || statusId === 5;
+                                                                const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'PRESCRIPTION/COLLECTION' || statusId === 5;
                                                                 return isEnabled ? 'pointer' : 'not-allowed';
                                                             })(),
                                                             backgroundColor: (() => {
                                                                 const statusId = mapStatusLabelToId(appointment.status);
                                                                 const normalizedStatus = normalizeStatusLabel(appointment.status);
-                                                                const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'PRESCRIPTION/COLLECTION' || statusId === 5;
+                                                                const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'PRESCRIPTION/COLLECTION' || statusId === 5;
                                                                 return isEnabled ? '#ECEFF1' : '#F5F5F5';
                                                             })(),
                                                             color: (() => {
                                                                 const statusId = mapStatusLabelToId(appointment.status);
                                                                 const normalizedStatus = normalizeStatusLabel(appointment.status);
-                                                                const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'PRESCRIPTION/COLLECTION' || statusId === 5;
+                                                                const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'PRESCRIPTION/COLLECTION' || statusId === 5;
                                                                 return isEnabled ? '#607D8B' : '#BDBDBD';
                                                             })(),
                                                             border: (() => {
                                                                 const statusId = mapStatusLabelToId(appointment.status);
                                                                 const normalizedStatus = normalizeStatusLabel(appointment.status);
-                                                                const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'PRESCRIPTION/COLLECTION' || statusId === 5;
+                                                                const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'PRESCRIPTION/COLLECTION' || statusId === 5;
                                                                 return isEnabled ? '1px solid #CFD8DC' : '1px solid #E0E0E0';
                                                             })(),
                                                             opacity: (() => {
                                                                 const statusId = mapStatusLabelToId(appointment.status);
                                                                 const normalizedStatus = normalizeStatusLabel(appointment.status);
-                                                                const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'PRESCRIPTION/COLLECTION' || statusId === 5;
+                                                                const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'PRESCRIPTION/COLLECTION' || statusId === 5;
                                                                 return isEnabled ? 1 : 0.5;
                                                             })()
                                                         }}
@@ -3583,7 +3585,7 @@ export default function AppointmentTable() {
                                                                 filter: (() => {
                                                                     const statusId = mapStatusLabelToId(appointment.status);
                                                                     const normalizedStatus = normalizeStatusLabel(appointment.status);
-                                                                    const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'PRESCRIPTION/COLLECTION' || statusId === 5;
+                                                                    const isEnabled = normalizedStatus === 'WITH DOCTOR' || normalizedStatus === 'CONSULT ON CALL' || normalizedStatus === 'SAVE' || normalizedStatus === 'COLLECTION' || normalizedStatus === 'PRESCRIPTION/COLLECTION' || statusId === 5;
                                                                     return isEnabled ? 'brightness(0)' : 'grayscale(100%) brightness(0.5)';
                                                                 })()
                                                             }}
