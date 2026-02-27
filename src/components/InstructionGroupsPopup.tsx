@@ -135,56 +135,39 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
 
   // Sync initialSelectedGroups when popup opens (these are saved instructions from master-lists API)
   useEffect(() => {
-    console.log('=== POPUP: Sync useEffect triggered ===');
-    console.log('isOpen:', isOpen);
-    console.log('initialSelectedGroups:', initialSelectedGroups);
-    console.log('initialSelectedGroups length:', initialSelectedGroups?.length || 0);
-    console.log('instructionGroups length:', instructionGroups.length);
-    console.log('Current selectedGroups state:', selectedGroups);
-
     if (isOpen) {
-      // Only reset snackbar and errors when the popup is FIRST opened
+      // Only sync data from parent when the popup is FIRST opened
       if (!prevOpenRef.current) {
         setShowSnackbar(false);
         setErrorMessage('');
         setErrors({ instructionGroups: '', searchTerm: '' });
+
+        if (initialSelectedGroups && initialSelectedGroups.length > 0) {
+          console.log('✅ POPUP: Initializing selectedGroups from parent');
+          setSelectedGroups(initialSelectedGroups);
+        } else {
+          setSelectedGroups([]);
+        }
       }
 
-      if (initialSelectedGroups && initialSelectedGroups.length > 0) {
-        // Display saved instructions from master-lists API in the tables
-        console.log('✅ POPUP: Setting selectedGroups from initialSelectedGroups');
-        console.log('initialSelectedGroups to set:', JSON.stringify(initialSelectedGroups, null, 2));
-        setSelectedGroups(initialSelectedGroups);
-        console.log('✅ POPUP: selectedGroups state has been SET');
-
-        // Sync dropdown selection with loaded instruction groups if possible
+      // Sync dropdown selection with loaded instruction groups whenever they change
+      // This part can run multiple times as instructionGroups might load asynchronously
+      if (instructionGroups.length > 0) {
         const normalize = (value: string) => value.trim().toUpperCase();
         const matchedIds = instructionGroups
           .filter(group => {
             const normalizedGroupName = normalize(group.name || '');
-            return initialSelectedGroups.some(selected =>
+            return selectedGroups.some(selected =>
               normalize(selected.name || '') === normalizedGroupName
             );
           })
           .map(group => group.id);
-        console.log('Matched dropdown IDs:', matchedIds);
-        if (matchedIds.length > 0) {
-          console.log('✅ POPUP: Set selectedGroupIds to matched IDs');
-          setSelectedGroupIds(matchedIds);
-        } else {
-          // Fallback: clear dropdown selection
-          console.log('⚠️ POPUP: No matching dropdown groups found, cleared selectedGroupIds');
-          setSelectedGroupIds([]);
-        }
-      } else {
-        // No saved instructions, clear everything
-        console.warn('⚠️ POPUP: initialSelectedGroups is empty, clearing selectedGroups');
-        setSelectedGroups([]);
-        setSelectedGroupIds([]);
+        
+        setSelectedGroupIds(matchedIds);
       }
     }
     prevOpenRef.current = isOpen;
-  }, [isOpen, initialSelectedGroups, instructionGroups]);
+  }, [isOpen, initialSelectedGroups, instructionGroups, selectedGroups.length]);
 
   const filteredGroups = instructionGroups.filter(group =>
     group.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -255,17 +238,10 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
     setSelectedGroupIds([]);
     setIsGroupsOpen(false);
     setErrors(prev => ({ ...prev, instructionGroups: '' })); // Clear error on success
-
-    if (onChange) onChange(updatedGroups);
   };
   const handleRemoveGroup = (groupId: string) => {
     const updatedGroups = selectedGroups.filter(g => g.id !== groupId);
     setSelectedGroups(updatedGroups);
-
-    // Notify parent component of the change
-    if (onChange) {
-      onChange(updatedGroups);
-    }
   };
 
   const handleSubmit = () => {
@@ -276,11 +252,6 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
     );
 
     const finalGroups = [...selectedGroups, ...pendingGroups];
-
-    if (finalGroups.length === 0) {
-      setErrors(prev => ({ ...prev, instructionGroups: 'Please select at least one group' }));
-      return;
-    }
 
     // Update state and notify parent
     setSelectedGroups(finalGroups);
@@ -302,10 +273,6 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
     setSelectedGroupIds([]);
     setSearchTerm('');
     setErrors({ instructionGroups: '', searchTerm: '' }); // Clear errors on reset
-
-    if (onChange) {
-      onChange([]);
-    }
   };
 
   if (!isOpen) return null;
@@ -332,6 +299,8 @@ const InstructionGroupsPopup: React.FC<InstructionGroupsPopupProps> = ({
           boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
           width: '95%',
           maxWidth: '800px',
+          height: 'auto',
+          minHeight: '400px',
           maxHeight: '89vh',
           overflow: 'hidden',
           display: 'flex',
