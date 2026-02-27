@@ -290,13 +290,19 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                     patched.rawVisit = initialData.rawVisit;
                 }
 
-                // ✅ Patch In Person dynamically from backend
+                // ✅ Patch Follow-Up dynamically from backend using Follow_Up_Flag
                 if (patched.rawVisit) {
-                    const inPersonFlag = patched.rawVisit.inPerson;
+                    const followUpFlag = patched.rawVisit.Follow_Up_Flag !== undefined ? patched.rawVisit.Follow_Up_Flag : patched.rawVisit.followUpFlag;
 
-                    if (inPersonFlag !== undefined && inPersonFlag !== null) {
-                        patched.inPerson = Boolean(inPersonFlag);
-                        console.log("Patched inPerson:", patched.inPerson);
+                    if (followUpFlag !== undefined && followUpFlag !== null) {
+                        // Handle string-based booleans from API
+                        if (typeof followUpFlag === 'string') {
+                            const lower = followUpFlag.toLowerCase().trim();
+                            patched.isFollowUp = !(lower === 'false' || lower === '0' || lower === 'no');
+                        } else {
+                            patched.isFollowUp = Boolean(followUpFlag);
+                        }
+                        console.log("Patched isFollowUp from Follow_Up_Flag:", patched.isFollowUp);
                     }
                 }
                 // Map prescriptions from API format to component format
@@ -1484,8 +1490,8 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                         }}>
                             Prescriptions
                         </h3>
-                        <div style={{ overflowX: 'auto' }}>
-                            <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #e0e0e0', tableLayout: 'fixed' }}>
+                        <div style={{ overflowX: 'auto', border: '1px solid #ccc', borderRadius: '4px' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
                                 <colgroup>
                                     <col style={{ width: '25%' }} />
                                     <col style={{ width: '10%' }} />
@@ -1496,12 +1502,12 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                 </colgroup>
                                 <thead>
                                     <tr>
-                                        <th style={{ textAlign: 'left', padding: '8px 10px', borderBottom: '1px solid #cfcfcf', borderRight: '1px solid #e0e0e0', color: '#666', fontWeight: 600, backgroundColor: '#f5f5f5' }}> Prescriptions</th>
-                                        <th style={{ textAlign: 'center', padding: '8px 10px', borderBottom: '1px solid #cfcfcf', borderRight: '1px solid #e0e0e0', color: '#666', fontWeight: 600, backgroundColor: '#f5f5f5' }}>B</th>
-                                        <th style={{ textAlign: 'center', padding: '8px 10px', borderBottom: '1px solid #cfcfcf', borderRight: '1px solid #e0e0e0', color: '#666', fontWeight: 600, backgroundColor: '#f5f5f5' }}>L</th>
-                                        <th style={{ textAlign: 'center', padding: '8px 10px', borderBottom: '1px solid #cfcfcf', borderRight: '1px solid #e0e0e0', color: '#666', fontWeight: 600, backgroundColor: '#f5f5f5' }}>D</th>
-                                        <th style={{ textAlign: 'center', padding: '8px 10px', borderBottom: '1px solid #cfcfcf', borderRight: '1px solid #e0e0e0', color: '#666', fontWeight: 600, backgroundColor: '#f5f5f5' }}>Days</th>
-                                        <th style={{ textAlign: 'left', padding: '8px 10px', borderBottom: '1px solid #cfcfcf', color: '#666', fontWeight: 600, backgroundColor: '#f5f5f5' }}>Instructions</th>
+                                        <th style={{ textAlign: 'left', padding: '10px', borderBottom: '2px solid #ccc', borderRight: '1px solid #ccc', color: '#333', fontWeight: 700, backgroundColor: '#f0f0f0' }}> Prescriptions</th>
+                                        <th style={{ textAlign: 'center', padding: '10px', borderBottom: '2px solid #ccc', borderRight: '1px solid #ccc', color: '#333', fontWeight: 700, backgroundColor: '#f0f0f0' }}>B</th>
+                                        <th style={{ textAlign: 'center', padding: '10px', borderBottom: '2px solid #ccc', borderRight: '1px solid #ccc', color: '#333', fontWeight: 700, backgroundColor: '#f0f0f0' }}>L</th>
+                                        <th style={{ textAlign: 'center', padding: '10px', borderBottom: '2px solid #ccc', borderRight: '1px solid #ccc', color: '#333', fontWeight: 700, backgroundColor: '#f0f0f0' }}>D</th>
+                                        <th style={{ textAlign: 'center', padding: '10px', borderBottom: '2px solid #ccc', borderRight: '1px solid #ccc', color: '#333', fontWeight: 700, backgroundColor: '#f0f0f0' }}>Days</th>
+                                        <th style={{ textAlign: 'left', padding: '10px', borderBottom: '2px solid #ccc', color: '#333', fontWeight: 700, backgroundColor: '#f0f0f0' }}>Instructions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -1552,22 +1558,22 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
 
                                             return (
                                                 <tr key={index}>
-                                                    <td style={{ height: '40px', padding: '10px', lineHeight: '20px', borderBottom: '1px solid #eaeaea', borderRight: '1px solid #e0e0e0', verticalAlign: 'middle', whiteSpace: 'normal', wordBreak: 'break-word', overflow: 'hidden' }}>
+                                                    <td style={{ height: '40px', padding: '10px', lineHeight: '20px', borderBottom: '1px solid #ccc', borderRight: '1px solid #ccc', verticalAlign: 'middle', whiteSpace: 'normal', wordBreak: 'break-word', overflow: 'hidden' }}>
                                                         {medicineDisplay || '-'}
                                                     </td>
-                                                    <td style={{ textAlign: 'center', height: '40px', padding: '10px', lineHeight: '20px', borderBottom: '1px solid #eaeaea', borderRight: '1px solid #e0e0e0', verticalAlign: 'middle', whiteSpace: 'normal', wordBreak: 'break-word', overflow: 'hidden' }}>
+                                                    <td style={{ textAlign: 'center', height: '40px', padding: '10px', lineHeight: '20px', borderBottom: '1px solid #ccc', borderRight: '1px solid #ccc', verticalAlign: 'middle', whiteSpace: 'normal', wordBreak: 'break-word', overflow: 'hidden' }}>
                                                         {bDisplay || '-'}
                                                     </td>
-                                                    <td style={{ textAlign: 'center', height: '40px', padding: '10px', lineHeight: '20px', borderBottom: '1px solid #eaeaea', borderRight: '1px solid #e0e0e0', verticalAlign: 'middle', whiteSpace: 'normal', wordBreak: 'break-word', overflow: 'hidden' }}>
+                                                    <td style={{ textAlign: 'center', height: '40px', padding: '10px', lineHeight: '20px', borderBottom: '1px solid #ccc', borderRight: '1px solid #ccc', verticalAlign: 'middle', whiteSpace: 'normal', wordBreak: 'break-word', overflow: 'hidden' }}>
                                                         {lDisplay || '-'}
                                                     </td>
-                                                    <td style={{ textAlign: 'center', height: '40px', padding: '10px', lineHeight: '20px', borderBottom: '1px solid #eaeaea', borderRight: '1px solid #e0e0e0', verticalAlign: 'middle', whiteSpace: 'normal', wordBreak: 'break-word', overflow: 'hidden' }}>
+                                                    <td style={{ textAlign: 'center', height: '40px', padding: '10px', lineHeight: '20px', borderBottom: '1px solid #ccc', borderRight: '1px solid #ccc', verticalAlign: 'middle', whiteSpace: 'normal', wordBreak: 'break-word', overflow: 'hidden' }}>
                                                         {dDisplay || '-'}
                                                     </td>
-                                                    <td style={{ textAlign: 'center', height: '40px', padding: '10px', lineHeight: '20px', borderBottom: '1px solid #eaeaea', borderRight: '1px solid #e0e0e0', verticalAlign: 'middle', whiteSpace: 'normal', wordBreak: 'break-word', overflow: 'hidden' }}>
+                                                    <td style={{ textAlign: 'center', height: '40px', padding: '10px', lineHeight: '20px', borderBottom: '1px solid #ccc', borderRight: '1px solid #ccc', verticalAlign: 'middle', whiteSpace: 'normal', wordBreak: 'break-word', overflow: 'hidden' }}>
                                                         {daysDisplay || '-'}
                                                     </td>
-                                                    <td style={{ height: '40px', padding: '10px', lineHeight: '20px', borderBottom: '1px solid #eaeaea', verticalAlign: 'middle', whiteSpace: 'normal', wordBreak: 'break-word', overflow: 'hidden' }}>
+                                                    <td style={{ height: '40px', padding: '10px', lineHeight: '20px', borderBottom: '1px solid #ccc', verticalAlign: 'middle', whiteSpace: 'normal', wordBreak: 'break-word', overflow: 'hidden' }}>
                                                         {instructionsDisplay || '-'}
                                                     </td>
                                                 </tr>
