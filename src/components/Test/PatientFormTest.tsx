@@ -11,6 +11,9 @@ type PatientFormTestProps = {
 };
 // Default form data extracted so it can be merged with initialData
 type Prescription = {
+    d: string;
+    l: string;
+    b: string;
     medicine: string;
     dosage: string;
     instructions: string;
@@ -48,6 +51,7 @@ type PatientFormData = {
     tobacco: boolean;
     alcohol: boolean;
     inPerson: boolean;
+    isFollowUp: boolean;
 
     // Medical Details
     allergy: string;
@@ -124,6 +128,7 @@ const defaultFormData: PatientFormData = {
     tobacco: false,
     alcohol: false,
     inPerson: true,
+    isFollowUp: false,
 
     // Medical Details
     allergy: '',
@@ -189,6 +194,7 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
         console.log('Provider field:', formData.provider);
         console.log('Visit dates:', visitDates);
         console.log('Current visit index:', currentVisitIndex);
+        console.log('isFollowUp value:', formData.isFollowUp);
 
         // Log raw visit data if available
         if (formData.rawVisit) {
@@ -284,6 +290,15 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                     patched.rawVisit = initialData.rawVisit;
                 }
 
+                // ✅ Patch In Person dynamically from backend
+                if (patched.rawVisit) {
+                    const inPersonFlag = patched.rawVisit.inPerson;
+
+                    if (inPersonFlag !== undefined && inPersonFlag !== null) {
+                        patched.inPerson = Boolean(inPersonFlag);
+                        console.log("Patched inPerson:", patched.inPerson);
+                    }
+                }
                 // Map prescriptions from API format to component format
                 // Handle prescriptions from initialData or rawVisit.Prescriptions
                 // Priority: Use visit_prescription_overwrite table fields (brand_name, morning-afternoon-night, no_of_days, instruction)
@@ -297,10 +312,11 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                     };
                     const toStr = (v: any) => (v === undefined || v === null ? '' : String(v));
 
-                    // Medicine column: Use brand_name from visit_prescription_overwrite (vp.brand_name)
-                    // Priority: brand_name > brandName > medicineName > other fallbacks
                     let med = '';
-                    if (p.brand_name !== undefined && p.brand_name !== null && String(p.brand_name).trim() !== '') {
+                    if (p.prescription !== undefined && p.prescription !== null && String(p.prescription).trim() !== '') {
+                        med = String(p.prescription).trim();
+                        console.log(`Prescription[${index ?? '?'}]: Using prescription (visit_prescription): "${med}"`);
+                    } else if (p.brand_name !== undefined && p.brand_name !== null && String(p.brand_name).trim() !== '') {
                         med = String(p.brand_name).trim();
                         console.log(`Prescription[${index ?? '?'}]: Using brand_name (visit_prescription): "${med}"`);
                     } else if (p.brandName !== undefined && p.brandName !== null && String(p.brandName).trim() !== '') {
@@ -346,8 +362,13 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                     }
 
                     const mapped = {
+                        prescription: med,
                         medicine: med,
                         dosage: doseCombined,
+                        b: m !== '0' ? m : '',
+                        l: a !== '0' ? a : '',
+                        d: n !== '0' ? n : '',
+                        days: noOfdays !== '0' ? noOfdays : '',
                         instructions: instr
                     };
 
@@ -377,7 +398,7 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                         const rawPrescription = patched.rawVisit.Prescriptions[idx];
                                         hasBrandName = rawPrescription?.brandName && String(rawPrescription.brandName).trim() !== '';
                                     }
-                                    const hasDosage = p.dosage && String(p.dosage).trim() !== '';
+                                    const hasDosage = (p.dosage && String(p.dosage).trim() !== '') || (p.b && String(p.b).trim() !== '') || (p.l && String(p.l).trim() !== '') || (p.d && String(p.d).trim() !== '');
                                     return hasMedicine || hasBrandName || hasDosage;
                                 })
                                 .map((p: any, idx: number) => {
@@ -391,8 +412,13 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                         }
                                     }
                                     return {
+                                        prescription: medicineValue,
                                         medicine: medicineValue,
                                         dosage: String(p.dosage || '').trim(),
+                                        b: String(p.b || '').trim(),
+                                        l: String(p.l || '').trim(),
+                                        d: String(p.d || '').trim(),
+                                        days: String(p.days || '').trim(),
                                         instructions: (p.instructions === '0' || p.instructions === '' ? '' : String(p.instructions || '').trim())
                                     };
                                 });
@@ -517,10 +543,20 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                     }
 
                     // Patch patient_visit.follow_up into followUp field
-                    const followUpFromVisit = patched.rawVisit?.follow_up || patched.rawVisit?.followUp || patched.rawVisit?.Follow_Up || '';
-                    if (followUpFromVisit && String(followUpFromVisit).trim() !== '') {
-                        patched.followUp = String(followUpFromVisit).trim();
-                        console.log('PatientFormTest: Patched followUp from patient_visit.follow_up:', patched.followUp);
+                    // ✅ Patch Follow-Up checkbox dynamically from Follow_Up_Flag
+                    if (patched.rawVisit) {
+                        const followUpFlag =
+                            patched.rawVisit.Follow_Up_Flag ??
+                            patched.rawVisit.follow_up_flag ??
+                            patched.rawVisit.followUpFlag;
+
+                        if (followUpFlag !== undefined && followUpFlag !== null) {
+                            patched.isFollowUp = Boolean(followUpFlag);
+                            console.log(
+                                'PatientFormTest: Patched isFollowUp from Follow_Up_Flag:',
+                                patched.isFollowUp
+                            );
+                        }
                     }
 
                     // Patch rawVisit.Current_Medicines into currentMedicines field
@@ -1036,6 +1072,20 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                 }}
                             />
                         </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <label style={{ color: '#212121', fontSize: '0.9rem', fontWeight: 'bold', fontFamily: "'Roboto', sans-serif" }}>Follow-Up</label>
+                            <input
+                                type="checkbox"
+                                checked={formData.isFollowUp}
+                                onChange={() => handleCheckboxChange('isFollowUp')}
+                                disabled={isReadOnly}
+                                style={{
+                                    width: '16px',
+                                    height: '16px',
+                                    accentColor: '#1E88E5'
+                                }}
+                            />
+                        </div>
                         {/* <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'nowrap' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                 <label style={{ color: '#212121', fontSize: '0.9rem', fontWeight: '500', fontFamily: "'Roboto', sans-serif" }}>Contact:</label>
@@ -1437,14 +1487,20 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                         <div style={{ overflowX: 'auto' }}>
                             <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #e0e0e0', tableLayout: 'fixed' }}>
                                 <colgroup>
-                                    <col style={{ width: '33.33%' }} />
-                                    <col style={{ width: '33.33%' }} />
-                                    <col style={{ width: '33.34%' }} />
+                                    <col style={{ width: '25%' }} />
+                                    <col style={{ width: '10%' }} />
+                                    <col style={{ width: '10%' }} />
+                                    <col style={{ width: '10%' }} />
+                                    <col style={{ width: '10%' }} />
+                                    <col style={{ width: '35%' }} />
                                 </colgroup>
                                 <thead>
                                     <tr>
-                                        <th style={{ textAlign: 'left', padding: '8px 10px', borderBottom: '1px solid #cfcfcf', borderRight: '1px solid #e0e0e0', color: '#666', fontWeight: 600, backgroundColor: '#f5f5f5' }}>Medicine</th>
-                                        <th style={{ textAlign: 'left', padding: '8px 10px', borderBottom: '1px solid #cfcfcf', borderRight: '1px solid #e0e0e0', color: '#666', fontWeight: 600, backgroundColor: '#f5f5f5' }}>Dosage</th>
+                                        <th style={{ textAlign: 'left', padding: '8px 10px', borderBottom: '1px solid #cfcfcf', borderRight: '1px solid #e0e0e0', color: '#666', fontWeight: 600, backgroundColor: '#f5f5f5' }}> Prescriptions</th>
+                                        <th style={{ textAlign: 'center', padding: '8px 10px', borderBottom: '1px solid #cfcfcf', borderRight: '1px solid #e0e0e0', color: '#666', fontWeight: 600, backgroundColor: '#f5f5f5' }}>B</th>
+                                        <th style={{ textAlign: 'center', padding: '8px 10px', borderBottom: '1px solid #cfcfcf', borderRight: '1px solid #e0e0e0', color: '#666', fontWeight: 600, backgroundColor: '#f5f5f5' }}>L</th>
+                                        <th style={{ textAlign: 'center', padding: '8px 10px', borderBottom: '1px solid #cfcfcf', borderRight: '1px solid #e0e0e0', color: '#666', fontWeight: 600, backgroundColor: '#f5f5f5' }}>D</th>
+                                        <th style={{ textAlign: 'center', padding: '8px 10px', borderBottom: '1px solid #cfcfcf', borderRight: '1px solid #e0e0e0', color: '#666', fontWeight: 600, backgroundColor: '#f5f5f5' }}>Days</th>
                                         <th style={{ textAlign: 'left', padding: '8px 10px', borderBottom: '1px solid #cfcfcf', color: '#666', fontWeight: 600, backgroundColor: '#f5f5f5' }}>Instructions</th>
                                     </tr>
                                 </thead>
@@ -1453,32 +1509,34 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                         formData.prescriptions.map((prescription, index) => {
                                             // Medicine: Use brand_name from visit_prescription_overwrite (vp.brand_name)
                                             // Fallback: if medicine is empty, try to get brand_name from rawVisit
-                                            let medicineDisplay = prescription.medicine || '';
+                                            let medicineDisplay = prescription.prescription || prescription.medicine || '';
                                             if (!medicineDisplay && formData.rawVisit?.Prescriptions?.[index]) {
                                                 const rawPrescription = formData.rawVisit.Prescriptions[index];
-                                                medicineDisplay = rawPrescription?.brand_name
+                                                medicineDisplay = rawPrescription?.prescription
+                                                    || rawPrescription?.brand_name
                                                     || rawPrescription?.brandName
                                                     || rawPrescription?.medicineName
                                                     || rawPrescription?.Medicine_Name
                                                     || '';
                                             }
 
-                                            // Dosage: Format as morning-afternoon-night (no_of_days) from visit_prescription_overwrite
-                                            // If dosage is empty, try to construct from rawVisit prescription data
-                                            let dosageDisplay = prescription.dosage || '';
-                                            if (!dosageDisplay && formData.rawVisit?.Prescriptions?.[index]) {
-                                                const rawPrescription = formData.rawVisit.Prescriptions[index];
-                                                const m = rawPrescription?.morning || rawPrescription?.Morning || '0';
-                                                const a = rawPrescription?.afternoon || rawPrescription?.Afternoon || '0';
-                                                const n = rawPrescription?.night || rawPrescription?.Night || '0';
-                                                const noOfdays = rawPrescription?.no_of_days || rawPrescription?.noOfDays || '';
+                                            // B-L-D and Days
+                                            let bDisplay = prescription.b || '';
+                                            let lDisplay = prescription.l || '';
+                                            let dDisplay = prescription.d || '';
+                                            let daysDisplay = prescription.days || '';
 
-                                                if (m !== '0' || a !== '0' || n !== '0') {
-                                                    dosageDisplay = `${m}-${a}-${n}`;
-                                                    if (noOfdays && noOfdays !== '0' && noOfdays !== '') {
-                                                        dosageDisplay += ` (${noOfdays})`;
-                                                    }
-                                                }
+                                            if ((!bDisplay && !lDisplay && !dDisplay && !daysDisplay) && formData.rawVisit?.Prescriptions?.[index]) {
+                                                const rawPrescription = formData.rawVisit.Prescriptions[index];
+                                                const m = rawPrescription?.morning || rawPrescription?.Morning || rawPrescription?.morningDose || rawPrescription?.M || rawPrescription?.morn || rawPrescription?.AM || '0';
+                                                const a = rawPrescription?.afternoon || rawPrescription?.Afternoon || rawPrescription?.afternoonDose || rawPrescription?.A || rawPrescription?.aft || rawPrescription?.PM || '0';
+                                                const n = rawPrescription?.night || rawPrescription?.Night || rawPrescription?.nightDose || rawPrescription?.N || rawPrescription?.eve || rawPrescription?.Evening || '0';
+                                                const noOfdays = rawPrescription?.no_of_days || rawPrescription?.noOfDays || rawPrescription?.NoOfDays || rawPrescription?.noOfdays || '';
+
+                                                bDisplay = m !== '0' ? m : '';
+                                                lDisplay = a !== '0' ? a : '';
+                                                dDisplay = n !== '0' ? n : '';
+                                                daysDisplay = noOfdays !== '0' ? noOfdays : '';
                                             }
 
                                             // Instructions: Use instruction from visit_prescription_overwrite (vp.instruction)
@@ -1497,8 +1555,17 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                                     <td style={{ height: '40px', padding: '10px', lineHeight: '20px', borderBottom: '1px solid #eaeaea', borderRight: '1px solid #e0e0e0', verticalAlign: 'middle', whiteSpace: 'normal', wordBreak: 'break-word', overflow: 'hidden' }}>
                                                         {medicineDisplay || '-'}
                                                     </td>
-                                                    <td style={{ height: '40px', padding: '10px', lineHeight: '20px', borderBottom: '1px solid #eaeaea', borderRight: '1px solid #e0e0e0', verticalAlign: 'middle', whiteSpace: 'normal', wordBreak: 'break-word', overflow: 'hidden' }}>
-                                                        {dosageDisplay || '-'}
+                                                    <td style={{ textAlign: 'center', height: '40px', padding: '10px', lineHeight: '20px', borderBottom: '1px solid #eaeaea', borderRight: '1px solid #e0e0e0', verticalAlign: 'middle', whiteSpace: 'normal', wordBreak: 'break-word', overflow: 'hidden' }}>
+                                                        {bDisplay || '-'}
+                                                    </td>
+                                                    <td style={{ textAlign: 'center', height: '40px', padding: '10px', lineHeight: '20px', borderBottom: '1px solid #eaeaea', borderRight: '1px solid #e0e0e0', verticalAlign: 'middle', whiteSpace: 'normal', wordBreak: 'break-word', overflow: 'hidden' }}>
+                                                        {lDisplay || '-'}
+                                                    </td>
+                                                    <td style={{ textAlign: 'center', height: '40px', padding: '10px', lineHeight: '20px', borderBottom: '1px solid #eaeaea', borderRight: '1px solid #e0e0e0', verticalAlign: 'middle', whiteSpace: 'normal', wordBreak: 'break-word', overflow: 'hidden' }}>
+                                                        {dDisplay || '-'}
+                                                    </td>
+                                                    <td style={{ textAlign: 'center', height: '40px', padding: '10px', lineHeight: '20px', borderBottom: '1px solid #eaeaea', borderRight: '1px solid #e0e0e0', verticalAlign: 'middle', whiteSpace: 'normal', wordBreak: 'break-word', overflow: 'hidden' }}>
+                                                        {daysDisplay || '-'}
                                                     </td>
                                                     <td style={{ height: '40px', padding: '10px', lineHeight: '20px', borderBottom: '1px solid #eaeaea', verticalAlign: 'middle', whiteSpace: 'normal', wordBreak: 'break-word', overflow: 'hidden' }}>
                                                         {instructionsDisplay || '-'}
@@ -1508,7 +1575,7 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                                         })
                                     ) : (
                                         <tr>
-                                            <td colSpan={3} style={{
+                                            <td colSpan={6} style={{
                                                 padding: '20px',
                                                 textAlign: 'center',
                                                 color: '#666',
