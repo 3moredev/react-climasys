@@ -25,13 +25,13 @@ interface VitalsTrendPopupProps {
     visitNumber?: number;
 }
 
-const VitalsTrendPopup: React.FC<VitalsTrendPopupProps> = ({ 
-    open, 
-    onClose, 
-    patientId, 
-    clinicId, 
+const VitalsTrendPopup: React.FC<VitalsTrendPopupProps> = ({
+    open,
+    onClose,
+    patientId,
+    clinicId,
     doctorId,
-    visitNumber 
+    visitNumber
 }) => {
     const [trendRows, setTrendRows] = useState<TrendRow[]>([]);
     const [loading, setLoading] = useState(false);
@@ -52,7 +52,7 @@ const VitalsTrendPopup: React.FC<VitalsTrendPopupProps> = ({
         try {
             setError(null);
             setLoading(true);
-            
+
             const shiftId = 1; // fallback if no shift available in session
             const visitDate = new Date().toISOString().slice(0, 10);
             const patientVisitNo = visitNumber ?? 0;
@@ -70,7 +70,7 @@ const VitalsTrendPopup: React.FC<VitalsTrendPopupProps> = ({
                 const datePart = item.preDates ?? (item.visitDate ?? '--');
                 const shiftPart = item.shiftDescription ? ` ${item.shiftDescription}` : '';
                 let date = `${datePart}${shiftPart}`.trim();
-                
+
                 // Format date: "11-Nov-2025 : M : 11:08 M" -> "11-Nov-25  11:08"
                 if (date && date !== '--') {
                     // Convert 4-digit year to 2-digit (e.g., 2025 -> 25) - case insensitive
@@ -93,9 +93,9 @@ const VitalsTrendPopup: React.FC<VitalsTrendPopupProps> = ({
                 const bp = (item.bloodPressure ?? item.preBp ?? '--').toString();
                 const sugar = (item.sugar ?? item.preSugar ?? '--').toString();
                 const tft = (item.thtext ?? item.preThtext ?? '--').toString();
-                const pallorHb = (item.pallor ?? item.prePallor ?? '--').toString();
-                const findings = (item.importantFindings ?? item.preImportantFindings ?? '--').toString();
-                const history = (item.additionalComments ?? item.preAdditionalComments ?? '--').toString();
+                const pallorHb = (item.pallor || item.prePallor || '--').toString();
+                const findings = (item.importantFindings || item.preImportantFindings || '--').toString();
+                const history = (item.symptomComment || item.preSymptomComment || '--').toString();
                 return { date, height, weight, pulse, bp, sugar, tft, pallorHb, findings, history };
             });
 
@@ -151,11 +151,11 @@ const VitalsTrendPopup: React.FC<VitalsTrendPopupProps> = ({
                     alignItems: 'center',
                     fontFamily: "'Roboto', sans-serif"
                 }}>
-                    <div style={{ 
-                        color: '#000000', 
-                        fontWeight: 700, 
-                        fontSize: '18px', 
-                        fontFamily: "'Roboto', sans-serif" 
+                    <div style={{
+                        color: '#000000',
+                        fontWeight: 700,
+                        fontSize: '18px',
+                        fontFamily: "'Roboto', sans-serif"
                     }}>
                         Vitals Trend
                     </div>
@@ -197,10 +197,10 @@ const VitalsTrendPopup: React.FC<VitalsTrendPopupProps> = ({
                         </div>
                     ) : (
                         <div style={{ border: '1px solid #ccc', borderRadius: '4px', overflow: 'hidden' }}>
-                            <div style={{ 
-                                display: 'grid', 
-                                gridTemplateColumns: 'minmax(130px, auto) 80px 80px 80px 100px 80px 80px 100px 120px 120px' as const, 
-                                backgroundColor: '#1976d2', 
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'minmax(130px, auto) 80px 80px 80px 100px 80px 80px 100px 120px 120px' as const,
+                                backgroundColor: '#1976d2',
                                 color: 'white',
                                 fontWeight: 'bold',
                                 fontSize: '11px',
@@ -216,7 +216,7 @@ const VitalsTrendPopup: React.FC<VitalsTrendPopupProps> = ({
                                 <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Sugar</div>
                                 <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>TFT</div>
                                 <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Pallor/HB</div>
-                                <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Important Findings</div>
+                                <div style={{ padding: '6px', borderRight: '1px solid rgba(255,255,255,0.2)' }}>Examination Findings</div>
                                 <div style={{ padding: '6px' }}>Detailed History</div>
                             </div>
                             {!loading && !error && trendRows.length === 0 && (
@@ -229,14 +229,14 @@ const VitalsTrendPopup: React.FC<VitalsTrendPopupProps> = ({
                                 overflowY: trendRows.length > 5 ? 'auto' : 'visible'
                             }}>
                                 {trendRows.map((row, index) => (
-                                    <div key={index} style={{ 
-                                        display: 'grid', 
+                                    <div key={index} style={{
+                                        display: 'grid',
                                         gridTemplateColumns: 'minmax(130px, auto) 80px 80px 80px 100px 80px 80px 100px 120px 120px' as const,
                                         backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white',
                                         borderBottom: '1px solid #e0e0e0'
                                     }}
-                                    onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = '#f5f5f5'; }}
-                                    onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = index % 2 === 0 ? '#f8f9fa' : 'white'; }}
+                                        onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = '#f5f5f5'; }}
+                                        onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.backgroundColor = index % 2 === 0 ? '#f8f9fa' : 'white'; }}
                                     >
                                         <div style={{ padding: '6px', borderRight: '1px solid #e0e0e0', fontSize: '12px', wordBreak: 'break-word', color: '#333' }}>{row.date}</div>
                                         <div style={{ padding: '6px', borderRight: '1px solid #e0e0e0', fontSize: '12px', color: '#333' }}>{row.height}</div>
