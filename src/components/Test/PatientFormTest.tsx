@@ -298,11 +298,24 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                         // Handle string-based booleans from API
                         if (typeof followUpFlag === 'string') {
                             const lower = followUpFlag.toLowerCase().trim();
-                            patched.isFollowUp = !(lower === 'false' || lower === '0' || lower === 'no');
+                            patched.isFollowUp = !(lower === 'false' || lower === '0' || lower === 'no' || lower === '');
                         } else {
                             patched.isFollowUp = Boolean(followUpFlag);
                         }
                         console.log("Patched isFollowUp from Follow_Up_Flag:", patched.isFollowUp);
+                    }
+                }
+
+                // ✅ Patch Plan dynamically from backend using Plan or Instructions
+                if (patched.rawVisit) {
+                    const planValue = patched.rawVisit.Plan || patched.rawVisit.plan || patched.rawVisit.Treatment_Plan;
+                    const instructionsValue = patched.rawVisit.Instructions || patched.rawVisit.instructions;
+                    
+                    if (planValue || instructionsValue) {
+                        const planBase = String(planValue || '').trim();
+                        const planInstr = String(instructionsValue || '').trim();
+                        patched.plan = [planBase, planInstr].filter(s => s && s.length > 0).join(' | ');
+                        console.log("PatientFormTest: Patched plan from rawVisit:", patched.plan);
                     }
                 }
                 // Map prescriptions from API format to component format
@@ -554,10 +567,16 @@ const PatientFormTest: React.FC<PatientFormTestProps> = ({
                         const followUpFlag =
                             patched.rawVisit.Follow_Up_Flag ??
                             patched.rawVisit.follow_up_flag ??
-                            patched.rawVisit.followUpFlag;
+                            patched.rawVisit.followUpFlag ??
+                            patched.rawVisit.isFollowUp;
 
                         if (followUpFlag !== undefined && followUpFlag !== null) {
-                            patched.isFollowUp = Boolean(followUpFlag);
+                            if (typeof followUpFlag === 'string') {
+                                const lower = followUpFlag.toLowerCase().trim();
+                                patched.isFollowUp = !(lower === 'false' || lower === '0' || lower === 'no' || lower === '');
+                            } else {
+                                patched.isFollowUp = Boolean(followUpFlag);
+                            }
                             console.log(
                                 'PatientFormTest: Patched isFollowUp from Follow_Up_Flag:',
                                 patched.isFollowUp
