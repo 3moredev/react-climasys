@@ -2034,20 +2034,36 @@ export default function Treatment() {
         // Pre-select the matched billing items (only if we have matches and not already selected)
         if (matchedIds.length > 0) {
             setSelectedBillingDetailIds(prev => {
-                // Check if we already have these selected
-                const allAlreadySelected = matchedIds.every(id => prev.includes(id));
-                if (allAlreadySelected) {
-                    console.log('Billing items already selected');
-                    return prev;
-                }
-
-                // Merge with existing selections, avoiding duplicates
                 const combined = [...new Set([...prev, ...matchedIds])];
-                console.log('Pre-selected billing IDs:', combined);
+
+                // Recalculate total from final selection to sync main screen
+                const totalFees = combined.reduce((sum, id) => {
+                    const opt = billingDetailsOptions.find(o => o.id === id);
+                    if (!opt) return sum;
+
+                    const matchingItem = billingArray.find(item => {
+                        const iG = (item.billing_group_name || '').trim().toLowerCase();
+                        const iS = (item.billing_subgroup_name || '').trim().toLowerCase();
+                        const oG = (opt.billing_group_name || '').trim().toLowerCase();
+                        const oS = (opt.billing_subgroup_name || '').trim().toLowerCase();
+                        if (iG !== oG || iS !== oS) return false;
+                        const iD = (item.billing_details || '').trim().toLowerCase();
+                        const oD = (opt.billing_details || '').trim().toLowerCase();
+                        return !iD || !oD || iD === oD;
+                    });
+
+                    const fee = matchingItem?.collected_fees ?? matchingItem?.collectedFees ?? opt.default_fees ?? 0;
+                    return sum + Number(fee);
+                }, 0);
+
+                setBillingData(prevBD => ({
+                    ...prevBD,
+                    billed: totalFees.toFixed(2),
+                    dues: (totalFees - (parseFloat(prevBD.discount) || 0)).toFixed(2)
+                }));
+
                 return combined;
             });
-        } else {
-            console.warn('No billing items matched for pre-selection');
         }
     }, [billingDetailsOptions]);
 
@@ -4088,6 +4104,57 @@ export default function Treatment() {
 
     // Generic treatment handler for both save and submit
     const handleTreatmentAction = async (isSubmit: boolean) => {
+        // Block action if there are active validation errors
+        if (billingError) {
+            setSnackbarMessage(billingError);
+            setSnackbarOpen(true);
+            return;
+        }
+        if (discountError) {
+            setSnackbarMessage(discountError);
+            setSnackbarOpen(true);
+            return;
+        }
+        if (followUpError) {
+            setSnackbarMessage(followUpError);
+            setSnackbarOpen(true);
+            return;
+        }
+        if (planAdvError) {
+            setSnackbarMessage(planAdvError);
+            setSnackbarOpen(true);
+            return;
+        }
+        if (remarkCommentsError) {
+            setSnackbarMessage(remarkCommentsError);
+            setSnackbarOpen(true);
+            return;
+        }
+        if (prescriptionError) {
+            setSnackbarMessage(prescriptionError);
+            setSnackbarOpen(true);
+            return;
+        }
+        if (complaintsSelectionError) {
+            setSnackbarMessage(complaintsSelectionError);
+            setSnackbarOpen(true);
+            return;
+        }
+        if (diagnosesSelectionError) {
+            setSnackbarMessage(diagnosesSelectionError);
+            setSnackbarOpen(true);
+            return;
+        }
+        if (medicinesSelectionError) {
+            setSnackbarMessage(medicinesSelectionError);
+            setSnackbarOpen(true);
+            return;
+        }
+        if (investigationsSelectionError) {
+            setSnackbarMessage(investigationsSelectionError);
+            setSnackbarOpen(true);
+            return;
+        }
         try {
             const actionType = isSubmit ? 'SUBMIT' : 'SAVE';
             setIsSubmitting(true);
@@ -6113,7 +6180,7 @@ export default function Treatment() {
                                                                 // Check if this complaint is already added to the table
                                                                 const normalizedValue = opt.value?.toLowerCase().trim() || '';
                                                                 const normalizedLabel = opt.label?.toLowerCase().trim() || '';
-                                                                const isAdded = complaintsRows.some(row => 
+                                                                const isAdded = complaintsRows.some(row =>
                                                                     (row.value && row.value.toLowerCase().trim() === normalizedValue) ||
                                                                     (row.label && row.label.toLowerCase().trim() === normalizedLabel)
                                                                 );
@@ -9275,23 +9342,15 @@ export default function Treatment() {
                     if (isFormDisabled) {
                         return;
                     }
-                    const billedNum = Number(total) || 0;
+                    const billedNumForVal = Number(total) || 0;
                     const discountNum = parseFloat(billingData.discount) || 0;
 
                     let newError: string | null = null;
-                    if (discountNum > 0 && discountNum > billedNum) {
+                    if (discountNum > 0 && discountNum > billedNumForVal) {
                         newError = 'Discount cannot be greater than billed amount';
                     }
                     setDiscountError(newError);
-
-                    setBillingData(prev => {
-                        const acBal = Math.max(0, billedNum - discountNum);
-                        return {
-                            ...prev,
-                            billed: billedNum.toFixed(2),
-                            dues: acBal.toFixed(2)
-                        };
-                    });
+                    // Removed setBillingData call to prevent "direct adding" before submit
                 }}
                 billingSearch={billingSearch}
                 setBillingSearch={setBillingSearch}
@@ -9415,7 +9474,9 @@ export default function Treatment() {
                             snackbarMessage.toLowerCase().includes('already added') ||
                             snackbarMessage.toLowerCase().includes('required') ||
                             snackbarMessage.toLowerCase().includes('must be') ||
-                            snackbarMessage.toLowerCase().includes('cannot exceed') ? '#f44336' : '#4caf50',
+                            snackbarMessage.toLowerCase().includes('cannot exceed') ||
+                            snackbarMessage.toLowerCase().includes('discount') ||
+                            snackbarMessage.toLowerCase().includes('greater than') ? '#f44336' : '#4caf50',
                         color: 'white',
                         fontWeight: 'bold'
                     }
